@@ -1,16 +1,19 @@
 export function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 4,
-  }).format(amount);
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+    }).format(amount);
+  } catch {
+    return `${amount.toFixed(2)} ${currency}`;
+  }
 }
 
-export function formatNumber(amount: number, decimals = 4): string {
+export function formatNumber(amount: number, decimals = 2): string {
+  const safeDecimals = Math.min(Math.max(0, decimals), 20);
   return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: decimals,
+    minimumFractionDigits: Math.min(2, safeDecimals),
+    maximumFractionDigits: safeDecimals,
   }).format(amount);
 }
 
