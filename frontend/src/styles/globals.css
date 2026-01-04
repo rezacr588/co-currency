@@ -109,3 +109,19 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
 }
+
+/* RTL Support */
+[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="rtl"] .select {
+  background-position: left 0.75rem center;
+  padding-right: 1rem;
+  padding-left: 2.5rem;
+}
+
+/* Font for Persian - using system fonts */
+[dir="rtl"] body {
+  font-family: 'Vazirmatn', 'Tahoma', 'Arial', sans-serif;
+}

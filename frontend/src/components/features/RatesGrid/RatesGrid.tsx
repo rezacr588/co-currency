@@ -4,10 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle, SkeletonRateCard } from '../.
 import { RateCard } from './RateCard';
 import { POPULAR_CURRENCIES } from '../../../utils/constants';
 import { formatTime } from '../../../utils/format';
+import { useLanguage } from '../../../context/LanguageContext';
 
 export function RatesGrid() {
   const [baseCurrency, setBaseCurrency] = useState('USD');
   const [showAll, setShowAll] = useState(false);
+  const { t } = useLanguage();
 
   const { data: currencies } = useCurrencies();
   const { data: rates, isLoading, error, dataUpdatedAt } = useRates(baseCurrency);
@@ -18,19 +20,19 @@ export function RatesGrid() {
 
   return (
     <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div>
-          <CardTitle>Exchange Rates</CardTitle>
+          <CardTitle>{t('exchangeRates')}</CardTitle>
           {dataUpdatedAt && (
             <p className="text-xs text-slate-400 mt-1">
-              Updated at {formatTime(new Date(dataUpdatedAt).toISOString())}
+              {t('updatedAt')} {formatTime(new Date(dataUpdatedAt).toISOString())}
             </p>
           )}
         </div>
         <select
           value={baseCurrency}
           onChange={(e) => setBaseCurrency(e.target.value)}
-          className="select w-32"
+          className="select w-full sm:w-32"
         >
           {currencies?.map((c) => (
             <option key={c.code} value={c.code}>
@@ -42,7 +44,7 @@ export function RatesGrid() {
       <CardContent>
         {error ? (
           <div className="text-center text-red-400 py-8">
-            Failed to load rates. Please try again.
+            {t('failedToLoadRates')}
           </div>
         ) : isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -62,7 +64,7 @@ export function RatesGrid() {
                 onClick={() => setShowAll(!showAll)}
                 className="mt-4 w-full btn-ghost py-2 text-primary-400 hover:text-primary-300"
               >
-                {showAll ? 'Show Less' : `Show All (${rates.rates.length} currencies)`}
+                {showAll ? t('showLess') : `${t('showAll')} (${rates.rates.length} ${t('currencies')})`}
               </button>
             )}
           </>

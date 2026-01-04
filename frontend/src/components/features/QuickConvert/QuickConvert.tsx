@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui';
 import { QuickConvertCard } from './QuickConvertCard';
+import { useLanguage } from '../../../context/LanguageContext';
 
 const QUICK_CONVERSIONS = [
   { from: 'USD', to: 'EUR', amount: 100 },
@@ -11,10 +12,12 @@ const QUICK_CONVERSIONS = [
 ];
 
 export function QuickConvert() {
+  const { t } = useLanguage();
+
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Quick Conversions</CardTitle>
+        <CardTitle>{t('quickConversions')}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
