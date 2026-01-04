@@ -42,8 +42,8 @@ func TestGetAllCurrencies(t *testing.T) {
 		}
 	}
 
-	// Check that USD is first (priority 1)
-	if currencies[0].Code != "USD" {
-		t.Errorf("First currency = %v, want USD", currencies[0].Code)
+	// Check that IRR is first (priority 0)
+	if currencies[0].Code != "IRR" {
+		t.Errorf("First currency = %v, want IRR", currencies[0].Code)
 	}
 }
