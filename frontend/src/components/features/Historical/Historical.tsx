@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui';
 import { HistoricalCard } from './HistoricalCard';
 import { useCurrencies } from '../../../hooks';
+import { useLanguage } from '../../../context/LanguageContext';
 
 export function Historical() {
   const [baseCurrency, setBaseCurrency] = useState('USD');
   const [targetCurrency, setTargetCurrency] = useState('EUR');
   const { data: currencies } = useCurrencies();
+  const { t } = useLanguage();
 
   const getDateDaysAgo = (days: number) => {
     const date = new Date();
@@ -24,8 +26,8 @@ export function Historical() {
   return (
     <Card className="w-full">
       <CardHeader className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-        <CardTitle>Historical Rates</CardTitle>
-        <div className="flex gap-2">
+        <CardTitle>{t('historicalRates')}</CardTitle>
+        <div className="flex gap-2 flex-wrap">
           <select
             value={baseCurrency}
             onChange={(e) => setBaseCurrency(e.target.value)}
@@ -37,7 +39,7 @@ export function Historical() {
               </option>
             ))}
           </select>
-          <span className="text-slate-400 self-center">to</span>
+          <span className="text-slate-400 self-center">{t('to')}</span>
           <select
             value={targetCurrency}
             onChange={(e) => setTargetCurrency(e.target.value)}
@@ -52,7 +54,7 @@ export function Historical() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {allDates.map((date) => (
             <HistoricalCard
               key={date}

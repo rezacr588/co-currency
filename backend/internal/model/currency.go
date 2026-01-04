@@ -10,6 +10,7 @@ type Currency struct {
 
 // CurrencyList contains metadata for supported currencies
 var CurrencyList = map[string]Currency{
+	"IRR": {Code: "IRR", Name: "Iranian Rial", Symbol: "﷼", Priority: 0},
 	"USD": {Code: "USD", Name: "US Dollar", Symbol: "$", Priority: 1},
 	"EUR": {Code: "EUR", Name: "Euro", Symbol: "€", Priority: 2},
 	"GBP": {Code: "GBP", Name: "British Pound", Symbol: "£", Priority: 3},

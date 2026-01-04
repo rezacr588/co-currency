@@ -1,6 +1,7 @@
-export const POPULAR_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'CNY'];
+export const POPULAR_CURRENCIES = ['IRR', 'USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'CNY'];
 
 export const CURRENCY_SYMBOLS: Record<string, string> = {
+  IRR: '﷼',
   USD: '$',
   EUR: '€',
   GBP: '£',
@@ -36,6 +37,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
 };
 
 export const CURRENCY_FLAGS: Record<string, string> = {
+  IRR: '🇮🇷',
   USD: '🇺🇸',
   EUR: '🇪🇺',
   GBP: '🇬🇧',
