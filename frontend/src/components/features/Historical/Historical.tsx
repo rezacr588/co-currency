@@ -2,19 +2,12 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui';
 import { HistoricalCard } from './HistoricalCard';
 import { useCurrencies } from '../../../hooks';
-import { getYesterday, getLastWeek } from '../../../utils/format';
 
 export function Historical() {
   const [baseCurrency, setBaseCurrency] = useState('USD');
   const [targetCurrency, setTargetCurrency] = useState('EUR');
   const { data: currencies } = useCurrencies();
 
-  const dates = [
-    getYesterday(),
-    getLastWeek(),
-  ];
-
-  // Add more historical dates
   const getDateDaysAgo = (days: number) => {
     const date = new Date();
     date.setDate(date.getDate() - days);
