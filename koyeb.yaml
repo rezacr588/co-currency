@@ -1,0 +1,49 @@
+# Koyeb deployment configuration
+# This file can be used with: koyeb app init --config koyeb.yaml
+
+name: currency-converter
+
+service:
+  name: currency-converter
+  type: web
+
+  git:
+    builder: dockerfile
+    dockerfile: Dockerfile
+
+  instance_type: free
+  regions:
+    - fra  # Frankfurt, or use 'was' for Washington DC
+
+  ports:
+    - port: 8080
+      protocol: http
+
+  routes:
+    - path: /
+      port: 8080
+
+  scaling:
+    min: 0  # Scale to zero when idle (free tier)
+    max: 1
+
+  health_checks:
+    - port: 8080
+      protocol: http
+      path: /health
+      interval: 30
+      timeout: 5
+      healthy_threshold: 2
+      unhealthy_threshold: 3
+
+  env:
+    - key: PORT
+      value: "8080"
+    - key: ENVIRONMENT
+      value: "production"
+    - key: CACHE_TTL
+      value: "5m"
+    - key: RATE_LIMIT
+      value: "100"
+    - key: FRANKFURTER_URL
+      value: "https://api.frankfurter.app"
