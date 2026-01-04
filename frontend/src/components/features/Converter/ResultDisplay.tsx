@@ -60,7 +60,7 @@ export function ResultDisplay({ result, isLoading, error }: ResultDisplayProps) 
           1 {result.from} = {formatRate(result.rate)} {result.to}
         </p>
         <p className="mt-1">
-          1 {result.to} = {formatRate(1 / result.rate)} {result.from}
+          1 {result.to} = {result.rate > 0 ? formatRate(1 / result.rate) : '0'} {result.from}
         </p>
       </div>
     </div>
