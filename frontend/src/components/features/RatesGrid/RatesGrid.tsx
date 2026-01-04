@@ -13,8 +13,8 @@ export function RatesGrid() {
   const { data: rates, isLoading, error, dataUpdatedAt } = useRates(baseCurrency);
 
   const displayedRates = showAll
-    ? rates?.rates
-    : rates?.rates.filter((r) => POPULAR_CURRENCIES.includes(r.code));
+    ? rates?.rates ?? []
+    : rates?.rates?.filter((r) => POPULAR_CURRENCIES.includes(r.code)) ?? [];
 
   return (
     <Card className="w-full">

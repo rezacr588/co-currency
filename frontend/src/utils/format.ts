@@ -10,6 +10,7 @@ export function formatCurrency(amount: number, currency: string): string {
 }
 
 export function formatNumber(amount: number, decimals = 2): string {
+  if (!isFinite(amount)) return '0.00';
   const safeDecimals = Math.min(Math.max(0, decimals), 20);
   return new Intl.NumberFormat('en-US', {
     minimumFractionDigits: Math.min(2, safeDecimals),
@@ -18,11 +19,14 @@ export function formatNumber(amount: number, decimals = 2): string {
 }
 
 export function formatRate(rate: number): string {
+  if (!isFinite(rate)) return '0.000000';
   return rate.toFixed(6);
 }
 
 export function formatDate(date: string): string {
-  return new Date(date).toLocaleDateString('en-US', {
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return 'N/A';
+  return d.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -30,7 +34,9 @@ export function formatDate(date: string): string {
 }
 
 export function formatTime(date: string): string {
-  return new Date(date).toLocaleTimeString('en-US', {
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return 'N/A';
+  return d.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
   });
