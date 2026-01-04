@@ -32,15 +32,3 @@ export function formatTime(date: string): string {
     minute: '2-digit',
   });
 }
-
-export function getYesterday(): string {
-  const date = new Date();
-  date.setDate(date.getDate() - 1);
-  return date.toISOString().split('T')[0];
-}
-
-export function getLastWeek(): string {
-  const date = new Date();
-  date.setDate(date.getDate() - 7);
-  return date.toISOString().split('T')[0];
-}
