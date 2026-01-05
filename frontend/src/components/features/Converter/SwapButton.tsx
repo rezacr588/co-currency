@@ -10,16 +10,19 @@ export function SwapButton({ onClick }: SwapButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="flex-shrink-0 w-12 h-12 min-w-[48px] min-h-[48px] rounded-full bg-gradient-to-br from-primary-500 to-accent-500 shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center group focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-800"
+      className="relative flex-shrink-0 w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center group focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-4 focus:ring-offset-white dark:focus:ring-offset-slate-900"
       aria-label={t('swapCurrencies')}
       title={t('swapCurrencies')}
     >
+      {/* Glow effect */}
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 blur-lg opacity-0 group-hover:opacity-50 transition-opacity duration-300" />
+
       <svg
-        className="w-5 h-5 text-white group-hover:rotate-180 transition-transform duration-300"
+        className="relative w-6 h-6 text-white group-hover:rotate-180 transition-transform duration-500 ease-out"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
-        strokeWidth={2.5}
+        strokeWidth={2}
         aria-hidden="true"
       >
         <path

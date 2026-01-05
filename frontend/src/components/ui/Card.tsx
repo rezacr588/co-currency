@@ -1,14 +1,17 @@
 import { HTMLAttributes, forwardRef } from 'react';
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'glass';
+  variant?: 'default' | 'glass' | 'gradient';
 }
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ className = '', variant = 'default', children, ...props }, ref) => {
+    const baseStyles = 'relative overflow-hidden rounded-2xl transition-all duration-300';
+
     const variants = {
-      default: 'card',
-      glass: 'card glass',
+      default: `${baseStyles} bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/60 shadow-lg hover:shadow-xl`,
+      glass: `${baseStyles} bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl border border-white/20 dark:border-slate-700/30`,
+      gradient: `${baseStyles} bg-gradient-to-br from-white/90 via-white/80 to-indigo-50/80 dark:from-slate-900/90 dark:via-slate-900/80 dark:to-indigo-950/80 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/60 shadow-lg`,
     };
 
     return (
@@ -23,7 +26,7 @@ Card.displayName = 'Card';
 
 export const CardHeader = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className = '', children, ...props }, ref) => (
-    <div ref={ref} className={`px-6 py-4 border-b border-slate-700 ${className}`} {...props}>
+    <div ref={ref} className={`px-6 py-5 border-b border-slate-200/60 dark:border-slate-800/60 ${className}`} {...props}>
       {children}
     </div>
   )
@@ -43,7 +46,7 @@ CardContent.displayName = 'CardContent';
 
 export const CardTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadingElement>>(
   ({ className = '', children, ...props }, ref) => (
-    <h3 ref={ref} className={`text-lg font-semibold text-slate-100 ${className}`} {...props}>
+    <h3 ref={ref} className={`text-xl font-light tracking-wide text-slate-800 dark:text-slate-100 ${className}`} {...props}>
       {children}
     </h3>
   )

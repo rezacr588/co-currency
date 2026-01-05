@@ -8,78 +8,160 @@
     --foreground: 248 250 252;
     --card: 30 41 59;
     --card-foreground: 248 250 252;
-    --primary: 59 130 246;
+    --primary: 99 102 241;
     --primary-foreground: 255 255 255;
     --secondary: 51 65 85;
     --secondary-foreground: 248 250 252;
     --muted: 71 85 105;
     --muted-foreground: 148 163 184;
-    --accent: 99 102 241;
+    --accent: 168 85 247;
     --accent-foreground: 255 255 255;
     --destructive: 239 68 68;
     --destructive-foreground: 255 255 255;
     --border: 51 65 85;
     --input: 51 65 85;
-    --ring: 59 130 246;
-    --radius: 0.75rem;
+    --ring: 99 102 241;
+    --radius: 1rem;
   }
 
   * {
-    @apply border-slate-200 dark:border-slate-700;
+    @apply border-slate-200 dark:border-slate-700/50;
   }
 
   body {
-    @apply bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100 antialiased transition-colors duration-200;
+    @apply bg-gradient-to-br from-slate-50 via-slate-100 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 text-slate-900 dark:text-slate-100 antialiased transition-colors duration-300;
     font-feature-settings: "rlig" 1, "calt" 1;
+    min-height: 100vh;
   }
 }
 
 @layer components {
   .card {
-    @apply bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg dark:shadow-xl;
+    @apply bg-white/70 dark:bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-200/50 dark:border-slate-700/30 shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50;
   }
 
   .btn {
-    @apply inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:pointer-events-none transform active:scale-[0.98];
   }
 
   .btn-primary {
-    @apply btn bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800;
+    @apply btn bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-500 hover:to-purple-500 shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:-translate-y-0.5;
   }
 
   .btn-secondary {
-    @apply btn bg-slate-200 text-slate-800 hover:bg-slate-300 active:bg-slate-400 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600 dark:active:bg-slate-500;
+    @apply btn bg-slate-100 text-slate-800 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700;
   }
 
   .btn-ghost {
-    @apply btn bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-slate-100;
+    @apply btn bg-transparent text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/50 dark:hover:text-slate-100;
   }
 
   .input {
-    @apply w-full bg-white dark:bg-slate-700/50 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-3 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors;
+    @apply w-full bg-white/80 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200;
   }
 
   .select {
     @apply input cursor-pointer appearance-none bg-no-repeat pr-10;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236366f1' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
     background-position: right 0.75rem center;
     background-size: 1.5em 1.5em;
   }
 
   .skeleton {
-    @apply animate-pulse bg-slate-200 dark:bg-slate-700 rounded;
+    @apply bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 dark:from-slate-700 dark:via-slate-600 dark:to-slate-700 rounded-xl bg-[length:200%_100%] animate-shimmer;
   }
 }
 
 @layer utilities {
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-accent-500 dark:from-primary-400 dark:to-accent-400;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400;
   }
 
   .glass {
-    @apply bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl;
+    @apply bg-white/60 dark:bg-slate-800/60 backdrop-blur-2xl border border-white/20 dark:border-slate-700/30;
+  }
+
+  .glow {
+    @apply shadow-lg shadow-indigo-500/20 dark:shadow-indigo-500/10;
+  }
+
+  .glow-strong {
+    @apply shadow-xl shadow-indigo-500/30 dark:shadow-indigo-500/20;
   }
 }
+
+/* Animations */
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bounce-soft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s ease-out forwards;
+}
+
+.animate-bounce-soft {
+  animation: bounce-soft 2s ease-in-out infinite;
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 5s ease infinite;
+}
+
+/* Staggered animations */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+.stagger-6 { animation-delay: 0.6s; }
 
 /* Custom scrollbar - Light mode */
 .light ::-webkit-scrollbar {
@@ -88,15 +170,11 @@
 }
 
 .light ::-webkit-scrollbar-track {
-  @apply bg-slate-100;
+  @apply bg-slate-100 rounded-full;
 }
 
 .light ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 rounded-full;
-}
-
-.light ::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-400;
+  @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors;
 }
 
 /* Custom scrollbar - Dark mode */
@@ -106,15 +184,11 @@
 }
 
 .dark ::-webkit-scrollbar-track {
-  @apply bg-slate-800;
+  @apply bg-slate-800 rounded-full;
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  @apply bg-slate-600 rounded-full;
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-500;
+  @apply bg-slate-600 rounded-full hover:bg-slate-500 transition-colors;
 }
 
 /* Number input without spinners */
@@ -139,7 +213,26 @@ input[type="number"] {
   padding-left: 2.5rem;
 }
 
-/* Font for Persian - using system fonts */
+/* Font for Persian */
 [dir="rtl"] body {
   font-family: 'Vazirmatn', 'Tahoma', 'Arial', sans-serif;
+}
+
+/* Hover effects */
+.hover-lift {
+  @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
+}
+
+.hover-glow {
+  @apply transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/20;
+}
+
+/* Selection styling */
+::selection {
+  @apply bg-indigo-500/30 text-indigo-900 dark:text-indigo-100;
+}
+
+/* Focus improvements */
+:focus-visible {
+  @apply outline-none ring-2 ring-indigo-500/50 ring-offset-2 ring-offset-white dark:ring-offset-slate-900;
 }
