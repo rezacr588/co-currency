@@ -13,6 +13,11 @@ type Config struct {
 	CacheTTL        time.Duration `env:"CACHE_TTL" envDefault:"5m"`
 	RateLimitPerMin int           `env:"RATE_LIMIT" envDefault:"100"`
 	FrankfurterURL  string        `env:"FRANKFURTER_URL" envDefault:"https://api.frankfurter.app"`
+
+	// IRR database and crawler settings
+	DatabaseURL        string        `env:"DATABASE_URL" envDefault:""`
+	IRRCrawlerInterval time.Duration `env:"IRR_CRAWLER_INTERVAL" envDefault:"5m"`
+	IRRCrawlerEnabled  bool          `env:"IRR_CRAWLER_ENABLED" envDefault:"true"`
 }
 
 // Load parses environment variables into Config

@@ -19,7 +19,7 @@ func setupTestService() *ExchangeService {
 	}
 	cache := repository.NewInMemoryCache(cfg.CacheTTL)
 	client := repository.NewFrankfurterClient(cfg.FrankfurterURL)
-	return NewExchangeService(cfg, client, cache)
+	return NewExchangeService(cfg, client, cache, nil)
 }
 
 func TestGetCurrencies(t *testing.T) {

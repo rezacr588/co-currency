@@ -25,7 +25,7 @@ func setupTestHandler() *Handler {
 	}
 	cache := repository.NewInMemoryCache(cfg.CacheTTL)
 	client := repository.NewFrankfurterClient(cfg.FrankfurterURL)
-	exchangeService := service.NewExchangeService(cfg, client, cache)
+	exchangeService := service.NewExchangeService(cfg, client, cache, nil)
 	return New(exchangeService)
 }
 
