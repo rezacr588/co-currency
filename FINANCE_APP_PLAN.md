@@ -68,6 +68,444 @@ balance_updated_at TIMESTAMP
 
 ---
 
+## Complete Transaction History & Audit Trail
+
+### Overview
+
+Full historical tracking of all financial activity with audit logs, balance snapshots, and timeline views. Never lose track of any transaction or balance change.
+
+### Features
+
+**1. Transaction Audit Log**
+- Every create, update, delete is logged
+- See what changed, when, and previous values
+- Immutable audit trail for accountability
+- Soft deletes (transactions never truly deleted)
+
+**2. Balance History**
+- Daily/monthly balance snapshots
+- See balance at any point in time
+- Track net worth over months/years
+- Visual balance timeline chart
+
+**3. Monthly/Yearly Summaries**
+- Auto-generated monthly reports
+- Income vs expense breakdown
+- Category spending comparison
+- Year-over-year trends
+
+**4. Advanced Search & Filters**
+- Search all historical transactions
+- Filter by date range, amount, category
+- Full-text search on descriptions
+- Export filtered results
+
+**5. Timeline View**
+- Chronological activity feed
+- Group by day/week/month
+- Running balance shown
+- Quick navigation to any period
+
+### Database Schema for History
+
+```sql
+-- Transaction Audit Log (immutable history)
+CREATE TABLE transaction_audit_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_id UUID NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id),
+    action VARCHAR(10) CHECK (action IN ('create', 'update', 'delete')),
+    old_values JSONB,          -- Previous state (null for create)
+    new_values JSONB,          -- New state (null for delete)
+    changed_fields TEXT[],     -- List of fields that changed
+    ip_address INET,
+    user_agent TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Balance Snapshots (daily/monthly)
+CREATE TABLE balance_snapshots (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    snapshot_date DATE NOT NULL,
+    snapshot_type VARCHAR(10) CHECK (snapshot_type IN ('daily', 'monthly', 'yearly')),
+    balance DECIMAL(15, 2) NOT NULL,
+    total_income DECIMAL(15, 2) DEFAULT 0,
+    total_expenses DECIMAL(15, 2) DEFAULT 0,
+    transaction_count INTEGER DEFAULT 0,
+    currency VARCHAR(3) NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id, snapshot_date, snapshot_type)
+);
+
+-- Monthly Summaries (pre-calculated for performance)
+CREATE TABLE monthly_summaries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    year INTEGER NOT NULL,
+    month INTEGER NOT NULL,
+    opening_balance DECIMAL(15, 2),
+    closing_balance DECIMAL(15, 2),
+    total_income DECIMAL(15, 2),
+    total_expenses DECIMAL(15, 2),
+    net_change DECIMAL(15, 2),
+    category_breakdown JSONB,   -- { "Food": 500, "Transport": 200, ... }
+    transaction_count INTEGER,
+    currency VARCHAR(3) NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id, year, month)
+);
+
+-- Soft delete support for transactions
+ALTER TABLE transactions ADD COLUMN deleted_at TIMESTAMP;
+ALTER TABLE transactions ADD COLUMN deleted_by UUID;
+
+-- Indexes for history queries
+CREATE INDEX idx_audit_log_transaction ON transaction_audit_log(transaction_id);
+CREATE INDEX idx_audit_log_user_date ON transaction_audit_log(user_id, created_at);
+CREATE INDEX idx_balance_snapshots_user_date ON balance_snapshots(user_id, snapshot_date);
+CREATE INDEX idx_monthly_summaries_user ON monthly_summaries(user_id, year, month);
+CREATE INDEX idx_transactions_deleted ON transactions(user_id, deleted_at) WHERE deleted_at IS NULL;
+```
+
+### API Endpoints for History
+
+```
+GET /api/history/timeline          - Activity timeline with pagination
+GET /api/history/balance           - Balance history over time
+GET /api/history/audit/:id         - Audit log for specific transaction
+GET /api/history/snapshots         - Balance snapshots (daily/monthly)
+GET /api/history/summaries         - Monthly/yearly summaries
+GET /api/history/search            - Full-text search across all transactions
+GET /api/history/export            - Export history to CSV/PDF
+POST /api/history/restore/:id      - Restore soft-deleted transaction
+```
+
+### Timeline API Response Example
+
+```json
+// GET /api/history/timeline?from=2024-01-01&to=2024-01-31
+{
+  "timeline": [
+    {
+      "date": "2024-01-15",
+      "transactions": [
+        {
+          "id": "uuid",
+          "time": "14:30:00",
+          "type": "expense",
+          "description": "Grocery shopping",
+          "amount": -85.50,
+          "currency": "USD",
+          "category": "Food & Dining",
+          "balance_after": 2450.75
+        },
+        {
+          "id": "uuid",
+          "time": "09:00:00",
+          "type": "income",
+          "description": "Salary deposit",
+          "amount": 3500.00,
+          "currency": "USD",
+          "category": "Salary",
+          "balance_after": 2536.25
+        }
+      ],
+      "daily_summary": {
+        "income": 3500.00,
+        "expenses": 85.50,
+        "net": 3414.50,
+        "opening_balance": -963.75,
+        "closing_balance": 2450.75
+      }
+    }
+  ],
+  "period_summary": {
+    "total_income": 5000.00,
+    "total_expenses": 3200.00,
+    "net_change": 1800.00,
+    "start_balance": 650.75,
+    "end_balance": 2450.75
+  }
+}
+```
+
+### Balance History Response Example
+
+```json
+// GET /api/history/balance?period=6months&interval=weekly
+{
+  "balance_history": [
+    { "date": "2024-01-01", "balance": 1500.00 },
+    { "date": "2024-01-08", "balance": 1750.25 },
+    { "date": "2024-01-15", "balance": 2100.00 },
+    { "date": "2024-01-22", "balance": 1890.50 },
+    { "date": "2024-01-29", "balance": 2450.75 }
+  ],
+  "statistics": {
+    "highest": { "date": "2024-01-29", "balance": 2450.75 },
+    "lowest": { "date": "2024-01-01", "balance": 1500.00 },
+    "average": 1938.30,
+    "trend": "increasing",
+    "growth_rate": 63.38
+  }
+}
+```
+
+### Frontend Components for History
+
+**Files to create:**
+- `frontend/src/pages/History.tsx`
+- `frontend/src/components/features/History/Timeline.tsx`
+- `frontend/src/components/features/History/TimelineItem.tsx`
+- `frontend/src/components/features/History/BalanceChart.tsx`
+- `frontend/src/components/features/History/MonthlySummary.tsx`
+- `frontend/src/components/features/History/SearchHistory.tsx`
+- `frontend/src/components/features/History/AuditLog.tsx`
+- `frontend/src/hooks/useHistory.ts`
+
+**UI Features:**
+- Infinite scroll timeline grouped by date
+- Interactive balance chart (zoom, hover for details)
+- Monthly summary cards with comparisons
+- Powerful search with filters
+- Transaction detail modal with edit history
+- Export to CSV/PDF buttons
+- Date range picker for navigation
+- "Jump to date" quick navigation
+
+### Background Jobs
+
+```go
+// Scheduled tasks for history management
+- Daily: Create balance snapshots at midnight
+- Monthly: Generate monthly summary on 1st of month
+- Weekly: Clean up old audit logs (keep 2 years)
+- On-demand: Recalculate summaries if needed
+```
+
+---
+
+## Smart Email Integration
+
+### Overview
+
+Automatically import transactions from emails - bank notifications, receipts, invoices. AI parses email content, extracts transaction details, categorizes, and updates balance.
+
+### How It Works
+
+```
+1. User forwards email to: transactions@yourapp.com
+   OR
+   User connects Gmail/Outlook for auto-import
+
+2. System receives email
+
+3. AI (Groq) analyzes email:
+   - Extracts amount, currency
+   - Determines income vs expense
+   - Identifies merchant/source
+   - Suggests category
+   - Extracts date
+
+4. Transaction created automatically
+   - Balance updated
+   - User notified
+```
+
+### Supported Email Types
+
+| Email Type | Example | Extracted Data |
+|------------|---------|----------------|
+| Bank alerts | "You spent $50.00 at Amazon" | Amount, merchant, type |
+| Receipts | "Your Uber receipt - $25.50" | Amount, category, date |
+| Invoices | "Invoice #123 - $500 paid" | Amount, description |
+| Salary | "Payroll deposit: $3,500" | Amount, income type |
+| Subscriptions | "Netflix charged $15.99" | Amount, recurring flag |
+| Transfers | "You received $100 from John" | Amount, sender, income |
+
+### Email Parsing with AI
+
+```json
+// Input: Raw email content
+{
+  "from": "alerts@bank.com",
+  "subject": "Transaction Alert",
+  "body": "You made a purchase of $45.99 at STARBUCKS #12345 on Jan 15, 2024 at 2:30 PM. Your new balance is $2,450.00."
+}
+
+// AI Output (Groq processes this)
+{
+  "transaction": {
+    "amount": 45.99,
+    "currency": "USD",
+    "type": "expense",
+    "description": "STARBUCKS #12345",
+    "category": "Food & Dining",
+    "subcategory": "Coffee",
+    "date": "2024-01-15",
+    "time": "14:30:00",
+    "merchant": "Starbucks"
+  },
+  "confidence": 0.98,
+  "balance_mentioned": 2450.00,
+  "needs_review": false
+}
+```
+
+### Database Schema for Email Import
+
+```sql
+-- Email import tracking
+CREATE TABLE email_imports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email_from VARCHAR(255),
+    email_subject TEXT,
+    email_body TEXT,
+    raw_email TEXT,
+    parsed_data JSONB,
+    transaction_id UUID REFERENCES transactions(id),
+    status VARCHAR(20) CHECK (status IN ('pending', 'processed', 'failed', 'needs_review')),
+    ai_confidence DECIMAL(3, 2),
+    error_message TEXT,
+    processed_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Email forwarding addresses (unique per user)
+CREATE TABLE email_addresses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email_address VARCHAR(255) UNIQUE NOT NULL,  -- user123@transactions.yourapp.com
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Connected email accounts (Gmail, Outlook)
+CREATE TABLE connected_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    provider VARCHAR(20) CHECK (provider IN ('gmail', 'outlook', 'imap')),
+    email VARCHAR(255) NOT NULL,
+    access_token TEXT,
+    refresh_token TEXT,
+    token_expires_at TIMESTAMP,
+    last_sync_at TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_email_imports_user ON email_imports(user_id, created_at);
+CREATE INDEX idx_email_imports_status ON email_imports(status);
+```
+
+### API Endpoints for Email
+
+```
+POST /api/email/webhook          - Receive forwarded emails (webhook)
+GET  /api/email/imports          - List imported emails
+GET  /api/email/imports/:id      - Get import details
+POST /api/email/imports/:id/approve  - Approve pending import
+POST /api/email/imports/:id/reject   - Reject import
+GET  /api/email/address          - Get user's unique email address
+POST /api/email/connect/gmail    - Connect Gmail account
+POST /api/email/connect/outlook  - Connect Outlook account
+DELETE /api/email/disconnect/:id - Disconnect email account
+POST /api/email/sync             - Manually trigger sync
+```
+
+### Email Import Flow
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│   Email     │────▶│   Webhook    │────▶│  AI Parser  │
+│  Received   │     │   Handler    │     │   (Groq)    │
+└─────────────┘     └──────────────┘     └──────┬──────┘
+                                                 │
+                    ┌────────────────────────────┘
+                    │
+                    ▼
+        ┌───────────────────────┐
+        │  Confidence > 90%?    │
+        └───────────┬───────────┘
+                    │
+         ┌──────────┴──────────┐
+         │                     │
+         ▼                     ▼
+   ┌──────────┐         ┌──────────────┐
+   │   Auto   │         │   Queue for  │
+   │  Create  │         │    Review    │
+   └────┬─────┘         └──────┬───────┘
+        │                      │
+        ▼                      ▼
+   ┌──────────┐         ┌──────────────┐
+   │  Update  │         │   Notify     │
+   │  Balance │         │    User      │
+   └──────────┘         └──────────────┘
+```
+
+### Frontend Components for Email
+
+**Files to create:**
+- `frontend/src/pages/EmailImport.tsx`
+- `frontend/src/components/features/Email/EmailImportList.tsx`
+- `frontend/src/components/features/Email/EmailReviewModal.tsx`
+- `frontend/src/components/features/Email/ConnectEmailModal.tsx`
+- `frontend/src/components/features/Email/EmailAddress.tsx`
+
+**UI Features:**
+- Show unique forwarding email address (copy button)
+- List of imported emails with status
+- Review queue for low-confidence imports
+- Edit extracted data before approval
+- Connect Gmail/Outlook buttons
+- Sync status and history
+
+### AI Prompt for Email Parsing
+
+```
+System: You are a financial transaction parser. Extract transaction details from emails.
+
+User: Parse this email and extract transaction details:
+From: alerts@chase.com
+Subject: Transaction Alert
+Body: "Your Chase card ending in 4532 was used for $127.50 at WHOLE FOODS MARKET #10847 on 01/15/2024."
+
+Return JSON:
+{
+  "amount": number,
+  "currency": "USD" | "EUR" | etc,
+  "type": "income" | "expense",
+  "description": string,
+  "category": string (from: Food & Dining, Shopping, Transport, Bills, Health, Entertainment, Travel, Income, Other),
+  "date": "YYYY-MM-DD",
+  "merchant": string or null,
+  "confidence": 0.0-1.0,
+  "notes": any additional context
+}
+```
+
+### Email Provider Integration
+
+**Option 1: Email Forwarding (Simple)**
+- Each user gets unique address: `user123@tx.yourapp.com`
+- User forwards bank emails to this address
+- Webhook receives and processes
+
+**Option 2: Gmail API (Automatic)**
+- User connects Gmail account
+- App reads emails with specific labels/filters
+- Auto-import matching emails
+
+**Option 3: IMAP (Universal)**
+- User provides IMAP credentials
+- App periodically checks for new emails
+- Works with any email provider
+
+---
+
 ## Phase 1: User Authentication & Database Foundation
 
 ### 1.1 Database Schema
@@ -405,16 +843,40 @@ GET    /api/goals/:id/forecast  - AI prediction for completion
 
 ---
 
-## Phase 6: AI Features
+## Phase 6: AI Features (Groq API)
 
-### 6.1 Backend - AI Service
+### 6.1 Backend - AI Service with Groq
+
+**Why Groq?**
+- Free tier available
+- Ultra-fast inference (fastest LLM API)
+- Supports Llama 3, Mixtral, Gemma models
+- OpenAI-compatible API format
+- Great for real-time features
 
 **Files to create:**
-- `backend/internal/ai/client.go` - Claude API client
+- `backend/internal/ai/groq_client.go` - Groq API client
 - `backend/internal/ai/categorize.go` - Auto-categorization
 - `backend/internal/ai/insights.go` - Spending insights
 - `backend/internal/ai/chat.go` - Natural language queries
 - `backend/internal/ai/forecast.go` - Predictions
+
+**Groq Configuration:**
+```go
+// Groq API setup
+const GroqAPIURL = "https://api.groq.com/openai/v1/chat/completions"
+
+type GroqClient struct {
+    APIKey string
+    Model  string  // "llama-3.1-70b-versatile" or "mixtral-8x7b-32768"
+}
+
+// Models available (as of 2024):
+// - llama-3.1-70b-versatile (best for complex tasks)
+// - llama-3.1-8b-instant (fastest, good for categorization)
+// - mixtral-8x7b-32768 (good balance)
+// - gemma2-9b-it (lightweight)
+```
 
 **API Endpoints:**
 ```
@@ -563,11 +1025,14 @@ POST /api/ai/forecast
 DATABASE_URL=postgresql://...
 FRANKFURTER_API_URL=https://api.frankfurter.app
 
-# New
+# New - Authentication
 JWT_SECRET=your-secret-key
 JWT_EXPIRY=15m
 REFRESH_TOKEN_EXPIRY=7d
-ANTHROPIC_API_KEY=sk-ant-...
+
+# New - AI (Groq - Free Tier)
+GROQ_API_KEY=gsk_...
+GROQ_MODEL=llama-3.1-70b-versatile  # or llama-3.1-8b-instant for speed
 ```
 
 ### Security
