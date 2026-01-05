@@ -35,6 +35,22 @@ export const translations = {
     language: 'Language',
     english: 'English',
     persian: 'فارسی',
+
+    // Accessibility & Actions
+    copied: 'Copied!',
+    copyResult: 'Copy result',
+    retry: 'Retry',
+    swapCurrencies: 'Swap currencies',
+    toggleTheme: 'Toggle theme',
+
+    // Validation
+    invalidAmount: 'Please enter a valid amount',
+    sameCurrency: 'Please select different currencies',
+    amountTooLarge: 'Amount is too large',
+
+    // Loading states
+    loading: 'Loading...',
+    converting: 'Converting...',
   },
   fa: {
     // Header
@@ -72,6 +88,22 @@ export const translations = {
     language: 'زبان',
     english: 'English',
     persian: 'فارسی',
+
+    // Accessibility & Actions
+    copied: 'کپی شد!',
+    copyResult: 'کپی نتیجه',
+    retry: 'تلاش مجدد',
+    swapCurrencies: 'تعویض ارزها',
+    toggleTheme: 'تغییر تم',
+
+    // Validation
+    invalidAmount: 'لطفاً مبلغ معتبر وارد کنید',
+    sameCurrency: 'لطفاً ارزهای متفاوت انتخاب کنید',
+    amountTooLarge: 'مبلغ بیش از حد بزرگ است',
+
+    // Loading states
+    loading: 'در حال بارگذاری...',
+    converting: 'در حال تبدیل...',
   },
 } as const;
 
