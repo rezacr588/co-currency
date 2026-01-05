@@ -19,11 +19,12 @@ type IRRRates struct {
 
 // IRRClient handles Iranian Rial exchange rate fetching
 type IRRClient struct {
-	httpClient *http.Client
-	mu         sync.RWMutex
+	httpClient  *http.Client
+	mu          sync.RWMutex
 	cachedRates *IRRRates
 	lastFetch   time.Time
 	cacheTTL    time.Duration
+	db          *IRRDatabase // Database for persistent storage
 }
 
 // NavasanResponse represents the Navasan API response structure
@@ -56,13 +57,21 @@ type BonbastResponse struct {
 }
 
 // NewIRRClient creates a new IRR API client
-func NewIRRClient() *IRRClient {
+func NewIRRClient(db *IRRDatabase) *IRRClient {
 	return &IRRClient{
 		httpClient: &http.Client{
 			Timeout: 15 * time.Second,
 		},
 		cacheTTL: 5 * time.Minute, // Cache IRR rates for 5 minutes
+		db:       db,
 	}
+}
+
+// SetDatabase sets the database for the client (for delayed initialization)
+func (c *IRRClient) SetDatabase(db *IRRDatabase) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.db = db
 }
 
 // GetRates fetches current IRR exchange rates
@@ -75,11 +84,31 @@ func (c *IRRClient) GetRates(ctx context.Context) (*IRRRates, error) {
 	}
 	c.mu.RUnlock()
 
-	// Try multiple sources
-	rates, err := c.fetchFromBonbastWrapper(ctx)
+	// Try to fetch from API
+	rates, err := c.fetchFromPriceDB(ctx)
 	if err != nil {
-		// Fallback to static rates if API fails
-		rates = c.getFallbackRates()
+		// Try to get from database (last known real rates)
+		if c.db != nil {
+			dbRates, dbErr := c.db.GetLatestRates(ctx)
+			if dbErr == nil && dbRates != nil {
+				c.mu.Lock()
+				c.cachedRates = dbRates
+				c.lastFetch = time.Now()
+				c.mu.Unlock()
+				return dbRates, nil
+			}
+		}
+		// No cached rates available - return error
+		return nil, fmt.Errorf("failed to get IRR rates: %w (no cached rates available)", err)
+	}
+
+	// Save to database for future fallback
+	if c.db != nil {
+		go func() {
+			saveCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = c.db.SaveRates(saveCtx, rates, "pricedb")
+		}()
 	}
 
 	c.mu.Lock()
@@ -90,73 +119,88 @@ func (c *IRRClient) GetRates(ctx context.Context) (*IRRRates, error) {
 	return rates, nil
 }
 
-// fetchFromBonbastWrapper tries to fetch from the Bonbast API wrapper
-func (c *IRRClient) fetchFromBonbastWrapper(ctx context.Context) (*IRRRates, error) {
-	// Try the community Bonbast API wrapper
-	url := "https://bonbast.amirhn.com/latest"
+// PriceDBResponse represents the margani/pricedb API response structure
+type PriceDBResponse struct {
+	Price string `json:"p"`
+	High  string `json:"h"`
+	Low   string `json:"l"`
+	Time  string `json:"ts"`
+}
 
+// fetchFromPriceDB fetches rates from the margani/pricedb GitHub repository
+// This is a free, auto-updated source for Iranian Rial exchange rates
+func (c *IRRClient) fetchFromPriceDB(ctx context.Context) (*IRRRates, error) {
+	baseURL := "https://raw.githubusercontent.com/margani/pricedb/main/tgju/current"
+
+	rates := &IRRRates{
+		UpdatedAt: time.Now(),
+	}
+
+	// Fetch USD rate
+	usdRate, err := c.fetchPriceDBRate(ctx, baseURL+"/price_dollar_rl/latest.json")
+	if err != nil {
+		return nil, fmt.Errorf("fetching USD rate: %w", err)
+	}
+	rates.USD = usdRate
+
+	// Fetch EUR rate
+	eurRate, err := c.fetchPriceDBRate(ctx, baseURL+"/price_eur/latest.json")
+	if err != nil {
+		return nil, fmt.Errorf("fetching EUR rate: %w", err)
+	}
+	rates.EUR = eurRate
+
+	// Fetch GBP rate
+	gbpRate, err := c.fetchPriceDBRate(ctx, baseURL+"/price_gbp/latest.json")
+	if err != nil {
+		return nil, fmt.Errorf("fetching GBP rate: %w", err)
+	}
+	rates.GBP = gbpRate
+
+	return rates, nil
+}
+
+// fetchPriceDBRate fetches a single rate from the pricedb API
+func (c *IRRClient) fetchPriceDBRate(ctx context.Context, url string) (float64, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("creating request: %w", err)
+		return 0, fmt.Errorf("creating request: %w", err)
 	}
 	req.Header.Set("User-Agent", "CurrencyConverter/1.0")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("executing request: %w", err)
+		return 0, fmt.Errorf("executing request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return 0, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	var bonbastResp map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&bonbastResp); err != nil {
-		return nil, fmt.Errorf("decoding response: %w", err)
+	var priceResp PriceDBResponse
+	if err := json.NewDecoder(resp.Body).Decode(&priceResp); err != nil {
+		return 0, fmt.Errorf("decoding response: %w", err)
 	}
 
-	// Parse the response - Bonbast returns rates in Toman (divide by 10 for Rial)
-	rates := &IRRRates{
-		UpdatedAt: time.Now(),
-	}
-
-	if usd, ok := bonbastResp["usd"].(map[string]interface{}); ok {
-		if sell, ok := usd["sell"].(float64); ok {
-			rates.USD = sell * 10 // Convert Toman to Rial
-		}
-	}
-	if eur, ok := bonbastResp["eur"].(map[string]interface{}); ok {
-		if sell, ok := eur["sell"].(float64); ok {
-			rates.EUR = sell * 10
-		}
-	}
-	if gbp, ok := bonbastResp["gbp"].(map[string]interface{}); ok {
-		if sell, ok := gbp["sell"].(float64); ok {
-			rates.GBP = sell * 10
+	// Parse the price string (remove commas and convert to float)
+	priceStr := priceResp.Price
+	// Remove commas from the price string
+	cleanPrice := ""
+	for _, ch := range priceStr {
+		if ch != ',' {
+			cleanPrice += string(ch)
 		}
 	}
 
-	// Validate we got rates
-	if rates.USD == 0 {
-		return nil, fmt.Errorf("failed to parse USD rate")
+	var rate float64
+	if _, err := fmt.Sscanf(cleanPrice, "%f", &rate); err != nil {
+		return 0, fmt.Errorf("parsing price '%s': %w", priceResp.Price, err)
 	}
 
-	return rates, nil
+	return rate, nil
 }
 
-// getFallbackRates returns approximate market rates as fallback
-// These should be updated periodically or fetched from a backup source
-func (c *IRRClient) getFallbackRates() *IRRRates {
-	// Approximate free market rates as of late 2025
-	// Note: These are fallback values and may not reflect current rates
-	return &IRRRates{
-		USD:       700000, // ~70,000 Toman = 700,000 Rial
-		EUR:       750000, // ~75,000 Toman
-		GBP:       880000, // ~88,000 Toman
-		UpdatedAt: time.Now(),
-	}
-}
 
 // ConvertToIRR converts an amount from a supported currency to IRR
 func (c *IRRClient) ConvertToIRR(ctx context.Context, from string, amount float64) (float64, float64, error) {

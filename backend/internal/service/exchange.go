@@ -19,10 +19,14 @@ type ExchangeService struct {
 }
 
 // NewExchangeService creates a new exchange service
-func NewExchangeService(cfg *config.Config, client *repository.FrankfurterClient, cache repository.Cache) *ExchangeService {
+func NewExchangeService(cfg *config.Config, client *repository.FrankfurterClient, cache repository.Cache, irrClient *repository.IRRClient) *ExchangeService {
+	// If no IRRClient provided, create one without database
+	if irrClient == nil {
+		irrClient = repository.NewIRRClient(nil)
+	}
 	return &ExchangeService{
 		client:    client,
-		irrClient: repository.NewIRRClient(),
+		irrClient: irrClient,
 		cache:     cache,
 		config:    cfg,
 	}
