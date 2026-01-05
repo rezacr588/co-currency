@@ -124,4 +124,5 @@ jobs:
         env:
           KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
         run: |
-          koyeb service redeploy terrible-moselle/co-currency
+          koyeb service update terrible-moselle/co-currency \
+            --docker ghcr.io/${{ github.repository }}:${{ github.sha }}
