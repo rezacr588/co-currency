@@ -10,7 +10,7 @@ export function LanguageToggle() {
         className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
           language === 'en'
             ? 'bg-primary-600 text-white'
-            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+            : 'bg-slate-200 text-slate-600 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
         }`}
       >
         {t('english')}
@@ -20,7 +20,7 @@ export function LanguageToggle() {
         className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
           language === 'fa'
             ? 'bg-primary-600 text-white'
-            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+            : 'bg-slate-200 text-slate-600 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
         }`}
       >
         {t('persian')}

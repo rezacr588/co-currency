@@ -27,13 +27,13 @@ export function Converter() {
   return (
     <div className="w-full max-w-xl mx-auto">
       {/* Glass Card Container */}
-      <div className="relative overflow-hidden bg-slate-800/60 backdrop-blur-xl rounded-3xl border border-slate-700/50 shadow-2xl shadow-slate-900/50">
+      <div className="relative overflow-hidden bg-white/80 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl border border-slate-200 dark:border-slate-700/50 shadow-xl dark:shadow-2xl dark:shadow-slate-900/50">
         {/* Gradient Background Decoration */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary-600/5 via-transparent to-accent-600/5" />
 
         {/* Header */}
-        <div className="relative px-6 pt-6 pb-4 border-b border-slate-700/50">
-          <h2 className="text-xl font-bold text-slate-100 text-center">{t('converterTitle')}</h2>
+        <div className="relative px-6 pt-6 pb-4 border-b border-slate-200 dark:border-slate-700/50">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 text-center">{t('converterTitle')}</h2>
         </div>
 
         {/* Content */}

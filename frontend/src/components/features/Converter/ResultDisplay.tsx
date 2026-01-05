@@ -31,7 +31,7 @@ export function ResultDisplay({ result, isLoading, error }: ResultDisplayProps) 
 
   if (!result) {
     return (
-      <div className="p-6 bg-slate-800/50 rounded-xl text-center text-slate-400 text-sm border border-dashed border-slate-700">
+      <div className="p-6 bg-slate-100 dark:bg-slate-800/50 rounded-xl text-center text-slate-500 dark:text-slate-400 text-sm border border-dashed border-slate-300 dark:border-slate-700">
         {t('enterAmount')}
       </div>
     );
@@ -44,13 +44,13 @@ export function ResultDisplay({ result, isLoading, error }: ResultDisplayProps) 
   return (
     <div className="space-y-4">
       {/* Main Result Card */}
-      <div className="relative overflow-hidden p-6 bg-gradient-to-br from-primary-600/20 via-accent-600/10 to-primary-600/20 rounded-2xl border border-primary-500/20">
+      <div className="relative overflow-hidden p-6 bg-gradient-to-br from-primary-600/10 dark:from-primary-600/20 via-accent-600/5 dark:via-accent-600/10 to-primary-600/10 dark:to-primary-600/20 rounded-2xl border border-primary-500/20">
         {/* Background decoration */}
         <div className="absolute top-0 end-0 w-32 h-32 bg-primary-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 start-0 w-24 h-24 bg-accent-500/10 rounded-full blur-2xl" />
 
         <div className="relative text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-800/50 rounded-full text-sm text-slate-300 mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-200/80 dark:bg-slate-800/50 rounded-full text-sm text-slate-600 dark:text-slate-300 mb-3">
             <span>{fromFlag}</span>
             <span>{formatNumber(result.amount)}</span>
             <span className="font-medium">{result.from}</span>
@@ -62,24 +62,24 @@ export function ResultDisplay({ result, isLoading, error }: ResultDisplayProps) 
               <p className="text-4xl sm:text-5xl font-bold text-gradient leading-tight">
                 {toSymbol}{formatNumber(result.result)}
               </p>
-              <p className="text-lg font-medium text-slate-300">{result.to}</p>
+              <p className="text-lg font-medium text-slate-600 dark:text-slate-300">{result.to}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Exchange Rate Info */}
-      <div className="flex flex-wrap justify-center gap-4 text-xs text-slate-400">
-        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/50 rounded-full">
+      <div className="flex flex-wrap justify-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-200/80 dark:bg-slate-800/50 rounded-full">
           <span>1 {result.from}</span>
           <span>=</span>
-          <span className="font-mono font-medium text-slate-300">{formatRate(result.rate)}</span>
+          <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{formatRate(result.rate)}</span>
           <span>{result.to}</span>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/50 rounded-full">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-200/80 dark:bg-slate-800/50 rounded-full">
           <span>1 {result.to}</span>
           <span>=</span>
-          <span className="font-mono font-medium text-slate-300">
+          <span className="font-mono font-medium text-slate-700 dark:text-slate-300">
             {result.rate > 0 ? formatRate(1 / result.rate) : '0'}
           </span>
           <span>{result.from}</span>
