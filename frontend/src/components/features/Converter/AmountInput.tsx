@@ -28,11 +28,11 @@ export function AmountInput({ value, onChange, error }: AmountInputProps) {
     <div className="relative">
       <label
         htmlFor={inputId}
-        className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider"
+        className="block text-xs font-medium text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-widest"
       >
         {t('amount')}
       </label>
-      <div className="relative">
+      <div className="relative group">
         <input
           id={inputId}
           type="number"
@@ -44,21 +44,18 @@ export function AmountInput({ value, onChange, error }: AmountInputProps) {
           inputMode="decimal"
           aria-invalid={!!error}
           aria-describedby={error ? errorId : undefined}
-          className={`w-full bg-white dark:bg-slate-800/80 border rounded-xl px-4 py-3.5 text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 hover:border-primary-500/50 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none transition-all min-h-[56px] ${
+          className={`w-full bg-slate-50 dark:bg-slate-800/50 border-2 rounded-2xl px-5 py-4 text-3xl sm:text-4xl font-light text-slate-800 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 transition-all duration-300 focus:outline-none ${
             error
-              ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
-              : 'border-slate-300 dark:border-slate-600/50'
+              ? 'border-red-400 focus:border-red-500'
+              : 'border-slate-200 dark:border-slate-700/50 hover:border-indigo-300 dark:hover:border-indigo-500/50 focus:border-indigo-500 dark:focus:border-indigo-500'
           }`}
-          placeholder="0.00"
+          placeholder="0"
         />
-        <div className="absolute inset-y-0 end-0 flex items-center pe-4 pointer-events-none">
-          <svg className="w-5 h-5 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
+        {/* Subtle focus glow */}
+        <div className="absolute inset-0 -z-10 rounded-2xl bg-indigo-500/20 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300" />
       </div>
       {error && (
-        <p id={errorId} className="mt-1.5 text-sm text-red-500 dark:text-red-400" role="alert">
+        <p id={errorId} className="mt-2 text-sm text-red-500 dark:text-red-400" role="alert">
           {error}
         </p>
       )}

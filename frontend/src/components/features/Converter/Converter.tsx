@@ -19,7 +19,6 @@ export function Converter() {
     amount
   );
 
-  // Validation
   const validationError = useMemo(() => {
     if (fromCurrency === toCurrency) {
       return t('sameCurrency');
@@ -37,63 +36,71 @@ export function Converter() {
   }, [refetch]);
 
   return (
-    <div className="w-full max-w-xl mx-auto">
-      {/* Glass Card Container */}
-      <div className="relative overflow-hidden bg-white/80 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl border border-slate-200 dark:border-slate-700/50 shadow-xl dark:shadow-2xl dark:shadow-slate-900/50">
-        {/* Gradient Background Decoration */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-600/5 via-transparent to-accent-600/5" aria-hidden="true" />
+    <div className="w-full max-w-2xl mx-auto animate-fade-in">
+      {/* Main Card */}
+      <div className="relative group">
+        {/* Ambient glow effect */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 rounded-[2rem] blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-700" />
 
-        {/* Header */}
-        <div className="relative px-4 sm:px-6 pt-6 pb-4 border-b border-slate-200 dark:border-slate-700/50">
-          <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 text-center">{t('converterTitle')}</h2>
-        </div>
+        {/* Card */}
+        <div className="relative overflow-hidden bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-[2rem] border border-slate-200/60 dark:border-slate-800/60 shadow-2xl">
+          {/* Minimal gradient accent */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
 
-        {/* Content */}
-        <div className="relative p-4 sm:p-6 space-y-4 sm:space-y-5">
-          {/* Amount Input */}
-          <AmountInput value={amount} onChange={setAmount} />
+          {/* Content */}
+          <div className="p-6 sm:p-10 space-y-8">
+            {/* Header - Minimal */}
+            <div className="text-center">
+              <h2 className="text-2xl sm:text-3xl font-light text-slate-800 dark:text-white tracking-wide">
+                {t('converterTitle')}
+              </h2>
+            </div>
 
-          {/* Currency Selectors with Swap */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
-            <div className="flex-1 min-w-0">
-              <CurrencySelect
-                value={fromCurrency}
-                onChange={setFromCurrency}
-                currencies={currencies}
-                label={t('from')}
+            {/* Amount Input */}
+            <AmountInput value={amount} onChange={setAmount} />
+
+            {/* Currency Selectors */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-6">
+              <div className="flex-1">
+                <CurrencySelect
+                  value={fromCurrency}
+                  onChange={setFromCurrency}
+                  currencies={currencies}
+                  label={t('from')}
+                />
+              </div>
+
+              <div className="flex justify-center sm:pt-6">
+                <SwapButton onClick={handleSwap} />
+              </div>
+
+              <div className="flex-1">
+                <CurrencySelect
+                  value={toCurrency}
+                  onChange={setToCurrency}
+                  currencies={currencies}
+                  label={t('to')}
+                />
+              </div>
+            </div>
+
+            {/* Validation Error */}
+            {validationError && (
+              <div className="p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl text-amber-700 dark:text-amber-400 text-center text-sm font-medium animate-fade-in" role="alert">
+                {validationError}
+              </div>
+            )}
+
+            {/* Result Display */}
+            {!validationError && (
+              <ResultDisplay
+                result={result}
+                isLoading={isLoading}
+                error={error}
+                onRetry={handleRetry}
               />
-            </div>
-
-            <div className="flex justify-center sm:pb-6">
-              <SwapButton onClick={handleSwap} />
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <CurrencySelect
-                value={toCurrency}
-                onChange={setToCurrency}
-                currencies={currencies}
-                label={t('to')}
-              />
-            </div>
+            )}
           </div>
-
-          {/* Validation Error */}
-          {validationError && (
-            <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-yellow-600 dark:text-yellow-400 text-center text-sm" role="alert">
-              {validationError}
-            </div>
-          )}
-
-          {/* Result Display */}
-          {!validationError && (
-            <ResultDisplay
-              result={result}
-              isLoading={isLoading}
-              error={error}
-              onRetry={handleRetry}
-            />
-          )}
         </div>
       </div>
     </div>

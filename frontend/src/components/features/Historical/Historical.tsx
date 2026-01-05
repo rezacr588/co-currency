@@ -27,11 +27,11 @@ export function Historical() {
     <Card className="w-full">
       <CardHeader className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
         <CardTitle>{t('historicalRates')}</CardTitle>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <select
             value={baseCurrency}
             onChange={(e) => setBaseCurrency(e.target.value)}
-            className="select w-24"
+            className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 rounded-xl text-slate-700 dark:text-slate-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all cursor-pointer w-24"
           >
             {currencies?.map((c) => (
               <option key={c.code} value={c.code}>
@@ -39,11 +39,13 @@ export function Historical() {
               </option>
             ))}
           </select>
-          <span className="text-slate-400 self-center">{t('to')}</span>
+          <svg className="w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+          </svg>
           <select
             value={targetCurrency}
             onChange={(e) => setTargetCurrency(e.target.value)}
-            className="select w-24"
+            className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 rounded-xl text-slate-700 dark:text-slate-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all cursor-pointer w-24"
           >
             {currencies?.map((c) => (
               <option key={c.code} value={c.code}>

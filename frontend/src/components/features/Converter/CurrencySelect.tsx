@@ -21,34 +21,43 @@ export function CurrencySelect({ value, onChange, currencies, label }: CurrencyS
     <div className="relative group">
       <label
         htmlFor={id}
-        className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider"
+        className="block text-xs font-medium text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-widest"
       >
         {label}
       </label>
       <div className="relative">
-        <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none" aria-hidden="true">
-          <span className="text-2xl">{flag}</span>
+        {/* Flag display */}
+        <div className="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none" aria-hidden="true">
+          <span className="text-3xl filter drop-shadow-sm">{flag}</span>
         </div>
+
         <select
           id={id}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full bg-white dark:bg-slate-800/80 border border-slate-300 dark:border-slate-600/50 rounded-xl ps-12 pe-10 py-3.5 text-base font-semibold text-slate-900 dark:text-slate-100 appearance-none cursor-pointer hover:border-primary-500/50 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none transition-all min-h-[56px]"
+          className="w-full bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-200 dark:border-slate-700/50 rounded-2xl ps-14 pe-12 py-4 text-lg font-medium text-slate-800 dark:text-white appearance-none cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-500/50 focus:border-indigo-500 dark:focus:border-indigo-500 focus:outline-none transition-all duration-300"
         >
           {currencies?.map((c) => (
             <option key={c.code} value={c.code}>
-              {c.code} - {c.name}
+              {c.code} — {c.name}
             </option>
           ))}
         </select>
-        <div className="absolute inset-y-0 end-0 flex items-center pe-3 pointer-events-none" aria-hidden="true">
-          <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+
+        {/* Custom dropdown arrow */}
+        <div className="absolute inset-y-0 end-0 flex items-center pe-4 pointer-events-none" aria-hidden="true">
+          <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
         </div>
+
+        {/* Subtle focus glow */}
+        <div className="absolute inset-0 -z-10 rounded-2xl bg-indigo-500/20 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300" />
       </div>
+
+      {/* Currency name subtitle */}
       {selectedCurrency && (
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">{selectedCurrency.name}</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 truncate font-light">{selectedCurrency.name}</p>
       )}
     </div>
   );

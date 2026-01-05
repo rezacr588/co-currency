@@ -12,20 +12,22 @@ export function RateCard({ rate, baseCurrency }: RateCardProps) {
   const symbol = CURRENCY_SYMBOLS[rate.code] || '';
 
   return (
-    <div className="card p-4 flex items-center justify-between hover:bg-slate-700/50 transition-colors">
+    <div className="group p-4 bg-slate-50/80 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-700/40 hover:border-indigo-300 dark:hover:border-indigo-500/30 transition-all duration-200 hover:shadow-md flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <span className="text-2xl">{flag}</span>
+        <div className="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-700/50 rounded-full shadow-sm">
+          <span className="text-xl">{flag}</span>
+        </div>
         <div>
-          <p className="font-semibold text-slate-100">{rate.code}</p>
-          <p className="text-sm text-slate-400">{rate.name}</p>
+          <p className="font-medium text-slate-800 dark:text-slate-100">{rate.code}</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 line-clamp-1">{rate.name}</p>
         </div>
       </div>
-      <div className="text-right">
-        <p className="font-mono text-lg font-semibold text-slate-100">
+      <div className="text-end">
+        <p className="font-mono text-lg font-semibold text-indigo-600 dark:text-indigo-400">
           {symbol}{formatRate(rate.rate)}
         </p>
-        <p className="text-xs text-slate-400">
-          1 {baseCurrency} = {formatRate(rate.rate)} {rate.code}
+        <p className="text-xs text-slate-400 dark:text-slate-500">
+          1 {baseCurrency}
         </p>
       </div>
     </div>
