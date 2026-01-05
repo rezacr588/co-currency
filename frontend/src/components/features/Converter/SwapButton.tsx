@@ -1,13 +1,18 @@
+import { useLanguage } from '../../../context/LanguageContext';
+
 interface SwapButtonProps {
   onClick: () => void;
 }
 
 export function SwapButton({ onClick }: SwapButtonProps) {
+  const { t } = useLanguage();
+
   return (
     <button
       onClick={onClick}
-      className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center group"
-      aria-label="Swap currencies"
+      className="flex-shrink-0 w-12 h-12 min-w-[48px] min-h-[48px] rounded-full bg-gradient-to-br from-primary-500 to-accent-500 shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center group focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-800"
+      aria-label={t('swapCurrencies')}
+      title={t('swapCurrencies')}
     >
       <svg
         className="w-5 h-5 text-white group-hover:rotate-180 transition-transform duration-300"
@@ -15,6 +20,7 @@ export function SwapButton({ onClick }: SwapButtonProps) {
         viewBox="0 0 24 24"
         stroke="currentColor"
         strokeWidth={2.5}
+        aria-hidden="true"
       >
         <path
           strokeLinecap="round"
