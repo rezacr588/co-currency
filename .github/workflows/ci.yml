@@ -124,14 +124,5 @@ jobs:
         env:
           KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
         run: |
-          koyeb service update currency-converter \
-            --docker ghcr.io/${{ github.repository }}:${{ github.sha }} \
-            --docker-private-registry-secret ghcr-secret \
-            || koyeb service create currency-converter \
-              --app currency-converter \
-              --docker ghcr.io/${{ github.repository }}:${{ github.sha }} \
-              --docker-private-registry-secret ghcr-secret \
-              --ports 8080:http \
-              --routes /:8080 \
-              --env PORT=8080 \
-              --regions fra
+          koyeb service update terrible-moselle/co-currency \
+            --docker ghcr.io/${{ github.repository }}:${{ github.sha }}
