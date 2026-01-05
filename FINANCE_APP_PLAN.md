@@ -8,9 +8,12 @@ Transform the currency converter into a full-featured personal finance applicati
 - **Backend**: Go with Chi router, pgx/v5 PostgreSQL driver
 - **Frontend**: React + TypeScript + TailwindCSS
 - **Database**: PostgreSQL (Neon)
-- **AI**: Groq API (free tier) - LLM inference only, no document ingestion
-- **OCR**: Tesseract (self-hosted), pdfplumber for PDFs
+- **AI**: Groq API (free tier) with Vision models (Llama 4 Scout/Maverick)
 - **Deployment**: Koyeb
+
+**Groq Vision Models (for OCR & Document Processing):**
+- `meta-llama/llama-4-scout-17b-16e-instruct` - 128K context, multimodal
+- `meta-llama/llama-4-maverick-17b-128e-instruct` - 128K context, more powerful
 
 ---
 
@@ -456,20 +459,29 @@ Automatically import transactions from emails:
 
 ### 5. Document & Receipt Scanning
 
-**Important: Groq API does NOT have native document ingestion.** Pipeline:
+**Groq Vision API handles OCR directly!** No external OCR tools needed.
 
+**Pipeline:**
 ```
-Document Upload → Text Extraction (External) → AI Parsing (Groq) → Transaction Created
+Image Upload → Groq Vision API → Transaction (direct extraction!)
+PDF Upload → Convert to Images → Groq Vision API → Transactions
 ```
 
-**Processing Tools:**
-- **Tesseract** - OCR for images (free, self-hosted)
-- **pdfplumber** - PDF text extraction (open source)
-- **Groq** - AI parsing of extracted text (free tier)
+**Groq Vision Capabilities:**
+- ✅ Native OCR - reads text from images directly
+- ✅ Document understanding - receipts, invoices, statements
+- ✅ Structured extraction via JSON mode
+- ✅ Multi-image support (up to 5 per request)
+- ❌ No native PDF upload - must convert to images first
+
+**Image Limits:**
+- Max 20MB per image (URL) or 4MB (base64)
+- Max 33 megapixels per image
+- Max 5 images per request
 
 **Supported Documents:**
-- Receipt photos
-- Bank statements (PDF)
+- Receipt photos (direct vision processing)
+- Bank statements (PDF → images → vision)
 - Invoices
 - Credit card statements
 - Scanned receipts
@@ -591,14 +603,32 @@ Expense: Food & Dining, Transportation, Shopping, Entertainment,
 
 ### Phase 6: AI Features (Groq API)
 
-**Why Groq:**
-- Free tier available (14,400 requests/day)
+**Why Groq (Best Free Tier for Vision + LLM):**
+- 500K tokens/day free (enough for ~1000+ document scans)
+- 30 requests/minute
+- Native vision/OCR - no external tools needed
 - Ultra-fast inference (fastest LLM API)
-- Supports Llama 3.1, Mixtral, Gemma models
 - OpenAI-compatible API format
 
+**Free Tier Rate Limits:**
+| Model | RPM | TPM | TPD | Use For |
+|-------|-----|-----|-----|---------|
+| llama-4-scout (vision) | 30 | 30K | 500K | OCR, document parsing |
+| llama-4-maverick (vision) | 30 | 6K | 500K | Complex document understanding |
+| llama-3.3-70b-versatile | 30 | 12K | 100K | Insights, chat, forecasts |
+| llama-3.1-8b-instant | 30 | 6K | 500K | Fast categorization |
+
+**Comparison with Alternatives:**
+| Provider | Daily Limit | Vision | Notes |
+|----------|-------------|--------|-------|
+| **Groq** ✅ | 500K tokens | ✅ Llama 4 | Best: fast + generous |
+| Gemini | 250-1000 RPD | ✅ | EU banned, limits cut Dec 2025 |
+| DeepSeek-OCR | Self-host | ✅ | Open source, needs 8GB+ GPU |
+| Qwen | 1M (one-time) | ✅ | Then pay-as-you-go |
+
 **Backend Files:**
-- `backend/internal/ai/groq_client.go` - Groq API client
+- `backend/internal/ai/groq_client.go` - Groq API client (text + vision)
+- `backend/internal/ai/vision.go` - Receipt/document OCR via vision API
 - `backend/internal/ai/categorize.go` - Auto-categorization
 - `backend/internal/ai/insights.go` - Spending insights
 - `backend/internal/ai/chat.go` - Natural language queries
@@ -615,10 +645,13 @@ Expense: Food & Dining, Transportation, Shopping, Entertainment,
 ```go
 const GroqAPIURL = "https://api.groq.com/openai/v1/chat/completions"
 
-// Recommended models:
-// - llama-3.1-70b-versatile (best for complex tasks)
-// - llama-3.1-8b-instant (fastest, good for categorization)
-// - mixtral-8x7b-32768 (good balance)
+// Vision models (for OCR/document processing):
+// - meta-llama/llama-4-scout-17b-16e-instruct (30K TPM, best for OCR)
+// - meta-llama/llama-4-maverick-17b-128e-instruct (complex docs)
+
+// Text models:
+// - llama-3.3-70b-versatile (insights, chat)
+// - llama-3.1-8b-instant (fast categorization)
 ```
 
 ---
@@ -650,12 +683,14 @@ const GroqAPIURL = "https://api.groq.com/openai/v1/chat/completions"
 
 ### Phase 8: Email Import & Document Scanning
 
+**No external OCR needed!** Groq Vision handles image OCR directly.
+
 **Backend Files:**
 - `backend/internal/handlers/email.go`
 - `backend/internal/handlers/document.go`
 - `backend/internal/services/email_parser.go`
-- `backend/internal/services/ocr.go` - Tesseract wrapper
-- `backend/internal/services/pdf_parser.go` - PDF text extraction
+- `backend/internal/services/pdf_to_image.go` - PDF → image conversion
+- `backend/internal/services/document_processor.go` - Orchestrates vision API
 
 **Frontend Files:**
 - `frontend/src/pages/EmailImport.tsx`
@@ -666,11 +701,20 @@ const GroqAPIURL = "https://api.groq.com/openai/v1/chat/completions"
 - `frontend/src/components/features/Documents/DocumentList.tsx`
 - `frontend/src/components/features/Documents/ExtractedDataReview.tsx`
 
+**Document Processing Pipeline:**
+```
+Image (JPG/PNG) → Groq Vision API → Transaction JSON
+PDF → Convert to images → Groq Vision API → Transactions JSON
+```
+
 **Dependencies:**
 ```go
-github.com/otiai10/gosseract    // Go wrapper for Tesseract OCR
-github.com/ledongthuc/pdf       // PDF text extraction
+github.com/gen2brain/go-fitz    // PDF to image conversion (uses MuPDF)
+// OR
+github.com/pdfcpu/pdfcpu        // Pure Go PDF processing
 ```
+
+**Note:** No Tesseract needed - Groq Vision does OCR natively!
 
 ---
 
@@ -720,7 +764,9 @@ REFRESH_TOKEN_EXPIRY=7d
 
 # AI (Groq - Free Tier)
 GROQ_API_KEY=gsk_...
-GROQ_MODEL=llama-3.1-70b-versatile
+GROQ_VISION_MODEL=meta-llama/llama-4-scout-17b-16e-instruct
+GROQ_TEXT_MODEL=llama-3.3-70b-versatile
+GROQ_FAST_MODEL=llama-3.1-8b-instant
 
 # Email (optional)
 EMAIL_WEBHOOK_SECRET=your-webhook-secret
@@ -751,11 +797,14 @@ STORAGE_PATH=/uploads
 
 | Service | Cost | Limits |
 |---------|------|--------|
-| Groq API | Free | 14,400 requests/day |
-| Tesseract OCR | Free | Self-hosted |
-| pdfplumber | Free | Open source |
-| Neon PostgreSQL | Free | 0.5GB storage, 1 compute |
-| Koyeb | Free | 1 app, limited hours |
+| **Groq API** | Free | 500K tokens/day, 30 RPM |
+| └─ Vision (OCR) | Free | Llama 4 Scout: 30K TPM |
+| └─ Text (Insights) | Free | Llama 3.3 70B: 12K TPM |
+| **Neon PostgreSQL** | Free | 0.5GB storage, 1 compute |
+| **Koyeb** | Free | 1 app, limited hours |
+| **go-fitz (PDF)** | Free | Open source |
+
+**No Tesseract needed** - Groq Vision handles OCR natively!
 
 ---
 
