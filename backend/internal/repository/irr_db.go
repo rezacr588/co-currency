@@ -2,19 +2,19 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"sync"
 	"time"
 
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
 )
 
 // IRRDatabase handles persistent storage of IRR exchange rates using PostgreSQL
 type IRRDatabase struct {
-	db *sql.DB
-	mu sync.RWMutex
+	pool *pgxpool.Pool
+	mu   sync.RWMutex
 }
 
 // IRRRateRecord represents a stored exchange rate record
@@ -28,35 +28,32 @@ type IRRRateRecord struct {
 }
 
 // NewIRRDatabase creates a new database connection for IRR rates
-// databaseURL should be in the format: postgres://user:password@host:port/dbname?sslmode=disable
+// databaseURL should be in the format: postgresql://user:password@host:port/dbname?sslmode=require
 func NewIRRDatabase(databaseURL string) (*IRRDatabase, error) {
 	if databaseURL == "" {
 		return nil, fmt.Errorf("DATABASE_URL is required")
 	}
 
-	db, err := sql.Open("postgres", databaseURL)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Create connection pool
+	pool, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {
-		return nil, fmt.Errorf("opening database: %w", err)
+		return nil, fmt.Errorf("creating connection pool: %w", err)
 	}
 
 	// Test connection
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if err := db.PingContext(ctx); err != nil {
-		db.Close()
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
 		return nil, fmt.Errorf("connecting to database: %w", err)
 	}
 
-	// Configure connection pool
-	db.SetMaxOpenConns(10)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(5 * time.Minute)
-
-	irrDB := &IRRDatabase{db: db}
+	irrDB := &IRRDatabase{pool: pool}
 
 	// Initialize tables
 	if err := irrDB.initTables(ctx); err != nil {
-		db.Close()
+		pool.Close()
 		return nil, fmt.Errorf("initializing tables: %w", err)
 	}
 
@@ -86,7 +83,7 @@ func (d *IRRDatabase) initTables(ctx context.Context) error {
 	}
 
 	for _, query := range queries {
-		if _, err := d.db.ExecContext(ctx, query); err != nil {
+		if _, err := d.pool.Exec(ctx, query); err != nil {
 			return fmt.Errorf("executing query: %w", err)
 		}
 	}
@@ -99,11 +96,11 @@ func (d *IRRDatabase) SaveRates(ctx context.Context, rates *IRRRates, source str
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	tx, err := d.db.BeginTx(ctx, nil)
+	tx, err := d.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("beginning transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(ctx)
 
 	now := time.Now()
 
@@ -118,7 +115,7 @@ func (d *IRRDatabase) SaveRates(ctx context.Context, rates *IRRRates, source str
 
 	for currency, rate := range currencies {
 		if rate > 0 {
-			_, err = tx.ExecContext(ctx, insertQuery, currency, rate, source, now)
+			_, err = tx.Exec(ctx, insertQuery, currency, rate, source, now)
 			if err != nil {
 				return fmt.Errorf("inserting rate for %s: %w", currency, err)
 			}
@@ -137,14 +134,14 @@ func (d *IRRDatabase) SaveRates(ctx context.Context, rates *IRRRates, source str
 
 	for currency, rate := range currencies {
 		if rate > 0 {
-			_, err = tx.ExecContext(ctx, upsertQuery, currency, rate, source, now)
+			_, err = tx.Exec(ctx, upsertQuery, currency, rate, source, now)
 			if err != nil {
 				return fmt.Errorf("upserting latest rate for %s: %w", currency, err)
 			}
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
+	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("committing transaction: %w", err)
 	}
 
@@ -165,7 +162,7 @@ func (d *IRRDatabase) GetLatestRates(ctx context.Context) (*IRRRates, error) {
 
 	query := `SELECT currency, rate, updated_at FROM irr_latest_rates`
 
-	rows, err := d.db.QueryContext(ctx, query)
+	rows, err := d.pool.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("querying latest rates: %w", err)
 	}
@@ -199,6 +196,10 @@ func (d *IRRDatabase) GetLatestRates(ctx context.Context) (*IRRRates, error) {
 		found = true
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating rows: %w", err)
+	}
+
 	if !found {
 		return nil, fmt.Errorf("no rates found in database")
 	}
@@ -224,27 +225,24 @@ func (d *IRRDatabase) GetRateHistory(ctx context.Context, currency string, limit
 		LIMIT $2
 	`
 
-	rows, err := d.db.QueryContext(ctx, query, currency, limit)
+	rows, err := d.pool.Query(ctx, query, currency, limit)
 	if err != nil {
 		return nil, fmt.Errorf("querying rate history: %w", err)
 	}
 	defer rows.Close()
 
-	var records []IRRRateRecord
-	for rows.Next() {
-		var r IRRRateRecord
-		if err := rows.Scan(&r.ID, &r.Currency, &r.Rate, &r.Source, &r.FetchedAt, &r.CreatedAt); err != nil {
-			return nil, fmt.Errorf("scanning row: %w", err)
-		}
-		records = append(records, r)
+	records, err := pgx.CollectRows(rows, pgx.RowToStructByPos[IRRRateRecord])
+	if err != nil {
+		return nil, fmt.Errorf("collecting rows: %w", err)
 	}
 
 	return records, nil
 }
 
-// Close closes the database connection
+// Close closes the database connection pool
 func (d *IRRDatabase) Close() error {
-	return d.db.Close()
+	d.pool.Close()
+	return nil
 }
 
 // CleanupOldRecords removes records older than the specified duration
@@ -254,14 +252,10 @@ func (d *IRRDatabase) CleanupOldRecords(ctx context.Context, olderThan time.Dura
 
 	cutoff := time.Now().Add(-olderThan)
 
-	result, err := d.db.ExecContext(ctx,
-		"DELETE FROM irr_rates WHERE fetched_at < $1",
-		cutoff,
-	)
+	result, err := d.pool.Exec(ctx, "DELETE FROM irr_rates WHERE fetched_at < $1", cutoff)
 	if err != nil {
 		return 0, fmt.Errorf("deleting old records: %w", err)
 	}
 
-	deleted, _ := result.RowsAffected()
-	return deleted, nil
+	return result.RowsAffected(), nil
 }
