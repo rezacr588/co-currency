@@ -6,6 +6,68 @@ Transform the currency converter into a full-featured personal finance applicati
 
 ---
 
+## Core Smart Features
+
+### Smart Transaction Intelligence
+
+**1. Auto-detect Income vs Expense (AI-powered)**
+- AI analyzes transaction description to determine type
+- "Salary from Company X" → Automatically marked as Income
+- "Amazon.com purchase" → Automatically marked as Expense
+- "Transfer from John" → AI suggests Income (user can override)
+- Confidence score shown, user can always correct
+
+**2. Running Balance Tracking**
+- Each user has a real-time balance in their base currency
+- Income transactions → ADD to balance
+- Expense transactions → SUBTRACT from balance
+- Balance history tracked over time
+- Dashboard shows current balance prominently
+
+**3. Automatic Currency Conversion**
+- Transactions can be entered in ANY currency
+- System auto-converts to user's base currency for:
+  - Balance calculation
+  - Budget tracking
+  - Reports and analytics
+- Uses live exchange rates from existing Frankfurter API
+- Stores both original amount/currency AND converted amount
+- Shows both values in transaction list
+
+**Example Flow:**
+```
+User's base currency: USD
+User adds: "Dinner in Paris" - €50 EUR
+
+AI detects:
+  - Type: Expense (restaurant = food category)
+  - Category: Food & Dining (auto-suggested)
+
+System converts:
+  - Original: €50.00 EUR
+  - Converted: $54.25 USD (at current rate)
+
+Balance updated:
+  - Previous: $2,505.00
+  - After: $2,450.75 (-$54.25)
+```
+
+### Database Support for Smart Features
+
+```sql
+-- Add to transactions table
+amount_base_currency DECIMAL(15, 2),  -- Converted amount
+exchange_rate DECIMAL(15, 8),          -- Rate used at time of transaction
+ai_detected_type VARCHAR(10),          -- AI suggestion
+ai_confidence DECIMAL(3, 2),           -- Confidence score (0.00-1.00)
+
+-- Add balance tracking to users
+current_balance DECIMAL(15, 2) DEFAULT 0,
+balance_updated_at TIMESTAMP
+```
+
+---
+
 ## Phase 1: User Authentication & Database Foundation
 
 ### 1.1 Database Schema
