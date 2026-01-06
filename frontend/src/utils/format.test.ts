@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { formatNumber, formatRate, formatTime } from './format';
+import {
+  formatNumber,
+  formatRate,
+  formatTime,
+  getCurrencyDisplay,
+  getRateChangeStatus,
+  calculatePercentChange,
+} from './format';
 
 describe('formatNumber', () => {
   it('should format integers with commas', () => {
@@ -48,5 +55,71 @@ describe('formatTime', () => {
     const result = formatTime(isoString);
     expect(result).toBeTruthy();
     expect(typeof result).toBe('string');
+  });
+});
+
+describe('getCurrencyDisplay', () => {
+  it('should return flag and symbol for known currencies', () => {
+    const usd = getCurrencyDisplay('USD');
+    expect(usd.flag).toBe('🇺🇸');
+    expect(usd.symbol).toBe('$');
+
+    const eur = getCurrencyDisplay('EUR');
+    expect(eur.flag).toBe('🇪🇺');
+    expect(eur.symbol).toBe('€');
+
+    const gbp = getCurrencyDisplay('GBP');
+    expect(gbp.flag).toBe('🇬🇧');
+    expect(gbp.symbol).toBe('£');
+  });
+
+  it('should return defaults for unknown currencies', () => {
+    const unknown = getCurrencyDisplay('XYZ');
+    expect(unknown.flag).toBe('🌍');
+    expect(unknown.symbol).toBe('XYZ');
+  });
+
+  it('should handle IRR currency', () => {
+    const irr = getCurrencyDisplay('IRR');
+    expect(irr.flag).toBe('🇮🇷');
+    expect(irr.symbol).toBe('﷼');
+  });
+});
+
+describe('getRateChangeStatus', () => {
+  it('should return "up" when current rate is higher', () => {
+    expect(getRateChangeStatus(1.5, 1.0)).toBe('up');
+    expect(getRateChangeStatus(100, 99.99)).toBe('up');
+  });
+
+  it('should return "down" when current rate is lower', () => {
+    expect(getRateChangeStatus(1.0, 1.5)).toBe('down');
+    expect(getRateChangeStatus(99, 100)).toBe('down');
+  });
+
+  it('should return "neutral" when rates are equal', () => {
+    expect(getRateChangeStatus(1.0, 1.0)).toBe('neutral');
+    expect(getRateChangeStatus(0, 0)).toBe('neutral');
+  });
+});
+
+describe('calculatePercentChange', () => {
+  it('should calculate positive percent change', () => {
+    expect(calculatePercentChange(110, 100)).toBe(10);
+    expect(calculatePercentChange(150, 100)).toBe(50);
+  });
+
+  it('should calculate negative percent change', () => {
+    expect(calculatePercentChange(90, 100)).toBe(-10);
+    expect(calculatePercentChange(50, 100)).toBe(-50);
+  });
+
+  it('should return 0 when previous value is 0', () => {
+    expect(calculatePercentChange(100, 0)).toBe(0);
+  });
+
+  it('should handle decimal values', () => {
+    const result = calculatePercentChange(1.1, 1.0);
+    expect(result).toBeCloseTo(10, 5);
   });
 });
