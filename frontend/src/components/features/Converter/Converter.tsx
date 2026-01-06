@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useConvert, useCurrencies } from '../../../hooks';
 import { AmountInput } from './AmountInput';
 import { CurrencySelect } from './CurrencySelect';
@@ -6,10 +6,44 @@ import { SwapButton } from './SwapButton';
 import { ResultDisplay } from './ResultDisplay';
 import { useLanguage } from '../../../context/LanguageContext';
 
+const STORAGE_KEY = 'currency-converter-state';
+
+interface ConverterState {
+  amount: number;
+  fromCurrency: string;
+  toCurrency: string;
+}
+
+function loadState(): ConverterState {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        amount: typeof parsed.amount === 'number' && parsed.amount > 0 ? parsed.amount : 1,
+        fromCurrency: typeof parsed.fromCurrency === 'string' ? parsed.fromCurrency : 'USD',
+        toCurrency: typeof parsed.toCurrency === 'string' ? parsed.toCurrency : 'EUR',
+      };
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return { amount: 1, fromCurrency: 'USD', toCurrency: 'EUR' };
+}
+
+function saveState(state: ConverterState): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // Ignore storage errors (e.g., quota exceeded)
+  }
+}
+
 export function Converter() {
-  const [amount, setAmount] = useState(1);
-  const [fromCurrency, setFromCurrency] = useState('USD');
-  const [toCurrency, setToCurrency] = useState('EUR');
+  const initialState = loadState();
+  const [amount, setAmount] = useState(initialState.amount);
+  const [fromCurrency, setFromCurrency] = useState(initialState.fromCurrency);
+  const [toCurrency, setToCurrency] = useState(initialState.toCurrency);
   const { t } = useLanguage();
 
   const { data: currencies } = useCurrencies();
@@ -18,6 +52,11 @@ export function Converter() {
     toCurrency,
     amount
   );
+
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    saveState({ amount, fromCurrency, toCurrency });
+  }, [amount, fromCurrency, toCurrency]);
 
   const validationError = useMemo(() => {
     if (fromCurrency === toCurrency) {

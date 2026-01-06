@@ -7,9 +7,19 @@ Allow: /
 # Sitemap location
 Sitemap: https://currency-converter.app/sitemap.xml
 
-# Crawl-delay for respectful crawling
-Crawl-delay: 1
-
-# Disallow API endpoints (these are backend only)
+# Disallow API endpoints (backend only)
 Disallow: /api/
 Disallow: /health
+
+# Allow search engine bots to crawl all static assets
+User-agent: Googlebot
+Allow: /*.js$
+Allow: /*.css$
+Allow: /*.svg$
+Allow: /*.png$
+
+User-agent: Bingbot
+Allow: /*.js$
+Allow: /*.css$
+Allow: /*.svg$
+Allow: /*.png$

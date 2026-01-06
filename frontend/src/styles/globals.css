@@ -22,6 +22,8 @@
     --input: 51 65 85;
     --ring: 99 102 241;
     --radius: 1rem;
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   }
 
   * {
@@ -30,8 +32,15 @@
 
   body {
     @apply bg-gradient-to-br from-slate-50 via-slate-100 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 text-slate-900 dark:text-slate-100 antialiased transition-colors duration-300;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: var(--font-sans);
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
     min-height: 100vh;
+  }
+
+  /* Finance-optimized number display */
+  .font-mono {
+    font-family: var(--font-mono);
+    font-feature-settings: "tnum" 1, "zero" 1;
   }
 }
 
