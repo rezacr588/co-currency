@@ -4,7 +4,6 @@ import { useLanguage } from '../../../context/LanguageContext';
 interface TeamMember {
   name: string;
   role: string;
-  description: string;
   skills: string[];
   linkedin: string;
 }
@@ -13,7 +12,6 @@ const teamMembers: TeamMember[] = [
   {
     name: 'Reza Zeraat',
     role: 'coFounder',
-    description: 'Full Stack Developer & ML Engineer with expertise in building scalable web applications and machine learning solutions.',
     skills: [
       'React', 'Vue', 'Angular', 'Next.js',
       'Node.js', 'Django', 'Spring', 'FastAPI',
@@ -33,7 +31,7 @@ export function AboutUs() {
         {/* Hero Section */}
         <div className="text-center mb-12">
           <div className="w-20 h-20 mx-auto mb-6 rounded-2xl shadow-xl shadow-indigo-500/30 overflow-hidden">
-            <img src="/logo.svg" alt="CoFinance Logo" className="w-full h-full" />
+            <img src="/logo.svg" alt="CoFinance Logo" className="w-full h-full" loading="eager" />
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-800 dark:text-white mb-4">
             {t('aboutUs')}
@@ -46,11 +44,9 @@ export function AboutUs() {
         {/* Mission Section */}
         <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-8 sm:p-12 mb-12 text-white">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-4">Our Mission</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-4">{t('ourMission')}</h2>
             <p className="text-lg opacity-90">
-              To provide fast, accurate, and accessible currency conversion tools for everyone.
-              We believe financial information should be free, transparent, and available in multiple languages
-              to serve a global community.
+              {t('missionDescription')}
             </p>
           </div>
         </div>
@@ -63,9 +59,9 @@ export function AboutUs() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">Lightning Fast</h3>
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">{t('featureFast')}</h3>
             <p className="text-slate-600 dark:text-slate-400">
-              Instant conversions with optimized performance and smart caching for a seamless experience.
+              {t('featureFastDesc')}
             </p>
           </div>
 
@@ -75,9 +71,9 @@ export function AboutUs() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">Accurate Rates</h3>
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">{t('featureAccurate')}</h3>
             <p className="text-slate-600 dark:text-slate-400">
-              Real-time exchange rates sourced from the European Central Bank for reliable conversions.
+              {t('featureAccurateDesc')}
             </p>
           </div>
 
@@ -87,9 +83,9 @@ export function AboutUs() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">Global Support</h3>
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">{t('featureGlobal')}</h3>
             <p className="text-slate-600 dark:text-slate-400">
-              160+ currencies with multi-language support including English, Persian, Arabic, and Turkish.
+              {t('featureGlobalDesc')}
             </p>
           </div>
         </div>
@@ -97,7 +93,7 @@ export function AboutUs() {
         {/* Team Section */}
         <div className="mb-12">
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-white text-center mb-8">
-            Our Team
+            {t('ourTeam')}
           </h2>
           <div className="grid grid-cols-1 gap-8 max-w-2xl mx-auto">
             {teamMembers.map((member) => (
@@ -120,7 +116,7 @@ export function AboutUs() {
                       {t(member.role as 'coFounder')}
                     </p>
                     <p className="text-slate-600 dark:text-slate-400 mb-4">
-                      {member.description}
+                      {t('teamMemberDesc')}
                     </p>
 
                     {/* Skills */}
@@ -156,7 +152,7 @@ export function AboutUs() {
 
         {/* Tech Stack */}
         <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-8 text-center">
-          <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-4">Built With</h2>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-4">{t('builtWith')}</h2>
           <div className="flex flex-wrap justify-center gap-4">
             {['React 18', 'TypeScript', 'Go', 'TailwindCSS', 'TanStack Query', 'Vite'].map((tech) => (
               <span

@@ -7,6 +7,7 @@ import { RatesGrid } from './components/features/RatesGrid';
 import { QuickConvert } from './components/features/QuickConvert';
 import { Historical } from './components/features/Historical';
 import { AboutUs } from './components/features/AboutUs';
+import { NotFound } from './components/features/NotFound';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { HamburgerMenu } from './components/ui/HamburgerMenu';
@@ -60,7 +61,7 @@ function Header() {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity group">
             <div className="w-9 h-9 rounded-xl shadow-lg shadow-indigo-500/25 group-hover:shadow-indigo-500/40 transition-shadow overflow-hidden">
-              <img src="/logo.svg" alt="CoFinance Logo" className="w-full h-full" />
+              <img src="/logo.svg" alt="CoFinance Logo" className="w-full h-full" loading="eager" />
             </div>
             <div className="hidden sm:block">
               <h1 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
@@ -168,6 +169,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/about" element={<AboutUs />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
 
       <Footer />
