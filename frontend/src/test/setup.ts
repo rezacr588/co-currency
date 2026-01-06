@@ -14,10 +14,10 @@ const localStorageMock = {
   removeItem: vi.fn(),
   clear: vi.fn(),
 };
-global.localStorage = localStorageMock as unknown as Storage;
+globalThis.localStorage = localStorageMock as unknown as Storage;
 
 // Mock fetch
-global.fetch = vi.fn();
+globalThis.fetch = vi.fn() as typeof fetch;
 
 // Mock clipboard
 Object.assign(navigator, {

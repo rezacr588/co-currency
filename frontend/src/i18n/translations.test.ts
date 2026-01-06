@@ -20,7 +20,7 @@ describe('translations', () => {
 
   it('should not have empty strings for any translation', () => {
     languages.forEach(lang => {
-      Object.entries(translations[lang]).forEach(([key, value]) => {
+      Object.entries(translations[lang]).forEach(([_key, value]) => {
         expect(value).toBeTruthy();
         expect(value.trim().length).toBeGreaterThan(0);
       });
