@@ -70,4 +70,12 @@ export const CURRENCY_FLAGS: Record<string, string> = {
   RON: '🇷🇴',
   BGN: '🇧🇬',
   ISK: '🇮🇸',
+  SAR: '🇸🇦',
+  AED: '🇦🇪',
+  EGP: '🇪🇬',
+  QAR: '🇶🇦',
+  KWD: '🇰🇼',
+  BHD: '🇧🇭',
+  OMR: '🇴🇲',
+  JOD: '🇯🇴',
 };
