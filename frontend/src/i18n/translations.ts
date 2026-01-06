@@ -5,12 +5,14 @@ export const translations = {
     appSubtitle: 'Real-time exchange rates powered by Frankfurter API',
 
     // Converter
-    converterTitle: 'Currency Converter',
+    converterTitle: 'Convert Currency',
     amount: 'Amount',
     from: 'From',
     to: 'To',
     enterAmount: 'Enter an amount to see the conversion',
     failedToConvert: 'Failed to convert. Please try again.',
+    searchCurrency: 'Search currency...',
+    noCurrencyFound: 'No currency found',
 
     // Rates Grid
     exchangeRates: 'Exchange Rates',
@@ -35,6 +37,15 @@ export const translations = {
     language: 'Language',
     english: 'English',
     persian: 'فارسی',
+    arabic: 'العربية',
+    turkish: 'Türkçe',
+
+    // Menu
+    menu: 'Menu',
+    home: 'Home',
+    rates: 'Rates',
+    history: 'History',
+    settings: 'Settings',
 
     // Accessibility & Actions
     copied: 'Copied!',
@@ -42,6 +53,8 @@ export const translations = {
     retry: 'Retry',
     swapCurrencies: 'Swap currencies',
     toggleTheme: 'Toggle theme',
+    closeMenu: 'Close menu',
+    openMenu: 'Open menu',
 
     // Validation
     invalidAmount: 'Please enter a valid amount',
@@ -58,12 +71,14 @@ export const translations = {
     appSubtitle: 'نرخ ارز لحظه‌ای با استفاده از Frankfurter API',
 
     // Converter
-    converterTitle: 'مبدل ارز',
+    converterTitle: 'تبدیل ارز',
     amount: 'مبلغ',
     from: 'از',
     to: 'به',
     enterAmount: 'مبلغ را وارد کنید تا تبدیل را ببینید',
     failedToConvert: 'تبدیل ناموفق بود. لطفاً دوباره تلاش کنید.',
+    searchCurrency: 'جستجوی ارز...',
+    noCurrencyFound: 'ارزی پیدا نشد',
 
     // Rates Grid
     exchangeRates: 'نرخ ارزها',
@@ -88,6 +103,15 @@ export const translations = {
     language: 'زبان',
     english: 'English',
     persian: 'فارسی',
+    arabic: 'العربية',
+    turkish: 'Türkçe',
+
+    // Menu
+    menu: 'منو',
+    home: 'خانه',
+    rates: 'نرخ‌ها',
+    history: 'تاریخچه',
+    settings: 'تنظیمات',
 
     // Accessibility & Actions
     copied: 'کپی شد!',
@@ -95,6 +119,8 @@ export const translations = {
     retry: 'تلاش مجدد',
     swapCurrencies: 'تعویض ارزها',
     toggleTheme: 'تغییر تم',
+    closeMenu: 'بستن منو',
+    openMenu: 'باز کردن منو',
 
     // Validation
     invalidAmount: 'لطفاً مبلغ معتبر وارد کنید',
@@ -104,6 +130,138 @@ export const translations = {
     // Loading states
     loading: 'در حال بارگذاری...',
     converting: 'در حال تبدیل...',
+  },
+  ar: {
+    // Header
+    appTitle: 'محول العملات',
+    appSubtitle: 'أسعار الصرف الفورية من Frankfurter API',
+
+    // Converter
+    converterTitle: 'تحويل العملات',
+    amount: 'المبلغ',
+    from: 'من',
+    to: 'إلى',
+    enterAmount: 'أدخل المبلغ لمشاهدة التحويل',
+    failedToConvert: 'فشل التحويل. يرجى المحاولة مرة أخرى.',
+    searchCurrency: 'البحث عن عملة...',
+    noCurrencyFound: 'لم يتم العثور على عملة',
+
+    // Rates Grid
+    exchangeRates: 'أسعار الصرف',
+    updatedAt: 'تم التحديث في',
+    failedToLoadRates: 'فشل تحميل الأسعار. يرجى المحاولة مرة أخرى.',
+    showLess: 'عرض أقل',
+    showAll: 'عرض الكل',
+    currencies: 'عملات',
+
+    // Quick Convert
+    quickConversions: 'تحويلات سريعة',
+    failedToLoad: 'فشل التحميل',
+
+    // Historical
+    historicalRates: 'الأسعار التاريخية',
+
+    // Footer
+    footerText: 'أسعار الصرف مقدمة من',
+    ratesUpdatedDaily: 'يتم تحديث الأسعار يوميًا',
+
+    // Language
+    language: 'اللغة',
+    english: 'English',
+    persian: 'فارسی',
+    arabic: 'العربية',
+    turkish: 'Türkçe',
+
+    // Menu
+    menu: 'القائمة',
+    home: 'الرئيسية',
+    rates: 'الأسعار',
+    history: 'التاريخ',
+    settings: 'الإعدادات',
+
+    // Accessibility & Actions
+    copied: 'تم النسخ!',
+    copyResult: 'نسخ النتيجة',
+    retry: 'إعادة المحاولة',
+    swapCurrencies: 'تبديل العملات',
+    toggleTheme: 'تبديل المظهر',
+    closeMenu: 'إغلاق القائمة',
+    openMenu: 'فتح القائمة',
+
+    // Validation
+    invalidAmount: 'يرجى إدخال مبلغ صالح',
+    sameCurrency: 'يرجى اختيار عملات مختلفة',
+    amountTooLarge: 'المبلغ كبير جدًا',
+
+    // Loading states
+    loading: 'جاري التحميل...',
+    converting: 'جاري التحويل...',
+  },
+  tr: {
+    // Header
+    appTitle: 'Döviz Çevirici',
+    appSubtitle: 'Frankfurter API ile anlık döviz kurları',
+
+    // Converter
+    converterTitle: 'Döviz Çevir',
+    amount: 'Miktar',
+    from: 'Kaynak',
+    to: 'Hedef',
+    enterAmount: 'Dönüşümü görmek için miktar girin',
+    failedToConvert: 'Dönüştürme başarısız. Lütfen tekrar deneyin.',
+    searchCurrency: 'Para birimi ara...',
+    noCurrencyFound: 'Para birimi bulunamadı',
+
+    // Rates Grid
+    exchangeRates: 'Döviz Kurları',
+    updatedAt: 'Güncellendi',
+    failedToLoadRates: 'Kurlar yüklenemedi. Lütfen tekrar deneyin.',
+    showLess: 'Daha Az Göster',
+    showAll: 'Tümünü Göster',
+    currencies: 'para birimi',
+
+    // Quick Convert
+    quickConversions: 'Hızlı Çeviriler',
+    failedToLoad: 'Yükleme başarısız',
+
+    // Historical
+    historicalRates: 'Geçmiş Kurlar',
+
+    // Footer
+    footerText: 'Döviz kurları sağlayan',
+    ratesUpdatedDaily: 'Kurlar günlük güncellenir',
+
+    // Language
+    language: 'Dil',
+    english: 'English',
+    persian: 'فارسی',
+    arabic: 'العربية',
+    turkish: 'Türkçe',
+
+    // Menu
+    menu: 'Menü',
+    home: 'Ana Sayfa',
+    rates: 'Kurlar',
+    history: 'Geçmiş',
+    settings: 'Ayarlar',
+
+    // Accessibility & Actions
+    copied: 'Kopyalandı!',
+    copyResult: 'Sonucu kopyala',
+    retry: 'Tekrar dene',
+    swapCurrencies: 'Para birimlerini değiştir',
+    toggleTheme: 'Temayı değiştir',
+    closeMenu: 'Menüyü kapat',
+    openMenu: 'Menüyü aç',
+
+    // Validation
+    invalidAmount: 'Lütfen geçerli bir miktar girin',
+    sameCurrency: 'Lütfen farklı para birimleri seçin',
+    amountTooLarge: 'Miktar çok büyük',
+
+    // Loading states
+    loading: 'Yükleniyor...',
+    converting: 'Dönüştürülüyor...',
   },
 } as const;
 

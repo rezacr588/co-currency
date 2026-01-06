@@ -10,20 +10,37 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-const IRAN_COUNTRY_CODE = 'IR';
 const STORAGE_KEY = 'currency-converter-language';
 
-async function detectIranIP(): Promise<boolean> {
+// RTL languages
+const RTL_LANGUAGES: Language[] = ['fa', 'ar'];
+
+// Country to language mapping
+const COUNTRY_LANGUAGE_MAP: Record<string, Language> = {
+  IR: 'fa', // Iran
+  SA: 'ar', // Saudi Arabia
+  AE: 'ar', // UAE
+  EG: 'ar', // Egypt
+  TR: 'tr', // Turkey
+};
+
+async function detectCountry(): Promise<string | null> {
   try {
     const response = await fetch('https://ipapi.co/json/', {
       signal: AbortSignal.timeout(3000)
     });
-    if (!response.ok) return false;
+    if (!response.ok) return null;
     const data = await response.json();
-    return data.country_code === IRAN_COUNTRY_CODE;
+    return data.country_code || null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+const VALID_LANGUAGES: Language[] = ['en', 'fa', 'ar', 'tr'];
+
+function isValidLanguage(lang: string | null): lang is Language {
+  return lang !== null && VALID_LANGUAGES.includes(lang as Language);
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
@@ -33,19 +50,30 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function initLanguage() {
       // Check localStorage first
-      const savedLanguage = localStorage.getItem(STORAGE_KEY) as Language | null;
+      const savedLanguage = localStorage.getItem(STORAGE_KEY);
 
-      if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'fa')) {
+      if (isValidLanguage(savedLanguage)) {
         setLanguageState(savedLanguage);
         setIsInitialized(true);
         return;
       }
 
-      // If no saved preference, check if user is from Iran
-      const isFromIran = await detectIranIP();
-      if (isFromIran) {
-        setLanguageState('fa');
-        localStorage.setItem(STORAGE_KEY, 'fa');
+      // Check URL parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const langParam = urlParams.get('lang');
+      if (isValidLanguage(langParam)) {
+        setLanguageState(langParam);
+        localStorage.setItem(STORAGE_KEY, langParam);
+        setIsInitialized(true);
+        return;
+      }
+
+      // If no saved preference, check user's country
+      const countryCode = await detectCountry();
+      if (countryCode && countryCode in COUNTRY_LANGUAGE_MAP) {
+        const detectedLang = COUNTRY_LANGUAGE_MAP[countryCode];
+        setLanguageState(detectedLang);
+        localStorage.setItem(STORAGE_KEY, detectedLang);
       }
       setIsInitialized(true);
     }
@@ -62,16 +90,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return translations[language][key] || translations.en[key] || key;
   };
 
-  const isRTL = language === 'fa';
+  const isRTL = RTL_LANGUAGES.includes(language);
 
-  // Update document direction
+  // Update document direction and lang
   useEffect(() => {
     document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
     document.documentElement.lang = language;
   }, [isRTL, language]);
 
   if (!isInitialized) {
-    return null; // Or a loading spinner
+    return null;
   }
 
   return (

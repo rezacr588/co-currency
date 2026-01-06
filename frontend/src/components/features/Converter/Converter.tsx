@@ -36,32 +36,25 @@ export function Converter() {
   }, [refetch]);
 
   return (
-    <div className="w-full max-w-2xl mx-auto animate-fade-in">
+    <div className="w-full max-w-xl mx-auto">
       {/* Main Card */}
       <div className="relative group">
         {/* Ambient glow effect */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 rounded-[2rem] blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-700" />
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
 
         {/* Card */}
-        <div className="relative overflow-hidden bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-[2rem] border border-slate-200/60 dark:border-slate-800/60 shadow-2xl">
-          {/* Minimal gradient accent */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+        <div className="relative bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-lg overflow-hidden">
+          {/* Gradient accent line */}
+          <div className="h-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
 
           {/* Content */}
-          <div className="p-6 sm:p-10 space-y-8">
-            {/* Header - Minimal */}
-            <div className="text-center">
-              <h2 className="text-2xl sm:text-3xl font-light text-slate-800 dark:text-white tracking-wide">
-                {t('converterTitle')}
-              </h2>
-            </div>
-
-            {/* Amount Input */}
+          <div className="p-4 sm:p-5 space-y-4">
+            {/* Amount Input - Compact */}
             <AmountInput value={amount} onChange={setAmount} />
 
-            {/* Currency Selectors */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-6">
-              <div className="flex-1">
+            {/* Currency Selectors - Inline on larger screens */}
+            <div className="flex flex-col sm:flex-row items-stretch gap-3">
+              <div className="flex-1 min-w-0">
                 <CurrencySelect
                   value={fromCurrency}
                   onChange={setFromCurrency}
@@ -70,11 +63,11 @@ export function Converter() {
                 />
               </div>
 
-              <div className="flex justify-center sm:pt-6">
+              <div className="flex justify-center items-end pb-1 sm:pb-0 sm:pt-5">
                 <SwapButton onClick={handleSwap} />
               </div>
 
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <CurrencySelect
                   value={toCurrency}
                   onChange={setToCurrency}
@@ -86,7 +79,7 @@ export function Converter() {
 
             {/* Validation Error */}
             {validationError && (
-              <div className="p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl text-amber-700 dark:text-amber-400 text-center text-sm font-medium animate-fade-in" role="alert">
+              <div className="p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl text-amber-700 dark:text-amber-400 text-center text-sm animate-fade-in" role="alert">
                 {validationError}
               </div>
             )}

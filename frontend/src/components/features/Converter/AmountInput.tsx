@@ -28,7 +28,7 @@ export function AmountInput({ value, onChange, error }: AmountInputProps) {
     <div className="relative">
       <label
         htmlFor={inputId}
-        className="block text-xs font-medium text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-widest"
+        className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider"
       >
         {t('amount')}
       </label>
@@ -44,18 +44,16 @@ export function AmountInput({ value, onChange, error }: AmountInputProps) {
           inputMode="decimal"
           aria-invalid={!!error}
           aria-describedby={error ? errorId : undefined}
-          className={`w-full bg-slate-50 dark:bg-slate-800/50 border-2 rounded-2xl px-5 py-4 text-3xl sm:text-4xl font-light text-slate-800 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 transition-all duration-300 focus:outline-none ${
+          className={`w-full bg-white dark:bg-slate-800/80 border rounded-xl px-4 py-3 text-2xl sm:text-3xl font-light text-slate-800 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${
             error
               ? 'border-red-400 focus:border-red-500'
-              : 'border-slate-200 dark:border-slate-700/50 hover:border-indigo-300 dark:hover:border-indigo-500/50 focus:border-indigo-500 dark:focus:border-indigo-500'
+              : 'border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 focus:border-indigo-500'
           }`}
           placeholder="0"
         />
-        {/* Subtle focus glow */}
-        <div className="absolute inset-0 -z-10 rounded-2xl bg-indigo-500/20 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300" />
       </div>
       {error && (
-        <p id={errorId} className="mt-2 text-sm text-red-500 dark:text-red-400" role="alert">
+        <p id={errorId} className="mt-1.5 text-xs text-red-500 dark:text-red-400" role="alert">
           {error}
         </p>
       )}
