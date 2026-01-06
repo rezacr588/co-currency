@@ -1,11 +1,11 @@
-# Currency Converter - robots.txt
-# https://currency-converter.app
+# CoFinance - robots.txt
+# https://cofinance.app
 
 User-agent: *
 Allow: /
 
 # Sitemap location
-Sitemap: https://currency-converter.app/sitemap.xml
+Sitemap: https://cofinance.app/sitemap.xml
 
 # Disallow API endpoints (backend only)
 Disallow: /api/

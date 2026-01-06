@@ -1,8 +1,14 @@
 export const translations = {
   en: {
     // Header
-    appTitle: 'Currency Converter',
+    appTitle: 'CoFinance',
     appSubtitle: 'Real-time exchange rates powered by Frankfurter API',
+
+    // About Us
+    aboutUs: 'About Us',
+    aboutUsDescription: 'CoFinance is a modern currency converter providing real-time exchange rates for 160+ currencies worldwide.',
+    coFounder: 'Co-Founder',
+    viewLinkedIn: 'View LinkedIn Profile',
 
     // Converter
     converterTitle: 'Convert Currency',
@@ -67,8 +73,14 @@ export const translations = {
   },
   fa: {
     // Header
-    appTitle: 'مبدل ارز',
+    appTitle: 'کوفایننس',
     appSubtitle: 'نرخ ارز لحظه‌ای با استفاده از Frankfurter API',
+
+    // About Us
+    aboutUs: 'درباره ما',
+    aboutUsDescription: 'کوفایننس یک مبدل ارز مدرن است که نرخ ارز لحظه‌ای را برای بیش از ۱۶۰ ارز در سراسر جهان ارائه می‌دهد.',
+    coFounder: 'هم‌بنیان‌گذار',
+    viewLinkedIn: 'مشاهده پروفایل لینکدین',
 
     // Converter
     converterTitle: 'تبدیل ارز',
@@ -133,8 +145,14 @@ export const translations = {
   },
   ar: {
     // Header
-    appTitle: 'محول العملات',
+    appTitle: 'كوفايننس',
     appSubtitle: 'أسعار الصرف الفورية من Frankfurter API',
+
+    // About Us
+    aboutUs: 'من نحن',
+    aboutUsDescription: 'كوفايننس هو محول عملات حديث يوفر أسعار صرف فورية لأكثر من 160 عملة حول العالم.',
+    coFounder: 'مؤسس مشارك',
+    viewLinkedIn: 'عرض الملف الشخصي على لينكدإن',
 
     // Converter
     converterTitle: 'تحويل العملات',
@@ -199,8 +217,14 @@ export const translations = {
   },
   tr: {
     // Header
-    appTitle: 'Döviz Çevirici',
+    appTitle: 'CoFinance',
     appSubtitle: 'Frankfurter API ile anlık döviz kurları',
+
+    // About Us
+    aboutUs: 'Hakkımızda',
+    aboutUsDescription: 'CoFinance, dünya genelinde 160\'tan fazla para birimi için anlık döviz kurları sağlayan modern bir döviz çeviricidir.',
+    coFounder: 'Kurucu Ortak',
+    viewLinkedIn: 'LinkedIn Profilini Görüntüle',
 
     // Converter
     converterTitle: 'Döviz Çevir',
