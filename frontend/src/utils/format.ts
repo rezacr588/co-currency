@@ -1,3 +1,38 @@
+import { CURRENCY_FLAGS, CURRENCY_SYMBOLS } from './constants';
+
+export interface CurrencyDisplay {
+  flag: string;
+  symbol: string;
+}
+
+/**
+ * Get display information for a currency code
+ * Returns the flag emoji and symbol for a given currency
+ */
+export function getCurrencyDisplay(code: string): CurrencyDisplay {
+  return {
+    flag: CURRENCY_FLAGS[code] || '🌍',
+    symbol: CURRENCY_SYMBOLS[code] || code,
+  };
+}
+
+/**
+ * Get the rate change status for displaying UI indicators
+ */
+export function getRateChangeStatus(currentRate: number, previousRate: number): 'up' | 'down' | 'neutral' {
+  if (currentRate > previousRate) return 'up';
+  if (currentRate < previousRate) return 'down';
+  return 'neutral';
+}
+
+/**
+ * Calculate percentage change between two values
+ */
+export function calculatePercentChange(current: number, previous: number): number {
+  if (previous === 0) return 0;
+  return ((current - previous) / previous) * 100;
+}
+
 export function formatCurrency(amount: number, currency: string): string {
   try {
     return new Intl.NumberFormat('en-US', {
