@@ -6,5 +6,7 @@ export function useCurrencies() {
     queryKey: ['currencies'],
     queryFn: () => api.currencies.list(),
     staleTime: 60 * 60 * 1000, // 1 hour
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 }
