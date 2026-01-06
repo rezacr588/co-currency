@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Language } from '../../i18n/translations';
@@ -15,6 +16,7 @@ export function HamburgerMenu() {
   const menuRef = useRef<HTMLDivElement>(null);
   const { language, setLanguage, t, isRTL } = useLanguage();
   const { theme, toggleTheme } = useTheme();
+  const location = useLocation();
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -63,6 +65,45 @@ export function HamburgerMenu() {
           className={`absolute top-full mt-2 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 overflow-hidden z-50 animate-fade-in ${isRTL ? 'left-0' : 'right-0'}`}
           role="menu"
         >
+          {/* Navigation Links - Mobile Only */}
+          <div className="p-2 border-b border-slate-100 dark:border-slate-700/50 sm:hidden">
+            <p className="px-2 py-1 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              {t('menu')}
+            </p>
+            <div className="mt-1 space-y-0.5">
+              <Link
+                to="/"
+                onClick={() => setIsOpen(false)}
+                className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
+                  location.pathname === '/'
+                    ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300'
+                    : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
+                }`}
+                role="menuitem"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                {t('home')}
+              </Link>
+              <Link
+                to="/about"
+                onClick={() => setIsOpen(false)}
+                className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
+                  location.pathname === '/about'
+                    ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300'
+                    : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
+                }`}
+                role="menuitem"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {t('aboutUs')}
+              </Link>
+            </div>
+          </div>
+
           {/* Language Section */}
           <div className="p-2 border-b border-slate-100 dark:border-slate-700/50">
             <p className="px-2 py-1 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">

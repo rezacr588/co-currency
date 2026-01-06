@@ -1,8 +1,28 @@
 export const translations = {
   en: {
     // Header
-    appTitle: 'Currency Converter',
+    appTitle: 'CoFinance',
     appSubtitle: 'Real-time exchange rates powered by Frankfurter API',
+
+    // About Us
+    aboutUs: 'About Us',
+    aboutUsDescription: 'CoFinance is a modern currency converter providing real-time exchange rates for 160+ currencies worldwide.',
+    coFounder: 'Co-Founder',
+    viewLinkedIn: 'View LinkedIn Profile',
+    ourMission: 'Our Mission',
+    missionDescription: 'To provide fast, accurate, and accessible currency conversion tools for everyone. We believe financial information should be free, transparent, and available in multiple languages to serve a global community.',
+    ourTeam: 'Our Team',
+    builtWith: 'Built With',
+    featureFast: 'Lightning Fast',
+    featureFastDesc: 'Instant conversions with optimized performance and smart caching for a seamless experience.',
+    featureAccurate: 'Accurate Rates',
+    featureAccurateDesc: 'Real-time exchange rates sourced from the European Central Bank for reliable conversions.',
+    featureGlobal: 'Global Support',
+    featureGlobalDesc: '160+ currencies with multi-language support including English, Persian, Arabic, and Turkish.',
+    teamMemberDesc: 'Full Stack Developer & ML Engineer with expertise in building scalable web applications and machine learning solutions.',
+    pageNotFound: 'Page Not Found',
+    pageNotFoundDesc: 'The page you are looking for does not exist or has been moved.',
+    backToHome: 'Back to Home',
 
     // Converter
     converterTitle: 'Convert Currency',
@@ -67,8 +87,28 @@ export const translations = {
   },
   fa: {
     // Header
-    appTitle: 'مبدل ارز',
+    appTitle: 'کوفایننس',
     appSubtitle: 'نرخ ارز لحظه‌ای با استفاده از Frankfurter API',
+
+    // About Us
+    aboutUs: 'درباره ما',
+    aboutUsDescription: 'کوفایننس یک مبدل ارز مدرن است که نرخ ارز لحظه‌ای را برای بیش از ۱۶۰ ارز در سراسر جهان ارائه می‌دهد.',
+    coFounder: 'هم‌بنیان‌گذار',
+    viewLinkedIn: 'مشاهده پروفایل لینکدین',
+    ourMission: 'ماموریت ما',
+    missionDescription: 'ارائه ابزارهای تبدیل ارز سریع، دقیق و در دسترس برای همه. ما معتقدیم اطلاعات مالی باید رایگان، شفاف و به زبان‌های مختلف برای خدمت به جامعه جهانی در دسترس باشد.',
+    ourTeam: 'تیم ما',
+    builtWith: 'ساخته شده با',
+    featureFast: 'سرعت بالا',
+    featureFastDesc: 'تبدیل فوری با عملکرد بهینه و کش هوشمند برای تجربه‌ای روان.',
+    featureAccurate: 'نرخ‌های دقیق',
+    featureAccurateDesc: 'نرخ ارز لحظه‌ای از بانک مرکزی اروپا برای تبدیل‌های قابل اعتماد.',
+    featureGlobal: 'پشتیبانی جهانی',
+    featureGlobalDesc: 'بیش از ۱۶۰ ارز با پشتیبانی چند زبانه شامل انگلیسی، فارسی، عربی و ترکی.',
+    teamMemberDesc: 'توسعه‌دهنده فول استک و مهندس یادگیری ماشین با تخصص در ساخت برنامه‌های وب مقیاس‌پذیر و راه‌حل‌های یادگیری ماشین.',
+    pageNotFound: 'صفحه پیدا نشد',
+    pageNotFoundDesc: 'صفحه‌ای که به دنبال آن هستید وجود ندارد یا منتقل شده است.',
+    backToHome: 'بازگشت به خانه',
 
     // Converter
     converterTitle: 'تبدیل ارز',
@@ -133,8 +173,28 @@ export const translations = {
   },
   ar: {
     // Header
-    appTitle: 'محول العملات',
+    appTitle: 'كوفايننس',
     appSubtitle: 'أسعار الصرف الفورية من Frankfurter API',
+
+    // About Us
+    aboutUs: 'من نحن',
+    aboutUsDescription: 'كوفايننس هو محول عملات حديث يوفر أسعار صرف فورية لأكثر من 160 عملة حول العالم.',
+    coFounder: 'مؤسس مشارك',
+    viewLinkedIn: 'عرض الملف الشخصي على لينكدإن',
+    ourMission: 'مهمتنا',
+    missionDescription: 'توفير أدوات تحويل عملات سريعة ودقيقة ومتاحة للجميع. نؤمن بأن المعلومات المالية يجب أن تكون مجانية وشفافة ومتوفرة بلغات متعددة لخدمة المجتمع العالمي.',
+    ourTeam: 'فريقنا',
+    builtWith: 'مبني بـ',
+    featureFast: 'سريع للغاية',
+    featureFastDesc: 'تحويلات فورية مع أداء محسن وتخزين مؤقت ذكي لتجربة سلسة.',
+    featureAccurate: 'أسعار دقيقة',
+    featureAccurateDesc: 'أسعار صرف فورية من البنك المركزي الأوروبي لتحويلات موثوقة.',
+    featureGlobal: 'دعم عالمي',
+    featureGlobalDesc: 'أكثر من 160 عملة مع دعم متعدد اللغات بما في ذلك الإنجليزية والفارسية والعربية والتركية.',
+    teamMemberDesc: 'مطور فول ستاك ومهندس تعلم آلي متخصص في بناء تطبيقات ويب قابلة للتوسع وحلول التعلم الآلي.',
+    pageNotFound: 'الصفحة غير موجودة',
+    pageNotFoundDesc: 'الصفحة التي تبحث عنها غير موجودة أو تم نقلها.',
+    backToHome: 'العودة للرئيسية',
 
     // Converter
     converterTitle: 'تحويل العملات',
@@ -199,8 +259,28 @@ export const translations = {
   },
   tr: {
     // Header
-    appTitle: 'Döviz Çevirici',
+    appTitle: 'CoFinance',
     appSubtitle: 'Frankfurter API ile anlık döviz kurları',
+
+    // About Us
+    aboutUs: 'Hakkımızda',
+    aboutUsDescription: 'CoFinance, dünya genelinde 160\'tan fazla para birimi için anlık döviz kurları sağlayan modern bir döviz çeviricidir.',
+    coFounder: 'Kurucu Ortak',
+    viewLinkedIn: 'LinkedIn Profilini Görüntüle',
+    ourMission: 'Misyonumuz',
+    missionDescription: 'Herkese hızlı, doğru ve erişilebilir döviz çevirme araçları sunmak. Finansal bilgilerin ücretsiz, şeffaf ve küresel topluma hizmet etmek için birden fazla dilde erişilebilir olması gerektiğine inanıyoruz.',
+    ourTeam: 'Ekibimiz',
+    builtWith: 'Kullanılan Teknolojiler',
+    featureFast: 'Çok Hızlı',
+    featureFastDesc: 'Sorunsuz bir deneyim için optimize edilmiş performans ve akıllı önbellekleme ile anında dönüşümler.',
+    featureAccurate: 'Doğru Kurlar',
+    featureAccurateDesc: 'Güvenilir dönüşümler için Avrupa Merkez Bankası\'ndan anlık döviz kurları.',
+    featureGlobal: 'Küresel Destek',
+    featureGlobalDesc: 'İngilizce, Farsça, Arapça ve Türkçe dahil çok dilli destek ile 160+ para birimi.',
+    teamMemberDesc: 'Ölçeklenebilir web uygulamaları ve makine öğrenimi çözümleri oluşturma konusunda uzman Full Stack Geliştirici ve ML Mühendisi.',
+    pageNotFound: 'Sayfa Bulunamadı',
+    pageNotFoundDesc: 'Aradığınız sayfa mevcut değil veya taşınmış.',
+    backToHome: 'Ana Sayfaya Dön',
 
     // Converter
     converterTitle: 'Döviz Çevir',

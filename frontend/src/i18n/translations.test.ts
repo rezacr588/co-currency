@@ -35,7 +35,7 @@ describe('translations', () => {
   });
 
   it('should have Turkish content for tr', () => {
-    expect(translations.tr.appTitle).toBe('Döviz Çevirici');
+    expect(translations.tr.appTitle).toBe('CoFinance');
   });
 
   it('should have core converter keys', () => {
