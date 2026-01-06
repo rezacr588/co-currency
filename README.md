@@ -1,24 +1,168 @@
-# Currency Converter v2
+# CoFinance
 
-A modern, full-stack currency converter application with real-time exchange rates, historical data, and a responsive PWA interface.
+A modern, full-stack currency converter application with real-time exchange rates, multi-language support, and a responsive PWA interface.
 
-## Tech Stack
+[![CI](https://github.com/rezacr588/co-currency/actions/workflows/ci.yml/badge.svg)](https://github.com/rezacr588/co-currency/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-- **Backend:** Go (Golang) with Chi router
-- **Frontend:** React + TypeScript + Vite
-- **Styling:** Tailwind CSS
-- **State Management:** TanStack Query (React Query)
-- **Cache:** In-memory (go-cache)
-- **Deployment:** Koyeb (single service)
+---
 
 ## Features
 
-- Real-time currency conversion
-- Exchange rates grid with auto-refresh
-- Quick conversion cards
-- Historical rates lookup
-- Responsive design
-- PWA support with offline caching
+- **Real-time Currency Conversion** - Convert between 160+ world currencies instantly
+- **Live Exchange Rates** - Auto-refreshing rates grid with visual indicators
+- **Historical Data** - Look up past exchange rates by date
+- **Multi-language Support** - English, Persian (فارسی), Arabic (العربية), Turkish (Türkçe)
+- **Dark/Light Theme** - System-aware with manual toggle
+- **PWA Support** - Install as app, works offline
+- **Responsive Design** - Optimized for mobile, tablet, and desktop
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| **Frontend** | React 18, TypeScript, Vite |
+| **Styling** | Tailwind CSS, Custom Design System |
+| **State** | TanStack Query (React Query) |
+| **Routing** | React Router DOM |
+| **Backend** | Go 1.22+, Chi Router |
+| **Cache** | go-cache (in-memory) |
+| **API** | Frankfurter API (ECB rates) |
+| **Deploy** | Docker, Koyeb |
+
+---
+
+## Architecture
+
+### System Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Client (Browser)                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
+│  │   React     │  │  TanStack   │  │    Service Worker       │  │
+│  │   App       │◄─┤   Query     │◄─┤    (PWA Cache)          │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────────┘  │
+└────────────────────────────┬────────────────────────────────────┘
+                             │ HTTP/REST
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Go Backend Server                           │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐ │
+│  │  Router  │─►│ Handlers │─►│ Services │─►│   Repositories   │ │
+│  │  (Chi)   │  │          │  │          │  │                  │ │
+│  └──────────┘  └──────────┘  └──────────┘  └────────┬─────────┘ │
+│       │                                              │           │
+│  ┌────┴────┐                                   ┌─────┴─────┐    │
+│  │Middleware│                                  │  Cache    │    │
+│  │- CORS   │                                   │ (go-cache)│    │
+│  │- Rate   │                                   └───────────┘    │
+│  │  Limit  │                                                    │
+│  │- Logger │                                                    │
+│  └─────────┘                                                    │
+└─────────────────────────────────┬───────────────────────────────┘
+                                  │ HTTP
+                                  ▼
+                    ┌─────────────────────────┐
+                    │   Frankfurter API       │
+                    │   (European Central     │
+                    │    Bank Rates)          │
+                    └─────────────────────────┘
+```
+
+### Frontend Architecture
+
+```
+frontend/src/
+├── api/                    # API client with retry logic
+│   └── client.ts           # Axios instance, error handling
+├── components/
+│   ├── ui/                 # Reusable UI components (Design System)
+│   │   ├── Button.tsx
+│   │   ├── Card.tsx
+│   │   ├── Input.tsx
+│   │   ├── StatusBadge.tsx
+│   │   ├── ErrorMessage.tsx
+│   │   ├── CurrencyBadge.tsx
+│   │   └── RateChange.tsx
+│   └── features/           # Feature-specific components
+│       ├── Converter/      # Main converter widget
+│       ├── RatesGrid/      # Exchange rates display
+│       ├── QuickConvert/   # Quick conversion cards
+│       ├── Historical/     # Historical rates lookup
+│       ├── AboutUs/        # About page
+│       └── NotFound/       # 404 page
+├── context/                # React Context providers
+│   ├── ThemeContext.tsx    # Dark/light theme
+│   └── LanguageContext.tsx # i18n with 4 languages
+├── hooks/                  # Custom React hooks
+│   ├── useConvert.ts       # Currency conversion
+│   ├── useRates.ts         # Exchange rates fetching
+│   ├── useCurrencies.ts    # Currency list
+│   ├── useHistorical.ts    # Historical rates
+│   └── useDebounce.ts      # Input debouncing
+├── i18n/                   # Internationalization
+│   └── translations.ts     # Translation strings
+├── styles/                 # Global styles
+│   └── globals.css         # Design system & Tailwind
+├── types/                  # TypeScript definitions
+│   └── currency.ts         # API types
+└── utils/                  # Utility functions
+    ├── format.ts           # Number/currency formatting
+    └── constants.ts        # Currency symbols & flags
+```
+
+### Backend Architecture
+
+```
+backend/
+├── cmd/api/                # Application entry point
+│   └── main.go
+├── internal/               # Private application code
+│   ├── config/             # Environment configuration
+│   ├── handler/            # HTTP request handlers
+│   │   ├── currencies.go   # GET /currencies
+│   │   ├── rates.go        # GET /rates/:base
+│   │   ├── convert.go      # GET /convert
+│   │   ├── historical.go   # GET /historical/:date
+│   │   └── health.go       # GET /health
+│   ├── middleware/         # HTTP middleware
+│   │   ├── cors.go         # CORS headers
+│   │   ├── ratelimit.go    # Request throttling
+│   │   └── logging.go      # Request logging
+│   ├── model/              # Domain models
+│   │   ├── currency.go
+│   │   ├── rate.go
+│   │   └── conversion.go
+│   ├── repository/         # Data access layer
+│   │   ├── frankfurter.go  # External API client
+│   │   ├── cache.go        # In-memory caching
+│   │   └── irr.go          # IRR rate handling
+│   ├── router/             # Route definitions
+│   │   └── router.go
+│   └── service/            # Business logic
+│       └── exchange.go     # Conversion calculations
+└── pkg/httputil/           # Shared HTTP utilities
+    ├── response.go         # JSON response helpers
+    └── errors.go           # Error handling
+```
+
+### Design System
+
+The frontend includes a custom finance-focused design system (`globals.css`):
+
+| Category | Classes |
+|----------|---------|
+| **Cards** | `.card`, `.card-header`, `.card-body`, `.card-title` |
+| **Buttons** | `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-ghost` |
+| **Forms** | `.input`, `.input-lg`, `.select`, `.form-label` |
+| **Finance** | `.currency-badge`, `.rate-display`, `.rate-up`, `.rate-down` |
+| **Status** | `.status-success`, `.status-warning`, `.status-error` |
+| **Feedback** | `.error-message`, `.info-message`, `.skeleton` |
+
+---
 
 ## Quick Start
 
@@ -31,13 +175,13 @@ A modern, full-stack currency converter application with real-time exchange rate
 ### Development
 
 ```bash
-# Install dependencies
+# Install all dependencies
 make install
 
 # Run backend (port 8080)
 make dev-backend
 
-# Run frontend (port 5173) - in another terminal
+# Run frontend (port 5173) - separate terminal
 make dev-frontend
 ```
 
@@ -63,127 +207,129 @@ make run-local
 # Run all tests
 make test
 
-# Run backend tests only
+# Frontend tests only
+cd frontend && npm test
+
+# Backend tests only
 make test-backend
 ```
 
-## API Endpoints
+---
 
-| Method | Endpoint | Description | Example |
-|--------|----------|-------------|---------|
-| GET | `/api/v1/currencies` | List all currencies | `/api/v1/currencies` |
-| GET | `/api/v1/rates/:base` | Get latest rates | `/api/v1/rates/USD` |
-| GET | `/api/v1/convert` | Convert currency | `/api/v1/convert?from=USD&to=EUR&amount=100` |
-| GET | `/api/v1/historical/:date` | Get historical rates | `/api/v1/historical/2024-01-15?base=USD` |
-| GET | `/health` | Health check | `/health` |
+## API Reference
 
-## Deployment to Koyeb
+### Endpoints
 
-### Option 1: Deploy via GitHub (Recommended)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/currencies` | List all supported currencies |
+| `GET` | `/api/v1/rates/:base` | Get latest rates for base currency |
+| `GET` | `/api/v1/convert` | Convert amount between currencies |
+| `GET` | `/api/v1/historical/:date` | Get rates for specific date |
+| `GET` | `/health` | Health check endpoint |
 
-1. **Push your code to GitHub**
-
-2. **Create a Koyeb account** at [app.koyeb.com](https://app.koyeb.com) (free, no credit card required)
-
-3. **Create a new App:**
-   - Click "Create App"
-   - Select "GitHub"
-   - Authorize Koyeb to access your repository
-   - Select this repository
-
-4. **Configure the deployment:**
-   - **Builder:** Dockerfile
-   - **Dockerfile path:** `Dockerfile`
-   - **Port:** 8080
-   - **Region:** Frankfurt (fra) or Washington (was)
-   - **Instance type:** Free
-
-5. **Set environment variables (optional, defaults are fine):**
-   - `PORT`: 8080
-   - `ENVIRONMENT`: production
-   - `CACHE_TTL`: 5m
-   - `RATE_LIMIT`: 100
-
-6. **Deploy!**
-
-Your app will be available at: `https://<app-name>-<username>.koyeb.app`
-
-### Option 2: Deploy via Koyeb CLI
+### Examples
 
 ```bash
-# Install Koyeb CLI
-curl -fsSL https://raw.githubusercontent.com/koyeb/koyeb-cli/master/install.sh | bash
+# List currencies
+curl https://your-app.koyeb.app/api/v1/currencies
 
-# Login to Koyeb
-koyeb login
-
-# Deploy from GitHub
-koyeb app create currency-converter \
-  --git github.com/yourusername/co-currency \
-  --git-branch main \
-  --git-builder dockerfile \
-  --ports 8080:http \
-  --routes /:8080 \
-  --regions fra \
-  --instance-type free \
-  --env PORT=8080 \
-  --env ENVIRONMENT=production
-```
-
-### CI/CD with GitHub Actions
-
-This repository includes GitHub Actions workflows for:
-- **CI** (`.github/workflows/ci.yml`): Runs tests on every push/PR
-- **Deploy** (`.github/workflows/deploy.yml`): Auto-deploys to Koyeb on push to main
-
-To enable auto-deployment:
-1. Go to your GitHub repo settings
-2. Navigate to Secrets and Variables > Actions
-3. Add a new secret: `KOYEB_TOKEN`
-4. Get your token from: Koyeb Console > Account > API Tokens
-
-### Verify Deployment
-
-```bash
-# Health check
-curl https://your-app.koyeb.app/health
-
-# Get rates
+# Get USD rates
 curl https://your-app.koyeb.app/api/v1/rates/USD
 
-# Convert currency
+# Convert 100 USD to EUR
 curl "https://your-app.koyeb.app/api/v1/convert?from=USD&to=EUR&amount=100"
+
+# Historical rates
+curl "https://your-app.koyeb.app/api/v1/historical/2024-01-15?base=USD"
 ```
+
+### Response Format
+
+```json
+{
+  "success": true,
+  "data": {
+    "from": "USD",
+    "to": "EUR",
+    "amount": 100,
+    "result": 92.45,
+    "rate": 0.9245
+  }
+}
+```
+
+---
+
+## Deployment
+
+### Koyeb (Recommended)
+
+1. **Push to GitHub**
+
+2. **Create Koyeb App**
+   - Go to [app.koyeb.com](https://app.koyeb.com)
+   - Click "Create App" → Select "GitHub"
+   - Choose this repository
+
+3. **Configure**
+   - Builder: `Dockerfile`
+   - Port: `8080`
+   - Instance: `Free`
+
+4. **Environment Variables** (optional)
+   ```
+   PORT=8080
+   ENVIRONMENT=production
+   CACHE_TTL=5m
+   RATE_LIMIT=100
+   ```
+
+### CI/CD
+
+GitHub Actions workflows included:
+- **CI** (`.github/workflows/ci.yml`) - Tests on push/PR
+- **Deploy** (`.github/workflows/deploy.yml`) - Auto-deploy to Koyeb
+
+Add `KOYEB_TOKEN` secret for auto-deployment.
+
+---
 
 ## Project Structure
 
 ```
-├── backend/                 # Go API server
-│   ├── cmd/api/            # Entry point
-│   ├── internal/           # Private packages
-│   │   ├── config/         # Configuration
-│   │   ├── handler/        # HTTP handlers
-│   │   ├── middleware/     # Middleware
-│   │   ├── model/          # Data models
-│   │   ├── repository/     # Data access
-│   │   ├── router/         # Route setup
-│   │   └── service/        # Business logic
-│   └── pkg/httputil/       # HTTP utilities
+co-currency/
+├── backend/                # Go API server
 ├── frontend/               # React application
-│   ├── src/
-│   │   ├── api/           # API client
-│   │   ├── components/    # UI components
-│   │   ├── hooks/         # React hooks
-│   │   ├── types/         # TypeScript types
-│   │   └── utils/         # Utilities
-│   └── public/            # Static assets
-├── .github/workflows/      # CI/CD
-├── Dockerfile             # Production build
-├── docker-compose.yml     # Development
-├── koyeb.yaml            # Koyeb config
-└── Makefile              # Build commands
+├── .github/workflows/      # CI/CD pipelines
+├── Dockerfile              # Production build
+├── docker-compose.yml      # Development setup
+├── koyeb.yaml              # Koyeb configuration
+├── Makefile                # Build commands
+└── README.md
 ```
+
+---
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing`)
+5. Open a Pull Request
+
+---
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+## Author
+
+**Reza Zeraat** - Full Stack Developer & ML Engineer
+
+- [LinkedIn](https://linkedin.com/in/rezazeraat)
+- [GitHub](https://github.com/rezacr588)
