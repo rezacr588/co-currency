@@ -1,10 +1,9 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useConvert, useCurrencies } from '../../../hooks';
-import { AmountInput } from './AmountInput';
-import { CurrencySelect } from './CurrencySelect';
 import { SwapButton } from './SwapButton';
-import { ResultDisplay } from './ResultDisplay';
 import { useLanguage } from '../../../context/LanguageContext';
+import { formatRate, formatNumber } from '../../../utils/format';
+import { CURRENCY_FLAGS, CURRENCY_SYMBOLS } from '../../../utils/constants';
 
 const STORAGE_KEY = 'currency-converter-state';
 
@@ -88,31 +87,124 @@ export function Converter() {
 
           {/* Content */}
           <div className="p-4 sm:p-5 space-y-4">
-            {/* Amount Input - Compact */}
-            <AmountInput value={amount} onChange={setAmount} />
+            {/* Single Inline Converter Box */}
+            <div className="relative bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-indigo-400 dark:hover:border-indigo-500 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/30">
+              <div className="flex flex-col sm:flex-row items-stretch">
+                {/* FROM: Amount Input + Currency */}
+                <div className="flex-1 min-w-0 flex items-stretch border-b sm:border-b-0 sm:border-e border-slate-200 dark:border-slate-700">
+                  {/* Amount Input */}
+                  <input
+                    type="number"
+                    value={amount || ''}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (isNaN(val)) setAmount(0);
+                      else if (val < 0) setAmount(0);
+                      else if (val > 999999999999) setAmount(999999999999);
+                      else setAmount(val);
+                    }}
+                    min="0"
+                    max="999999999999"
+                    step="any"
+                    inputMode="decimal"
+                    placeholder="0"
+                    className="flex-1 min-w-0 bg-transparent px-3 sm:px-4 py-3 text-xl sm:text-2xl font-light text-slate-800 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 focus:outline-none"
+                  />
 
-            {/* Currency Selectors - Inline on larger screens */}
-            <div className="flex flex-col sm:flex-row items-stretch gap-3">
-              <div className="flex-1 min-w-0">
-                <CurrencySelect
-                  value={fromCurrency}
-                  onChange={setFromCurrency}
-                  currencies={currencies}
-                  label={t('from')}
-                />
-              </div>
+                  {/* FROM Currency Selector */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const select = document.getElementById('from-currency-select') as HTMLSelectElement;
+                        if (select) select.focus();
+                      }}
+                      className="h-full px-3 py-2 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-600/50 border-s border-slate-200 dark:border-slate-600 transition-colors flex items-center gap-1.5 sm:gap-2"
+                      aria-label={`Select ${t('from')} currency`}
+                    >
+                      <span className="text-xl sm:text-2xl">{CURRENCY_FLAGS[fromCurrency] || '🌍'}</span>
+                      <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200">
+                        {fromCurrency}
+                      </span>
+                      <svg className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    <select
+                      id="from-currency-select"
+                      value={fromCurrency}
+                      onChange={(e) => setFromCurrency(e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      aria-label={t('from')}
+                    >
+                      {currencies?.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.code} - {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
-              <div className="flex justify-center items-end pb-1 sm:pb-0 sm:pt-5">
-                <SwapButton onClick={handleSwap} />
-              </div>
+                {/* Swap Button */}
+                <div className="flex justify-center items-center bg-slate-50 dark:bg-slate-800/50 border-b sm:border-b-0 border-slate-200 dark:border-slate-700 py-2 sm:py-0">
+                  <SwapButton onClick={handleSwap} />
+                </div>
 
-              <div className="flex-1 min-w-0">
-                <CurrencySelect
-                  value={toCurrency}
-                  onChange={setToCurrency}
-                  currencies={currencies}
-                  label={t('to')}
-                />
+                {/* TO: Result + Currency */}
+                <div className="flex-1 min-w-0 flex items-stretch">
+                  {/* Result Display */}
+                  <div className="flex-1 min-w-0 px-3 sm:px-4 py-3 flex items-center">
+                    {isLoading ? (
+                      <div className="w-full h-8 bg-slate-100 dark:bg-slate-700/50 rounded animate-pulse" />
+                    ) : error ? (
+                      <span className="text-sm text-red-500 dark:text-red-400">Error</span>
+                    ) : result ? (
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-sm text-slate-400 dark:text-slate-500">{CURRENCY_SYMBOLS[toCurrency] || ''}</span>
+                        <span className="text-xl sm:text-2xl font-light text-slate-800 dark:text-white">
+                          {formatNumber(result.result)}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xl sm:text-2xl font-light text-slate-300 dark:text-slate-600">-</span>
+                    )}
+                  </div>
+
+                  {/* TO Currency Selector */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const select = document.getElementById('to-currency-select') as HTMLSelectElement;
+                        if (select) select.focus();
+                      }}
+                      className="h-full px-3 py-2 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-600/50 border-s border-slate-200 dark:border-slate-600 transition-colors flex items-center gap-1.5 sm:gap-2"
+                      aria-label={`Select ${t('to')} currency`}
+                    >
+                      <span className="text-xl sm:text-2xl">{CURRENCY_FLAGS[toCurrency] || '🌍'}</span>
+                      <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200">
+                        {toCurrency}
+                      </span>
+                      <svg className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    <select
+                      id="to-currency-select"
+                      value={toCurrency}
+                      onChange={(e) => setToCurrency(e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      aria-label={t('to')}
+                    >
+                      {currencies?.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.code} - {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -123,14 +215,42 @@ export function Converter() {
               </div>
             )}
 
-            {/* Result Display */}
-            {!validationError && (
-              <ResultDisplay
-                result={result}
-                isLoading={isLoading}
-                error={error}
-                onRetry={handleRetry}
-              />
+            {/* Exchange Rate Info - Compact */}
+            {!validationError && result && (
+              <div className="flex flex-wrap justify-center gap-2 text-[11px] pt-2">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-full text-slate-500 dark:text-slate-400">
+                  <span>1 {result.from}</span>
+                  <span className="text-slate-300 dark:text-slate-600">=</span>
+                  <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{formatRate(result.rate)}</span>
+                  <span>{result.to}</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-full text-slate-500 dark:text-slate-400">
+                  <span>1 {result.to}</span>
+                  <span className="text-slate-300 dark:text-slate-600">=</span>
+                  <span className="font-mono font-medium text-slate-700 dark:text-slate-300">
+                    {result.rate > 0 ? formatRate(1 / result.rate) : '0'}
+                  </span>
+                  <span>{result.from}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Error Display */}
+            {!validationError && error && (
+              <div
+                className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl text-center animate-fade-in"
+                role="alert"
+                aria-live="assertive"
+              >
+                <p className="text-red-600 dark:text-red-400 text-sm mb-3">{t('failedToConvert')}</p>
+                <button
+                  onClick={handleRetry}
+                  className="px-4 py-2 bg-red-100 dark:bg-red-500/20 hover:bg-red-200 dark:hover:bg-red-500/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                  aria-label={t('retry')}
+                >
+                  {t('retry')}
+                </button>
+              </div>
             )}
           </div>
         </div>
