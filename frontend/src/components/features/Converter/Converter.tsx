@@ -1,9 +1,10 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useConvert, useCurrencies } from '../../../hooks';
 import { SwapButton } from './SwapButton';
+import { InlineCurrencySelect } from './InlineCurrencySelect';
 import { useLanguage } from '../../../context/LanguageContext';
 import { formatRate, formatNumber } from '../../../utils/format';
-import { CURRENCY_FLAGS, CURRENCY_SYMBOLS } from '../../../utils/constants';
+import { CURRENCY_SYMBOLS } from '../../../utils/constants';
 
 const STORAGE_KEY = 'currency-converter-state';
 
@@ -112,38 +113,11 @@ export function Converter() {
                   />
 
                   {/* FROM Currency Selector */}
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const select = document.getElementById('from-currency-select') as HTMLSelectElement;
-                        if (select) select.focus();
-                      }}
-                      className="h-full px-3 py-2 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-600/50 border-s border-slate-200 dark:border-slate-600 transition-colors flex items-center gap-1.5 sm:gap-2"
-                      aria-label={`Select ${t('from')} currency`}
-                    >
-                      <span className="text-xl sm:text-2xl">{CURRENCY_FLAGS[fromCurrency] || '🌍'}</span>
-                      <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200">
-                        {fromCurrency}
-                      </span>
-                      <svg className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    <select
-                      id="from-currency-select"
-                      value={fromCurrency}
-                      onChange={(e) => setFromCurrency(e.target.value)}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                      aria-label={t('from')}
-                    >
-                      {currencies?.map((c) => (
-                        <option key={c.code} value={c.code}>
-                          {c.code} - {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <InlineCurrencySelect
+                    value={fromCurrency}
+                    onChange={setFromCurrency}
+                    currencies={currencies}
+                  />
                 </div>
 
                 {/* Swap Button */}
@@ -172,38 +146,11 @@ export function Converter() {
                   </div>
 
                   {/* TO Currency Selector */}
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const select = document.getElementById('to-currency-select') as HTMLSelectElement;
-                        if (select) select.focus();
-                      }}
-                      className="h-full px-3 py-2 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-600/50 border-s border-slate-200 dark:border-slate-600 transition-colors flex items-center gap-1.5 sm:gap-2"
-                      aria-label={`Select ${t('to')} currency`}
-                    >
-                      <span className="text-xl sm:text-2xl">{CURRENCY_FLAGS[toCurrency] || '🌍'}</span>
-                      <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200">
-                        {toCurrency}
-                      </span>
-                      <svg className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    <select
-                      id="to-currency-select"
-                      value={toCurrency}
-                      onChange={(e) => setToCurrency(e.target.value)}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                      aria-label={t('to')}
-                    >
-                      {currencies?.map((c) => (
-                        <option key={c.code} value={c.code}>
-                          {c.code} - {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <InlineCurrencySelect
+                    value={toCurrency}
+                    onChange={setToCurrency}
+                    currencies={currencies}
+                  />
                 </div>
               </div>
             </div>
