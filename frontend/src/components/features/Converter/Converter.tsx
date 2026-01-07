@@ -1,10 +1,10 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useConvert, useCurrencies } from '../../../hooks';
-import { AmountInput } from './AmountInput';
-import { CurrencySelect } from './CurrencySelect';
+import { AmountCurrencyInput } from './AmountCurrencyInput';
+import { ResultCurrencyDisplay } from './ResultCurrencyDisplay';
 import { SwapButton } from './SwapButton';
-import { ResultDisplay } from './ResultDisplay';
 import { useLanguage } from '../../../context/LanguageContext';
+import { formatRate } from '../../../utils/format';
 
 const STORAGE_KEY = 'currency-converter-state';
 
@@ -88,32 +88,33 @@ export function Converter() {
 
           {/* Content */}
           <div className="p-4 sm:p-5 space-y-4">
-            {/* Amount Input - Compact */}
-            <AmountInput value={amount} onChange={setAmount} />
+            {/* Inline Currency Converter */}
+            <div className="flex flex-col sm:flex-row items-end gap-3">
+              {/* From: Amount + Currency Input */}
+              <AmountCurrencyInput
+                amount={amount}
+                onAmountChange={setAmount}
+                currency={fromCurrency}
+                onCurrencyChange={setFromCurrency}
+                currencies={currencies}
+                label={t('from')}
+              />
 
-            {/* Currency Selectors - Inline on larger screens */}
-            <div className="flex flex-col sm:flex-row items-stretch gap-3">
-              <div className="flex-1 min-w-0">
-                <CurrencySelect
-                  value={fromCurrency}
-                  onChange={setFromCurrency}
-                  currencies={currencies}
-                  label={t('from')}
-                />
-              </div>
-
-              <div className="flex justify-center items-end pb-1 sm:pb-0 sm:pt-5">
+              {/* Swap Button */}
+              <div className="flex justify-center sm:pb-3">
                 <SwapButton onClick={handleSwap} />
               </div>
 
-              <div className="flex-1 min-w-0">
-                <CurrencySelect
-                  value={toCurrency}
-                  onChange={setToCurrency}
-                  currencies={currencies}
-                  label={t('to')}
-                />
-              </div>
+              {/* To: Result + Currency Display */}
+              <ResultCurrencyDisplay
+                result={result}
+                isLoading={isLoading}
+                error={error}
+                currency={toCurrency}
+                onCurrencyChange={setToCurrency}
+                currencies={currencies}
+                label={t('to')}
+              />
             </div>
 
             {/* Validation Error */}
@@ -123,14 +124,42 @@ export function Converter() {
               </div>
             )}
 
-            {/* Result Display */}
-            {!validationError && (
-              <ResultDisplay
-                result={result}
-                isLoading={isLoading}
-                error={error}
-                onRetry={handleRetry}
-              />
+            {/* Exchange Rate Info - Compact */}
+            {!validationError && result && (
+              <div className="flex flex-wrap justify-center gap-2 text-[11px] pt-2">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-full text-slate-500 dark:text-slate-400">
+                  <span>1 {result.from}</span>
+                  <span className="text-slate-300 dark:text-slate-600">=</span>
+                  <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{formatRate(result.rate)}</span>
+                  <span>{result.to}</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-full text-slate-500 dark:text-slate-400">
+                  <span>1 {result.to}</span>
+                  <span className="text-slate-300 dark:text-slate-600">=</span>
+                  <span className="font-mono font-medium text-slate-700 dark:text-slate-300">
+                    {result.rate > 0 ? formatRate(1 / result.rate) : '0'}
+                  </span>
+                  <span>{result.from}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Error Display */}
+            {!validationError && error && (
+              <div
+                className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl text-center animate-fade-in"
+                role="alert"
+                aria-live="assertive"
+              >
+                <p className="text-red-600 dark:text-red-400 text-sm mb-3">{t('failedToConvert')}</p>
+                <button
+                  onClick={handleRetry}
+                  className="px-4 py-2 bg-red-100 dark:bg-red-500/20 hover:bg-red-200 dark:hover:bg-red-500/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                  aria-label={t('retry')}
+                >
+                  {t('retry')}
+                </button>
+              </div>
             )}
           </div>
         </div>
