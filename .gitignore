@@ -42,6 +42,10 @@ go.work
 .vite/
 *.local
 
+# Playwright
+playwright-report/
+test-results/
+
 # Coverage
 coverage/
 *.lcov
