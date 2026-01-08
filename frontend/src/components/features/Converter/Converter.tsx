@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useConvert, useCurrencies } from '../../../hooks';
 import { SwapButton } from './SwapButton';
 import { InlineCurrencySelect } from './InlineCurrencySelect';
+import { CurrencyInput } from '../../ui/CurrencyInput';
 import { useLanguage } from '../../../context/LanguageContext';
 import { formatRate, formatNumber } from '../../../utils/format';
 import { CURRENCY_SYMBOLS } from '../../../utils/constants';
@@ -93,23 +94,13 @@ export function Converter() {
               <div className="flex flex-col sm:flex-row items-stretch">
                 {/* FROM: Amount Input + Currency */}
                 <div className="flex-1 min-w-0 flex items-stretch border-b sm:border-b-0 sm:border-e border-slate-200 dark:border-slate-700">
-                  {/* Amount Input */}
-                  <input
-                    type="number"
-                    value={amount || ''}
-                    onChange={(e) => {
-                      const val = parseFloat(e.target.value);
-                      if (isNaN(val)) setAmount(0);
-                      else if (val < 0) setAmount(0);
-                      else if (val > 999999999999) setAmount(999999999999);
-                      else setAmount(val);
-                    }}
-                    min="0"
-                    max="999999999999"
-                    step="any"
-                    inputMode="decimal"
+                  {/* Formatted Amount Input */}
+                  <CurrencyInput
+                    value={amount}
+                    onChange={setAmount}
+                    currencyCode={fromCurrency}
+                    currencySymbol={CURRENCY_SYMBOLS[fromCurrency]}
                     placeholder="0"
-                    className="flex-1 min-w-0 bg-transparent px-3 sm:px-4 py-3 text-xl sm:text-2xl font-light text-slate-800 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 focus:outline-none"
                   />
 
                   {/* FROM Currency Selector */}
@@ -164,21 +155,38 @@ export function Converter() {
 
             {/* Exchange Rate Info - Compact */}
             {!validationError && result && (
-              <div className="flex flex-wrap justify-center gap-2 text-[11px] pt-2">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-full text-slate-500 dark:text-slate-400">
-                  <span>1 {result.from}</span>
-                  <span className="text-slate-300 dark:text-slate-600">=</span>
-                  <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{formatRate(result.rate)}</span>
-                  <span>{result.to}</span>
+              <div className="space-y-2">
+                <div className="flex flex-wrap justify-center gap-2 text-[11px] pt-2">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-full text-slate-500 dark:text-slate-400">
+                    <span>1 {result.from}</span>
+                    <span className="text-slate-300 dark:text-slate-600">=</span>
+                    <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{formatRate(result.rate)}</span>
+                    <span>{result.to}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-full text-slate-500 dark:text-slate-400">
+                    <span>1 {result.to}</span>
+                    <span className="text-slate-300 dark:text-slate-600">=</span>
+                    <span className="font-mono font-medium text-slate-700 dark:text-slate-300">
+                      {result.rate > 0 ? formatRate(1 / result.rate) : '0'}
+                    </span>
+                    <span>{result.from}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-full text-slate-500 dark:text-slate-400">
-                  <span>1 {result.to}</span>
-                  <span className="text-slate-300 dark:text-slate-600">=</span>
-                  <span className="font-mono font-medium text-slate-700 dark:text-slate-300">
-                    {result.rate > 0 ? formatRate(1 / result.rate) : '0'}
-                  </span>
-                  <span>{result.from}</span>
-                </div>
+
+                {/* Last Updated Timestamp */}
+                {result.updated_at && (
+                  <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-400 dark:text-slate-500">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>
+                      {t('updatedAt')}: {new Date(result.updated_at).toLocaleString(undefined, {
+                        dateStyle: 'short',
+                        timeStyle: 'short'
+                      })}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
