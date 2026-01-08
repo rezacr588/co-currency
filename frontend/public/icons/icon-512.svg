@@ -1,12 +1,46 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
   <defs>
-    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    <linearGradient id="mainGradient512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1"/>
+      <stop offset="50%" style="stop-color:#8b5cf6;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#ec4899;stop-opacity:1"/>
+    </linearGradient>
+    <linearGradient id="accentGradient512" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1"/>
     </linearGradient>
   </defs>
-  <circle cx="256" cy="256" r="240" fill="url(#grad)"/>
-  <text x="256" y="320" font-family="Arial, sans-serif" font-size="200" font-weight="bold" fill="white" text-anchor="middle">$</text>
-  <path d="M 360 128 Q 420 256 360 384" stroke="white" stroke-width="16" fill="none" stroke-linecap="round"/>
-  <polygon points="352,112 384,144 336,156" fill="white"/>
+
+  <!-- Modern rounded square background -->
+  <rect x="21" y="21" width="470" height="470" rx="128" fill="url(#mainGradient512)"/>
+
+  <!-- Currency exchange symbol - stylized arrows forming infinity/exchange -->
+  <g transform="translate(256, 256)">
+    <!-- Right arrow (outward) -->
+    <path d="M -85 -64 L 21 -64 L 21 -85 L 64 -53 L 21 -21 L 21 -43 L -85 -43 Z"
+          fill="white" opacity="0.95"/>
+
+    <!-- Left arrow (inward) -->
+    <path d="M 85 64 L -21 64 L -21 85 L -64 53 L -21 21 L -21 43 L 85 43 Z"
+          fill="url(#accentGradient512)"/>
+
+    <!-- Currency symbols integrated -->
+    <circle cx="-107" cy="-53" r="16" fill="white" opacity="0.7"/>
+    <circle cx="107" cy="53" r="16" fill="#10b981" opacity="0.8"/>
+
+    <!-- Modern accent line -->
+    <line x1="-128" y1="0" x2="128" y2="0"
+          stroke="white" stroke-width="5"
+          opacity="0.3" stroke-dasharray="11,21"/>
+  </g>
+
+  <!-- Bottom accent - financial bar chart style -->
+  <g opacity="0.25">
+    <rect x="85" y="406" width="21" height="64" rx="11" fill="white"/>
+    <rect x="149" y="384" width="21" height="85" rx="11" fill="white"/>
+    <rect x="213" y="363" width="21" height="107" rx="11" fill="white"/>
+    <rect x="277" y="384" width="21" height="85" rx="11" fill="white"/>
+    <rect x="341" y="373" width="21" height="96" rx="11" fill="white"/>
+    <rect x="405" y="395" width="21" height="75" rx="11" fill="white"/>
+  </g>
 </svg>
