@@ -15,7 +15,22 @@ const STORAGE_KEY = 'currency-converter-language';
 // RTL languages
 const RTL_LANGUAGES: Language[] = ['fa', 'ar'];
 
-// Country to language mapping
+// Browser locale to language mapping
+const LOCALE_LANGUAGE_MAP: Record<string, Language> = {
+  fa: 'fa',
+  'fa-IR': 'fa',
+  ar: 'ar',
+  'ar-SA': 'ar',
+  'ar-AE': 'ar',
+  'ar-EG': 'ar',
+  tr: 'tr',
+  'tr-TR': 'tr',
+  en: 'en',
+  'en-US': 'en',
+  'en-GB': 'en',
+};
+
+// Country to language mapping (fallback from IP)
 const COUNTRY_LANGUAGE_MAP: Record<string, Language> = {
   IR: 'fa', // Iran
   SA: 'ar', // Saudi Arabia
@@ -24,6 +39,39 @@ const COUNTRY_LANGUAGE_MAP: Record<string, Language> = {
   TR: 'tr', // Turkey
 };
 
+/**
+ * Detect language from browser locale
+ */
+function detectBrowserLanguage(): Language | null {
+  try {
+    // Check navigator.language and navigator.languages
+    const browserLocales = [
+      navigator.language,
+      ...(navigator.languages || [])
+    ];
+
+    for (const locale of browserLocales) {
+      // Try exact match first (e.g., "fa-IR")
+      if (locale in LOCALE_LANGUAGE_MAP) {
+        return LOCALE_LANGUAGE_MAP[locale];
+      }
+
+      // Try language code only (e.g., "fa" from "fa-IR")
+      const langCode = locale.split('-')[0];
+      if (langCode in LOCALE_LANGUAGE_MAP) {
+        return LOCALE_LANGUAGE_MAP[langCode];
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Detect language from user's country via IP lookup
+ */
 async function detectCountry(): Promise<string | null> {
   try {
     const response = await fetch('https://ipapi.co/json/', {
@@ -49,16 +97,15 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     async function initLanguage() {
-      // Check localStorage first
+      // Priority 1: Check localStorage for saved preference
       const savedLanguage = localStorage.getItem(STORAGE_KEY);
-
       if (isValidLanguage(savedLanguage)) {
         setLanguageState(savedLanguage);
         setIsInitialized(true);
         return;
       }
 
-      // Check URL parameter
+      // Priority 2: Check URL parameter
       const urlParams = new URLSearchParams(window.location.search);
       const langParam = urlParams.get('lang');
       if (isValidLanguage(langParam)) {
@@ -68,13 +115,23 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // If no saved preference, check user's country
+      // Priority 3: Detect from browser locale (instant, no API call)
+      const browserLang = detectBrowserLanguage();
+      if (browserLang) {
+        setLanguageState(browserLang);
+        // Don't save to localStorage - let user explicitly choose to persist
+        setIsInitialized(true);
+        return;
+      }
+
+      // Priority 4: Detect from user's country via IP (fallback, requires API call)
       const countryCode = await detectCountry();
       if (countryCode && countryCode in COUNTRY_LANGUAGE_MAP) {
         const detectedLang = COUNTRY_LANGUAGE_MAP[countryCode];
         setLanguageState(detectedLang);
-        localStorage.setItem(STORAGE_KEY, detectedLang);
+        // Don't save to localStorage - let user explicitly choose to persist
       }
+
       setIsInitialized(true);
     }
 
