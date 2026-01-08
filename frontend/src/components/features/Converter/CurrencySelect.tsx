@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import type { Currency } from '../../../types';
 import { CURRENCY_FLAGS } from '../../../utils/constants';
 import { useLanguage } from '../../../context/LanguageContext';
@@ -35,10 +36,15 @@ export function CurrencySelect({ value, onChange, currencies, label }: CurrencyS
     );
   }, [currencies, search]);
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside or on backdrop
   useEffect(() => {
+    if (!isOpen) return;
+
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as HTMLElement;
+      // Close if clicking on backdrop or outside modal
+      if (target.classList.contains('currency-modal-backdrop') ||
+          (containerRef.current && !containerRef.current.contains(event.target as Node))) {
         setIsOpen(false);
         setSearch('');
       }
@@ -46,7 +52,7 @@ export function CurrencySelect({ value, onChange, currencies, label }: CurrencyS
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isOpen]);
 
   // Focus input when dropdown opens
   useEffect(() => {
@@ -114,83 +120,107 @@ export function CurrencySelect({ value, onChange, currencies, label }: CurrencyS
         </svg>
       </button>
 
-      {/* Dropdown */}
-      {isOpen && (
-        <div
-          className={`absolute z-50 mt-1.5 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 overflow-hidden animate-fade-in ${isRTL ? 'right-0' : 'left-0'}`}
-          style={{ maxHeight: '280px' }}
-        >
-          {/* Search Input */}
-          <div className="p-2 border-b border-slate-100 dark:border-slate-700/50">
-            <div className="relative">
-              <svg
-                className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 ${isRTL ? 'right-2.5' : 'left-2.5'}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                ref={inputRef}
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={t('searchCurrency')}
-                className={`w-full bg-slate-50 dark:bg-slate-700/50 border-0 rounded-lg py-2 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${isRTL ? 'pr-8 pl-3' : 'pl-8 pr-3'}`}
-              />
-            </div>
-          </div>
-
-          {/* Currency List */}
-          <ul
-            ref={listRef}
-            className="overflow-y-auto"
-            style={{ maxHeight: '220px' }}
-            role="listbox"
+      {/* Modal Dropdown - Rendered via Portal */}
+      {isOpen && createPortal(
+        <div className="currency-modal-backdrop fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div
+            ref={containerRef}
+            className="relative w-full max-w-md mx-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-scale-in"
+            style={{ maxHeight: '80vh' }}
+            onClick={(e) => e.stopPropagation()}
           >
-            {filteredCurrencies.length > 0 ? (
-              filteredCurrencies.map((currency) => {
-                const currencyFlag = CURRENCY_FLAGS[currency.code] || '🌍';
-                const isSelected = currency.code === value;
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white">
+                {label}
+              </h3>
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  setSearch('');
+                }}
+                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                aria-label="Close"
+              >
+                <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
 
-                return (
-                  <li
-                    key={currency.code}
-                    data-selected={isSelected}
-                    role="option"
-                    aria-selected={isSelected}
-                    onClick={() => handleSelect(currency.code)}
-                    className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors duration-150 ${
-                      isSelected
-                        ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                    }`}
-                  >
-                    <span className="text-xl flex-shrink-0">{currencyFlag}</span>
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium text-sm">{currency.code}</span>
-                      <span className="text-xs text-slate-500 dark:text-slate-400 block truncate">
-                        {currency.name}
-                      </span>
-                    </div>
-                    {isSelected && (
-                      <svg className="w-4 h-4 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </li>
-                );
-              })
-            ) : (
-              <li className="px-3 py-4 text-center text-sm text-slate-500 dark:text-slate-400">
-                {t('noCurrencyFound')}
-              </li>
-            )}
-          </ul>
-        </div>
+            {/* Search Input */}
+            <div className="p-3 border-b border-slate-100 dark:border-slate-700/50">
+              <div className="relative">
+                <svg
+                  className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 ${isRTL ? 'right-3' : 'left-3'}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={t('searchCurrency')}
+                  className={`w-full bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 ${isRTL ? 'pr-10 pl-3' : 'pl-10 pr-3'}`}
+                />
+              </div>
+            </div>
+
+            {/* Currency List */}
+            <ul
+              ref={listRef}
+              className="overflow-y-auto p-2"
+              style={{ maxHeight: 'calc(80vh - 180px)' }}
+              role="listbox"
+            >
+              {filteredCurrencies.length > 0 ? (
+                filteredCurrencies.map((currency) => {
+                  const currencyFlag = CURRENCY_FLAGS[currency.code] || '🌍';
+                  const isSelected = currency.code === value;
+
+                  return (
+                    <li
+                      key={currency.code}
+                      data-selected={isSelected}
+                      role="option"
+                      aria-selected={isSelected}
+                      onClick={() => handleSelect(currency.code)}
+                      className={`flex items-center gap-3 px-3 py-3 cursor-pointer transition-all duration-150 rounded-lg ${
+                        isSelected
+                          ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300'
+                          : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
+                      }`}
+                    >
+                      <span className="text-2xl flex-shrink-0">{currencyFlag}</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="font-semibold text-sm block">{currency.code}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 block truncate">
+                          {currency.name}
+                        </span>
+                      </div>
+                      {isSelected && (
+                        <svg className="w-5 h-5 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </li>
+                  );
+                })
+              ) : (
+                <li className="px-3 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+                  {t('noCurrencyFound')}
+                </li>
+              )}
+            </ul>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
