@@ -33,6 +33,7 @@ export const translations = {
     failedToConvert: 'Failed to convert. Please try again.',
     searchCurrency: 'Search currency...',
     noCurrencyFound: 'No currency found',
+    selectCurrency: 'Select Currency',
 
     // Rates Grid
     exchangeRates: 'Exchange Rates',
@@ -119,6 +120,7 @@ export const translations = {
     failedToConvert: 'تبدیل ناموفق بود. لطفاً دوباره تلاش کنید.',
     searchCurrency: 'جستجوی ارز...',
     noCurrencyFound: 'ارزی پیدا نشد',
+    selectCurrency: 'انتخاب ارز',
 
     // Rates Grid
     exchangeRates: 'نرخ ارزها',
@@ -205,6 +207,7 @@ export const translations = {
     failedToConvert: 'فشل التحويل. يرجى المحاولة مرة أخرى.',
     searchCurrency: 'البحث عن عملة...',
     noCurrencyFound: 'لم يتم العثور على عملة',
+    selectCurrency: 'اختر العملة',
 
     // Rates Grid
     exchangeRates: 'أسعار الصرف',
@@ -291,6 +294,7 @@ export const translations = {
     failedToConvert: 'Dönüştürme başarısız. Lütfen tekrar deneyin.',
     searchCurrency: 'Para birimi ara...',
     noCurrencyFound: 'Para birimi bulunamadı',
+    selectCurrency: 'Para Birimi Seç',
 
     // Rates Grid
     exchangeRates: 'Döviz Kurları',
