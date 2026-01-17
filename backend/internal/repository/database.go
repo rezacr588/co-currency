@@ -135,6 +135,75 @@ func (d *Database) initTables(ctx context.Context) error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_hash ON refresh_tokens(token_hash)`,
+
+		// Goals table
+		`CREATE TABLE IF NOT EXISTS goals (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+			name VARCHAR(255) NOT NULL,
+			target_amount DECIMAL(20, 8) NOT NULL,
+			current_amount DECIMAL(20, 8) NOT NULL DEFAULT 0,
+			currency VARCHAR(10) NOT NULL,
+			category VARCHAR(50),
+			deadline DATE,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_goals_user_id ON goals(user_id)`,
+
+		// Tags table
+		`CREATE TABLE IF NOT EXISTS tags (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+			name VARCHAR(50) NOT NULL,
+			color VARCHAR(20),
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			UNIQUE(user_id, name)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_tags_user_id ON tags(user_id)`,
+
+		// Transaction tags junction table
+		`CREATE TABLE IF NOT EXISTS transaction_tags (
+			transaction_id UUID REFERENCES transactions(id) ON DELETE CASCADE,
+			tag_id UUID REFERENCES tags(id) ON DELETE CASCADE,
+			PRIMARY KEY (transaction_id, tag_id)
+		)`,
+
+		// Add notes column to transactions if not exists
+		`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS notes TEXT`,
+
+		// Budgets table
+		`CREATE TABLE IF NOT EXISTS budgets (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+			category VARCHAR(50) NOT NULL,
+			amount DECIMAL(20, 8) NOT NULL,
+			currency VARCHAR(10) NOT NULL,
+			period VARCHAR(20) NOT NULL DEFAULT 'monthly',
+			spent DECIMAL(20, 8) NOT NULL DEFAULT 0,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			UNIQUE(user_id, category, period)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_budgets_user_id ON budgets(user_id)`,
+
+		// Recurring transactions table
+		`CREATE TABLE IF NOT EXISTS recurring_transactions (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+			type VARCHAR(20) NOT NULL,
+			amount DECIMAL(20, 8) NOT NULL,
+			currency VARCHAR(10) NOT NULL,
+			category VARCHAR(50),
+			description TEXT,
+			frequency VARCHAR(20) NOT NULL,
+			next_execution DATE NOT NULL,
+			is_active BOOLEAN DEFAULT TRUE,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_recurring_transactions_user_id ON recurring_transactions(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_recurring_transactions_next_execution ON recurring_transactions(next_execution)`,
 	}
 
 	for _, query := range queries {

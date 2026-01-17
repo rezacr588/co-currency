@@ -79,6 +79,26 @@ export function Wallet() {
                   {t('aiParser')}
                 </Button>
               </Link>
+              <Link to="/goals">
+                <Button variant="ghost" size="sm">
+                  {t('financialGoals')}
+                </Button>
+              </Link>
+              <Link to="/budgets">
+                <Button variant="ghost" size="sm">
+                  {t('budgets')}
+                </Button>
+              </Link>
+              <Link to="/recurring">
+                <Button variant="ghost" size="sm">
+                  {t('recurringTransactions')}
+                </Button>
+              </Link>
+              <Link to="/reports">
+                <Button variant="ghost" size="sm">
+                  {t('reportsAndStats')}
+                </Button>
+              </Link>
             </div>
           </div>
 

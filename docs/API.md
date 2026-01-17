@@ -1075,6 +1075,635 @@ Content-Type: application/json
 
 ---
 
+## Goals Endpoints
+
+All goals endpoints require authentication.
+
+### List Goals
+
+Get all financial goals for the authenticated user.
+
+```
+GET /api/v1/goals
+```
+
+**Headers:**
+
+```
+Authorization: Bearer <jwt-token>
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "goals": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "user_id": "550e8400-e29b-41d4-a716-446655440000",
+      "name": "Emergency Fund",
+      "target_amount": 10000.00,
+      "current_amount": 5500.00,
+      "currency": "USD",
+      "category": "emergency_fund",
+      "deadline": "2024-12-31",
+      "progress": 55.0,
+      "is_completed": false,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### Create Goal
+
+Create a new financial goal.
+
+```
+POST /api/v1/goals
+```
+
+**Request Body:**
+
+```json
+{
+  "name": "Vacation Fund",
+  "target_amount": 5000.00,
+  "currency": "USD",
+  "category": "vacation",
+  "deadline": "2024-06-01"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| name | string | Yes | Goal name |
+| target_amount | number | Yes | Target amount (> 0) |
+| currency | string | Yes | Currency code |
+| category | string | No | Goal category |
+| deadline | string | No | Deadline date (YYYY-MM-DD) |
+
+**Response (201 Created):**
+
+```json
+{
+  "goal": {
+    "id": "550e8400-e29b-41d4-a716-446655440002",
+    "name": "Vacation Fund",
+    "target_amount": 5000.00,
+    "current_amount": 0,
+    "currency": "USD",
+    "category": "vacation",
+    "deadline": "2024-06-01",
+    "progress": 0,
+    "is_completed": false
+  }
+}
+```
+
+---
+
+### Update Goal
+
+Update an existing goal.
+
+```
+PUT /api/v1/goals/{id}
+```
+
+**Request Body:**
+
+```json
+{
+  "name": "Updated Goal Name",
+  "target_amount": 7500.00,
+  "deadline": "2024-08-01"
+}
+```
+
+---
+
+### Delete Goal
+
+Delete a goal.
+
+```
+DELETE /api/v1/goals/{id}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "goal deleted successfully"
+}
+```
+
+---
+
+### Contribute to Goal
+
+Add funds to a goal from your wallet balance.
+
+```
+POST /api/v1/goals/{id}/contribute
+```
+
+**Request Body:**
+
+```json
+{
+  "amount": 500.00
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "goal": {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "current_amount": 6000.00,
+    "progress": 60.0
+  },
+  "transaction": {
+    "id": "660e8400-e29b-41d4-a716-446655440005",
+    "type": "debit",
+    "amount": 500.00,
+    "source": "goal_contribution"
+  }
+}
+```
+
+---
+
+### Get Goal Categories
+
+Get available goal categories.
+
+```
+GET /api/v1/goals/categories
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "categories": [
+    "savings",
+    "emergency_fund",
+    "vacation",
+    "home",
+    "car",
+    "education",
+    "retirement",
+    "investment",
+    "debt_payoff",
+    "other"
+  ]
+}
+```
+
+---
+
+## Tags Endpoints
+
+All tags endpoints require authentication.
+
+### List Tags
+
+Get all tags for the authenticated user.
+
+```
+GET /api/v1/tags
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "tags": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "name": "urgent",
+      "color": "#ef4444",
+      "created_at": "2024-01-15T10:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### Create Tag
+
+Create a new tag.
+
+```
+POST /api/v1/tags
+```
+
+**Request Body:**
+
+```json
+{
+  "name": "business",
+  "color": "#3b82f6"
+}
+```
+
+---
+
+### Delete Tag
+
+Delete a tag.
+
+```
+DELETE /api/v1/tags/{id}
+```
+
+---
+
+## Budgets Endpoints
+
+All budgets endpoints require authentication.
+
+### List Budgets
+
+Get all budgets for the authenticated user with calculated spent amounts.
+
+```
+GET /api/v1/budgets
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "budgets": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "category": "food",
+      "amount": 500.00,
+      "currency": "USD",
+      "period": "monthly",
+      "spent": 350.00,
+      "remaining": 150.00,
+      "progress": 70.0,
+      "is_over_budget": false,
+      "is_near_limit": false
+    }
+  ]
+}
+```
+
+---
+
+### Create Budget
+
+Create a new budget.
+
+```
+POST /api/v1/budgets
+```
+
+**Request Body:**
+
+```json
+{
+  "category": "entertainment",
+  "amount": 200.00,
+  "currency": "USD",
+  "period": "monthly"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| category | string | Yes | Category name |
+| amount | number | Yes | Budget amount (> 0) |
+| currency | string | Yes | Currency code |
+| period | string | No | "monthly" or "yearly" (default: monthly) |
+
+---
+
+### Update Budget
+
+Update an existing budget.
+
+```
+PUT /api/v1/budgets/{id}
+```
+
+**Request Body:**
+
+```json
+{
+  "amount": 300.00,
+  "period": "monthly"
+}
+```
+
+---
+
+### Delete Budget
+
+Delete a budget.
+
+```
+DELETE /api/v1/budgets/{id}
+```
+
+---
+
+## Recurring Transactions Endpoints
+
+All recurring endpoints require authentication.
+
+### List Recurring Transactions
+
+Get all recurring transactions for the authenticated user.
+
+```
+GET /api/v1/recurring
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "recurring_transactions": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "type": "debit",
+      "amount": 100.00,
+      "currency": "USD",
+      "category": "bills",
+      "description": "Netflix subscription",
+      "frequency": "monthly",
+      "next_execution": "2024-02-01",
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### Create Recurring Transaction
+
+Create a new recurring transaction.
+
+```
+POST /api/v1/recurring
+```
+
+**Request Body:**
+
+```json
+{
+  "type": "debit",
+  "amount": 15.99,
+  "currency": "USD",
+  "category": "entertainment",
+  "description": "Streaming service",
+  "frequency": "monthly",
+  "next_execution": "2024-02-01"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| type | string | Yes | "credit" or "debit" |
+| amount | number | Yes | Transaction amount (> 0) |
+| currency | string | Yes | Currency code |
+| category | string | No | Category name |
+| description | string | No | Description |
+| frequency | string | Yes | "daily", "weekly", "monthly", or "yearly" |
+| next_execution | string | Yes | Next execution date (YYYY-MM-DD) |
+
+---
+
+### Update Recurring Transaction
+
+Update an existing recurring transaction.
+
+```
+PUT /api/v1/recurring/{id}
+```
+
+**Request Body:**
+
+```json
+{
+  "amount": 19.99,
+  "is_active": true
+}
+```
+
+---
+
+### Delete Recurring Transaction
+
+Delete a recurring transaction.
+
+```
+DELETE /api/v1/recurring/{id}
+```
+
+---
+
+### Execute Recurring Transaction
+
+Manually execute a recurring transaction.
+
+```
+POST /api/v1/recurring/{id}/execute
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "transaction": {
+    "id": "660e8400-e29b-41d4-a716-446655440010",
+    "type": "debit",
+    "amount": 15.99,
+    "currency": "USD",
+    "source": "recurring"
+  },
+  "recurring_transaction": {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "next_execution": "2024-03-01"
+  },
+  "message": "recurring transaction executed successfully"
+}
+```
+
+---
+
+## Reports Endpoints
+
+All reports endpoints require authentication.
+
+### Monthly Report
+
+Get monthly income, expenses, and savings summary.
+
+```
+GET /api/v1/reports/monthly
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| year | integer | No | Year (default: current year) |
+| month | integer | No | Month 1-12 (default: current month) |
+| currency | string | No | Display currency (default: USD) |
+
+**Response (200 OK):**
+
+```json
+{
+  "year": 2024,
+  "month": 1,
+  "currency": "USD",
+  "income": 5000.00,
+  "expenses": 3500.00,
+  "net": 1500.00,
+  "savings_rate": 30.0
+}
+```
+
+---
+
+### Category Report
+
+Get spending breakdown by category.
+
+```
+GET /api/v1/reports/category
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| from_date | string | No | Start date (YYYY-MM-DD) |
+| to_date | string | No | End date (YYYY-MM-DD) |
+| currency | string | No | Display currency (default: USD) |
+
+**Response (200 OK):**
+
+```json
+{
+  "from_date": "2024-01-01",
+  "to_date": "2024-01-31",
+  "currency": "USD",
+  "total": 3500.00,
+  "categories": [
+    {
+      "category": "food",
+      "amount": 800.00,
+      "percentage": 22.86,
+      "count": 15
+    },
+    {
+      "category": "transportation",
+      "amount": 400.00,
+      "percentage": 11.43,
+      "count": 8
+    }
+  ]
+}
+```
+
+---
+
+### Trends Report
+
+Get income/expense trends over time.
+
+```
+GET /api/v1/reports/trends
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| months | integer | No | Number of months (default: 6, max: 24) |
+| currency | string | No | Display currency (default: USD) |
+
+**Response (200 OK):**
+
+```json
+{
+  "currency": "USD",
+  "months": 6,
+  "trends": [
+    {
+      "period": "2023-08",
+      "income": 4500.00,
+      "expenses": 3200.00,
+      "net": 1300.00
+    },
+    {
+      "period": "2023-09",
+      "income": 5000.00,
+      "expenses": 3500.00,
+      "net": 1500.00
+    }
+  ]
+}
+```
+
+---
+
+### Net Worth Report
+
+Get total net worth and balance distribution.
+
+```
+GET /api/v1/reports/networth
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| currency | string | No | Display currency (default: USD) |
+
+**Response (200 OK):**
+
+```json
+{
+  "currency": "USD",
+  "total_balance": 15000.00,
+  "balances": [
+    {
+      "currency": "USD",
+      "balance": 10000.00,
+      "balance_in_base": 10000.00,
+      "percentage": 66.67
+    },
+    {
+      "currency": "EUR",
+      "balance": 4500.00,
+      "balance_in_base": 5000.00,
+      "percentage": 33.33
+    }
+  ]
+}
+```
+
+---
+
 ## SDK Examples
 
 ### JavaScript/TypeScript

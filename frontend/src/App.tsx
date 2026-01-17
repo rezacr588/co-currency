@@ -15,7 +15,11 @@ import {
   WalletConvert,
   AIReceiptParser,
 } from './components/features/Wallet';
+import { GoalsList } from './components/features/Goals';
+import { BudgetList } from './components/features/Budgets';
+import { RecurringList } from './components/features/Recurring';
 import { Login, Register, ForgotPassword, ResetPassword } from './pages';
+import { Reports } from './pages/Reports';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -263,6 +267,38 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <AIReceiptParser />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/goals"
+          element={
+            <ProtectedRoute>
+              <GoalsList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/budgets"
+          element={
+            <ProtectedRoute>
+              <BudgetList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/recurring"
+          element={
+            <ProtectedRoute>
+              <RecurringList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <Reports />
             </ProtectedRoute>
           }
         />

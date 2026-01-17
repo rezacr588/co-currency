@@ -122,17 +122,75 @@ func main() {
 		log.Info().Msg("AI_API_KEY not configured, AI features disabled")
 	}
 
+	// Initialize Phase 3 services (goals, tags, budgets, recurring, reports)
+	var goalService *service.GoalService
+	var tagService *service.TagService
+	var budgetService *service.BudgetService
+	var recurringService *service.RecurringService
+	var reportsService *service.ReportsService
+
+	if mainDB != nil {
+		goalRepo := repository.NewGoalRepository(mainDB)
+		goalService = service.NewGoalService(goalRepo)
+		log.Info().Msg("Goal service initialized")
+
+		tagRepo := repository.NewTagRepository(mainDB)
+		tagService = service.NewTagService(tagRepo)
+		log.Info().Msg("Tag service initialized")
+
+		budgetRepo := repository.NewBudgetRepository(mainDB)
+		budgetService = service.NewBudgetService(budgetRepo)
+		log.Info().Msg("Budget service initialized")
+
+		recurringRepo := repository.NewRecurringRepository(mainDB)
+		recurringService = service.NewRecurringService(recurringRepo)
+		log.Info().Msg("Recurring transaction service initialized")
+
+		if walletRepo != nil {
+			reportsService = service.NewReportsService(walletRepo, exchangeService)
+			log.Info().Msg("Reports service initialized")
+		}
+	}
+
 	// Initialize handlers
 	exchangeHandler := handler.New(exchangeService)
 	authHandler := handler.NewAuthHandler(authService)
 	walletHandler := handler.NewWalletHandler(walletService)
 	aiHandler := handler.NewAIHandler(aiService, walletService)
 
+	// Initialize Phase 3 handlers
+	var goalHandler *handler.GoalHandler
+	var tagHandler *handler.TagHandler
+	var budgetHandler *handler.BudgetHandler
+	var recurringHandler *handler.RecurringHandler
+	var reportsHandler *handler.ReportsHandler
+
+	if goalService != nil {
+		goalHandler = handler.NewGoalHandler(goalService)
+	}
+	if tagService != nil {
+		tagHandler = handler.NewTagHandler(tagService)
+	}
+	if budgetService != nil {
+		budgetHandler = handler.NewBudgetHandler(budgetService)
+	}
+	if recurringService != nil {
+		recurringHandler = handler.NewRecurringHandler(recurringService)
+	}
+	if reportsService != nil {
+		reportsHandler = handler.NewReportsHandler(reportsService)
+	}
+
 	handlers := &router.Handlers{
-		Exchange: exchangeHandler,
-		Auth:     authHandler,
-		Wallet:   walletHandler,
-		AI:       aiHandler,
+		Exchange:  exchangeHandler,
+		Auth:      authHandler,
+		Wallet:    walletHandler,
+		AI:        aiHandler,
+		Goal:      goalHandler,
+		Tag:       tagHandler,
+		Budget:    budgetHandler,
+		Recurring: recurringHandler,
+		Reports:   reportsHandler,
 	}
 
 	rateLimiter := middleware.NewRateLimiter(cfg.RateLimitPerMin)

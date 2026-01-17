@@ -1,0 +1,169 @@
+import { useState, useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api } from '../../../api/client';
+import { useLanguage } from '../../../context/LanguageContext';
+import type { Goal, CreateGoalRequest, UpdateGoalRequest } from '../../../types/goal';
+import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
+import { Button } from '../../ui/Button';
+import { Input } from '../../ui/Input';
+import { Select } from '../../ui/Select';
+import { GOAL_CATEGORIES } from '../../../types/goal';
+
+interface GoalFormProps {
+  goal?: Goal;
+  onClose: () => void;
+}
+
+export function GoalForm({ goal, onClose }: GoalFormProps) {
+  const { t } = useLanguage();
+  const queryClient = useQueryClient();
+  const isEditing = !!goal;
+
+  const [name, setName] = useState(goal?.name || '');
+  const [targetAmount, setTargetAmount] = useState(goal?.target_amount?.toString() || '');
+  const [currency, setCurrency] = useState(goal?.currency || 'USD');
+  const [category, setCategory] = useState(goal?.category || '');
+  const [deadline, setDeadline] = useState(goal?.deadline?.split('T')[0] || '');
+
+  const { data: currenciesData } = useQuery({
+    queryKey: ['currencies'],
+    queryFn: () => api.currencies.list(),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: CreateGoalRequest) => api.goals.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      onClose();
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: UpdateGoalRequest) => api.goals.update(goal!.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      onClose();
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (isEditing) {
+      const updateData: UpdateGoalRequest = {};
+      if (name !== goal.name) updateData.name = name;
+      if (parseFloat(targetAmount) !== goal.target_amount) updateData.target_amount = parseFloat(targetAmount);
+      if (category !== goal.category) updateData.category = category;
+      if (deadline !== goal.deadline?.split('T')[0]) updateData.deadline = deadline || undefined;
+
+      updateMutation.mutate(updateData);
+    } else {
+      createMutation.mutate({
+        name,
+        target_amount: parseFloat(targetAmount),
+        currency,
+        category: category || undefined,
+        deadline: deadline || undefined,
+      });
+    }
+  };
+
+  const isLoading = createMutation.isPending || updateMutation.isPending;
+  const error = createMutation.error || updateMutation.error;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{isEditing ? t('editGoal') : t('createGoal')}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              {t('goalName')}
+            </label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t('enterGoalName')}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                {t('targetAmount')}
+              </label>
+              <Input
+                type="number"
+                value={targetAmount}
+                onChange={(e) => setTargetAmount(e.target.value)}
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                {t('currency')}
+              </label>
+              <Select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                disabled={isEditing}
+              >
+                {currenciesData?.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} - {c.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              {t('category')} ({t('optional')})
+            </label>
+            <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+              <option value="">{t('selectCategory')}</option>
+              {GOAL_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {t(`goalCategory_${cat}` as any) || cat}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              {t('deadline')} ({t('optional')})
+            </label>
+            <Input
+              type="date"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+            />
+          </div>
+
+          {error && (
+            <p className="text-sm text-red-500">{t('goalSaveFailed')}</p>
+          )}
+
+          <div className="flex gap-2 pt-2">
+            <Button type="submit" variant="primary" disabled={isLoading} className="flex-1">
+              {isLoading ? t('saving') : isEditing ? t('saveChanges') : t('createGoal')}
+            </Button>
+            <Button type="button" variant="ghost" onClick={onClose}>
+              {t('cancel')}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}

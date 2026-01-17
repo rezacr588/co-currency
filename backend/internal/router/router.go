@@ -12,10 +12,15 @@ import (
 
 // Handlers holds all HTTP handlers for the application
 type Handlers struct {
-	Exchange *handler.Handler
-	Auth     *handler.AuthHandler
-	Wallet   *handler.WalletHandler
-	AI       *handler.AIHandler
+	Exchange  *handler.Handler
+	Auth      *handler.AuthHandler
+	Wallet    *handler.WalletHandler
+	AI        *handler.AIHandler
+	Goal      *handler.GoalHandler
+	Tag       *handler.TagHandler
+	Budget    *handler.BudgetHandler
+	Recurring *handler.RecurringHandler
+	Reports   *handler.ReportsHandler
 }
 
 // New creates a new router with all routes configured
@@ -83,6 +88,64 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 				r.Post("/apply-parsed", h.AI.ApplyParsed)
 			})
 		})
+
+		// Goals routes (protected)
+		if h.Goal != nil {
+			r.Route("/goals", func(r chi.Router) {
+				r.Use(authMiddleware.Middleware)
+				r.Get("/", h.Goal.GetGoals)
+				r.Post("/", h.Goal.CreateGoal)
+				r.Get("/categories", h.Goal.GetGoalCategories)
+				r.Get("/{id}", h.Goal.GetGoal)
+				r.Put("/{id}", h.Goal.UpdateGoal)
+				r.Delete("/{id}", h.Goal.DeleteGoal)
+				r.Post("/{id}/contribute", h.Goal.ContributeToGoal)
+			})
+		}
+
+		// Tags routes (protected)
+		if h.Tag != nil {
+			r.Route("/tags", func(r chi.Router) {
+				r.Use(authMiddleware.Middleware)
+				r.Get("/", h.Tag.GetTags)
+				r.Post("/", h.Tag.CreateTag)
+				r.Delete("/{id}", h.Tag.DeleteTag)
+			})
+		}
+
+		// Budgets routes (protected)
+		if h.Budget != nil {
+			r.Route("/budgets", func(r chi.Router) {
+				r.Use(authMiddleware.Middleware)
+				r.Get("/", h.Budget.GetBudgets)
+				r.Post("/", h.Budget.CreateBudget)
+				r.Put("/{id}", h.Budget.UpdateBudget)
+				r.Delete("/{id}", h.Budget.DeleteBudget)
+			})
+		}
+
+		// Recurring transactions routes (protected)
+		if h.Recurring != nil {
+			r.Route("/recurring", func(r chi.Router) {
+				r.Use(authMiddleware.Middleware)
+				r.Get("/", h.Recurring.GetRecurring)
+				r.Post("/", h.Recurring.CreateRecurring)
+				r.Put("/{id}", h.Recurring.UpdateRecurring)
+				r.Delete("/{id}", h.Recurring.DeleteRecurring)
+				r.Post("/{id}/execute", h.Recurring.ExecuteRecurring)
+			})
+		}
+
+		// Reports routes (protected)
+		if h.Reports != nil {
+			r.Route("/reports", func(r chi.Router) {
+				r.Use(authMiddleware.Middleware)
+				r.Get("/monthly", h.Reports.GetMonthlyReport)
+				r.Get("/category", h.Reports.GetCategoryReport)
+				r.Get("/trends", h.Reports.GetTrendsReport)
+				r.Get("/networth", h.Reports.GetNetWorthReport)
+			})
+		}
 	})
 
 	// Serve static files (frontend)

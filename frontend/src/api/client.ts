@@ -20,6 +20,24 @@ import type {
   AIApplyResponse,
   Category,
 } from '../types/wallet';
+import type {
+  Goal,
+  CreateGoalRequest,
+  UpdateGoalRequest,
+  ContributeToGoalRequest,
+  Tag,
+  CreateTagRequest,
+  Budget,
+  CreateBudgetRequest,
+  UpdateBudgetRequest,
+  RecurringTransaction,
+  CreateRecurringRequest,
+  UpdateRecurringRequest,
+  MonthlyReport,
+  CategoryReport,
+  TrendsReport,
+  NetWorthReport,
+} from '../types/goal';
 
 const API_BASE = '/api/v1';
 
@@ -249,5 +267,120 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+  },
+
+  // Goals
+  goals: {
+    list: () => fetchAPI<{ goals: Goal[] }>('/goals'),
+    get: (id: string) => fetchAPI<{ goal: Goal; progress: number; is_completed: boolean }>(`/goals/${id}`),
+    create: (data: CreateGoalRequest) =>
+      fetchAPI<{ goal: Goal; progress: number; is_completed: boolean }>('/goals', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: UpdateGoalRequest) =>
+      fetchAPI<{ goal: Goal; progress: number; is_completed: boolean }>(`/goals/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      fetchAPI<{ message: string }>(`/goals/${id}`, {
+        method: 'DELETE',
+      }),
+    contribute: (id: string, data: ContributeToGoalRequest) =>
+      fetchAPI<{ goal: Goal; progress: number; is_completed: boolean; transaction: Transaction }>(`/goals/${id}/contribute`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getCategories: () => fetchAPI<{ categories: string[] }>('/goals/categories'),
+  },
+
+  // Tags
+  tags: {
+    list: () => fetchAPI<{ tags: Tag[] }>('/tags'),
+    create: (data: CreateTagRequest) =>
+      fetchAPI<Tag>('/tags', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      fetchAPI<{ message: string }>(`/tags/${id}`, {
+        method: 'DELETE',
+      }),
+  },
+
+  // Budgets
+  budgets: {
+    list: () => fetchAPI<{ budgets: Budget[] }>('/budgets'),
+    create: (data: CreateBudgetRequest) =>
+      fetchAPI<{ budget: Budget }>('/budgets', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: UpdateBudgetRequest) =>
+      fetchAPI<{ budget: Budget }>(`/budgets/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      fetchAPI<{ message: string }>(`/budgets/${id}`, {
+        method: 'DELETE',
+      }),
+  },
+
+  // Recurring Transactions
+  recurring: {
+    list: () => fetchAPI<{ recurring_transactions: RecurringTransaction[] }>('/recurring'),
+    create: (data: CreateRecurringRequest) =>
+      fetchAPI<RecurringTransaction>('/recurring', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: UpdateRecurringRequest) =>
+      fetchAPI<RecurringTransaction>(`/recurring/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      fetchAPI<{ message: string }>(`/recurring/${id}`, {
+        method: 'DELETE',
+      }),
+    execute: (id: string) =>
+      fetchAPI<{ transaction: Transaction; recurring_transaction: RecurringTransaction }>(`/recurring/${id}/execute`, {
+        method: 'POST',
+      }),
+  },
+
+  // Reports
+  reports: {
+    monthly: (year?: number, month?: number, currency?: string) => {
+      const params = new URLSearchParams();
+      if (year) params.set('year', year.toString());
+      if (month) params.set('month', month.toString());
+      if (currency) params.set('currency', currency);
+      const query = params.toString();
+      return fetchAPI<MonthlyReport>(`/reports/monthly${query ? `?${query}` : ''}`);
+    },
+    category: (fromDate?: string, toDate?: string, currency?: string) => {
+      const params = new URLSearchParams();
+      if (fromDate) params.set('from_date', fromDate);
+      if (toDate) params.set('to_date', toDate);
+      if (currency) params.set('currency', currency);
+      const query = params.toString();
+      return fetchAPI<CategoryReport>(`/reports/category${query ? `?${query}` : ''}`);
+    },
+    trends: (months?: number, currency?: string) => {
+      const params = new URLSearchParams();
+      if (months) params.set('months', months.toString());
+      if (currency) params.set('currency', currency);
+      const query = params.toString();
+      return fetchAPI<TrendsReport>(`/reports/trends${query ? `?${query}` : ''}`);
+    },
+    networth: (currency?: string) => {
+      const params = new URLSearchParams();
+      if (currency) params.set('currency', currency);
+      const query = params.toString();
+      return fetchAPI<NetWorthReport>(`/reports/networth${query ? `?${query}` : ''}`);
+    },
   },
 };
