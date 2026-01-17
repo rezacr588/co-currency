@@ -85,12 +85,14 @@ function TransactionItem({ transaction }: { transaction: Transaction }) {
   const { t } = useLanguage();
 
   const isPositive = transaction.type === 'credit' || transaction.type === 'convert_to';
-  const typeLabel = {
+  const typeLabels: Record<Transaction['type'], string> = {
     credit: t('credit'),
     debit: t('debit'),
+    convert: t('convert'),
     convert_from: t('convertedFrom'),
     convert_to: t('convertedTo'),
-  }[transaction.type];
+  };
+  const typeLabel = typeLabels[transaction.type];
 
   return (
     <div className="flex items-center gap-3 py-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
@@ -115,9 +117,11 @@ function TransactionItem({ transaction }: { transaction: Transaction }) {
           {isPositive ? '+' : '-'}
           {formatCurrency(Math.abs(transaction.amount), transaction.currency)}
         </span>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          {t('balance')}: {formatCurrency(transaction.balance_after, transaction.currency)}
-        </p>
+        {transaction.balance_after !== undefined && (
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {t('balance')}: {formatCurrency(transaction.balance_after, transaction.currency)}
+          </p>
+        )}
       </div>
     </div>
   );

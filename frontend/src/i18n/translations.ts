@@ -170,6 +170,55 @@ export const translations = {
     enterReceiptText: 'Please enter receipt text to parse.',
     noTransactionsToApply: 'No transactions to apply.',
     remove: 'Remove',
+
+    // Onboarding
+    welcomeTitle: 'Welcome to CoFinance',
+    welcomeDesc: 'Your personal finance companion for managing multiple currencies',
+    featureMultiCurrency: 'Multi-Currency Wallet',
+    featureAnalytics: 'Spending Analytics',
+    featureAI: 'AI Receipt Parser',
+    skip: 'Skip',
+    getStarted: 'Get Started',
+    selectPrimaryCurrency: 'Select Primary Currency',
+    primaryCurrencyDesc: 'Choose your main currency for displaying totals',
+    back: 'Back',
+    continue: 'Continue',
+    addFirstTransaction: 'Add Your First Transaction',
+    firstTransactionDesc: 'Start tracking your finances by adding a transaction',
+    category: 'Category',
+    descriptionPlaceholder: 'Enter description...',
+    skipForNow: 'Skip for Now',
+    setupComplete: 'Setup Complete!',
+    setupCompleteDesc: 'You are all set to start managing your finances',
+    goToWallet: 'Go to Wallet',
+
+    // Transaction Filters
+    searchTransactions: 'Search transactions...',
+    filters: 'Filters',
+    export: 'Export',
+    allCategories: 'All Categories',
+    type: 'Type',
+    allTypes: 'All Types',
+    allCurrencies: 'All Currencies',
+    fromDate: 'From Date',
+    toDate: 'To Date',
+    clearFilters: 'Clear Filters',
+
+    // Wallet Charts
+    spendingByCategory: 'Spending by Category',
+    incomeVsExpenses: 'Income vs Expenses',
+    income: 'Income',
+    expenses: 'Expenses',
+    balanceDistribution: 'Balance Distribution',
+
+    // Password Reset
+    forgotPassword: 'Forgot Password',
+    resetPassword: 'Reset Password',
+    newPassword: 'New Password',
+    sendResetLink: 'Send Reset Link',
+    resetLinkSent: 'Reset link sent to your email',
+    invalidResetToken: 'Invalid or expired reset token',
+    passwordResetSuccess: 'Password reset successfully',
   },
   fa: {
     // Header
@@ -342,6 +391,55 @@ export const translations = {
     enterReceiptText: 'لطفاً متن رسید را وارد کنید.',
     noTransactionsToApply: 'تراکنشی برای اعمال وجود ندارد.',
     remove: 'حذف',
+
+    // Onboarding
+    welcomeTitle: 'به کوفایننس خوش آمدید',
+    welcomeDesc: 'همراه مالی شخصی شما برای مدیریت ارزهای متعدد',
+    featureMultiCurrency: 'کیف پول چند ارزی',
+    featureAnalytics: 'تحلیل هزینه‌ها',
+    featureAI: 'پردازشگر هوشمند رسید',
+    skip: 'رد شدن',
+    getStarted: 'شروع کنید',
+    selectPrimaryCurrency: 'ارز اصلی را انتخاب کنید',
+    primaryCurrencyDesc: 'ارز اصلی خود را برای نمایش مجموع انتخاب کنید',
+    back: 'بازگشت',
+    continue: 'ادامه',
+    addFirstTransaction: 'اولین تراکنش خود را اضافه کنید',
+    firstTransactionDesc: 'با افزودن یک تراکنش شروع به پیگیری مالی کنید',
+    category: 'دسته‌بندی',
+    descriptionPlaceholder: 'توضیحات را وارد کنید...',
+    skipForNow: 'فعلاً رد شود',
+    setupComplete: 'راه‌اندازی کامل شد!',
+    setupCompleteDesc: 'شما آماده مدیریت امور مالی خود هستید',
+    goToWallet: 'رفتن به کیف پول',
+
+    // Transaction Filters
+    searchTransactions: 'جستجوی تراکنش‌ها...',
+    filters: 'فیلترها',
+    export: 'خروجی',
+    allCategories: 'همه دسته‌بندی‌ها',
+    type: 'نوع',
+    allTypes: 'همه انواع',
+    allCurrencies: 'همه ارزها',
+    fromDate: 'از تاریخ',
+    toDate: 'تا تاریخ',
+    clearFilters: 'پاک کردن فیلترها',
+
+    // Wallet Charts
+    spendingByCategory: 'هزینه بر اساس دسته‌بندی',
+    incomeVsExpenses: 'درآمد در مقابل هزینه',
+    income: 'درآمد',
+    expenses: 'هزینه‌ها',
+    balanceDistribution: 'توزیع موجودی',
+
+    // Password Reset
+    forgotPassword: 'فراموشی رمز عبور',
+    resetPassword: 'بازنشانی رمز عبور',
+    newPassword: 'رمز عبور جدید',
+    sendResetLink: 'ارسال لینک بازنشانی',
+    resetLinkSent: 'لینک بازنشانی به ایمیل شما ارسال شد',
+    invalidResetToken: 'توکن نامعتبر یا منقضی شده',
+    passwordResetSuccess: 'رمز عبور با موفقیت بازنشانی شد',
   },
   ar: {
     // Header
@@ -514,6 +612,55 @@ export const translations = {
     enterReceiptText: 'يرجى إدخال نص الإيصال.',
     noTransactionsToApply: 'لا توجد معاملات للتطبيق.',
     remove: 'حذف',
+
+    // Onboarding
+    welcomeTitle: 'مرحباً بك في كوفايننس',
+    welcomeDesc: 'رفيقك المالي الشخصي لإدارة العملات المتعددة',
+    featureMultiCurrency: 'محفظة متعددة العملات',
+    featureAnalytics: 'تحليل الإنفاق',
+    featureAI: 'محلل الإيصالات بالذكاء الاصطناعي',
+    skip: 'تخطي',
+    getStarted: 'ابدأ',
+    selectPrimaryCurrency: 'اختر العملة الرئيسية',
+    primaryCurrencyDesc: 'اختر عملتك الرئيسية لعرض المجاميع',
+    back: 'رجوع',
+    continue: 'متابعة',
+    addFirstTransaction: 'أضف أول معاملة',
+    firstTransactionDesc: 'ابدأ بتتبع أموالك بإضافة معاملة',
+    category: 'الفئة',
+    descriptionPlaceholder: 'أدخل الوصف...',
+    skipForNow: 'تخطي الآن',
+    setupComplete: 'اكتمل الإعداد!',
+    setupCompleteDesc: 'أنت جاهز لبدء إدارة أموالك',
+    goToWallet: 'الذهاب للمحفظة',
+
+    // Transaction Filters
+    searchTransactions: 'البحث في المعاملات...',
+    filters: 'الفلاتر',
+    export: 'تصدير',
+    allCategories: 'جميع الفئات',
+    type: 'النوع',
+    allTypes: 'جميع الأنواع',
+    allCurrencies: 'جميع العملات',
+    fromDate: 'من تاريخ',
+    toDate: 'إلى تاريخ',
+    clearFilters: 'مسح الفلاتر',
+
+    // Wallet Charts
+    spendingByCategory: 'الإنفاق حسب الفئة',
+    incomeVsExpenses: 'الدخل مقابل المصروفات',
+    income: 'الدخل',
+    expenses: 'المصروفات',
+    balanceDistribution: 'توزيع الرصيد',
+
+    // Password Reset
+    forgotPassword: 'نسيت كلمة المرور',
+    resetPassword: 'إعادة تعيين كلمة المرور',
+    newPassword: 'كلمة المرور الجديدة',
+    sendResetLink: 'إرسال رابط إعادة التعيين',
+    resetLinkSent: 'تم إرسال رابط إعادة التعيين إلى بريدك',
+    invalidResetToken: 'رمز غير صالح أو منتهي الصلاحية',
+    passwordResetSuccess: 'تم إعادة تعيين كلمة المرور بنجاح',
   },
   tr: {
     // Header
@@ -686,6 +833,55 @@ export const translations = {
     enterReceiptText: 'Lütfen ayrıştırmak için fiş metni girin.',
     noTransactionsToApply: 'Uygulanacak işlem yok.',
     remove: 'Kaldır',
+
+    // Onboarding
+    welcomeTitle: 'CoFinance\'a Hoş Geldiniz',
+    welcomeDesc: 'Çoklu para birimi yönetimi için kişisel finans asistanınız',
+    featureMultiCurrency: 'Çoklu Para Birimi Cüzdanı',
+    featureAnalytics: 'Harcama Analitiği',
+    featureAI: 'AI Fiş Ayrıştırıcı',
+    skip: 'Atla',
+    getStarted: 'Başla',
+    selectPrimaryCurrency: 'Ana Para Birimini Seçin',
+    primaryCurrencyDesc: 'Toplamları görüntülemek için ana para biriminizi seçin',
+    back: 'Geri',
+    continue: 'Devam',
+    addFirstTransaction: 'İlk İşleminizi Ekleyin',
+    firstTransactionDesc: 'Bir işlem ekleyerek finanslarınızı takip etmeye başlayın',
+    category: 'Kategori',
+    descriptionPlaceholder: 'Açıklama girin...',
+    skipForNow: 'Şimdilik Atla',
+    setupComplete: 'Kurulum Tamamlandı!',
+    setupCompleteDesc: 'Finanslarınızı yönetmeye hazırsınız',
+    goToWallet: 'Cüzdana Git',
+
+    // Transaction Filters
+    searchTransactions: 'İşlemleri ara...',
+    filters: 'Filtreler',
+    export: 'Dışa Aktar',
+    allCategories: 'Tüm Kategoriler',
+    type: 'Tür',
+    allTypes: 'Tüm Türler',
+    allCurrencies: 'Tüm Para Birimleri',
+    fromDate: 'Başlangıç Tarihi',
+    toDate: 'Bitiş Tarihi',
+    clearFilters: 'Filtreleri Temizle',
+
+    // Wallet Charts
+    spendingByCategory: 'Kategoriye Göre Harcama',
+    incomeVsExpenses: 'Gelir ve Gider',
+    income: 'Gelir',
+    expenses: 'Giderler',
+    balanceDistribution: 'Bakiye Dağılımı',
+
+    // Password Reset
+    forgotPassword: 'Şifremi Unuttum',
+    resetPassword: 'Şifre Sıfırla',
+    newPassword: 'Yeni Şifre',
+    sendResetLink: 'Sıfırlama Bağlantısı Gönder',
+    resetLinkSent: 'Sıfırlama bağlantısı e-postanıza gönderildi',
+    invalidResetToken: 'Geçersiz veya süresi dolmuş token',
+    passwordResetSuccess: 'Şifre başarıyla sıfırlandı',
   },
 } as const;
 

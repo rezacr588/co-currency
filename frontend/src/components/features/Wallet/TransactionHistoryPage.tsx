@@ -26,7 +26,7 @@ export function TransactionHistoryPage() {
     setOffset((prev) => prev + PAGE_SIZE);
   };
 
-  const hasMore = data && data.length === PAGE_SIZE;
+  const hasMore = data && data.transactions.length === PAGE_SIZE;
 
   return (
     <main className="flex-1 py-4 sm:py-6">
@@ -58,7 +58,7 @@ export function TransactionHistoryPage() {
                 <ErrorMessage onRetry={refetch}>{t('failedToLoadTransactions')}</ErrorMessage>
               ) : data ? (
                 <TransactionHistory
-                  transactions={data}
+                  transactions={data.transactions}
                   showPagination
                   onLoadMore={handleLoadMore}
                   hasMore={hasMore}

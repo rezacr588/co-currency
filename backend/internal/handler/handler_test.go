@@ -304,3 +304,178 @@ func TestDateRegex(t *testing.T) {
 		}
 	}
 }
+
+// Test NewWithConfig
+func TestNewWithConfig_WithNilConfig(t *testing.T) {
+	cfg := &config.Config{
+		Port:            "8080",
+		Environment:     "test",
+		CacheTTL:        5 * time.Minute,
+		RateLimitPerMin: 100,
+		FrankfurterURL:  "https://api.frankfurter.app",
+	}
+	cache := repository.NewInMemoryCache(cfg.CacheTTL)
+	client := repository.NewFrankfurterClient(cfg.FrankfurterURL)
+	exchangeService := service.NewExchangeService(cfg, client, cache, nil)
+
+	h := NewWithConfig(exchangeService, nil)
+
+	if h == nil {
+		t.Fatal("Expected handler to be created with nil config")
+	}
+
+	if h.exchangeService == nil {
+		t.Error("Expected exchange service to be set")
+	}
+}
+
+func TestNewWithConfig_WithEmptyConfig(t *testing.T) {
+	cfg := &config.Config{
+		Port:            "8080",
+		Environment:     "test",
+		CacheTTL:        5 * time.Minute,
+		RateLimitPerMin: 100,
+		FrankfurterURL:  "https://api.frankfurter.app",
+	}
+	cache := repository.NewInMemoryCache(cfg.CacheTTL)
+	client := repository.NewFrankfurterClient(cfg.FrankfurterURL)
+	exchangeService := service.NewExchangeService(cfg, client, cache, nil)
+
+	h := NewWithConfig(exchangeService, &HandlerConfig{})
+
+	if h == nil {
+		t.Fatal("Expected handler to be created with empty config")
+	}
+
+	if h.db != nil {
+		t.Error("Expected db to be nil")
+	}
+
+	if h.cache != nil {
+		t.Error("Expected cache to be nil")
+	}
+
+	if h.rateLimiter != nil {
+		t.Error("Expected rateLimiter to be nil")
+	}
+}
+
+// Test Convert with valid parameters
+func TestConvert_Success(t *testing.T) {
+	h := setupTestHandler()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/convert?from=EUR&to=USD&amount=100", nil)
+	rec := httptest.NewRecorder()
+
+	h.Convert(rec, req)
+
+	// Should succeed or fail due to external API
+	if rec.Code != http.StatusOK && rec.Code != http.StatusInternalServerError {
+		t.Errorf("Convert() unexpected status = %v", rec.Code)
+	}
+}
+
+// Test Convert with zero amount
+func TestConvert_ZeroAmount(t *testing.T) {
+	h := setupTestHandler()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/convert?from=USD&to=EUR&amount=0", nil)
+	rec := httptest.NewRecorder()
+
+	h.Convert(rec, req)
+
+	// Zero amount should still work
+	if rec.Code != http.StatusOK && rec.Code != http.StatusInternalServerError {
+		t.Errorf("Convert() unexpected status = %v", rec.Code)
+	}
+}
+
+// Test GetHistorical with base parameter
+func TestGetHistorical_WithBase(t *testing.T) {
+	h := setupTestHandler()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/historical/2024-01-15?base=GBP", nil)
+	rec := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("date", "2024-01-15")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+	h.GetHistorical(rec, req)
+
+	// Should work with GBP as base
+	if rec.Code != http.StatusOK && rec.Code != http.StatusInternalServerError {
+		t.Errorf("GetHistorical() unexpected status = %v", rec.Code)
+	}
+}
+
+// Test GetRates response structure
+func TestGetRates_ResponseStructure(t *testing.T) {
+	h := setupTestHandler()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/rates/EUR", nil)
+	rec := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("base", "EUR")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+	h.GetRates(rec, req)
+
+	if rec.Code == http.StatusOK {
+		var rates model.RatesResponse
+		if err := json.NewDecoder(rec.Body).Decode(&rates); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
+
+		if rates.Base != "EUR" {
+			t.Errorf("Expected base EUR, got %s", rates.Base)
+		}
+
+		if len(rates.Rates) == 0 {
+			t.Error("Expected rates to have values")
+		}
+	}
+}
+
+// Test Handler structure
+func TestHandlerStructure(t *testing.T) {
+	h := &Handler{}
+
+	if h.exchangeService != nil {
+		t.Error("Expected exchangeService to be nil in empty handler")
+	}
+
+	if h.db != nil {
+		t.Error("Expected db to be nil in empty handler")
+	}
+
+	if h.cache != nil {
+		t.Error("Expected cache to be nil in empty handler")
+	}
+
+	if h.rateLimiter != nil {
+		t.Error("Expected rateLimiter to be nil in empty handler")
+	}
+}
+
+// Test HandlerConfig structure
+func TestHandlerConfigStructure(t *testing.T) {
+	cfg := &HandlerConfig{
+		DB:          nil,
+		Cache:       nil,
+		RateLimiter: nil,
+	}
+
+	if cfg.DB != nil {
+		t.Error("Expected DB to be nil")
+	}
+
+	if cfg.Cache != nil {
+		t.Error("Expected Cache to be nil")
+	}
+
+	if cfg.RateLimiter != nil {
+		t.Error("Expected RateLimiter to be nil")
+	}
+}

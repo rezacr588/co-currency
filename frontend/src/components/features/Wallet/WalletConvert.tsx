@@ -79,7 +79,7 @@ export function WalletConvert() {
       return;
     }
 
-    const fromBalance = balances?.find((b) => b.currency === fromCurrency);
+    const fromBalance = balances?.balances.find((b: WalletBalance) => b.currency === fromCurrency);
     if (!fromBalance || fromBalance.amount < numAmount) {
       setError(t('insufficientBalance'));
       return;
@@ -103,7 +103,7 @@ export function WalletConvert() {
       label: `${c.code} - ${c.name}`,
     })) || [{ value: 'USD', label: 'USD - US Dollar' }];
 
-  const fromBalance = balances?.find((b) => b.currency === fromCurrency);
+  const fromBalance = balances?.balances.find((b: WalletBalance) => b.currency === fromCurrency);
 
   return (
     <main className="flex-1 py-4 sm:py-6">
