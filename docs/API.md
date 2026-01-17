@@ -15,15 +15,18 @@ Protected endpoints require a JWT token in the `Authorization` header:
 Authorization: Bearer <your-jwt-token>
 ```
 
-Tokens are obtained through the `/auth/login` or `/auth/register` endpoints and are valid for 7 days.
+Tokens are obtained through the `/auth/login` or `/auth/register` endpoints:
+- **Access Token**: Valid for 15 minutes
+- **Refresh Token**: Valid for 7 days (use `/auth/refresh` to get new access token)
 
 ## Rate Limiting
 
 All API endpoints (except `/health`) are rate-limited to prevent abuse:
 
-- **Default Limit**: 100 requests per minute per IP address
-- **Burst Allowance**: 10% of the limit (10 requests)
-- **Rate Limit Header**: Not currently exposed
+- **Anonymous Users**: 30 requests per minute per IP
+- **Authenticated Users**: 100 requests per minute per IP
+- **Login Attempts**: 5 attempts per minute per IP
+- **Burst Allowance**: 10% of the limit
 
 When rate limited, the API returns:
 
@@ -72,9 +75,9 @@ When rate limited, the API returns:
 
 ## Public Endpoints
 
-### Health Check
+### Basic Health Check
 
-Check if the API is running and healthy.
+Check if the API is running.
 
 ```
 GET /health
@@ -84,8 +87,64 @@ GET /health
 
 ```json
 {
-  "status": "ok",
-  "timestamp": "2024-01-15T10:30:00Z"
+  "status": "ok"
+}
+```
+
+---
+
+### Detailed Health Check
+
+Get comprehensive health status of all components.
+
+```
+GET /health/detailed
+```
+
+**Response (200 OK - healthy):**
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "version": "1.0.0",
+  "checks": {
+    "database": {
+      "status": "healthy",
+      "message": "connected",
+      "latency": "2.5ms"
+    },
+    "cache": {
+      "status": "healthy",
+      "message": "operational",
+      "latency": "0ms"
+    },
+    "exchange_api": {
+      "status": "healthy",
+      "message": "connected",
+      "latency": "150ms"
+    },
+    "rate_limiter": {
+      "status": "healthy",
+      "message": "operational"
+    }
+  }
+}
+```
+
+**Response (503 - unhealthy):**
+
+```json
+{
+  "status": "unhealthy",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "version": "1.0.0",
+  "checks": {
+    "database": {
+      "status": "unhealthy",
+      "message": "connection refused"
+    }
+  }
 }
 ```
 
@@ -359,6 +418,7 @@ POST /api/v1/auth/login
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "user": {
     "id": "550e8400-e29b-41d4-a716-446655440000",
     "email": "user@example.com",
@@ -423,6 +483,134 @@ Expired token:
   "error": "unauthorized",
   "code": 401,
   "message": "token expired"
+}
+```
+
+---
+
+### Refresh Token
+
+Get a new access token using a refresh token.
+
+```
+POST /api/v1/auth/refresh
+```
+
+**Request Body:**
+
+```json
+{
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "user@example.com",
+    "name": "John Doe"
+  }
+}
+```
+
+---
+
+### Forgot Password
+
+Request a password reset email.
+
+```
+POST /api/v1/auth/forgot-password
+```
+
+**Request Body:**
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "If an account exists with this email, a password reset link has been sent"
+}
+```
+
+---
+
+### Reset Password
+
+Reset password using a token from the reset email.
+
+```
+POST /api/v1/auth/reset-password
+```
+
+**Request Body:**
+
+```json
+{
+  "token": "reset-token-from-email",
+  "new_password": "newsecurepassword123"
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Password reset successfully"
+}
+```
+
+**Error Examples:**
+
+Invalid or expired token:
+```json
+{
+  "error": "bad_request",
+  "code": 400,
+  "message": "invalid or expired reset token"
+}
+```
+
+---
+
+### Logout
+
+Revoke the current refresh token.
+
+```
+POST /api/v1/auth/logout
+```
+
+**Headers:**
+
+```
+Authorization: Bearer <jwt-token>
+```
+
+**Request Body:**
+
+```json
+{
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Logged out successfully"
 }
 ```
 
@@ -529,6 +717,12 @@ GET /api/v1/wallet/transactions
 |-----------|------|----------|---------|-------------|
 | limit | integer | No | 50 | Maximum number of transactions to return |
 | offset | integer | No | 0 | Number of transactions to skip |
+| search | string | No | - | Search in description |
+| category | string | No | - | Filter by category |
+| type | string | No | - | Filter by type (credit/debit/convert) |
+| currency | string | No | - | Filter by currency code |
+| from_date | string | No | - | Start date (YYYY-MM-DD) |
+| to_date | string | No | - | End date (YYYY-MM-DD) |
 
 **Headers:**
 
@@ -607,6 +801,7 @@ Content-Type: application/json
 | type | string | Yes | Transaction type: `credit` or `debit` |
 | amount | number | Yes | Transaction amount (must be > 0) |
 | currency | string | Yes | Currency code (e.g., USD, EUR) |
+| category | string | No | Category (food, transportation, etc.) |
 | description | string | No | Transaction description |
 
 **Response (201 Created):**
@@ -691,6 +886,75 @@ Content-Type: application/json
   }
 }
 ```
+
+---
+
+### Export Transactions
+
+Export transaction history as CSV.
+
+```
+GET /api/v1/wallet/transactions/export
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| format | string | No | csv | Export format (currently only csv) |
+| search | string | No | - | Search filter |
+| category | string | No | - | Category filter |
+| type | string | No | - | Type filter |
+| currency | string | No | - | Currency filter |
+| from_date | string | No | - | Start date |
+| to_date | string | No | - | End date |
+
+**Response:**
+
+Returns a CSV file download with Content-Disposition header.
+
+---
+
+### Get Categories
+
+Get available transaction categories.
+
+```
+GET /api/v1/wallet/categories
+```
+
+**Headers:**
+
+```
+Authorization: Bearer <jwt-token>
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "categories": [
+    {
+      "id": "default-food",
+      "name": "food",
+      "icon": "🍔",
+      "color": "#ef4444",
+      "is_default": true
+    },
+    {
+      "id": "default-transportation",
+      "name": "transportation",
+      "icon": "🚗",
+      "color": "#f97316",
+      "is_default": true
+    }
+  ]
+}
+```
+
+**Default Categories:**
+- food, transportation, entertainment, shopping
+- bills, income, transfer, other
 
 ---
 
