@@ -1,6 +1,46 @@
 import type { Currency, RatesResponse, ConversionResult, ConversionRequest } from '../types';
+import type {
+  LoginRequest,
+  RegisterRequest,
+  AuthResponse,
+  User,
+  WalletBalance,
+  WalletSummary,
+  Transaction,
+  TransactionRequest,
+  WalletConvertRequest,
+  WalletConvertResponse,
+  AIParseRequest,
+  AIParseResponse,
+  AIApplyRequest,
+  AIApplyResponse,
+} from '../types/wallet';
 
 const API_BASE = '/api/v1';
+
+// Token management
+let authToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+  if (token) {
+    localStorage.setItem('auth_token', token);
+  } else {
+    localStorage.removeItem('auth_token');
+  }
+}
+
+export function getAuthToken(): string | null {
+  if (!authToken) {
+    authToken = localStorage.getItem('auth_token');
+  }
+  return authToken;
+}
+
+export function clearAuthToken() {
+  authToken = null;
+  localStorage.removeItem('auth_token');
+}
 
 interface RetryOptions {
   maxRetries?: number;
@@ -23,10 +63,12 @@ async function fetchWithRetry<T>(
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
+      const token = getAuthToken();
       const response = await fetch(url, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...options?.headers,
         },
       });
@@ -87,4 +129,56 @@ export const api = {
     fetchAPI<ConversionResult>(
       `/convert?from=${params.from}&to=${params.to}&amount=${params.amount}`
     ),
+
+  // Authentication
+  auth: {
+    register: (data: RegisterRequest) =>
+      fetchAPI<AuthResponse>('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    login: (data: LoginRequest) =>
+      fetchAPI<AuthResponse>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getProfile: () => fetchAPI<User>('/auth/profile'),
+  },
+
+  // Wallet
+  wallet: {
+    getBalances: () => fetchAPI<WalletBalance[]>('/wallet/balances'),
+    getSummary: () => fetchAPI<WalletSummary>('/wallet/summary'),
+    getTransactions: (limit?: number, offset?: number) => {
+      const params = new URLSearchParams();
+      if (limit) params.set('limit', limit.toString());
+      if (offset) params.set('offset', offset.toString());
+      const query = params.toString();
+      return fetchAPI<Transaction[]>(`/wallet/transactions${query ? `?${query}` : ''}`);
+    },
+    addTransaction: (data: TransactionRequest) =>
+      fetchAPI<Transaction>('/wallet/transaction', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    convert: (data: WalletConvertRequest) =>
+      fetchAPI<WalletConvertResponse>('/wallet/convert', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  },
+
+  // AI
+  ai: {
+    parseReceipt: (data: AIParseRequest) =>
+      fetchAPI<AIParseResponse>('/ai/parse', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    applyParsed: (data: AIApplyRequest) =>
+      fetchAPI<AIApplyResponse>('/ai/apply', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  },
 };

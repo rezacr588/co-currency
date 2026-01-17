@@ -47,3 +47,13 @@ func TooManyRequests(w http.ResponseWriter, message string) {
 func ServiceUnavailable(w http.ResponseWriter, message string) {
 	Error(w, http.StatusServiceUnavailable, "service_unavailable", message)
 }
+
+// Unauthorized writes a 401 Unauthorized response
+func Unauthorized(w http.ResponseWriter, message string) {
+	Error(w, http.StatusUnauthorized, "unauthorized", message)
+}
+
+// Forbidden writes a 403 Forbidden response
+func Forbidden(w http.ResponseWriter, message string) {
+	Error(w, http.StatusForbidden, "forbidden", message)
+}

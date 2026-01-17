@@ -144,3 +144,92 @@ func TestGetHistoricalRates_Integration(t *testing.T) {
 		t.Error("GetHistoricalRates() returned no rates")
 	}
 }
+
+func TestNewExchangeService(t *testing.T) {
+	cfg := &config.Config{
+		Port:            "8080",
+		Environment:     "test",
+		CacheTTL:        5 * time.Minute,
+		RateLimitPerMin: 100,
+		FrankfurterURL:  "https://api.frankfurter.app",
+	}
+	cache := repository.NewInMemoryCache(cfg.CacheTTL)
+	client := repository.NewFrankfurterClient(cfg.FrankfurterURL)
+
+	svc := NewExchangeService(cfg, client, cache, nil)
+
+	if svc == nil {
+		t.Fatal("Expected service to be created")
+	}
+
+	if svc.client == nil {
+		t.Error("Expected client to be set")
+	}
+
+	if svc.cache == nil {
+		t.Error("Expected cache to be set")
+	}
+
+	if svc.config == nil {
+		t.Error("Expected config to be set")
+	}
+
+	// IRR client should be auto-created when nil
+	if svc.irrClient == nil {
+		t.Error("Expected IRR client to be auto-created")
+	}
+}
+
+func TestGetLatestRates_Cached(t *testing.T) {
+	svc := setupTestService()
+	ctx := context.Background()
+
+	// First call - will fetch from API
+	rates1, err := svc.GetLatestRates(ctx, "USD")
+	if err != nil {
+		t.Fatalf("GetLatestRates() first call error = %v", err)
+	}
+
+	// Second call - should be cached
+	rates2, err := svc.GetLatestRates(ctx, "USD")
+	if err != nil {
+		t.Fatalf("GetLatestRates() second call error = %v", err)
+	}
+
+	// Check cache worked (rates should be the same)
+	if rates1.Base != rates2.Base {
+		t.Error("Cached result differs in base")
+	}
+}
+
+func TestGetHistoricalRates_Cached(t *testing.T) {
+	svc := setupTestService()
+	ctx := context.Background()
+
+	// First call
+	rates1, err := svc.GetHistoricalRates(ctx, "2024-01-15", "USD")
+	if err != nil {
+		t.Fatalf("GetHistoricalRates() first call error = %v", err)
+	}
+
+	// Second call - should be cached
+	rates2, err := svc.GetHistoricalRates(ctx, "2024-01-15", "USD")
+	if err != nil {
+		t.Fatalf("GetHistoricalRates() second call error = %v", err)
+	}
+
+	if rates1.Base != rates2.Base {
+		t.Error("Cached result differs in base")
+	}
+}
+
+func TestConvert_RateNotFound(t *testing.T) {
+	svc := setupTestService()
+	ctx := context.Background()
+
+	// Try to convert to a non-existent currency
+	_, err := svc.Convert(ctx, "USD", "INVALID", 100)
+	if err == nil {
+		t.Error("Expected error for invalid currency")
+	}
+}

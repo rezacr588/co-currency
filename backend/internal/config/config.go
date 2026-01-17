@@ -18,6 +18,14 @@ type Config struct {
 	DatabaseURL        string        `env:"DATABASE_URL" envDefault:""`
 	IRRCrawlerInterval time.Duration `env:"IRR_CRAWLER_INTERVAL" envDefault:"5m"`
 	IRRCrawlerEnabled  bool          `env:"IRR_CRAWLER_ENABLED" envDefault:"true"`
+
+	// JWT Authentication
+	JWTSecret string `env:"JWT_SECRET" envDefault:"change-me-in-production-to-a-secure-secret"`
+
+	// AI Service settings
+	AIProvider     string `env:"AI_PROVIDER" envDefault:"googleai"` // googleai, openai
+	AIAPIKey       string `env:"AI_API_KEY" envDefault:""`
+	AICloudProject string `env:"AI_CLOUD_PROJECT" envDefault:""`    // Google Cloud project ID
 }
 
 // Load parses environment variables into Config

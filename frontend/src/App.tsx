@@ -8,9 +8,19 @@ import { QuickConvert } from './components/features/QuickConvert';
 import { Historical } from './components/features/Historical';
 import { AboutUs } from './components/features/AboutUs';
 import { NotFound } from './components/features/NotFound';
+import {
+  Wallet,
+  TransactionForm,
+  TransactionHistoryPage,
+  WalletConvert,
+  AIReceiptParser,
+} from './components/features/Wallet';
+import { Login, Register } from './pages';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { HamburgerMenu } from './components/ui/HamburgerMenu';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -52,6 +62,7 @@ function SEOHead() {
 
 function Header() {
   const { t, isRTL } = useLanguage();
+  const { isAuthenticated, user, logout } = useAuth();
   const location = useLocation();
 
   return (
@@ -93,6 +104,48 @@ function Header() {
               >
                 {t('aboutUs')}
               </Link>
+              {isAuthenticated ? (
+                <>
+                  <Link
+                    to="/wallet"
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      location.pathname.startsWith('/wallet')
+                        ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {t('wallet')}
+                  </Link>
+                  <span className="text-sm text-slate-500 dark:text-slate-400 px-2">
+                    {user?.name}
+                  </span>
+                  <button
+                    onClick={logout}
+                    className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    {t('logout')}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      location.pathname === '/login'
+                        ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {t('login')}
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                  >
+                    {t('register')}
+                  </Link>
+                </>
+              )}
             </nav>
 
             {/* Menu */}
@@ -169,6 +222,48 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/about" element={<AboutUs />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route
+          path="/wallet"
+          element={
+            <ProtectedRoute>
+              <Wallet />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/wallet/add"
+          element={
+            <ProtectedRoute>
+              <TransactionForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/wallet/history"
+          element={
+            <ProtectedRoute>
+              <TransactionHistoryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/wallet/convert"
+          element={
+            <ProtectedRoute>
+              <WalletConvert />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/wallet/ai"
+          element={
+            <ProtectedRoute>
+              <AIReceiptParser />
+            </ProtectedRoute>
+          }
+        />
         <Route path="*" element={<NotFound />} />
       </Routes>
 
@@ -184,7 +279,9 @@ function App() {
         <BrowserRouter>
           <ThemeProvider>
             <LanguageProvider>
-              <AppContent />
+              <AuthProvider>
+                <AppContent />
+              </AuthProvider>
             </LanguageProvider>
           </ThemeProvider>
         </BrowserRouter>
