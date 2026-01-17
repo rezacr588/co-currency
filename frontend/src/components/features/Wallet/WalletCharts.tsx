@@ -72,7 +72,7 @@ export function WalletCharts({ transactions, balances }: WalletChartsProps) {
                   <div className="flex-1">
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-slate-700 dark:text-slate-300 capitalize">
-                        {t(category.name) || category.name}
+                        {category.name}
                       </span>
                       <span className="text-slate-600 dark:text-slate-400">
                         ${category.value.toFixed(2)} ({percentage.toFixed(1)}%)

@@ -125,7 +125,7 @@ export function FirstTransaction({
         >
           {DEFAULT_CATEGORIES.map((cat) => (
             <option key={cat.name} value={cat.name}>
-              {cat.icon} {t(cat.name) || cat.name}
+              {cat.icon} {cat.name.charAt(0).toUpperCase() + cat.name.slice(1)}
             </option>
           ))}
         </Select>

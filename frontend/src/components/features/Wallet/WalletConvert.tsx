@@ -11,6 +11,7 @@ import { Button } from '../../ui/Button';
 import { ErrorMessage } from '../../ui/ErrorMessage';
 import { CurrencyBadge } from '../../ui/CurrencyBadge';
 import { Skeleton } from '../../ui/Skeleton';
+import type { WalletBalance } from '../../../types/wallet';
 
 function formatCurrency(amount: number, currency: string): string {
   return new Intl.NumberFormat('en-US', {
