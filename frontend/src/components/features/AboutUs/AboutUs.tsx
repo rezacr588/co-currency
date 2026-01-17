@@ -119,11 +119,44 @@ export function AboutUs() {
             </div>
           </div>
 
+          {/* App Features - New Section */}
+          <div className="mb-10">
+            <h2 className="text-xl font-bold text-slate-800 dark:text-white text-center mb-6">
+              {t('appFeatures')}
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {[
+                { icon: '💱', label: t('currencyConverter'), desc: t('converterDesc') },
+                { icon: '💰', label: t('multiCurrencyWallet'), desc: t('walletDesc') },
+                { icon: '🎯', label: t('financialGoals'), desc: t('goalsDesc') },
+                { icon: '📊', label: t('budgets'), desc: t('budgetDesc') },
+                { icon: '🔄', label: t('recurringTransactions'), desc: t('recurringDesc') },
+                { icon: '📈', label: t('reportsAndStats'), desc: t('reportsDesc') },
+                { icon: '🤖', label: t('aiReceiptParsing'), desc: t('aiParsingDesc') },
+                { icon: '🌙', label: t('darkMode'), desc: t('darkModeDesc') },
+                { icon: '🌐', label: t('multiLanguage'), desc: t('multiLangDesc') },
+              ].map((feature) => (
+                <div
+                  key={feature.label}
+                  className="p-4 rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
+                >
+                  <span className="text-2xl mb-2 block">{feature.icon}</span>
+                  <h3 className="text-sm font-semibold text-slate-800 dark:text-white mb-1">
+                    {feature.label}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {feature.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Tech Stack - Minimal */}
           <div className="text-center">
             <p className="text-sm text-slate-500 dark:text-slate-500 mb-3">{t('builtWith')}</p>
             <div className="flex flex-wrap justify-center gap-2">
-              {['React', 'TypeScript', 'Go', 'Tailwind', 'Vite'].map((tech) => (
+              {['React', 'TypeScript', 'Go', 'PostgreSQL', 'Tailwind', 'Vite'].map((tech) => (
                 <span
                   key={tech}
                   className="px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg"
