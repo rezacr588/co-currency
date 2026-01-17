@@ -113,7 +113,6 @@ func (d *Database) initTables(ctx context.Context) error {
 			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`,
-		`CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users(password_reset_token)`,
 
 		// Add new columns if they don't exist (for existing databases)
 		`ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0`,
@@ -121,6 +120,9 @@ func (d *Database) initTables(ctx context.Context) error {
 		`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token VARCHAR(255)`,
 		`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMP WITH TIME ZONE`,
 		`ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE`,
+
+		// Create index after column is ensured to exist
+		`CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users(password_reset_token)`,
 
 		// Wallet balances (one row per user per currency)
 		`CREATE TABLE IF NOT EXISTS wallet_balances (
