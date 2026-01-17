@@ -153,10 +153,12 @@ func (d *Database) initTables(ctx context.Context) error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at)`,
-		`CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category)`,
 
-		// Add category column if it doesn't exist
+		// Add category column if it doesn't exist (for existing databases)
 		`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS category VARCHAR(50)`,
+
+		// Create index after column is ensured to exist
+		`CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category)`,
 
 		// Categories table
 		`CREATE TABLE IF NOT EXISTS categories (
