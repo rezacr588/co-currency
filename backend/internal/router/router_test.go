@@ -126,7 +126,7 @@ func TestRouter_HistoricalEndpoint_InvalidDate(t *testing.T) {
 	}
 }
 
-func TestRouter_AuthRegisterEndpoint_InvalidBody(t *testing.T) {
+func TestRouter_AuthRegisterEndpoint_ServiceUnavailable(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
 	r := New(handlers, rateLimiter, authMiddleware, nil)
 
@@ -135,12 +135,13 @@ func TestRouter_AuthRegisterEndpoint_InvalidBody(t *testing.T) {
 
 	r.ServeHTTP(rr, req)
 
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("Register endpoint with no body status = %v, want %v", rr.Code, http.StatusBadRequest)
+	// With nil auth service, should return 503 Service Unavailable
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Errorf("Register endpoint with nil auth service status = %v, want %v", rr.Code, http.StatusServiceUnavailable)
 	}
 }
 
-func TestRouter_AuthLoginEndpoint_InvalidBody(t *testing.T) {
+func TestRouter_AuthLoginEndpoint_ServiceUnavailable(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
 	r := New(handlers, rateLimiter, authMiddleware, nil)
 
@@ -149,8 +150,9 @@ func TestRouter_AuthLoginEndpoint_InvalidBody(t *testing.T) {
 
 	r.ServeHTTP(rr, req)
 
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("Login endpoint with no body status = %v, want %v", rr.Code, http.StatusBadRequest)
+	// With nil auth service, should return 503 Service Unavailable
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Errorf("Login endpoint with nil auth service status = %v, want %v", rr.Code, http.StatusServiceUnavailable)
 	}
 }
 

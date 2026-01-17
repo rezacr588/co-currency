@@ -553,41 +553,38 @@ func TestNewAuthHandler(t *testing.T) {
 	}
 }
 
-// Test the actual Register handler with nil service (should panic or handle gracefully)
-func TestAuthHandler_Register_InvalidBody(t *testing.T) {
+// Test auth handlers with nil service return 503 Service Unavailable
+func TestAuthHandler_Register_NilService(t *testing.T) {
 	handler := NewAuthHandler(nil)
 
-	// Test with invalid JSON body
-	body := `{invalid json}`
+	body := `{"email":"test@test.com","password":"test123","name":"Test"}`
 	req := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
 	handler.Register(rr, req)
 
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for invalid JSON, got %d", rr.Code)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Errorf("Expected status 503 for nil service, got %d", rr.Code)
 	}
 }
 
-// Test the actual Login handler with invalid body
-func TestAuthHandler_Login_InvalidBody(t *testing.T) {
+func TestAuthHandler_Login_NilService(t *testing.T) {
 	handler := NewAuthHandler(nil)
 
-	body := `{invalid json}`
+	body := `{"email":"test@test.com","password":"test123"}`
 	req := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
 	handler.Login(rr, req)
 
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for invalid JSON, got %d", rr.Code)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Errorf("Expected status 503 for nil service, got %d", rr.Code)
 	}
 }
 
-// Test the actual GetProfile handler without user in context
-func TestAuthHandler_GetProfile_NoContext(t *testing.T) {
+func TestAuthHandler_GetProfile_NilService(t *testing.T) {
 	handler := NewAuthHandler(nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/auth/profile", nil)
@@ -595,116 +592,53 @@ func TestAuthHandler_GetProfile_NoContext(t *testing.T) {
 
 	handler.GetProfile(rr, req)
 
-	if rr.Code != http.StatusUnauthorized {
-		t.Errorf("Expected status 401, got %d", rr.Code)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Errorf("Expected status 503 for nil service, got %d", rr.Code)
 	}
 }
 
-// Tests for ForgotPassword Handler
-func TestAuthHandler_ForgotPassword_InvalidBody(t *testing.T) {
+func TestAuthHandler_ForgotPassword_NilService(t *testing.T) {
 	handler := NewAuthHandler(nil)
 
-	body := `{invalid json}`
+	body := `{"email":"test@test.com"}`
 	req := httptest.NewRequest("POST", "/api/v1/auth/forgot-password", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
 	handler.ForgotPassword(rr, req)
 
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for invalid JSON, got %d", rr.Code)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Errorf("Expected status 503 for nil service, got %d", rr.Code)
 	}
 }
 
-func TestAuthHandler_ForgotPassword_EmptyEmail(t *testing.T) {
+func TestAuthHandler_ResetPassword_NilService(t *testing.T) {
 	handler := NewAuthHandler(nil)
 
-	body := `{"email": ""}`
-	req := httptest.NewRequest("POST", "/api/v1/auth/forgot-password", bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
-	rr := httptest.NewRecorder()
-
-	handler.ForgotPassword(rr, req)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for empty email, got %d", rr.Code)
-	}
-}
-
-// Tests for ResetPassword Handler
-func TestAuthHandler_ResetPassword_InvalidBody(t *testing.T) {
-	handler := NewAuthHandler(nil)
-
-	body := `{invalid json}`
+	body := `{"token":"test-token","new_password":"newpass123"}`
 	req := httptest.NewRequest("POST", "/api/v1/auth/reset-password", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
 	handler.ResetPassword(rr, req)
 
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for invalid JSON, got %d", rr.Code)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Errorf("Expected status 503 for nil service, got %d", rr.Code)
 	}
 }
 
-func TestAuthHandler_ResetPassword_MissingToken(t *testing.T) {
+func TestAuthHandler_RefreshToken_NilService(t *testing.T) {
 	handler := NewAuthHandler(nil)
 
-	body := `{"token": "", "new_password": "newpassword123"}`
-	req := httptest.NewRequest("POST", "/api/v1/auth/reset-password", bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
-	rr := httptest.NewRecorder()
-
-	handler.ResetPassword(rr, req)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for missing token, got %d", rr.Code)
-	}
-}
-
-func TestAuthHandler_ResetPassword_MissingPassword(t *testing.T) {
-	handler := NewAuthHandler(nil)
-
-	body := `{"token": "valid-token", "new_password": ""}`
-	req := httptest.NewRequest("POST", "/api/v1/auth/reset-password", bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
-	rr := httptest.NewRecorder()
-
-	handler.ResetPassword(rr, req)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for missing password, got %d", rr.Code)
-	}
-}
-
-// Tests for RefreshToken Handler
-func TestAuthHandler_RefreshToken_InvalidBody(t *testing.T) {
-	handler := NewAuthHandler(nil)
-
-	body := `{invalid json}`
+	body := `{"refresh_token":"test-token"}`
 	req := httptest.NewRequest("POST", "/api/v1/auth/refresh", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
 	handler.RefreshToken(rr, req)
 
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for invalid JSON, got %d", rr.Code)
-	}
-}
-
-func TestAuthHandler_RefreshToken_EmptyToken(t *testing.T) {
-	handler := NewAuthHandler(nil)
-
-	body := `{"refresh_token": ""}`
-	req := httptest.NewRequest("POST", "/api/v1/auth/refresh", bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
-	rr := httptest.NewRecorder()
-
-	handler.RefreshToken(rr, req)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for empty token, got %d", rr.Code)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Errorf("Expected status 503 for nil service, got %d", rr.Code)
 	}
 }
 

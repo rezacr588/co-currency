@@ -30,6 +30,15 @@ func NewWalletHandlerWithCategories(walletService *service.WalletService, catego
 	}
 }
 
+// serviceUnavailable returns true and sends an error response if wallet service is not available
+func (h *WalletHandler) serviceUnavailable(w http.ResponseWriter) bool {
+	if h.walletService == nil {
+		httputil.ServiceUnavailable(w, "wallet service not available - database connection failed")
+		return true
+	}
+	return false
+}
+
 // GetCategories handles GET /api/v1/wallet/categories
 func (h *WalletHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
@@ -59,6 +68,10 @@ func (h *WalletHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
 
 // GetBalances handles GET /api/v1/wallet/balances
 func (h *WalletHandler) GetBalances(w http.ResponseWriter, r *http.Request) {
+	if h.serviceUnavailable(w) {
+		return
+	}
+
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		httputil.Unauthorized(w, "user not found in context")
@@ -78,6 +91,10 @@ func (h *WalletHandler) GetBalances(w http.ResponseWriter, r *http.Request) {
 
 // GetSummary handles GET /api/v1/wallet/summary
 func (h *WalletHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
+	if h.serviceUnavailable(w) {
+		return
+	}
+
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		httputil.Unauthorized(w, "user not found in context")
@@ -95,6 +112,10 @@ func (h *WalletHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 
 // AddTransaction handles POST /api/v1/wallet/transaction
 func (h *WalletHandler) AddTransaction(w http.ResponseWriter, r *http.Request) {
+	if h.serviceUnavailable(w) {
+		return
+	}
+
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		httputil.Unauthorized(w, "user not found in context")
@@ -118,6 +139,10 @@ func (h *WalletHandler) AddTransaction(w http.ResponseWriter, r *http.Request) {
 
 // ConvertBalance handles POST /api/v1/wallet/convert
 func (h *WalletHandler) ConvertBalance(w http.ResponseWriter, r *http.Request) {
+	if h.serviceUnavailable(w) {
+		return
+	}
+
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		httputil.Unauthorized(w, "user not found in context")
@@ -141,6 +166,10 @@ func (h *WalletHandler) ConvertBalance(w http.ResponseWriter, r *http.Request) {
 
 // GetTransactions handles GET /api/v1/wallet/transactions
 func (h *WalletHandler) GetTransactions(w http.ResponseWriter, r *http.Request) {
+	if h.serviceUnavailable(w) {
+		return
+	}
+
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		httputil.Unauthorized(w, "user not found in context")
@@ -202,6 +231,10 @@ func (h *WalletHandler) GetTransactions(w http.ResponseWriter, r *http.Request) 
 
 // ExportTransactions handles GET /api/v1/wallet/transactions/export
 func (h *WalletHandler) ExportTransactions(w http.ResponseWriter, r *http.Request) {
+	if h.serviceUnavailable(w) {
+		return
+	}
+
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		httputil.Unauthorized(w, "user not found in context")

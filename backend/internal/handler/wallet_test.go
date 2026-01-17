@@ -952,8 +952,8 @@ func TestNewWalletHandler(t *testing.T) {
 	}
 }
 
-// Test actual handlers with no user in context
-func TestWalletHandler_GetBalances_NoContext(t *testing.T) {
+// Test wallet handlers with nil service return 503 Service Unavailable
+func TestWalletHandler_GetBalances_NilService(t *testing.T) {
 	handler := NewWalletHandler(nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/wallet/balances", nil)
@@ -961,12 +961,12 @@ func TestWalletHandler_GetBalances_NoContext(t *testing.T) {
 
 	handler.GetBalances(rr, req)
 
-	if rr.Code != http.StatusUnauthorized {
-		t.Errorf("Expected status 401, got %d", rr.Code)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Errorf("Expected status 503 for nil service, got %d", rr.Code)
 	}
 }
 
-func TestWalletHandler_GetSummary_NoContext(t *testing.T) {
+func TestWalletHandler_GetSummary_NilService(t *testing.T) {
 	handler := NewWalletHandler(nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/wallet/summary", nil)
@@ -974,12 +974,12 @@ func TestWalletHandler_GetSummary_NoContext(t *testing.T) {
 
 	handler.GetSummary(rr, req)
 
-	if rr.Code != http.StatusUnauthorized {
-		t.Errorf("Expected status 401, got %d", rr.Code)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Errorf("Expected status 503 for nil service, got %d", rr.Code)
 	}
 }
 
-func TestWalletHandler_AddTransaction_NoContext(t *testing.T) {
+func TestWalletHandler_AddTransaction_NilService(t *testing.T) {
 	handler := NewWalletHandler(nil)
 
 	body := `{"type": "credit", "amount": 100, "currency": "USD"}`
@@ -989,31 +989,12 @@ func TestWalletHandler_AddTransaction_NoContext(t *testing.T) {
 
 	handler.AddTransaction(rr, req)
 
-	if rr.Code != http.StatusUnauthorized {
-		t.Errorf("Expected status 401, got %d", rr.Code)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Errorf("Expected status 503 for nil service, got %d", rr.Code)
 	}
 }
 
-func TestWalletHandler_AddTransaction_InvalidBody(t *testing.T) {
-	handler := NewWalletHandler(nil)
-
-	userID := uuid.New()
-
-	body := `{invalid json}`
-	req := httptest.NewRequest("POST", "/api/v1/wallet/transaction", bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
-	req = req.WithContext(ctx)
-	rr := httptest.NewRecorder()
-
-	handler.AddTransaction(rr, req)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", rr.Code)
-	}
-}
-
-func TestWalletHandler_ConvertBalance_NoContext(t *testing.T) {
+func TestWalletHandler_ConvertBalance_NilService(t *testing.T) {
 	handler := NewWalletHandler(nil)
 
 	body := `{"from_currency": "USD", "to_currency": "EUR", "amount": 100}`
@@ -1023,31 +1004,12 @@ func TestWalletHandler_ConvertBalance_NoContext(t *testing.T) {
 
 	handler.ConvertBalance(rr, req)
 
-	if rr.Code != http.StatusUnauthorized {
-		t.Errorf("Expected status 401, got %d", rr.Code)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Errorf("Expected status 503 for nil service, got %d", rr.Code)
 	}
 }
 
-func TestWalletHandler_ConvertBalance_InvalidBody(t *testing.T) {
-	handler := NewWalletHandler(nil)
-
-	userID := uuid.New()
-
-	body := `{invalid json}`
-	req := httptest.NewRequest("POST", "/api/v1/wallet/convert", bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
-	req = req.WithContext(ctx)
-	rr := httptest.NewRecorder()
-
-	handler.ConvertBalance(rr, req)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", rr.Code)
-	}
-}
-
-func TestWalletHandler_GetTransactions_NoContext(t *testing.T) {
+func TestWalletHandler_GetTransactions_NilService(t *testing.T) {
 	handler := NewWalletHandler(nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/wallet/transactions", nil)
@@ -1055,8 +1017,8 @@ func TestWalletHandler_GetTransactions_NoContext(t *testing.T) {
 
 	handler.GetTransactions(rr, req)
 
-	if rr.Code != http.StatusUnauthorized {
-		t.Errorf("Expected status 401, got %d", rr.Code)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Errorf("Expected status 503 for nil service, got %d", rr.Code)
 	}
 }
 
@@ -1161,8 +1123,8 @@ func TestGetTransactionsHandler_WithNegativePaginationParams(t *testing.T) {
 	}
 }
 
-// Tests for ExportTransactions Handler
-func TestWalletHandler_ExportTransactions_NoContext(t *testing.T) {
+// Tests for ExportTransactions Handler with nil service
+func TestWalletHandler_ExportTransactions_NilService(t *testing.T) {
 	handler := NewWalletHandler(nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/wallet/transactions/export", nil)
@@ -1170,25 +1132,8 @@ func TestWalletHandler_ExportTransactions_NoContext(t *testing.T) {
 
 	handler.ExportTransactions(rr, req)
 
-	if rr.Code != http.StatusUnauthorized {
-		t.Errorf("Expected status 401, got %d", rr.Code)
-	}
-}
-
-func TestWalletHandler_ExportTransactions_UnsupportedFormat(t *testing.T) {
-	handler := NewWalletHandler(nil)
-
-	userID := uuid.New()
-
-	req := httptest.NewRequest("GET", "/api/v1/wallet/transactions/export?format=xml", nil)
-	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
-	req = req.WithContext(ctx)
-	rr := httptest.NewRecorder()
-
-	handler.ExportTransactions(rr, req)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for unsupported format, got %d", rr.Code)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Errorf("Expected status 503 for nil service, got %d", rr.Code)
 	}
 }
 

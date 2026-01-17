@@ -20,8 +20,21 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 	return &AuthHandler{authService: authService}
 }
 
+// serviceUnavailable returns true and sends an error response if auth service is not available
+func (h *AuthHandler) serviceUnavailable(w http.ResponseWriter) bool {
+	if h.authService == nil {
+		httputil.ServiceUnavailable(w, "authentication service not available - database connection failed")
+		return true
+	}
+	return false
+}
+
 // Register handles POST /api/v1/auth/register
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+	if h.serviceUnavailable(w) {
+		return
+	}
+
 	var req model.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.BadRequest(w, "invalid request body")
@@ -39,6 +52,10 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 // Login handles POST /api/v1/auth/login
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+	if h.serviceUnavailable(w) {
+		return
+	}
+
 	var req model.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.BadRequest(w, "invalid request body")
@@ -69,6 +86,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 // ForgotPassword handles POST /api/v1/auth/forgot-password
 func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	if h.serviceUnavailable(w) {
+		return
+	}
+
 	var req model.ForgotPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.BadRequest(w, "invalid request body")
@@ -101,6 +122,10 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 
 // ResetPassword handles POST /api/v1/auth/reset-password
 func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	if h.serviceUnavailable(w) {
+		return
+	}
+
 	var req model.ResetPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.BadRequest(w, "invalid request body")
@@ -128,6 +153,10 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 
 // GetProfile handles GET /api/v1/auth/profile
 func (h *AuthHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
+	if h.serviceUnavailable(w) {
+		return
+	}
+
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		httputil.Unauthorized(w, "user not found in context")
@@ -145,6 +174,10 @@ func (h *AuthHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 
 // RefreshToken handles POST /api/v1/auth/refresh
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	if h.serviceUnavailable(w) {
+		return
+	}
+
 	var req model.RefreshTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.BadRequest(w, "invalid request body")
@@ -175,6 +208,12 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 // Logout handles POST /api/v1/auth/logout
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	// Logout is idempotent, so if service is unavailable, just return success
+	if h.authService == nil {
+		httputil.Success(w, map[string]string{"message": "logged out successfully"})
+		return
+	}
+
 	var req model.RefreshTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		// If no body, just return success (logout is idempotent)
