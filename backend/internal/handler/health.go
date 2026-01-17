@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -88,19 +89,25 @@ func (h *Handler) checkDatabase(ctx context.Context) ComponentHealth {
 	}
 
 	start := time.Now()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
 
-	if err := h.db.Pool().Ping(ctx); err != nil {
+	if err := h.db.IsHealthy(ctx); err != nil {
 		return ComponentHealth{
 			Status:  "unhealthy",
 			Message: err.Error(),
 		}
 	}
 
+	// Include pool stats for diagnostics
+	stats := h.db.Stats()
+	message := "connected"
+	if stats != nil {
+		message = fmt.Sprintf("connected (pool: %d/%d total, %d idle, %d in-use)",
+			stats.TotalConns(), stats.MaxConns(), stats.IdleConns(), stats.AcquiredConns())
+	}
+
 	return ComponentHealth{
 		Status:  "healthy",
-		Message: "connected",
+		Message: message,
 		Latency: time.Since(start).String(),
 	}
 }

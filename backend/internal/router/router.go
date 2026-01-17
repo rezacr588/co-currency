@@ -129,6 +129,7 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 			r.Route("/recurring", func(r chi.Router) {
 				r.Use(authMiddleware.Middleware)
 				r.Get("/", h.Recurring.GetRecurring)
+				r.Get("/frequencies", h.Recurring.GetFrequencies)
 				r.Post("/", h.Recurring.CreateRecurring)
 				r.Put("/{id}", h.Recurring.UpdateRecurring)
 				r.Delete("/{id}", h.Recurring.DeleteRecurring)
