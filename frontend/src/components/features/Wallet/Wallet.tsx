@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../../api/client';
 import { useLanguage } from '../../../context/LanguageContext';
-import { useAuth } from '../../../context/AuthContext';
 import { Container } from '../../layout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
 import { Button } from '../../ui/Button';
@@ -38,7 +37,6 @@ function BalanceCard({ currency, amount }: { currency: string; amount: number })
 
 export function Wallet() {
   const { t } = useLanguage();
-  const { user } = useAuth();
 
   const {
     data: summary,
@@ -59,7 +57,7 @@ export function Wallet() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                {t('welcomeBack')}, {user?.name}
+                {t('wallet')}
               </h1>
               <p className="text-slate-500 dark:text-slate-400">{t('walletOverview')}</p>
             </div>
@@ -74,29 +72,14 @@ export function Wallet() {
                   {t('convertCurrency')}
                 </Button>
               </Link>
+              <Link to="/wallet/history">
+                <Button variant="ghost" size="sm">
+                  {t('transactionHistory')}
+                </Button>
+              </Link>
               <Link to="/wallet/ai">
                 <Button variant="ghost" size="sm">
                   {t('aiParser')}
-                </Button>
-              </Link>
-              <Link to="/goals">
-                <Button variant="ghost" size="sm">
-                  {t('financialGoals')}
-                </Button>
-              </Link>
-              <Link to="/budgets">
-                <Button variant="ghost" size="sm">
-                  {t('budgets')}
-                </Button>
-              </Link>
-              <Link to="/recurring">
-                <Button variant="ghost" size="sm">
-                  {t('recurringTransactions')}
-                </Button>
-              </Link>
-              <Link to="/reports">
-                <Button variant="ghost" size="sm">
-                  {t('reportsAndStats')}
                 </Button>
               </Link>
             </div>
