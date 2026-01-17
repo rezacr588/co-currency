@@ -150,7 +150,7 @@ export function RecurringForm({ recurring, onClose }: RecurringFormProps) {
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 {t('frequency')}
               </label>
-              <Select value={frequency} onChange={(e) => setFrequency(e.target.value)}>
+              <Select value={frequency} onChange={(e) => setFrequency(e.target.value as typeof frequency)}>
                 {RECURRING_FREQUENCIES.map((freq) => (
                   <option key={freq} value={freq}>
                     {t(`frequency_${freq}` as any) || freq}

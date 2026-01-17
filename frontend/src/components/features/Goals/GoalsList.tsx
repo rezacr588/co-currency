@@ -5,7 +5,7 @@ import { api } from '../../../api/client';
 import { useLanguage } from '../../../context/LanguageContext';
 import type { Goal } from '../../../types/goal';
 import { Container } from '../../layout';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
+import { Card, CardContent } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import { Skeleton } from '../../ui/Skeleton';
 import { ErrorMessage } from '../../ui/ErrorMessage';

@@ -328,7 +328,6 @@ export const translations = {
     noDataAvailable: 'No data available',
     totalNetWorth: 'Total Net Worth',
     months: 'months',
-    enterAmount: 'Enter amount',
   },
   fa: {
     // Header
@@ -659,7 +658,6 @@ export const translations = {
     noDataAvailable: 'داده‌ای موجود نیست',
     totalNetWorth: 'ارزش خالص کل',
     months: 'ماه',
-    enterAmount: 'مبلغ را وارد کنید',
   },
   ar: {
     // Header
@@ -990,7 +988,6 @@ export const translations = {
     noDataAvailable: 'لا توجد بيانات متاحة',
     totalNetWorth: 'إجمالي صافي القيمة',
     months: 'أشهر',
-    enterAmount: 'أدخل المبلغ',
   },
   tr: {
     // Header
@@ -1321,7 +1318,6 @@ export const translations = {
     noDataAvailable: 'Veri mevcut değil',
     totalNetWorth: 'Toplam Net Değer',
     months: 'ay',
-    enterAmount: 'Miktar girin',
   },
 } as const;
 

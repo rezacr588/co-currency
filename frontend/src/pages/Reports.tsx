@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -13,7 +11,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
   Line,
   Area,
   AreaChart,
@@ -185,13 +182,13 @@ export function Reports() {
                         outerRadius={100}
                         paddingAngle={2}
                         dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                       >
                         {pieData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: number) => formatCurrency(value, currency)} />
+                      <Tooltip formatter={(value) => typeof value === 'number' ? formatCurrency(value, currency) : ''} />
                     </PieChart>
                   </ResponsiveContainer>
                 )}
@@ -234,7 +231,7 @@ export function Reports() {
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(value: number) => formatCurrency(value, currency)} />
+                        <Tooltip formatter={(value) => typeof value === 'number' ? formatCurrency(value, currency) : ''} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -268,7 +265,7 @@ export function Reports() {
                     <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
                     <XAxis dataKey="period" className="text-sm" />
                     <YAxis tickFormatter={(value) => formatCurrency(value, currency)} className="text-sm" />
-                    <Tooltip formatter={(value: number) => formatCurrency(value, currency)} />
+                    <Tooltip formatter={(value) => typeof value === 'number' ? formatCurrency(value, currency) : ''} />
                     <Legend />
                     <Area
                       type="monotone"
