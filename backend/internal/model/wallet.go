@@ -27,6 +27,7 @@ type Transaction struct {
 	ToCurrency      *string         `json:"to_currency,omitempty"`
 	Rate            *float64        `json:"rate,omitempty"`
 	Source          string          `json:"source"` // "manual", "ai_receipt", "ai_invoice"
+	Category        string          `json:"category,omitempty"`
 	AIExtractedData json.RawMessage `json:"ai_extracted_data,omitempty"`
 	Description     string          `json:"description,omitempty"`
 	CreatedAt       time.Time       `json:"created_at"`
@@ -34,10 +35,45 @@ type Transaction struct {
 
 // TransactionRequest represents a manual transaction request
 type TransactionRequest struct {
-	Type        string  `json:"type"`        // "credit" or "debit"
+	Type        string `json:"type"`        // "credit" or "debit"
 	Amount      float64 `json:"amount"`
 	Currency    string  `json:"currency"`
+	Category    string  `json:"category,omitempty"`
 	Description string  `json:"description,omitempty"`
+}
+
+// Category represents a transaction category
+type Category struct {
+	ID        uuid.UUID `json:"id"`
+	UserID    uuid.UUID `json:"user_id,omitempty"`
+	Name      string    `json:"name"`
+	Icon      string    `json:"icon,omitempty"`
+	Color     string    `json:"color,omitempty"`
+	IsDefault bool      `json:"is_default"`
+}
+
+// DefaultCategories returns the default transaction categories
+func DefaultCategories() []Category {
+	return []Category{
+		{Name: "food", Icon: "🍔", Color: "#ef4444", IsDefault: true},
+		{Name: "transportation", Icon: "🚗", Color: "#f97316", IsDefault: true},
+		{Name: "entertainment", Icon: "🎬", Color: "#eab308", IsDefault: true},
+		{Name: "shopping", Icon: "🛒", Color: "#22c55e", IsDefault: true},
+		{Name: "bills", Icon: "📄", Color: "#3b82f6", IsDefault: true},
+		{Name: "income", Icon: "💰", Color: "#10b981", IsDefault: true},
+		{Name: "transfer", Icon: "↔️", Color: "#8b5cf6", IsDefault: true},
+		{Name: "other", Icon: "📦", Color: "#6b7280", IsDefault: true},
+	}
+}
+
+// TransactionFilter represents filter options for transactions
+type TransactionFilter struct {
+	Search   string `json:"search,omitempty"`
+	Category string `json:"category,omitempty"`
+	Type     string `json:"type,omitempty"`
+	Currency string `json:"currency,omitempty"`
+	FromDate string `json:"from_date,omitempty"`
+	ToDate   string `json:"to_date,omitempty"`
 }
 
 // ConvertBalanceRequest represents a currency conversion request

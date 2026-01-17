@@ -24,7 +24,7 @@ func (h *Handler) Convert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.exchange.Convert(r.Context(), from, to, amount)
+	result, err := h.exchangeService.Convert(r.Context(), from, to, amount)
 	if err != nil {
 		httputil.InternalServerError(w, "Failed to convert currency")
 		return

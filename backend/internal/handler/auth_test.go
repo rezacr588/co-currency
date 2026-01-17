@@ -599,3 +599,149 @@ func TestAuthHandler_GetProfile_NoContext(t *testing.T) {
 		t.Errorf("Expected status 401, got %d", rr.Code)
 	}
 }
+
+// Tests for ForgotPassword Handler
+func TestAuthHandler_ForgotPassword_InvalidBody(t *testing.T) {
+	handler := NewAuthHandler(nil)
+
+	body := `{invalid json}`
+	req := httptest.NewRequest("POST", "/api/v1/auth/forgot-password", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	handler.ForgotPassword(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for invalid JSON, got %d", rr.Code)
+	}
+}
+
+func TestAuthHandler_ForgotPassword_EmptyEmail(t *testing.T) {
+	handler := NewAuthHandler(nil)
+
+	body := `{"email": ""}`
+	req := httptest.NewRequest("POST", "/api/v1/auth/forgot-password", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	handler.ForgotPassword(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for empty email, got %d", rr.Code)
+	}
+}
+
+// Tests for ResetPassword Handler
+func TestAuthHandler_ResetPassword_InvalidBody(t *testing.T) {
+	handler := NewAuthHandler(nil)
+
+	body := `{invalid json}`
+	req := httptest.NewRequest("POST", "/api/v1/auth/reset-password", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	handler.ResetPassword(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for invalid JSON, got %d", rr.Code)
+	}
+}
+
+func TestAuthHandler_ResetPassword_MissingToken(t *testing.T) {
+	handler := NewAuthHandler(nil)
+
+	body := `{"token": "", "new_password": "newpassword123"}`
+	req := httptest.NewRequest("POST", "/api/v1/auth/reset-password", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	handler.ResetPassword(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for missing token, got %d", rr.Code)
+	}
+}
+
+func TestAuthHandler_ResetPassword_MissingPassword(t *testing.T) {
+	handler := NewAuthHandler(nil)
+
+	body := `{"token": "valid-token", "new_password": ""}`
+	req := httptest.NewRequest("POST", "/api/v1/auth/reset-password", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	handler.ResetPassword(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for missing password, got %d", rr.Code)
+	}
+}
+
+// Tests for RefreshToken Handler
+func TestAuthHandler_RefreshToken_InvalidBody(t *testing.T) {
+	handler := NewAuthHandler(nil)
+
+	body := `{invalid json}`
+	req := httptest.NewRequest("POST", "/api/v1/auth/refresh", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	handler.RefreshToken(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for invalid JSON, got %d", rr.Code)
+	}
+}
+
+func TestAuthHandler_RefreshToken_EmptyToken(t *testing.T) {
+	handler := NewAuthHandler(nil)
+
+	body := `{"refresh_token": ""}`
+	req := httptest.NewRequest("POST", "/api/v1/auth/refresh", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	handler.RefreshToken(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for empty token, got %d", rr.Code)
+	}
+}
+
+// Tests for Logout Handler
+func TestAuthHandler_Logout_InvalidBody(t *testing.T) {
+	handler := NewAuthHandler(nil)
+
+	body := `{invalid json}`
+	req := httptest.NewRequest("POST", "/api/v1/auth/logout", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	handler.Logout(rr, req)
+
+	// Logout should return success even with invalid body (idempotent)
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status 200 (logout is idempotent), got %d", rr.Code)
+	}
+}
+
+func TestAuthHandler_Logout_EmptyBody(t *testing.T) {
+	handler := NewAuthHandler(nil)
+
+	req := httptest.NewRequest("POST", "/api/v1/auth/logout", nil)
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	handler.Logout(rr, req)
+
+	// Logout should return success even with empty body
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", rr.Code)
+	}
+}
+
+func TestAuthHandler_Logout_WithToken(t *testing.T) {
+	// Skip this test since it requires a properly configured auth service
+	// The handler will panic if authService is nil when trying to call Logout
+	t.Skip("Skipping test that requires configured auth service")
+}

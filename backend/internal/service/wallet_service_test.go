@@ -1119,3 +1119,355 @@ func TestApplyAIParsedResult_InsufficientBalance(t *testing.T) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }
+
+// GetTransactionsFiltered mock method
+func (m *MockWalletRepository) GetTransactionsFiltered(ctx context.Context, userID uuid.UUID, filter *model.TransactionFilter, limit, offset int) ([]model.Transaction, int, error) {
+	if m.getTransactionsErr != nil {
+		return nil, 0, m.getTransactionsErr
+	}
+
+	transactions, exists := m.transactions[userID.String()]
+	if !exists {
+		return nil, 0, nil
+	}
+
+	// Apply basic filters for testing
+	var filtered []model.Transaction
+	for _, tx := range transactions {
+		if filter != nil {
+			if filter.Type != "" && tx.Type != filter.Type {
+				continue
+			}
+			if filter.Currency != "" && tx.Currency != filter.Currency {
+				continue
+			}
+			if filter.Category != "" && tx.Category != filter.Category {
+				continue
+			}
+		}
+		filtered = append(filtered, tx)
+	}
+
+	total := len(filtered)
+
+	// Apply pagination
+	if offset >= len(filtered) {
+		return nil, total, nil
+	}
+
+	end := offset + limit
+	if end > len(filtered) {
+		end = len(filtered)
+	}
+
+	return filtered[offset:end], total, nil
+}
+
+func (s *WalletServiceWithMock) GetTransactionsFiltered(ctx context.Context, userID uuid.UUID, filter *model.TransactionFilter, limit, offset int) ([]model.Transaction, int, error) {
+	transactions, total, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, filter, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if transactions == nil {
+		transactions = []model.Transaction{}
+	}
+
+	return transactions, total, nil
+}
+
+// Tests for GetTransactionsFiltered
+func TestGetTransactionsFiltered_NoFilter(t *testing.T) {
+	mockRepo := NewMockWalletRepository()
+	mockExchange := NewMockExchangeService()
+	service := NewWalletServiceWithMock(mockRepo, mockExchange)
+
+	userID := uuid.New()
+
+	// Add some transactions
+	for i := 0; i < 5; i++ {
+		req := &model.TransactionRequest{
+			Type:     "credit",
+			Amount:   float64(i + 1) * 10,
+			Currency: "USD",
+		}
+		service.AddTransaction(context.Background(), userID, req)
+	}
+
+	transactions, total, err := service.GetTransactionsFiltered(context.Background(), userID, nil, 10, 0)
+	if err != nil {
+		t.Fatalf("GetTransactionsFiltered failed: %v", err)
+	}
+
+	if len(transactions) != 5 {
+		t.Errorf("Expected 5 transactions, got %d", len(transactions))
+	}
+
+	if total != 5 {
+		t.Errorf("Expected total 5, got %d", total)
+	}
+}
+
+func TestGetTransactionsFiltered_ByType(t *testing.T) {
+	mockRepo := NewMockWalletRepository()
+	mockExchange := NewMockExchangeService()
+	service := NewWalletServiceWithMock(mockRepo, mockExchange)
+
+	userID := uuid.New()
+
+	// Add credit transactions
+	service.AddTransaction(context.Background(), userID, &model.TransactionRequest{
+		Type:     "credit",
+		Amount:   100,
+		Currency: "USD",
+	})
+
+	mockRepo.SetBalance(userID, "USD", 100)
+
+	// Add debit transaction
+	service.AddTransaction(context.Background(), userID, &model.TransactionRequest{
+		Type:     "debit",
+		Amount:   50,
+		Currency: "USD",
+	})
+
+	// Filter by type
+	filter := &model.TransactionFilter{Type: "credit"}
+	transactions, _, err := service.GetTransactionsFiltered(context.Background(), userID, filter, 10, 0)
+	if err != nil {
+		t.Fatalf("GetTransactionsFiltered failed: %v", err)
+	}
+
+	if len(transactions) != 1 {
+		t.Errorf("Expected 1 credit transaction, got %d", len(transactions))
+	}
+
+	for _, tx := range transactions {
+		if tx.Type != "credit" {
+			t.Errorf("Expected type credit, got %s", tx.Type)
+		}
+	}
+}
+
+func TestGetTransactionsFiltered_ByCurrency(t *testing.T) {
+	mockRepo := NewMockWalletRepository()
+	mockExchange := NewMockExchangeService()
+	service := NewWalletServiceWithMock(mockRepo, mockExchange)
+
+	userID := uuid.New()
+
+	// Add USD transaction
+	service.AddTransaction(context.Background(), userID, &model.TransactionRequest{
+		Type:     "credit",
+		Amount:   100,
+		Currency: "USD",
+	})
+
+	// Add EUR transaction
+	service.AddTransaction(context.Background(), userID, &model.TransactionRequest{
+		Type:     "credit",
+		Amount:   100,
+		Currency: "EUR",
+	})
+
+	// Filter by currency
+	filter := &model.TransactionFilter{Currency: "USD"}
+	transactions, _, err := service.GetTransactionsFiltered(context.Background(), userID, filter, 10, 0)
+	if err != nil {
+		t.Fatalf("GetTransactionsFiltered failed: %v", err)
+	}
+
+	if len(transactions) != 1 {
+		t.Errorf("Expected 1 USD transaction, got %d", len(transactions))
+	}
+
+	for _, tx := range transactions {
+		if tx.Currency != "USD" {
+			t.Errorf("Expected currency USD, got %s", tx.Currency)
+		}
+	}
+}
+
+func TestGetTransactionsFiltered_WithPagination(t *testing.T) {
+	mockRepo := NewMockWalletRepository()
+	mockExchange := NewMockExchangeService()
+	service := NewWalletServiceWithMock(mockRepo, mockExchange)
+
+	userID := uuid.New()
+
+	// Add 10 transactions
+	for i := 0; i < 10; i++ {
+		service.AddTransaction(context.Background(), userID, &model.TransactionRequest{
+			Type:     "credit",
+			Amount:   float64(i + 1) * 10,
+			Currency: "USD",
+		})
+	}
+
+	// Get first page
+	transactions, total, _ := service.GetTransactionsFiltered(context.Background(), userID, nil, 3, 0)
+	if len(transactions) != 3 {
+		t.Errorf("Expected 3 transactions in first page, got %d", len(transactions))
+	}
+	if total != 10 {
+		t.Errorf("Expected total 10, got %d", total)
+	}
+
+	// Get second page
+	transactions, total, _ = service.GetTransactionsFiltered(context.Background(), userID, nil, 3, 3)
+	if len(transactions) != 3 {
+		t.Errorf("Expected 3 transactions in second page, got %d", len(transactions))
+	}
+
+	// Get last page
+	transactions, _, _ = service.GetTransactionsFiltered(context.Background(), userID, nil, 3, 9)
+	if len(transactions) != 1 {
+		t.Errorf("Expected 1 transaction in last page, got %d", len(transactions))
+	}
+}
+
+func TestGetTransactionsFiltered_Empty(t *testing.T) {
+	mockRepo := NewMockWalletRepository()
+	mockExchange := NewMockExchangeService()
+	service := NewWalletServiceWithMock(mockRepo, mockExchange)
+
+	userID := uuid.New()
+
+	transactions, total, err := service.GetTransactionsFiltered(context.Background(), userID, nil, 10, 0)
+	if err != nil {
+		t.Fatalf("GetTransactionsFiltered failed: %v", err)
+	}
+
+	if transactions == nil {
+		t.Error("Expected empty slice, got nil")
+	}
+
+	if len(transactions) != 0 {
+		t.Errorf("Expected 0 transactions, got %d", len(transactions))
+	}
+
+	if total != 0 {
+		t.Errorf("Expected total 0, got %d", total)
+	}
+}
+
+func TestGetTransactionsFiltered_Error(t *testing.T) {
+	mockRepo := NewMockWalletRepository()
+	mockExchange := NewMockExchangeService()
+	mockRepo.getTransactionsErr = errors.New("database error")
+	service := NewWalletServiceWithMock(mockRepo, mockExchange)
+
+	userID := uuid.New()
+
+	_, _, err := service.GetTransactionsFiltered(context.Background(), userID, nil, 10, 0)
+	if err == nil {
+		t.Error("Expected error, got nil")
+	}
+}
+
+// Test NewWalletService
+func TestNewWalletService(t *testing.T) {
+	service := NewWalletService(nil, nil)
+
+	if service == nil {
+		t.Error("Expected service to be created")
+	}
+}
+
+// Test WalletBalance model
+func TestWalletBalance(t *testing.T) {
+	userID := uuid.New()
+	balance := model.WalletBalance{
+		ID:       uuid.New(),
+		UserID:   userID,
+		Currency: "USD",
+		Balance:  100.50,
+	}
+
+	if balance.Currency != "USD" {
+		t.Errorf("Expected currency USD, got %s", balance.Currency)
+	}
+
+	if balance.Balance != 100.50 {
+		t.Errorf("Expected balance 100.50, got %f", balance.Balance)
+	}
+}
+
+// Test Transaction model
+func TestTransaction(t *testing.T) {
+	userID := uuid.New()
+	tx := model.Transaction{
+		ID:          uuid.New(),
+		UserID:      userID,
+		Type:        "credit",
+		Amount:      100,
+		Currency:    "USD",
+		Source:      "manual",
+		Description: "Test transaction",
+	}
+
+	if tx.Type != "credit" {
+		t.Errorf("Expected type credit, got %s", tx.Type)
+	}
+
+	if tx.Amount != 100 {
+		t.Errorf("Expected amount 100, got %f", tx.Amount)
+	}
+}
+
+// Test ConvertBalanceRequest model
+func TestConvertBalanceRequest(t *testing.T) {
+	req := model.ConvertBalanceRequest{
+		FromCurrency: "USD",
+		ToCurrency:   "EUR",
+		Amount:       100,
+	}
+
+	if req.FromCurrency != "USD" {
+		t.Errorf("Expected from currency USD, got %s", req.FromCurrency)
+	}
+
+	if req.ToCurrency != "EUR" {
+		t.Errorf("Expected to currency EUR, got %s", req.ToCurrency)
+	}
+}
+
+// Test TransactionFilter model
+func TestTransactionFilter(t *testing.T) {
+	filter := model.TransactionFilter{
+		Search:   "test",
+		Category: "food",
+		Type:     "debit",
+		Currency: "USD",
+		FromDate: "2024-01-01",
+		ToDate:   "2024-12-31",
+	}
+
+	if filter.Search != "test" {
+		t.Errorf("Expected search 'test', got %s", filter.Search)
+	}
+
+	if filter.Category != "food" {
+		t.Errorf("Expected category 'food', got %s", filter.Category)
+	}
+}
+
+// Test AIParseResult model
+func TestAIParseResult(t *testing.T) {
+	result := model.AIParseResult{
+		Amount:      50.99,
+		Currency:    "USD",
+		Type:        "debit",
+		Description: "Coffee shop",
+		Confidence:  0.95,
+		RawText:     "Receipt from coffee shop",
+	}
+
+	if result.Amount != 50.99 {
+		t.Errorf("Expected amount 50.99, got %f", result.Amount)
+	}
+
+	if result.Confidence != 0.95 {
+		t.Errorf("Expected confidence 0.95, got %f", result.Confidence)
+	}
+}

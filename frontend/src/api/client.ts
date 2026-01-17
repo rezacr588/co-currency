@@ -2,24 +2,30 @@ import type { Currency, RatesResponse, ConversionResult, ConversionRequest } fro
 import type {
   LoginRequest,
   RegisterRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+  RefreshTokenRequest,
   AuthResponse,
   User,
   WalletBalance,
   WalletSummary,
   Transaction,
   TransactionRequest,
+  TransactionFilter,
   WalletConvertRequest,
   WalletConvertResponse,
   AIParseRequest,
   AIParseResponse,
   AIApplyRequest,
   AIApplyResponse,
+  Category,
 } from '../types/wallet';
 
 const API_BASE = '/api/v1';
 
 // Token management
 let authToken: string | null = null;
+let refreshToken: string | null = null;
 
 export function setAuthToken(token: string | null) {
   authToken = token;
@@ -30,6 +36,15 @@ export function setAuthToken(token: string | null) {
   }
 }
 
+export function setRefreshToken(token: string | null) {
+  refreshToken = token;
+  if (token) {
+    localStorage.setItem('refresh_token', token);
+  } else {
+    localStorage.removeItem('refresh_token');
+  }
+}
+
 export function getAuthToken(): string | null {
   if (!authToken) {
     authToken = localStorage.getItem('auth_token');
@@ -37,9 +52,18 @@ export function getAuthToken(): string | null {
   return authToken;
 }
 
+export function getRefreshToken(): string | null {
+  if (!refreshToken) {
+    refreshToken = localStorage.getItem('refresh_token');
+  }
+  return refreshToken;
+}
+
 export function clearAuthToken() {
   authToken = null;
+  refreshToken = null;
   localStorage.removeItem('auth_token');
+  localStorage.removeItem('refresh_token');
 }
 
 interface RetryOptions {
@@ -143,18 +167,48 @@ export const api = {
         body: JSON.stringify(data),
       }),
     getProfile: () => fetchAPI<User>('/auth/profile'),
+    forgotPassword: (data: ForgotPasswordRequest) =>
+      fetchAPI<{ message: string; token?: string }>('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    resetPassword: (data: ResetPasswordRequest) =>
+      fetchAPI<{ message: string }>('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    refresh: (data: RefreshTokenRequest) =>
+      fetchAPI<AuthResponse>('/auth/refresh', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    logout: (refreshToken?: string) =>
+      fetchAPI<{ message: string }>('/auth/logout', {
+        method: 'POST',
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      }),
   },
 
   // Wallet
   wallet: {
-    getBalances: () => fetchAPI<WalletBalance[]>('/wallet/balances'),
+    getBalances: () => fetchAPI<{ balances: WalletBalance[] }>('/wallet/balances'),
     getSummary: () => fetchAPI<WalletSummary>('/wallet/summary'),
-    getTransactions: (limit?: number, offset?: number) => {
+    getTransactions: (limit?: number, offset?: number, filter?: TransactionFilter) => {
       const params = new URLSearchParams();
       if (limit) params.set('limit', limit.toString());
       if (offset) params.set('offset', offset.toString());
+      if (filter) {
+        if (filter.search) params.set('search', filter.search);
+        if (filter.category) params.set('category', filter.category);
+        if (filter.type) params.set('type', filter.type);
+        if (filter.currency) params.set('currency', filter.currency);
+        if (filter.from_date) params.set('from_date', filter.from_date);
+        if (filter.to_date) params.set('to_date', filter.to_date);
+      }
       const query = params.toString();
-      return fetchAPI<Transaction[]>(`/wallet/transactions${query ? `?${query}` : ''}`);
+      return fetchAPI<{ transactions: Transaction[]; total: number; limit: number; offset: number }>(
+        `/wallet/transactions${query ? `?${query}` : ''}`
+      );
     },
     addTransaction: (data: TransactionRequest) =>
       fetchAPI<Transaction>('/wallet/transaction', {
@@ -166,6 +220,21 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+    getCategories: () => fetchAPI<{ categories: Category[] }>('/wallet/categories'),
+    exportTransactions: (format: string = 'csv', filter?: TransactionFilter) => {
+      const params = new URLSearchParams();
+      params.set('format', format);
+      if (filter) {
+        if (filter.search) params.set('search', filter.search);
+        if (filter.category) params.set('category', filter.category);
+        if (filter.type) params.set('type', filter.type);
+        if (filter.currency) params.set('currency', filter.currency);
+        if (filter.from_date) params.set('from_date', filter.from_date);
+        if (filter.to_date) params.set('to_date', filter.to_date);
+      }
+      // Return the URL for downloading
+      return `${API_BASE}/wallet/transactions/export?${params.toString()}`;
+    },
   },
 
   // AI

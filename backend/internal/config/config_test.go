@@ -71,3 +71,107 @@ func TestLoad_CustomValues(t *testing.T) {
 		t.Errorf("FrankfurterURL = %v, want %v", cfg.FrankfurterURL, "https://custom.api.com")
 	}
 }
+
+func TestLoad_JWTAndAIDefaults(t *testing.T) {
+	// Clear any existing env vars
+	os.Unsetenv("JWT_SECRET")
+	os.Unsetenv("AI_PROVIDER")
+	os.Unsetenv("AI_API_KEY")
+	os.Unsetenv("AI_CLOUD_PROJECT")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if cfg.JWTSecret != "change-me-in-production-to-a-secure-secret" {
+		t.Errorf("JWTSecret = %v, want default", cfg.JWTSecret)
+	}
+	if cfg.AIProvider != "googleai" {
+		t.Errorf("AIProvider = %v, want googleai", cfg.AIProvider)
+	}
+	if cfg.AIAPIKey != "" {
+		t.Errorf("AIAPIKey = %v, want empty", cfg.AIAPIKey)
+	}
+	if cfg.AICloudProject != "" {
+		t.Errorf("AICloudProject = %v, want empty", cfg.AICloudProject)
+	}
+}
+
+func TestLoad_JWTAndAICustomValues(t *testing.T) {
+	os.Setenv("JWT_SECRET", "super-secret-key")
+	os.Setenv("AI_PROVIDER", "openai")
+	os.Setenv("AI_API_KEY", "sk-test-key")
+	os.Setenv("AI_CLOUD_PROJECT", "my-project")
+	defer func() {
+		os.Unsetenv("JWT_SECRET")
+		os.Unsetenv("AI_PROVIDER")
+		os.Unsetenv("AI_API_KEY")
+		os.Unsetenv("AI_CLOUD_PROJECT")
+	}()
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if cfg.JWTSecret != "super-secret-key" {
+		t.Errorf("JWTSecret = %v, want super-secret-key", cfg.JWTSecret)
+	}
+	if cfg.AIProvider != "openai" {
+		t.Errorf("AIProvider = %v, want openai", cfg.AIProvider)
+	}
+	if cfg.AIAPIKey != "sk-test-key" {
+		t.Errorf("AIAPIKey = %v, want sk-test-key", cfg.AIAPIKey)
+	}
+	if cfg.AICloudProject != "my-project" {
+		t.Errorf("AICloudProject = %v, want my-project", cfg.AICloudProject)
+	}
+}
+
+func TestLoad_DatabaseAndCrawlerDefaults(t *testing.T) {
+	os.Unsetenv("DATABASE_URL")
+	os.Unsetenv("IRR_CRAWLER_INTERVAL")
+	os.Unsetenv("IRR_CRAWLER_ENABLED")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if cfg.DatabaseURL != "" {
+		t.Errorf("DatabaseURL = %v, want empty", cfg.DatabaseURL)
+	}
+	if cfg.IRRCrawlerInterval != 5*time.Minute {
+		t.Errorf("IRRCrawlerInterval = %v, want 5m", cfg.IRRCrawlerInterval)
+	}
+	if cfg.IRRCrawlerEnabled != true {
+		t.Errorf("IRRCrawlerEnabled = %v, want true", cfg.IRRCrawlerEnabled)
+	}
+}
+
+func TestLoad_DatabaseAndCrawlerCustomValues(t *testing.T) {
+	os.Setenv("DATABASE_URL", "postgres://localhost:5432/test")
+	os.Setenv("IRR_CRAWLER_INTERVAL", "10m")
+	os.Setenv("IRR_CRAWLER_ENABLED", "false")
+	defer func() {
+		os.Unsetenv("DATABASE_URL")
+		os.Unsetenv("IRR_CRAWLER_INTERVAL")
+		os.Unsetenv("IRR_CRAWLER_ENABLED")
+	}()
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if cfg.DatabaseURL != "postgres://localhost:5432/test" {
+		t.Errorf("DatabaseURL = %v, want postgres://localhost:5432/test", cfg.DatabaseURL)
+	}
+	if cfg.IRRCrawlerInterval != 10*time.Minute {
+		t.Errorf("IRRCrawlerInterval = %v, want 10m", cfg.IRRCrawlerInterval)
+	}
+	if cfg.IRRCrawlerEnabled != false {
+		t.Errorf("IRRCrawlerEnabled = %v, want false", cfg.IRRCrawlerEnabled)
+	}
+}

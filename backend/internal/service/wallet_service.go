@@ -57,7 +57,7 @@ func (s *WalletService) GetBalance(ctx context.Context, userID uuid.UUID, curren
 	return balance, nil
 }
 
-// AddTransaction adds a credit or debit transaction
+// AddTransaction adds a credit or debit transaction atomically
 func (s *WalletService) AddTransaction(ctx context.Context, userID uuid.UUID, req *model.TransactionRequest) (*model.Transaction, error) {
 	// Validate request
 	if req.Type != "credit" && req.Type != "debit" {
@@ -72,33 +72,13 @@ func (s *WalletService) AddTransaction(ctx context.Context, userID uuid.UUID, re
 		return nil, errors.New("currency is required")
 	}
 
-	// Calculate delta based on type
-	delta := req.Amount
-	if req.Type == "debit" {
-		delta = -req.Amount
-	}
-
-	// Update balance
-	_, err := s.walletRepo.UpdateBalance(ctx, userID, req.Currency, delta)
+	// Use atomic transaction method
+	tx, err := s.walletRepo.AddTransactionAtomic(ctx, userID, req.Type, req.Amount, req.Currency, "manual", req.Description, req.Category, nil)
 	if err != nil {
 		if errors.Is(err, repository.ErrInsufficientBalance) {
 			return nil, errors.New("insufficient balance")
 		}
-		return nil, fmt.Errorf("updating balance: %w", err)
-	}
-
-	// Create transaction record
-	tx := &model.Transaction{
-		UserID:      userID,
-		Type:        req.Type,
-		Amount:      req.Amount,
-		Currency:    req.Currency,
-		Source:      "manual",
-		Description: req.Description,
-	}
-
-	if err := s.walletRepo.CreateTransaction(ctx, tx); err != nil {
-		return nil, fmt.Errorf("creating transaction: %w", err)
+		return nil, fmt.Errorf("adding transaction: %w", err)
 	}
 
 	return tx, nil
@@ -160,6 +140,20 @@ func (s *WalletService) GetTransactions(ctx context.Context, userID uuid.UUID, l
 	return transactions, nil
 }
 
+// GetTransactionsFiltered retrieves transaction history with filters
+func (s *WalletService) GetTransactionsFiltered(ctx context.Context, userID uuid.UUID, filter *model.TransactionFilter, limit, offset int) ([]model.Transaction, int, error) {
+	transactions, total, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, filter, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("getting filtered transactions: %w", err)
+	}
+
+	if transactions == nil {
+		transactions = []model.Transaction{}
+	}
+
+	return transactions, total, nil
+}
+
 // GetWalletSummary retrieves a summary of the user's wallet
 func (s *WalletService) GetWalletSummary(ctx context.Context, userID uuid.UUID) (*model.WalletSummary, error) {
 	balances, err := s.GetBalances(ctx, userID)
@@ -178,7 +172,7 @@ func (s *WalletService) GetWalletSummary(ctx context.Context, userID uuid.UUID) 
 	}, nil
 }
 
-// ApplyAIParsedResult applies the result of AI parsing to the wallet
+// ApplyAIParsedResult applies the result of AI parsing to the wallet atomically
 func (s *WalletService) ApplyAIParsedResult(ctx context.Context, userID uuid.UUID, parsed *model.AIParseResult) (*model.Transaction, error) {
 	// Validate
 	if parsed.Amount <= 0 {
@@ -193,37 +187,16 @@ func (s *WalletService) ApplyAIParsedResult(ctx context.Context, userID uuid.UUI
 		return nil, errors.New("type must be 'credit' or 'debit'")
 	}
 
-	// Calculate delta
-	delta := parsed.Amount
-	if parsed.Type == "debit" {
-		delta = -parsed.Amount
-	}
+	// Store the AI extracted data
+	aiData, _ := json.Marshal(parsed)
 
-	// Update balance
-	_, err := s.walletRepo.UpdateBalance(ctx, userID, parsed.Currency, delta)
+	// Use atomic transaction method
+	tx, err := s.walletRepo.AddTransactionAtomic(ctx, userID, parsed.Type, parsed.Amount, parsed.Currency, "ai_receipt", parsed.Description, "", aiData)
 	if err != nil {
 		if errors.Is(err, repository.ErrInsufficientBalance) {
 			return nil, errors.New("insufficient balance")
 		}
-		return nil, fmt.Errorf("updating balance: %w", err)
-	}
-
-	// Store the AI extracted data
-	aiData, _ := json.Marshal(parsed)
-
-	// Create transaction record
-	tx := &model.Transaction{
-		UserID:          userID,
-		Type:            parsed.Type,
-		Amount:          parsed.Amount,
-		Currency:        parsed.Currency,
-		Source:          "ai_receipt",
-		AIExtractedData: aiData,
-		Description:     parsed.Description,
-	}
-
-	if err := s.walletRepo.CreateTransaction(ctx, tx); err != nil {
-		return nil, fmt.Errorf("creating transaction: %w", err)
+		return nil, fmt.Errorf("applying AI parsed result: %w", err)
 	}
 
 	return tx, nil

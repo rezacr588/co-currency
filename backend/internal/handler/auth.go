@@ -51,11 +51,79 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			httputil.Unauthorized(w, "invalid email or password")
 			return
 		}
+		if err == service.ErrAccountLocked {
+			httputil.TooManyRequests(w, "account temporarily locked due to too many failed login attempts")
+			return
+		}
+		// Check if it's an account locked error with time info
+		if len(err.Error()) > 0 && err.Error()[:len("account is temporarily")] == "account is temporarily" {
+			httputil.TooManyRequests(w, err.Error())
+			return
+		}
 		httputil.InternalServerError(w, "login failed")
 		return
 	}
 
 	httputil.Success(w, response)
+}
+
+// ForgotPassword handles POST /api/v1/auth/forgot-password
+func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req model.ForgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.BadRequest(w, "invalid request body")
+		return
+	}
+
+	if req.Email == "" {
+		httputil.BadRequest(w, "email is required")
+		return
+	}
+
+	// Generate reset token (always return success to not leak email existence)
+	token, err := h.authService.GeneratePasswordResetToken(r.Context(), req.Email)
+	if err != nil {
+		// Log error but don't expose to user
+		httputil.Success(w, map[string]string{
+			"message": "If an account exists with this email, a password reset link has been sent",
+		})
+		return
+	}
+
+	// In a real app, you would send an email here
+	// For now, we return the token in the response (for testing purposes)
+	// In production, remove the token from response and send via email
+	httputil.Success(w, map[string]string{
+		"message": "If an account exists with this email, a password reset link has been sent",
+		"token":   token, // Remove this in production - send via email instead
+	})
+}
+
+// ResetPassword handles POST /api/v1/auth/reset-password
+func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var req model.ResetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.BadRequest(w, "invalid request body")
+		return
+	}
+
+	if req.Token == "" || req.NewPassword == "" {
+		httputil.BadRequest(w, "token and new_password are required")
+		return
+	}
+
+	if err := h.authService.ResetPassword(r.Context(), req.Token, req.NewPassword); err != nil {
+		if err == service.ErrInvalidResetToken {
+			httputil.BadRequest(w, "invalid or expired reset token")
+			return
+		}
+		httputil.BadRequest(w, err.Error())
+		return
+	}
+
+	httputil.Success(w, map[string]string{
+		"message": "password reset successfully",
+	})
 }
 
 // GetProfile handles GET /api/v1/auth/profile
@@ -73,4 +141,51 @@ func (h *AuthHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.Success(w, user.ToProfile())
+}
+
+// RefreshToken handles POST /api/v1/auth/refresh
+func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	var req model.RefreshTokenRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.BadRequest(w, "invalid request body")
+		return
+	}
+
+	if req.RefreshToken == "" {
+		httputil.BadRequest(w, "refresh_token is required")
+		return
+	}
+
+	response, err := h.authService.RefreshToken(r.Context(), req.RefreshToken)
+	if err != nil {
+		if err == service.ErrInvalidToken {
+			httputil.Unauthorized(w, "invalid refresh token")
+			return
+		}
+		if err == service.ErrTokenExpired {
+			httputil.Unauthorized(w, "refresh token expired")
+			return
+		}
+		httputil.InternalServerError(w, "failed to refresh token")
+		return
+	}
+
+	httputil.Success(w, response)
+}
+
+// Logout handles POST /api/v1/auth/logout
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	var req model.RefreshTokenRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		// If no body, just return success (logout is idempotent)
+		httputil.Success(w, map[string]string{"message": "logged out successfully"})
+		return
+	}
+
+	if req.RefreshToken != "" {
+		// Try to revoke the refresh token
+		_ = h.authService.Logout(r.Context(), req.RefreshToken)
+	}
+
+	httputil.Success(w, map[string]string{"message": "logged out successfully"})
 }

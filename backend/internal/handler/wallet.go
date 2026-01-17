@@ -13,12 +13,48 @@ import (
 
 // WalletHandler handles wallet endpoints
 type WalletHandler struct {
-	walletService *service.WalletService
+	walletService   *service.WalletService
+	categoryService *service.CategoryService
 }
 
 // NewWalletHandler creates a new WalletHandler
 func NewWalletHandler(walletService *service.WalletService) *WalletHandler {
 	return &WalletHandler{walletService: walletService}
+}
+
+// NewWalletHandlerWithCategories creates a new WalletHandler with category support
+func NewWalletHandlerWithCategories(walletService *service.WalletService, categoryService *service.CategoryService) *WalletHandler {
+	return &WalletHandler{
+		walletService:   walletService,
+		categoryService: categoryService,
+	}
+}
+
+// GetCategories handles GET /api/v1/wallet/categories
+func (h *WalletHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, "user not found in context")
+		return
+	}
+
+	if h.categoryService == nil {
+		// Return default categories if service not configured
+		httputil.Success(w, map[string]interface{}{
+			"categories": model.DefaultCategories(),
+		})
+		return
+	}
+
+	categories, err := h.categoryService.GetCategories(r.Context(), userID)
+	if err != nil {
+		httputil.InternalServerError(w, "failed to get categories")
+		return
+	}
+
+	httputil.Success(w, map[string]interface{}{
+		"categories": categories,
+	})
 }
 
 // GetBalances handles GET /api/v1/wallet/balances
@@ -126,7 +162,31 @@ func (h *WalletHandler) GetTransactions(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	transactions, err := h.walletService.GetTransactions(r.Context(), userID, limit, offset)
+	// Parse filter params
+	filter := &model.TransactionFilter{
+		Search:   r.URL.Query().Get("search"),
+		Category: r.URL.Query().Get("category"),
+		Type:     r.URL.Query().Get("type"),
+		Currency: r.URL.Query().Get("currency"),
+		FromDate: r.URL.Query().Get("from_date"),
+		ToDate:   r.URL.Query().Get("to_date"),
+	}
+
+	// Check if any filter is set
+	hasFilter := filter.Search != "" || filter.Category != "" || filter.Type != "" ||
+		filter.Currency != "" || filter.FromDate != "" || filter.ToDate != ""
+
+	var transactions []model.Transaction
+	var total int
+	var err error
+
+	if hasFilter {
+		transactions, total, err = h.walletService.GetTransactionsFiltered(r.Context(), userID, filter, limit, offset)
+	} else {
+		transactions, err = h.walletService.GetTransactions(r.Context(), userID, limit, offset)
+		total = len(transactions) // Approximate for non-filtered queries
+	}
+
 	if err != nil {
 		httputil.InternalServerError(w, "failed to get transactions")
 		return
@@ -134,7 +194,68 @@ func (h *WalletHandler) GetTransactions(w http.ResponseWriter, r *http.Request) 
 
 	httputil.Success(w, map[string]interface{}{
 		"transactions": transactions,
+		"total":        total,
 		"limit":        limit,
 		"offset":       offset,
 	})
+}
+
+// ExportTransactions handles GET /api/v1/wallet/transactions/export
+func (h *WalletHandler) ExportTransactions(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, "user not found in context")
+		return
+	}
+
+	format := r.URL.Query().Get("format")
+	if format == "" {
+		format = "csv"
+	}
+
+	if format != "csv" {
+		httputil.BadRequest(w, "only csv format is supported")
+		return
+	}
+
+	// Parse filter params
+	filter := &model.TransactionFilter{
+		Search:   r.URL.Query().Get("search"),
+		Category: r.URL.Query().Get("category"),
+		Type:     r.URL.Query().Get("type"),
+		Currency: r.URL.Query().Get("currency"),
+		FromDate: r.URL.Query().Get("from_date"),
+		ToDate:   r.URL.Query().Get("to_date"),
+	}
+
+	// Get all transactions (with high limit)
+	transactions, _, err := h.walletService.GetTransactionsFiltered(r.Context(), userID, filter, 10000, 0)
+	if err != nil {
+		httputil.InternalServerError(w, "failed to get transactions")
+		return
+	}
+
+	// Set headers for CSV download
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", "attachment; filename=transactions.csv")
+
+	// Write CSV header
+	csvWriter := "Date,Type,Amount,Currency,Category,Description\n"
+
+	// Write data rows
+	for _, tx := range transactions {
+		csvWriter += tx.CreatedAt.Format("2006-01-02 15:04:05") + ","
+		csvWriter += tx.Type + ","
+		csvWriter += strconv.FormatFloat(tx.Amount, 'f', 2, 64) + ","
+		csvWriter += tx.Currency + ","
+		csvWriter += tx.Category + ","
+		// Escape description for CSV
+		desc := tx.Description
+		if desc != "" {
+			desc = "\"" + desc + "\""
+		}
+		csvWriter += desc + "\n"
+	}
+
+	w.Write([]byte(csvWriter))
 }

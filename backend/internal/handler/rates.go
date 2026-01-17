@@ -14,7 +14,7 @@ func (h *Handler) GetRates(w http.ResponseWriter, r *http.Request) {
 		base = "USD"
 	}
 
-	rates, err := h.exchange.GetLatestRates(r.Context(), base)
+	rates, err := h.exchangeService.GetLatestRates(r.Context(), base)
 	if err != nil {
 		httputil.InternalServerError(w, "Failed to fetch rates")
 		return

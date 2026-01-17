@@ -28,6 +28,7 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 
 	// Health check (no rate limiting)
 	r.Get("/health", h.Exchange.Health)
+	r.Get("/health/detailed", h.Exchange.HealthDetailed)
 
 	// API routes with rate limiting
 	r.Route("/api/v1", func(r chi.Router) {
@@ -43,6 +44,10 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/register", h.Auth.Register)
 			r.Post("/login", h.Auth.Login)
+			r.Post("/forgot-password", h.Auth.ForgotPassword)
+			r.Post("/reset-password", h.Auth.ResetPassword)
+			r.Post("/refresh", h.Auth.RefreshToken)
+			r.Post("/logout", h.Auth.Logout)
 
 			// Protected auth routes
 			r.Group(func(r chi.Router) {
@@ -59,6 +64,8 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 			r.Post("/transaction", h.Wallet.AddTransaction)
 			r.Post("/convert", h.Wallet.ConvertBalance)
 			r.Get("/transactions", h.Wallet.GetTransactions)
+			r.Get("/transactions/export", h.Wallet.ExportTransactions)
+			r.Get("/categories", h.Wallet.GetCategories)
 		})
 
 		// AI routes

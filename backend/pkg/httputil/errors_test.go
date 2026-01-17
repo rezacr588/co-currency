@@ -75,3 +75,53 @@ func TestServiceUnavailable(t *testing.T) {
 		t.Errorf("ServiceUnavailable() status = %v, want %v", rec.Code, http.StatusServiceUnavailable)
 	}
 }
+
+func TestUnauthorized(t *testing.T) {
+	rec := httptest.NewRecorder()
+	Unauthorized(rec, "unauthorized access")
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("Unauthorized() status = %v, want %v", rec.Code, http.StatusUnauthorized)
+	}
+
+	var got ErrorResponse
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if got.Error != "unauthorized" {
+		t.Errorf("Error = %v, want unauthorized", got.Error)
+	}
+}
+
+func TestForbidden(t *testing.T) {
+	rec := httptest.NewRecorder()
+	Forbidden(rec, "access denied")
+
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("Forbidden() status = %v, want %v", rec.Code, http.StatusForbidden)
+	}
+
+	var got ErrorResponse
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if got.Error != "forbidden" {
+		t.Errorf("Error = %v, want forbidden", got.Error)
+	}
+}
+
+func TestNewError(t *testing.T) {
+	err := NewError(http.StatusBadRequest, "bad_request", "Invalid data")
+
+	if err.Code != http.StatusBadRequest {
+		t.Errorf("NewError().Code = %v, want %v", err.Code, http.StatusBadRequest)
+	}
+	if err.Error != "bad_request" {
+		t.Errorf("NewError().Error = %v, want bad_request", err.Error)
+	}
+	if err.Message != "Invalid data" {
+		t.Errorf("NewError().Message = %v, want 'Invalid data'", err.Message)
+	}
+}

@@ -249,7 +249,7 @@ func TestNew(t *testing.T) {
 		t.Fatal("Expected handler to be created")
 	}
 
-	if h.exchange == nil {
+	if h.exchangeService == nil {
 		t.Error("Expected exchange service to be set")
 	}
 }

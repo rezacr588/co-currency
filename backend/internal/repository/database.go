@@ -61,10 +61,23 @@ func (d *Database) initTables(ctx context.Context) error {
 			email VARCHAR(255) UNIQUE NOT NULL,
 			password_hash VARCHAR(255) NOT NULL,
 			name VARCHAR(255),
+			failed_login_attempts INTEGER DEFAULT 0,
+			locked_until TIMESTAMP WITH TIME ZONE,
+			password_reset_token VARCHAR(255),
+			password_reset_expires TIMESTAMP WITH TIME ZONE,
+			onboarding_completed BOOLEAN DEFAULT FALSE,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`,
+		`CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users(password_reset_token)`,
+
+		// Add new columns if they don't exist (for existing databases)
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP WITH TIME ZONE`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token VARCHAR(255)`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMP WITH TIME ZONE`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE`,
 
 		// Wallet balances (one row per user per currency)
 		`CREATE TABLE IF NOT EXISTS wallet_balances (
@@ -77,7 +90,7 @@ func (d *Database) initTables(ctx context.Context) error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_wallet_balances_user_id ON wallet_balances(user_id)`,
 
-		// Transaction history
+		// Transaction history with category
 		`CREATE TABLE IF NOT EXISTS transactions (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -88,12 +101,40 @@ func (d *Database) initTables(ctx context.Context) error {
 			to_currency VARCHAR(10),
 			rate DECIMAL(20, 8),
 			source VARCHAR(50),
+			category VARCHAR(50),
 			ai_extracted_data JSONB,
 			description TEXT,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category)`,
+
+		// Add category column if it doesn't exist
+		`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS category VARCHAR(50)`,
+
+		// Categories table
+		`CREATE TABLE IF NOT EXISTS categories (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+			name VARCHAR(50) NOT NULL,
+			icon VARCHAR(50),
+			color VARCHAR(20),
+			is_default BOOLEAN DEFAULT FALSE,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id)`,
+
+		// Refresh tokens table
+		`CREATE TABLE IF NOT EXISTS refresh_tokens (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+			token_hash VARCHAR(255) NOT NULL,
+			expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_hash ON refresh_tokens(token_hash)`,
 	}
 
 	for _, query := range queries {

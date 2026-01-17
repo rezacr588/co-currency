@@ -23,7 +23,7 @@ func (h *Handler) GetHistorical(w http.ResponseWriter, r *http.Request) {
 		base = "USD"
 	}
 
-	rates, err := h.exchange.GetHistoricalRates(r.Context(), date, base)
+	rates, err := h.exchangeService.GetHistoricalRates(r.Context(), date, base)
 	if err != nil {
 		httputil.InternalServerError(w, "Failed to fetch historical rates")
 		return

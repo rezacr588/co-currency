@@ -608,8 +608,8 @@ func TestNewAuthService(t *testing.T) {
 		t.Errorf("Expected jwt secret 'test-secret', got '%s'", string(service.jwtSecret))
 	}
 
-	if service.jwtExpiry != 24*time.Hour*7 {
-		t.Errorf("Expected jwt expiry 7 days, got %v", service.jwtExpiry)
+	if service.jwtExpiry != 15*time.Minute {
+		t.Errorf("Expected jwt expiry 15 minutes, got %v", service.jwtExpiry)
 	}
 }
 
@@ -715,5 +715,321 @@ func TestAuthService_ValidateToken_EmptyToken(t *testing.T) {
 	_, err := service.ValidateToken("")
 	if !errors.Is(err, ErrInvalidToken) {
 		t.Errorf("Expected ErrInvalidToken, got: %v", err)
+	}
+}
+
+// Test NewAuthServiceWithRefresh
+func TestNewAuthServiceWithRefresh(t *testing.T) {
+	service := NewAuthServiceWithRefresh(nil, nil, "test-secret")
+
+	if service == nil {
+		t.Fatal("Expected service to be created")
+	}
+
+	if service.refreshTokenRepo != nil {
+		t.Error("Expected refreshTokenRepo to be nil")
+	}
+
+	if string(service.jwtSecret) != "test-secret" {
+		t.Errorf("Expected jwt secret 'test-secret', got '%s'", string(service.jwtSecret))
+	}
+
+	// Check refresh expiry is set
+	if service.refreshExpiry != 7*24*time.Hour {
+		t.Errorf("Expected refresh expiry 7 days, got %v", service.refreshExpiry)
+	}
+}
+
+// Test RefreshToken without repository
+func TestAuthService_RefreshToken_NoRepository(t *testing.T) {
+	service := NewAuthService(nil, "test-secret")
+
+	_, err := service.RefreshToken(context.Background(), "some-token")
+	if err == nil {
+		t.Error("Expected error when refresh token repo not configured")
+	}
+
+	if err.Error() != "refresh tokens not configured" {
+		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
+// Test Logout without repository
+func TestAuthService_Logout_NoRepository(t *testing.T) {
+	service := NewAuthService(nil, "test-secret")
+
+	err := service.Logout(context.Background(), "some-token")
+	if err != nil {
+		t.Errorf("Expected no error when logout without repo, got: %v", err)
+	}
+}
+
+// Test LogoutAllDevices without repository
+func TestAuthService_LogoutAllDevices_NoRepository(t *testing.T) {
+	service := NewAuthService(nil, "test-secret")
+
+	err := service.LogoutAllDevices(context.Background(), uuid.New())
+	if err != nil {
+		t.Errorf("Expected no error when logout all without repo, got: %v", err)
+	}
+}
+
+// Test ErrAccountLocked error
+func TestErrAccountLocked(t *testing.T) {
+	if ErrAccountLocked == nil {
+		t.Error("ErrAccountLocked should not be nil")
+	}
+
+	if ErrAccountLocked.Error() != "account is temporarily locked due to too many failed login attempts" {
+		t.Errorf("Unexpected error message: %s", ErrAccountLocked.Error())
+	}
+}
+
+// Test ErrInvalidResetToken error
+func TestErrInvalidResetToken(t *testing.T) {
+	if ErrInvalidResetToken == nil {
+		t.Error("ErrInvalidResetToken should not be nil")
+	}
+
+	if ErrInvalidResetToken.Error() != "invalid or expired password reset token" {
+		t.Errorf("Unexpected error message: %s", ErrInvalidResetToken.Error())
+	}
+}
+
+// MockUserRepositoryWithPasswordReset extends MockUserRepository for password reset testing
+type MockUserRepositoryWithPasswordReset struct {
+	*MockUserRepository
+	resetTokens       map[string]*resetTokenInfo
+	lockedAccounts    map[string]*time.Time
+	failedAttempts    map[string]int
+	onboardingCompleted map[uuid.UUID]bool
+}
+
+type resetTokenInfo struct {
+	email   string
+	expires time.Time
+}
+
+func NewMockUserRepositoryWithPasswordReset() *MockUserRepositoryWithPasswordReset {
+	return &MockUserRepositoryWithPasswordReset{
+		MockUserRepository:   NewMockUserRepository(),
+		resetTokens:          make(map[string]*resetTokenInfo),
+		lockedAccounts:       make(map[string]*time.Time),
+		failedAttempts:       make(map[string]int),
+		onboardingCompleted:  make(map[uuid.UUID]bool),
+	}
+}
+
+func (m *MockUserRepositoryWithPasswordReset) SetPasswordResetToken(ctx context.Context, email, token string, expiry time.Time) error {
+	if _, exists := m.users[email]; !exists {
+		return repository.ErrUserNotFound
+	}
+	m.resetTokens[token] = &resetTokenInfo{email: email, expires: expiry}
+	return nil
+}
+
+func (m *MockUserRepositoryWithPasswordReset) GetByResetToken(ctx context.Context, token string) (*model.User, error) {
+	info, exists := m.resetTokens[token]
+	if !exists {
+		return nil, repository.ErrInvalidResetToken
+	}
+	if time.Now().After(info.expires) {
+		return nil, repository.ErrInvalidResetToken
+	}
+	return m.GetByEmail(ctx, info.email)
+}
+
+func (m *MockUserRepositoryWithPasswordReset) UpdatePassword(ctx context.Context, userID uuid.UUID, passwordHash string) error {
+	for _, user := range m.users {
+		if user.ID == userID {
+			user.PasswordHash = passwordHash
+			// Clear reset token
+			for token, info := range m.resetTokens {
+				if info.email == user.Email {
+					delete(m.resetTokens, token)
+				}
+			}
+			return nil
+		}
+	}
+	return repository.ErrUserNotFound
+}
+
+func (m *MockUserRepositoryWithPasswordReset) IncrementFailedAttempts(ctx context.Context, email string) error {
+	if _, exists := m.users[email]; !exists {
+		return repository.ErrUserNotFound
+	}
+	m.failedAttempts[email]++
+	if m.failedAttempts[email] >= 5 {
+		lockUntil := time.Now().Add(15 * time.Minute)
+		m.lockedAccounts[email] = &lockUntil
+	}
+	return nil
+}
+
+func (m *MockUserRepositoryWithPasswordReset) ResetFailedAttempts(ctx context.Context, userID uuid.UUID) error {
+	for _, user := range m.users {
+		if user.ID == userID {
+			delete(m.failedAttempts, user.Email)
+			delete(m.lockedAccounts, user.Email)
+			return nil
+		}
+	}
+	return nil
+}
+
+func (m *MockUserRepositoryWithPasswordReset) IsAccountLocked(ctx context.Context, email string) (bool, *time.Time, error) {
+	lockedUntil, exists := m.lockedAccounts[email]
+	if !exists {
+		return false, nil, nil
+	}
+	if time.Now().After(*lockedUntil) {
+		delete(m.lockedAccounts, email)
+		return false, nil, nil
+	}
+	return true, lockedUntil, nil
+}
+
+func (m *MockUserRepositoryWithPasswordReset) SetOnboardingCompleted(ctx context.Context, userID uuid.UUID) error {
+	m.onboardingCompleted[userID] = true
+	return nil
+}
+
+// AuthServiceWithMockPasswordReset wraps AuthService with mock that supports password reset
+type AuthServiceWithMockPasswordReset struct {
+	mockRepo      *MockUserRepositoryWithPasswordReset
+	jwtSecret     []byte
+	jwtExpiry     time.Duration
+	refreshExpiry time.Duration
+}
+
+func NewAuthServiceWithMockPasswordReset(mockRepo *MockUserRepositoryWithPasswordReset) *AuthServiceWithMockPasswordReset {
+	return &AuthServiceWithMockPasswordReset{
+		mockRepo:      mockRepo,
+		jwtSecret:     []byte("test-secret-key-for-testing"),
+		jwtExpiry:     24 * time.Hour,
+		refreshExpiry: 7 * 24 * time.Hour,
+	}
+}
+
+func (s *AuthServiceWithMockPasswordReset) GeneratePasswordResetToken(ctx context.Context, email string) (string, error) {
+	_, err := s.mockRepo.GetByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return "", nil // Don't reveal if email exists
+		}
+		return "", err
+	}
+
+	token := uuid.New().String()
+	expiry := time.Now().Add(1 * time.Hour)
+
+	if err := s.mockRepo.SetPasswordResetToken(ctx, email, token, expiry); err != nil {
+		return "", err
+	}
+
+	return token, nil
+}
+
+func (s *AuthServiceWithMockPasswordReset) ResetPassword(ctx context.Context, token, newPassword string) error {
+	if len(newPassword) < 6 {
+		return errors.New("password must be at least 6 characters")
+	}
+
+	user, err := s.mockRepo.GetByResetToken(ctx, token)
+	if err != nil {
+		if errors.Is(err, repository.ErrInvalidResetToken) {
+			return ErrInvalidResetToken
+		}
+		return err
+	}
+
+	return s.mockRepo.UpdatePassword(ctx, user.ID, newPassword)
+}
+
+// Tests for GeneratePasswordResetToken
+func TestGeneratePasswordResetToken_Success(t *testing.T) {
+	mockRepo := NewMockUserRepositoryWithPasswordReset()
+	service := NewAuthServiceWithMockPasswordReset(mockRepo)
+
+	// Create a user
+	user := &model.User{
+		Email:        "test@example.com",
+		PasswordHash: "password123",
+		Name:         "Test User",
+	}
+	mockRepo.Create(context.Background(), user)
+
+	// Generate reset token
+	token, err := service.GeneratePasswordResetToken(context.Background(), "test@example.com")
+	if err != nil {
+		t.Fatalf("GeneratePasswordResetToken failed: %v", err)
+	}
+
+	if token == "" {
+		t.Error("Expected non-empty token")
+	}
+}
+
+func TestGeneratePasswordResetToken_UserNotFound(t *testing.T) {
+	mockRepo := NewMockUserRepositoryWithPasswordReset()
+	service := NewAuthServiceWithMockPasswordReset(mockRepo)
+
+	// Try to generate reset token for non-existent user
+	token, err := service.GeneratePasswordResetToken(context.Background(), "nonexistent@example.com")
+	if err != nil {
+		t.Fatalf("Expected no error (to not reveal email existence), got: %v", err)
+	}
+
+	// Token should be empty for non-existent users
+	if token != "" {
+		t.Error("Expected empty token for non-existent user")
+	}
+}
+
+// Tests for ResetPassword
+func TestResetPassword_Success(t *testing.T) {
+	mockRepo := NewMockUserRepositoryWithPasswordReset()
+	service := NewAuthServiceWithMockPasswordReset(mockRepo)
+
+	// Create a user
+	user := &model.User{
+		Email:        "test@example.com",
+		PasswordHash: "oldpassword",
+		Name:         "Test User",
+	}
+	mockRepo.Create(context.Background(), user)
+
+	// Generate reset token
+	token, _ := service.GeneratePasswordResetToken(context.Background(), "test@example.com")
+
+	// Reset password
+	err := service.ResetPassword(context.Background(), token, "newpassword123")
+	if err != nil {
+		t.Fatalf("ResetPassword failed: %v", err)
+	}
+}
+
+func TestResetPassword_ShortPassword(t *testing.T) {
+	mockRepo := NewMockUserRepositoryWithPasswordReset()
+	service := NewAuthServiceWithMockPasswordReset(mockRepo)
+
+	err := service.ResetPassword(context.Background(), "some-token", "123")
+	if err == nil {
+		t.Error("Expected error for short password")
+	}
+
+	if err.Error() != "password must be at least 6 characters" {
+		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
+func TestResetPassword_InvalidToken(t *testing.T) {
+	mockRepo := NewMockUserRepositoryWithPasswordReset()
+	service := NewAuthServiceWithMockPasswordReset(mockRepo)
+
+	err := service.ResetPassword(context.Background(), "invalid-token", "newpassword123")
+	if !errors.Is(err, ErrInvalidResetToken) {
+		t.Errorf("Expected ErrInvalidResetToken, got: %v", err)
 	}
 }

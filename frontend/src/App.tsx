@@ -15,7 +15,7 @@ import {
   WalletConvert,
   AIReceiptParser,
 } from './components/features/Wallet';
-import { Login, Register } from './pages';
+import { Login, Register, ForgotPassword, ResetPassword } from './pages';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -224,6 +224,8 @@ function AppContent() {
         <Route path="/about" element={<AboutUs />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route
           path="/wallet"
           element={

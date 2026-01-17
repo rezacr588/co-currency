@@ -197,7 +197,7 @@ func (r *WalletRepository) GetTransactions(ctx context.Context, userID uuid.UUID
 	}
 
 	query := `
-		SELECT id, user_id, type, amount, currency, to_amount, to_currency, rate, source, ai_extracted_data, description, created_at
+		SELECT id, user_id, type, amount, currency, to_amount, to_currency, rate, source, category, ai_extracted_data, description, created_at
 		FROM transactions
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -214,14 +214,18 @@ func (r *WalletRepository) GetTransactions(ctx context.Context, userID uuid.UUID
 	for rows.Next() {
 		var t model.Transaction
 		var aiData []byte
+		var category *string
 		if err := rows.Scan(
 			&t.ID, &t.UserID, &t.Type, &t.Amount, &t.Currency,
-			&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &aiData, &t.Description, &t.CreatedAt,
+			&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &category, &aiData, &t.Description, &t.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scanning transaction: %w", err)
 		}
 		if aiData != nil {
 			t.AIExtractedData = json.RawMessage(aiData)
+		}
+		if category != nil {
+			t.Category = *category
 		}
 		transactions = append(transactions, t)
 	}
@@ -231,6 +235,111 @@ func (r *WalletRepository) GetTransactions(ctx context.Context, userID uuid.UUID
 	}
 
 	return transactions, nil
+}
+
+// GetTransactionsFiltered retrieves transactions for a user with filters
+func (r *WalletRepository) GetTransactionsFiltered(ctx context.Context, userID uuid.UUID, filter *model.TransactionFilter, limit, offset int) ([]model.Transaction, int, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	// Build dynamic query
+	query := `
+		SELECT id, user_id, type, amount, currency, to_amount, to_currency, rate, source, category, ai_extracted_data, description, created_at
+		FROM transactions
+		WHERE user_id = $1
+	`
+	countQuery := `SELECT COUNT(*) FROM transactions WHERE user_id = $1`
+
+	args := []interface{}{userID}
+	argCount := 1
+
+	// Add filters
+	if filter != nil {
+		if filter.Category != "" {
+			argCount++
+			query += fmt.Sprintf(" AND category = $%d", argCount)
+			countQuery += fmt.Sprintf(" AND category = $%d", argCount)
+			args = append(args, filter.Category)
+		}
+		if filter.Type != "" {
+			argCount++
+			query += fmt.Sprintf(" AND type = $%d", argCount)
+			countQuery += fmt.Sprintf(" AND type = $%d", argCount)
+			args = append(args, filter.Type)
+		}
+		if filter.Currency != "" {
+			argCount++
+			query += fmt.Sprintf(" AND currency = $%d", argCount)
+			countQuery += fmt.Sprintf(" AND currency = $%d", argCount)
+			args = append(args, filter.Currency)
+		}
+		if filter.Search != "" {
+			argCount++
+			query += fmt.Sprintf(" AND (description ILIKE $%d OR category ILIKE $%d)", argCount, argCount)
+			countQuery += fmt.Sprintf(" AND (description ILIKE $%d OR category ILIKE $%d)", argCount, argCount)
+			args = append(args, "%"+filter.Search+"%")
+		}
+		if filter.FromDate != "" {
+			argCount++
+			query += fmt.Sprintf(" AND created_at >= $%d", argCount)
+			countQuery += fmt.Sprintf(" AND created_at >= $%d", argCount)
+			args = append(args, filter.FromDate)
+		}
+		if filter.ToDate != "" {
+			argCount++
+			query += fmt.Sprintf(" AND created_at <= $%d", argCount)
+			countQuery += fmt.Sprintf(" AND created_at <= $%d", argCount)
+			args = append(args, filter.ToDate+"T23:59:59Z")
+		}
+	}
+
+	// Get total count
+	var total int
+	err := r.pool.QueryRow(ctx, countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("counting transactions: %w", err)
+	}
+
+	// Add ordering and pagination
+	query += " ORDER BY created_at DESC"
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argCount+1, argCount+2)
+	args = append(args, limit, offset)
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("querying transactions: %w", err)
+	}
+	defer rows.Close()
+
+	var transactions []model.Transaction
+	for rows.Next() {
+		var t model.Transaction
+		var aiData []byte
+		var category *string
+		if err := rows.Scan(
+			&t.ID, &t.UserID, &t.Type, &t.Amount, &t.Currency,
+			&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &category, &aiData, &t.Description, &t.CreatedAt,
+		); err != nil {
+			return nil, 0, fmt.Errorf("scanning transaction: %w", err)
+		}
+		if aiData != nil {
+			t.AIExtractedData = json.RawMessage(aiData)
+		}
+		if category != nil {
+			t.Category = *category
+		}
+		transactions = append(transactions, t)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("iterating transactions: %w", err)
+	}
+
+	return transactions, total, nil
 }
 
 // GetTransaction retrieves a single transaction by ID
@@ -261,6 +370,80 @@ func (r *WalletRepository) GetTransaction(ctx context.Context, userID, txID uuid
 	}
 
 	return t, nil
+}
+
+// AddTransactionAtomic performs a balance update and transaction creation atomically
+func (r *WalletRepository) AddTransactionAtomic(ctx context.Context, userID uuid.UUID, txType string, amount float64, currency, source, description, category string, aiData json.RawMessage) (*model.Transaction, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	now := time.Now()
+
+	// Calculate delta
+	delta := amount
+	if txType == "debit" {
+		delta = -amount
+	}
+
+	// Check current balance for debits with row-level lock
+	if txType == "debit" {
+		var currentBalance float64
+		err = tx.QueryRow(ctx, `
+			SELECT COALESCE(balance, 0) FROM wallet_balances
+			WHERE user_id = $1 AND currency = $2
+			FOR UPDATE
+		`, userID, currency).Scan(&currentBalance)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("checking balance: %w", err)
+		}
+		if currentBalance < amount {
+			return nil, ErrInsufficientBalance
+		}
+	}
+
+	// Update or insert balance
+	_, err = tx.Exec(ctx, `
+		INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (user_id, currency) DO UPDATE SET
+			balance = wallet_balances.balance + EXCLUDED.balance,
+			updated_at = EXCLUDED.updated_at
+	`, uuid.New(), userID, currency, delta, now)
+	if err != nil {
+		return nil, fmt.Errorf("updating balance: %w", err)
+	}
+
+	// Create transaction record
+	transaction := &model.Transaction{
+		ID:              uuid.New(),
+		UserID:          userID,
+		Type:            txType,
+		Amount:          amount,
+		Currency:        currency,
+		Source:          source,
+		Description:     description,
+		Category:        category,
+		AIExtractedData: aiData,
+		CreatedAt:       now,
+	}
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO transactions (id, user_id, type, amount, currency, source, category, ai_extracted_data, description, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, transaction.ID, transaction.UserID, transaction.Type, transaction.Amount, transaction.Currency,
+		transaction.Source, transaction.Category, transaction.AIExtractedData, transaction.Description, transaction.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("recording transaction: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("committing transaction: %w", err)
+	}
+
+	return transaction, nil
 }
 
 // ExecuteConversion performs an atomic currency conversion
