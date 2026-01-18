@@ -1,10 +1,13 @@
 package httputil
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/rezacr588/currency-converter/pkg/ctxkeys"
 )
 
 func TestError(t *testing.T) {
@@ -123,5 +126,123 @@ func TestNewError(t *testing.T) {
 	}
 	if err.Message != "Invalid data" {
 		t.Errorf("NewError().Message = %v, want 'Invalid data'", err.Message)
+	}
+}
+
+func TestNewErrorWithTrace(t *testing.T) {
+	traceID := "test-trace-123"
+	err := NewErrorWithTrace(http.StatusBadRequest, "bad_request", "Invalid data", traceID)
+
+	if err.Code != http.StatusBadRequest {
+		t.Errorf("NewErrorWithTrace().Code = %v, want %v", err.Code, http.StatusBadRequest)
+	}
+	if err.Error != "bad_request" {
+		t.Errorf("NewErrorWithTrace().Error = %v, want bad_request", err.Error)
+	}
+	if err.Message != "Invalid data" {
+		t.Errorf("NewErrorWithTrace().Message = %v, want 'Invalid data'", err.Message)
+	}
+	if err.TraceID != traceID {
+		t.Errorf("NewErrorWithTrace().TraceID = %v, want %v", err.TraceID, traceID)
+	}
+}
+
+func TestErrorWithContext(t *testing.T) {
+	traceID := "test-trace-456"
+	ctx := context.WithValue(context.Background(), ctxkeys.TraceID, traceID)
+	rec := httptest.NewRecorder()
+
+	ErrorWithContext(ctx, rec, http.StatusBadRequest, "bad_request", "Invalid input")
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("ErrorWithContext() status = %v, want %v", rec.Code, http.StatusBadRequest)
+	}
+
+	var got ErrorResponse
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if got.TraceID != traceID {
+		t.Errorf("ErrorWithContext() TraceID = %v, want %v", got.TraceID, traceID)
+	}
+}
+
+func TestBadRequestWithContext(t *testing.T) {
+	traceID := "trace-bad-request"
+	ctx := context.WithValue(context.Background(), ctxkeys.TraceID, traceID)
+	rec := httptest.NewRecorder()
+
+	BadRequestWithContext(ctx, rec, "test message")
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("BadRequestWithContext() status = %v, want %v", rec.Code, http.StatusBadRequest)
+	}
+
+	var got ErrorResponse
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if got.TraceID != traceID {
+		t.Errorf("BadRequestWithContext() TraceID = %v, want %v", got.TraceID, traceID)
+	}
+}
+
+func TestInternalServerErrorWithContext(t *testing.T) {
+	traceID := "trace-internal-error"
+	ctx := context.WithValue(context.Background(), ctxkeys.TraceID, traceID)
+	rec := httptest.NewRecorder()
+
+	InternalServerErrorWithContext(ctx, rec, "something went wrong")
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("InternalServerErrorWithContext() status = %v, want %v", rec.Code, http.StatusInternalServerError)
+	}
+
+	var got ErrorResponse
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if got.TraceID != traceID {
+		t.Errorf("InternalServerErrorWithContext() TraceID = %v, want %v", got.TraceID, traceID)
+	}
+}
+
+func TestUnauthorizedWithContext(t *testing.T) {
+	traceID := "trace-unauthorized"
+	ctx := context.WithValue(context.Background(), ctxkeys.TraceID, traceID)
+	rec := httptest.NewRecorder()
+
+	UnauthorizedWithContext(ctx, rec, "not allowed")
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("UnauthorizedWithContext() status = %v, want %v", rec.Code, http.StatusUnauthorized)
+	}
+
+	var got ErrorResponse
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if got.TraceID != traceID {
+		t.Errorf("UnauthorizedWithContext() TraceID = %v, want %v", got.TraceID, traceID)
+	}
+}
+
+func TestContextErrorWithoutTraceID(t *testing.T) {
+	ctx := context.Background() // No trace ID in context
+	rec := httptest.NewRecorder()
+
+	BadRequestWithContext(ctx, rec, "test message")
+
+	var got ErrorResponse
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if got.TraceID != "" {
+		t.Errorf("Expected empty TraceID when not in context, got %v", got.TraceID)
 	}
 }

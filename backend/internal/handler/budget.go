@@ -24,133 +24,111 @@ func NewBudgetHandler(budgetService *service.BudgetService) *BudgetHandler {
 
 // GetBudgets handles GET /api/v1/budgets
 func (h *BudgetHandler) GetBudgets(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	ctx := r.Context()
+	userID, ok := middleware.GetUserIDFromContext(ctx)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
+		httputil.UnauthorizedWithContext(ctx, w, "user not found in context")
 		return
 	}
 
-	budgets, err := h.budgetService.GetBudgets(r.Context(), userID)
+	budgets, err := h.budgetService.GetBudgets(ctx, userID)
 	if err != nil {
-		httputil.InternalServerError(w, "failed to get budgets")
+		httputil.InternalServerErrorWithContext(ctx, w, "failed to get budgets")
 		return
 	}
 
-	// Add computed fields to response
-	type budgetWithStatus struct {
-		model.Budget
-		Remaining    float64 `json:"remaining"`
-		Progress     float64 `json:"progress"`
-		IsOverBudget bool    `json:"is_over_budget"`
-		IsNearLimit  bool    `json:"is_near_limit"`
-	}
-
-	budgetsWithStatus := make([]budgetWithStatus, len(budgets))
+	// Convert to response type with computed fields including daily allowance
+	budgetResponses := make([]model.BudgetResponse, len(budgets))
 	for i, b := range budgets {
-		budgetsWithStatus[i] = budgetWithStatus{
-			Budget:       b,
-			Remaining:    b.Remaining(),
-			Progress:     b.Progress(),
-			IsOverBudget: b.IsOverBudget(),
-			IsNearLimit:  b.IsNearLimit(),
-		}
+		budgetResponses[i] = b.ToBudgetResponse()
 	}
 
 	httputil.Success(w, map[string]interface{}{
-		"budgets": budgetsWithStatus,
+		"budgets": budgetResponses,
 	})
 }
 
 // CreateBudget handles POST /api/v1/budgets
 func (h *BudgetHandler) CreateBudget(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	ctx := r.Context()
+	userID, ok := middleware.GetUserIDFromContext(ctx)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
+		httputil.UnauthorizedWithContext(ctx, w, "user not found in context")
 		return
 	}
 
 	var req model.CreateBudgetRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequest(w, "invalid request body")
+		httputil.BadRequestWithContext(ctx, w, "invalid request body")
 		return
 	}
 
-	budget, err := h.budgetService.CreateBudget(r.Context(), userID, &req)
+	budget, err := h.budgetService.CreateBudget(ctx, userID, &req)
 	if err != nil {
-		httputil.BadRequest(w, err.Error())
+		httputil.BadRequestWithContext(ctx, w, err.Error())
 		return
 	}
 
-	httputil.Created(w, map[string]interface{}{
-		"budget":        budget,
-		"remaining":     budget.Remaining(),
-		"progress":      budget.Progress(),
-		"is_over_budget": budget.IsOverBudget(),
-		"is_near_limit": budget.IsNearLimit(),
-	})
+	httputil.Created(w, budget.ToBudgetResponse())
 }
 
 // UpdateBudget handles PUT /api/v1/budgets/{id}
 func (h *BudgetHandler) UpdateBudget(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	ctx := r.Context()
+	userID, ok := middleware.GetUserIDFromContext(ctx)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
+		httputil.UnauthorizedWithContext(ctx, w, "user not found in context")
 		return
 	}
 
 	budgetIDStr := chi.URLParam(r, "id")
 	budgetID, err := uuid.Parse(budgetIDStr)
 	if err != nil {
-		httputil.BadRequest(w, "invalid budget ID")
+		httputil.BadRequestWithContext(ctx, w, "invalid budget ID")
 		return
 	}
 
 	var req model.UpdateBudgetRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequest(w, "invalid request body")
+		httputil.BadRequestWithContext(ctx, w, "invalid request body")
 		return
 	}
 
-	budget, err := h.budgetService.UpdateBudget(r.Context(), userID, budgetID, &req)
+	budget, err := h.budgetService.UpdateBudget(ctx, userID, budgetID, &req)
 	if err != nil {
 		if err.Error() == "budget not found" {
-			httputil.NotFound(w, "budget not found")
+			httputil.NotFoundWithContext(ctx, w, "budget not found")
 			return
 		}
-		httputil.BadRequest(w, err.Error())
+		httputil.BadRequestWithContext(ctx, w, err.Error())
 		return
 	}
 
-	httputil.Success(w, map[string]interface{}{
-		"budget":        budget,
-		"remaining":     budget.Remaining(),
-		"progress":      budget.Progress(),
-		"is_over_budget": budget.IsOverBudget(),
-		"is_near_limit": budget.IsNearLimit(),
-	})
+	httputil.Success(w, budget.ToBudgetResponse())
 }
 
 // DeleteBudget handles DELETE /api/v1/budgets/{id}
 func (h *BudgetHandler) DeleteBudget(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	ctx := r.Context()
+	userID, ok := middleware.GetUserIDFromContext(ctx)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
+		httputil.UnauthorizedWithContext(ctx, w, "user not found in context")
 		return
 	}
 
 	budgetIDStr := chi.URLParam(r, "id")
 	budgetID, err := uuid.Parse(budgetIDStr)
 	if err != nil {
-		httputil.BadRequest(w, "invalid budget ID")
+		httputil.BadRequestWithContext(ctx, w, "invalid budget ID")
 		return
 	}
 
-	if err := h.budgetService.DeleteBudget(r.Context(), userID, budgetID); err != nil {
+	if err := h.budgetService.DeleteBudget(ctx, userID, budgetID); err != nil {
 		if err.Error() == "budget not found" {
-			httputil.NotFound(w, "budget not found")
+			httputil.NotFoundWithContext(ctx, w, "budget not found")
 			return
 		}
-		httputil.InternalServerError(w, "failed to delete budget")
+		httputil.InternalServerErrorWithContext(ctx, w, "failed to delete budget")
 		return
 	}
 

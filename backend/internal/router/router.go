@@ -28,7 +28,8 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 	r := chi.NewRouter()
 
 	// Global middleware
-	r.Use(middleware.Logging)
+	r.Use(middleware.Trace)   // Generate trace ID first
+	r.Use(middleware.Logging) // Logging will include trace ID
 	r.Use(middleware.CORS)
 
 	// Health check (no rate limiting)

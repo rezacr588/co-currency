@@ -33,9 +33,9 @@ function getTransactionIcon(type: Transaction['type']) {
   switch (type) {
     case 'credit':
       return (
-        <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
           <svg
-            className="w-4 h-4 text-emerald-600 dark:text-emerald-400"
+            className="w-4 h-4 text-green-600 dark:text-green-400"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -62,9 +62,9 @@ function getTransactionIcon(type: Transaction['type']) {
     case 'convert_from':
     case 'convert_to':
       return (
-        <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
           <svg
-            className="w-4 h-4 text-indigo-600 dark:text-indigo-400"
+            className="w-4 h-4 text-purple-600 dark:text-purple-400"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -111,7 +111,7 @@ function TransactionItem({ transaction }: { transaction: Transaction }) {
       <div className="text-right">
         <span
           className={`text-sm font-semibold ${
-            isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+            isPositive ? 'text-green-600 dark:text-green-400' : 'text-rose-600 dark:text-rose-400'
           }`}
         >
           {isPositive ? '+' : '-'}
@@ -154,7 +154,7 @@ export function TransactionHistory({
           <button
             onClick={onLoadMore}
             disabled={isLoadingMore}
-            className="w-full py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium disabled:opacity-50"
+            className="w-full py-2 text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium disabled:opacity-50"
           >
             {isLoadingMore ? t('loading') : t('loadMore')}
           </button>

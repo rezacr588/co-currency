@@ -29,9 +29,9 @@ export function AboutUs() {
           {/* Features Row - Compact */}
           <div className="grid grid-cols-3 gap-4 mb-10">
             {[
-              { icon: '⚡', label: t('featureFast'), color: 'indigo' },
-              { icon: '✓', label: t('featureAccurate'), color: 'emerald' },
-              { icon: '🌍', label: t('featureGlobal'), color: 'purple' },
+              { icon: '⚡', label: t('featureFast'), color: 'purple' },
+              { icon: '✓', label: t('featureAccurate'), color: 'violet' },
+              { icon: '🌍', label: t('featureGlobal'), color: 'fuchsia' },
             ].map((feature) => (
               <div
                 key={feature.label}
@@ -54,9 +54,9 @@ export function AboutUs() {
                   <img
                     src="https://media.licdn.com/dms/image/v2/D4E03AQF3hRqdwxserA/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1718006654218?e=1741219200&v=beta&t=5WdFxbGJfEfF2X5lqSwJXrwf3Fn6z7l5o5rZbKFGbhk"
                     alt="Reza Zeraat"
-                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-4 ring-indigo-100 dark:ring-indigo-900/50"
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-4 ring-purple-100 dark:ring-purple-900/50"
                   />
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-800 flex items-center justify-center">
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-purple-500 rounded-full border-2 border-white dark:border-slate-800 flex items-center justify-center">
                     <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
@@ -69,7 +69,7 @@ export function AboutUs() {
                     <h3 className="text-xl font-bold text-slate-800 dark:text-white">
                       Reza Zeraat
                     </h3>
-                    <span className="px-2 py-0.5 text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-full">
+                    <span className="px-2 py-0.5 text-xs font-semibold bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded-full">
                       {t('coFounder')}
                     </span>
                   </div>
@@ -138,7 +138,7 @@ export function AboutUs() {
               ].map((feature) => (
                 <div
                   key={feature.label}
-                  className="p-4 rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
+                  className="p-4 rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:border-purple-300 dark:hover:border-purple-600 transition-colors"
                 >
                   <span className="text-2xl mb-2 block">{feature.icon}</span>
                   <h3 className="text-sm font-semibold text-slate-800 dark:text-white mb-1">

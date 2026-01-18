@@ -13,10 +13,10 @@ export function GoalProgress({ progress, isCompleted, size = 'md' }: GoalProgres
 
   const getProgressColor = () => {
     if (isCompleted) return 'bg-green-500';
-    if (progress >= 75) return 'bg-emerald-500';
-    if (progress >= 50) return 'bg-yellow-500';
-    if (progress >= 25) return 'bg-orange-500';
-    return 'bg-indigo-500';
+    if (progress >= 75) return 'bg-purple-500';
+    if (progress >= 50) return 'bg-violet-500';
+    if (progress >= 25) return 'bg-fuchsia-500';
+    return 'bg-purple-400';
   };
 
   return (

@@ -21,7 +21,7 @@ function formatCurrency(amount: number, currency: string): string {
 
 function ConfidenceBadge({ confidence }: { confidence: number }) {
   const percent = Math.round(confidence * 100);
-  let colorClass = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+  let colorClass = 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
 
   if (percent < 70) {
     colorClass = 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
@@ -59,7 +59,7 @@ function ParsedTransactionCard({
           <span
             className={`px-2 py-0.5 text-xs font-medium rounded-full ${
               isPositive
-                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                 : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
             }`}
           >
@@ -75,7 +75,7 @@ function ParsedTransactionCard({
       <div className="text-right">
         <span
           className={`text-lg font-semibold ${
-            isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+            isPositive ? 'text-green-600 dark:text-green-400' : 'text-rose-600 dark:text-rose-400'
           }`}
         >
           {isPositive ? '+' : '-'}
@@ -187,7 +187,7 @@ export function AIReceiptParser() {
                     onChange={(e) => setText(e.target.value)}
                     placeholder={t('pasteReceiptHere')}
                     rows={8}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all resize-none font-mono text-sm"
+                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all resize-none font-mono text-sm"
                     disabled={parseMutation.isPending}
                   />
                 </div>
