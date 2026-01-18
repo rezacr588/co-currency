@@ -66,12 +66,12 @@ func NewRateLimiterWithConfig(cfg RateLimiterConfig) *RateLimiter {
 	rl := &RateLimiter{
 		limiters:        make(map[string]*rateLimiterEntry),
 		limit:           rate.Limit(float64(cfg.RequestsPerMinute) / 60.0),
-		burst:           cfg.RequestsPerMinute / 10,
+		burst:           cfg.RequestsPerMinute / 2, // Allow larger burst for page loads
 		cleanupInterval: cfg.CleanupInterval,
 		entryTTL:        cfg.EntryTTL,
 		stopCleanup:     make(chan struct{}),
 		authLimit:       rate.Limit(float64(cfg.AuthRequestsPerMinute) / 60.0),
-		authBurst:       cfg.AuthRequestsPerMinute / 10,
+		authBurst:       cfg.AuthRequestsPerMinute / 2, // Allow larger burst for authenticated users
 		loginLimit:      rate.Limit(float64(cfg.LoginAttemptsPerMinute) / 60.0),
 		loginBurst:      2, // Allow small burst for login
 	}

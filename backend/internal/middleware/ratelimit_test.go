@@ -24,8 +24,8 @@ func TestNewRateLimiter(t *testing.T) {
 		t.Errorf("Expected limit %f, got %f", expectedLimit, float64(rl.limit))
 	}
 
-	// Check burst is set correctly (10% of limit)
-	expectedBurst := 60 / 10
+	// Check burst is set correctly (50% of limit for better page load handling)
+	expectedBurst := 60 / 2
 	if rl.burst != expectedBurst {
 		t.Errorf("Expected burst %d, got %d", expectedBurst, rl.burst)
 	}
@@ -199,8 +199,8 @@ func TestNewRateLimiterWithConfig(t *testing.T) {
 		t.Errorf("Expected entry TTL 15 minutes, got %v", rl.entryTTL)
 	}
 
-	// Check burst calculations
-	expectedBurst := 120 / 10
+	// Check burst calculations (50% of limit)
+	expectedBurst := 120 / 2
 	if rl.burst != expectedBurst {
 		t.Errorf("Expected burst %d, got %d", expectedBurst, rl.burst)
 	}
@@ -293,8 +293,8 @@ func TestRateLimiter_Stats(t *testing.T) {
 		t.Error("Expected burst in stats")
 	}
 
-	if burst != 6 {
-		t.Errorf("Expected burst 6, got %d", burst)
+	if burst != 30 {
+		t.Errorf("Expected burst 30, got %d", burst)
 	}
 }
 

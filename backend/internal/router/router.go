@@ -36,9 +36,9 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 	r.Get("/health", h.Exchange.Health)
 	r.Get("/health/detailed", h.Exchange.HealthDetailed)
 
-	// API routes with rate limiting
+	// API routes (rate limiting disabled for now)
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Use(rateLimiter.Middleware)
+		// r.Use(rateLimiter.Middleware) // Disabled - causing 429 errors on landing page
 
 		// Public exchange routes
 		r.Get("/currencies", h.Exchange.GetCurrencies)
