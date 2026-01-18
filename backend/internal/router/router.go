@@ -71,6 +71,9 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 			r.Post("/convert", h.Wallet.ConvertBalance)
 			r.Get("/transactions", h.Wallet.GetTransactions)
 			r.Get("/transactions/export", h.Wallet.ExportTransactions)
+			r.Get("/transactions/{id}", h.Wallet.GetTransaction)
+			r.Put("/transactions/{id}", h.Wallet.UpdateTransaction)
+			r.Delete("/transactions/{id}", h.Wallet.DeleteTransaction)
 			r.Get("/categories", h.Wallet.GetCategories)
 		})
 

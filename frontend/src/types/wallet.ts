@@ -56,6 +56,7 @@ export interface Transaction {
   currency: string;
   amount: number;
   category?: string;
+  icon?: string;
   description: string;
   created_at: string;
   balance_after?: number;
@@ -66,6 +67,16 @@ export interface TransactionRequest {
   currency: string;
   amount: number;
   category?: string;
+  icon?: string;
+  description?: string;
+}
+
+export interface UpdateTransactionRequest {
+  type?: 'credit' | 'debit';
+  currency?: string;
+  amount?: number;
+  category?: string;
+  icon?: string;
   description?: string;
 }
 

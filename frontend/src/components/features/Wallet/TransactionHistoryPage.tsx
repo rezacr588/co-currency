@@ -63,6 +63,7 @@ export function TransactionHistoryPage() {
                   onLoadMore={handleLoadMore}
                   hasMore={hasMore}
                   isLoadingMore={isFetching && offset > 0}
+                  showActions
                 />
               ) : null}
             </CardContent>

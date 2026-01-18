@@ -11,6 +11,7 @@ import type {
   WalletSummary,
   Transaction,
   TransactionRequest,
+  UpdateTransactionRequest,
   TransactionFilter,
   WalletConvertRequest,
   WalletConvertResponse,
@@ -232,6 +233,16 @@ export const api = {
       fetchAPI<Transaction>('/wallet/transaction', {
         method: 'POST',
         body: JSON.stringify(data),
+      }),
+    getTransaction: (id: string) => fetchAPI<Transaction>(`/wallet/transactions/${id}`),
+    updateTransaction: (id: string, data: UpdateTransactionRequest) =>
+      fetchAPI<Transaction>(`/wallet/transactions/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    deleteTransaction: (id: string) =>
+      fetchAPI<{ message: string }>(`/wallet/transactions/${id}`, {
+        method: 'DELETE',
       }),
     convert: (data: WalletConvertRequest) =>
       fetchAPI<WalletConvertResponse>('/wallet/convert', {

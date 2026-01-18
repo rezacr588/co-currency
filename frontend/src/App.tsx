@@ -351,52 +351,347 @@ function Footer() {
   );
 }
 
-function CallToAction() {
+// Hero Section - Main value proposition
+function HeroSection() {
   const { t } = useLanguage();
 
   return (
-    <Card variant="gradient" className="overflow-hidden">
-      <CardContent className="py-8 text-center">
-        <div className="max-w-xl mx-auto">
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">
-            {t('ctaTitle')}
-          </h2>
-          <p className="text-slate-600 dark:text-slate-400 mb-6">
-            {t('ctaDescription')}
-          </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            <Link to="/register">
-              <Button variant="primary" size="lg">
-                {t('getStarted')}
-              </Button>
-            </Link>
-            <Link to="/login">
-              <Button variant="secondary" size="lg">
-                {t('login')}
-              </Button>
-            </Link>
+    <section className="relative overflow-hidden bg-gradient-to-br from-[#1e3a5f] via-[#2d4a6f] to-[#1e3a5f] rounded-2xl">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#d4af37]/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#d4af37]/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
+      </div>
+
+      <div className="relative px-6 py-16 sm:py-20 md:py-24 text-center">
+        <div className="max-w-4xl mx-auto">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full bg-white/10 border border-white/20 text-white/90 text-sm font-medium backdrop-blur-sm">
+            <svg className="w-4 h-4 text-[#d4af37]" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <span>{t('statsFreeLabel')}</span>
           </div>
-          <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-            <div className="text-center">
-              <span className="block text-lg mb-1">wallet</span>
-              <span className="text-slate-500 dark:text-slate-400">{t('walletCardDesc')}</span>
+
+          {/* Main headline */}
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+            {t('heroTitle')}
+          </h1>
+
+          {/* Subtitle */}
+          <p className="text-lg sm:text-xl text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed">
+            {t('heroSubtitle')}
+          </p>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
+            <Link to="/register">
+              <Button
+                variant="primary"
+                size="lg"
+                className="w-full sm:w-auto bg-[#d4af37] hover:bg-[#c9a432] text-[#1e3a5f] font-semibold px-8 py-4 text-lg shadow-lg shadow-[#d4af37]/25 border-0"
+              >
+                {t('heroCtaPrimary')}
+                <svg className="w-5 h-5 ms-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </Button>
+            </Link>
+            <a href="#converter">
+              <Button
+                variant="secondary"
+                size="lg"
+                className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border-white/30 px-8 py-4 text-lg backdrop-blur-sm"
+              >
+                {t('heroCtaSecondary')}
+              </Button>
+            </a>
+          </div>
+
+          {/* Trust indicators */}
+          <div className="flex flex-wrap justify-center gap-6 text-white/60 text-sm">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span>{t('trustSecure')}</span>
             </div>
-            <div className="text-center">
-              <span className="block text-lg mb-1">target</span>
-              <span className="text-slate-500 dark:text-slate-400">{t('goalsCardDesc')}</span>
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span>{t('trustPrivacy')}</span>
             </div>
-            <div className="text-center">
-              <span className="block text-lg mb-1">chart</span>
-              <span className="text-slate-500 dark:text-slate-400">{t('budgetsCardDesc')}</span>
-            </div>
-            <div className="text-center">
-              <span className="block text-lg mb-1">robot</span>
-              <span className="text-slate-500 dark:text-slate-400">{t('aiCardDesc')}</span>
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span>{t('trustOpen')}</span>
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
+  );
+}
+
+// Stats Section - Social proof with numbers
+function StatsSection() {
+  const { t } = useLanguage();
+
+  const stats = [
+    { value: t('statsCurrencies'), label: t('statsCurrenciesLabel'), icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+    { value: t('statsRealTime'), label: t('statsRealTimeLabel'), icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+    { value: t('statsFree'), label: t('statsFreeLabel'), icon: 'M5 13l4 4L19 7' },
+    { value: t('statsLanguages'), label: t('statsLanguagesLabel'), icon: 'M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129' },
+  ];
+
+  return (
+    <section className="py-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {stats.map((stat, index) => (
+          <Card key={index} className="text-center p-6 hover:shadow-lg transition-shadow">
+            <CardContent className="p-0">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#1e3a5f]/10 dark:bg-[#d4af37]/10 mb-4">
+                <svg className="w-6 h-6 text-[#1e3a5f] dark:text-[#d4af37]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d={stat.icon} />
+                </svg>
+              </div>
+              <div className="text-3xl sm:text-4xl font-bold text-[#1e3a5f] dark:text-[#d4af37] mb-1">
+                {stat.value}
+              </div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                {stat.label}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// Features Grid - Key features with icons
+function FeaturesSection() {
+  const { t } = useLanguage();
+
+  const features = [
+    {
+      title: t('featureWalletTitle'),
+      description: t('featureWalletDesc'),
+      icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
+      color: 'bg-blue-500',
+    },
+    {
+      title: t('featureGoalsTitle'),
+      description: t('featureGoalsDesc'),
+      icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+      color: 'bg-green-500',
+    },
+    {
+      title: t('featureBudgetsTitle'),
+      description: t('featureBudgetsDesc'),
+      icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
+      color: 'bg-purple-500',
+    },
+    {
+      title: t('featureRecurringTitle'),
+      description: t('featureRecurringDesc'),
+      icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
+      color: 'bg-orange-500',
+    },
+    {
+      title: t('featureReportsTitle'),
+      description: t('featureReportsDesc'),
+      icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+      color: 'bg-cyan-500',
+    },
+    {
+      title: t('featureAITitle'),
+      description: t('featureAIDesc'),
+      icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+      color: 'bg-pink-500',
+    },
+  ];
+
+  return (
+    <section className="py-12">
+      <div className="text-center mb-10">
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 mb-3">
+          {t('featuresTitle')}
+        </h2>
+        <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+          {t('featuresSubtitle')}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {features.map((feature, index) => (
+          <Card key={index} className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <CardContent className="p-6">
+              <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl ${feature.color} mb-4 group-hover:scale-110 transition-transform`}>
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d={feature.icon} />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">
+                {feature.title}
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                {feature.description}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// How It Works - Simple 3-step process
+function HowItWorksSection() {
+  const { t } = useLanguage();
+
+  const steps = [
+    { number: '1', title: t('step1Title'), description: t('step1Desc'), icon: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z' },
+    { number: '2', title: t('step2Title'), description: t('step2Desc'), icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
+    { number: '3', title: t('step3Title'), description: t('step3Desc'), icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6' },
+  ];
+
+  return (
+    <section className="py-12">
+      <div className="text-center mb-10">
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 mb-3">
+          {t('howItWorksTitle')}
+        </h2>
+        <p className="text-slate-600 dark:text-slate-400">
+          {t('howItWorksSubtitle')}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {steps.map((step, index) => (
+          <div key={index} className="relative text-center">
+            {/* Connector line */}
+            {index < steps.length - 1 && (
+              <div className="hidden md:block absolute top-16 left-1/2 w-full h-0.5 bg-gradient-to-r from-[#1e3a5f] to-[#d4af37] dark:from-[#d4af37] dark:to-[#1e3a5f]" />
+            )}
+
+            {/* Step number */}
+            <div className="relative inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-[#1e3a5f] to-[#2d4a6f] dark:from-[#d4af37] dark:to-[#c9a432] text-white dark:text-[#1e3a5f] text-2xl font-bold mb-6 shadow-lg">
+              {step.number}
+            </div>
+
+            {/* Icon */}
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 mb-4">
+              <svg className="w-6 h-6 text-[#1e3a5f] dark:text-[#d4af37]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d={step.icon} />
+              </svg>
+            </div>
+
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">
+              {step.title}
+            </h3>
+            <p className="text-slate-600 dark:text-slate-400 text-sm">
+              {step.description}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// Trust Indicators Section
+function TrustSection() {
+  const { t } = useLanguage();
+
+  const trustItems = [
+    { title: t('trustSecure'), description: t('trustSecureDesc'), icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' },
+    { title: t('trustPrivacy'), description: t('trustPrivacyDesc'), icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
+    { title: t('trustOpen'), description: t('trustOpenDesc'), icon: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+  ];
+
+  return (
+    <section className="py-12">
+      <div className="text-center mb-10">
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 mb-3">
+          {t('trustTitle')}
+        </h2>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {trustItems.map((item, index) => (
+          <Card key={index} className="border-2 border-[#1e3a5f]/10 dark:border-[#d4af37]/20 bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900">
+            <CardContent className="p-6 text-center">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#1e3a5f]/10 dark:bg-[#d4af37]/10 mb-4">
+                <svg className="w-7 h-7 text-[#1e3a5f] dark:text-[#d4af37]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">
+                {item.title}
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 text-sm">
+                {item.description}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// Final CTA Section
+function FinalCTA() {
+  const { t } = useLanguage();
+
+  return (
+    <section className="py-12">
+      <Card className="overflow-hidden bg-gradient-to-br from-[#1e3a5f] via-[#2d4a6f] to-[#1e3a5f] border-0">
+        <CardContent className="py-12 px-6 text-center relative">
+          {/* Background decoration */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute -top-20 -right-20 w-40 h-40 bg-[#d4af37]/20 rounded-full blur-3xl" />
+            <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-[#d4af37]/20 rounded-full blur-3xl" />
+          </div>
+
+          <div className="relative max-w-2xl mx-auto">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
+              {t('finalCtaTitle')}
+            </h2>
+            <p className="text-white/80 mb-8 text-lg">
+              {t('finalCtaSubtitle')}
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
+              <Link to="/register">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="w-full sm:w-auto bg-[#d4af37] hover:bg-[#c9a432] text-[#1e3a5f] font-semibold px-8 py-4 text-lg shadow-lg shadow-[#d4af37]/25 border-0"
+                >
+                  {t('heroCtaPrimary')}
+                  <svg className="w-5 h-5 ms-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </Button>
+              </Link>
+              <Link to="/login">
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border-white/30 px-8 py-4 text-lg backdrop-blur-sm"
+                >
+                  {t('login')}
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </section>
   );
 }
 
@@ -406,34 +701,53 @@ function HomePage() {
   return (
     <main className="flex-1 py-4 sm:py-6">
       <Container>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
-          {/* Call to action for non-authenticated users */}
-          {!isAuthenticated && (
-            <section className="lg:col-span-12">
-              <CallToAction />
+        {/* Marketing sections for non-authenticated users */}
+        {!isAuthenticated && (
+          <div className="space-y-4">
+            {/* Hero Section */}
+            <HeroSection />
+
+            {/* Stats Section */}
+            <StatsSection />
+
+            {/* Features Section */}
+            <FeaturesSection />
+
+            {/* How It Works Section */}
+            <HowItWorksSection />
+
+            {/* Trust Indicators Section */}
+            <TrustSection />
+          </div>
+        )}
+
+        {/* Converter Section - with anchor for navigation */}
+        <div id="converter" className={!isAuthenticated ? 'pt-8' : ''}>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+            {/* Main Converter - Centered and prominent */}
+            <section className="lg:col-span-7 xl:col-span-6 xl:col-start-1">
+              <Converter />
             </section>
-          )}
 
-          {/* Main Converter - Centered and prominent */}
-          <section className="lg:col-span-7 xl:col-span-6 xl:col-start-1">
-            <Converter />
-          </section>
+            {/* Quick Conversions - Side panel on large screens */}
+            <section className="lg:col-span-5 xl:col-span-6">
+              <QuickConvert />
+            </section>
 
-          {/* Quick Conversions - Side panel on large screens */}
-          <section className="lg:col-span-5 xl:col-span-6">
-            <QuickConvert />
-          </section>
+            {/* Exchange Rates Grid - Full width */}
+            <section className="lg:col-span-12">
+              <RatesGrid />
+            </section>
 
-          {/* Exchange Rates Grid - Full width */}
-          <section className="lg:col-span-12">
-            <RatesGrid />
-          </section>
-
-          {/* Historical Rates - Full width */}
-          <section className="lg:col-span-12">
-            <Historical />
-          </section>
+            {/* Historical Rates - Full width */}
+            <section className="lg:col-span-12">
+              <Historical />
+            </section>
+          </div>
         </div>
+
+        {/* Final CTA for non-authenticated users */}
+        {!isAuthenticated && <FinalCTA />}
       </Container>
     </main>
   );

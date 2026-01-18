@@ -150,10 +150,21 @@ export const translations = {
     currency: 'Currency',
     description: 'Description',
     optional: 'optional',
+    transactionIcon: 'Transaction Icon',
+    selectIcon: 'Select an icon',
     transactionDescription: 'Enter a description for this transaction...',
     adding: 'Adding...',
     transactionFailed: 'Transaction failed. Please try again.',
     cancel: 'Cancel',
+    editTransaction: 'Edit Transaction',
+    updateFailed: 'Failed to update transaction',
+    deleteFailed: 'Failed to delete transaction',
+    confirmDelete: 'Confirm Delete',
+    confirmDeleteTransaction: 'Are you sure you want to delete this transaction? This action cannot be undone.',
+    cannotEditConversion: 'Currency conversions cannot be edited',
+    close: 'Close',
+    clearIcon: 'Clear icon',
+    deleting: 'Deleting...',
 
     // Wallet Convert
     available: 'Available',
@@ -363,6 +374,61 @@ export const translations = {
     ctaDescription: 'Create an account to access multi-currency wallet, savings goals, budgets, and AI-powered receipt parsing.',
     navigation: 'Navigation',
     converter: 'Converter',
+
+    // Landing Page - Hero Section
+    heroTitle: 'Your All-in-One Personal Finance Platform',
+    heroSubtitle: 'Track expenses, manage multiple currencies, set savings goals, and take control of your financial future - all in one powerful app.',
+    heroCtaPrimary: 'Start Free Today',
+    heroCtaSecondary: 'Try the Converter',
+
+    // Landing Page - Features
+    featuresTitle: 'Everything You Need to Master Your Money',
+    featuresSubtitle: 'Powerful tools designed to simplify your financial life',
+    featureWalletTitle: 'Multi-Currency Wallet',
+    featureWalletDesc: 'Track balances and transactions across 160+ currencies with real-time exchange rates.',
+    featureGoalsTitle: 'Smart Savings Goals',
+    featureGoalsDesc: 'Set financial targets, track progress, and achieve your dreams with automated contributions.',
+    featureBudgetsTitle: 'Budget Tracking',
+    featureBudgetsDesc: 'Create category-based budgets, monitor spending, and stay on track with visual alerts.',
+    featureRecurringTitle: 'Recurring Transactions',
+    featureRecurringDesc: 'Automate regular income and expenses. Never miss a bill or forget a payment.',
+    featureReportsTitle: 'Insights & Reports',
+    featureReportsDesc: 'Visualize spending trends, net worth, and monthly summaries with beautiful charts.',
+    featureAITitle: 'AI Receipt Parsing',
+    featureAIDesc: 'Simply paste receipt text and let AI automatically extract and categorize transactions.',
+
+    // Landing Page - Stats
+    statsCurrencies: '160+',
+    statsCurrenciesLabel: 'Currencies Supported',
+    statsRealTime: 'Real-Time',
+    statsRealTimeLabel: 'Exchange Rates',
+    statsFree: '100%',
+    statsFreeLabel: 'Free Forever',
+    statsLanguages: '4',
+    statsLanguagesLabel: 'Languages',
+
+    // Landing Page - How It Works
+    howItWorksTitle: 'Get Started in Minutes',
+    howItWorksSubtitle: 'Three simple steps to financial clarity',
+    step1Title: 'Create Your Account',
+    step1Desc: 'Sign up for free in seconds. No credit card required.',
+    step2Title: 'Add Your Finances',
+    step2Desc: 'Import transactions, set up budgets, and define your goals.',
+    step3Title: 'Watch Your Wealth Grow',
+    step3Desc: 'Track progress, get insights, and achieve financial freedom.',
+
+    // Landing Page - Trust
+    trustTitle: 'Built with Security in Mind',
+    trustSecure: 'Bank-Grade Security',
+    trustSecureDesc: 'Your data is encrypted and protected with industry-standard security.',
+    trustPrivacy: 'Privacy First',
+    trustPrivacyDesc: 'We never sell your data. Your financial information stays yours.',
+    trustOpen: 'Open & Transparent',
+    trustOpenDesc: 'Real-time rates from the European Central Bank. No hidden fees.',
+
+    // Landing Page - Final CTA
+    finalCtaTitle: 'Ready to Transform Your Finances?',
+    finalCtaSubtitle: 'Join thousands of users who have taken control of their money with CoFinance.',
   },
   fa: {
     // Header
@@ -515,10 +581,21 @@ export const translations = {
     currency: 'ارز',
     description: 'توضیحات',
     optional: 'اختیاری',
+    transactionIcon: 'آیکون تراکنش',
+    selectIcon: 'یک آیکون انتخاب کنید',
     transactionDescription: 'توضیحات این تراکنش را وارد کنید...',
     adding: 'در حال افزودن...',
     transactionFailed: 'تراکنش ناموفق بود. لطفاً دوباره تلاش کنید.',
     cancel: 'انصراف',
+    editTransaction: 'ویرایش تراکنش',
+    updateFailed: 'به‌روزرسانی تراکنش ناموفق بود',
+    deleteFailed: 'حذف تراکنش ناموفق بود',
+    confirmDelete: 'تأیید حذف',
+    confirmDeleteTransaction: 'آیا مطمئن هستید که می‌خواهید این تراکنش را حذف کنید؟ این عمل قابل بازگشت نیست.',
+    cannotEditConversion: 'تبدیل ارز قابل ویرایش نیست',
+    close: 'بستن',
+    clearIcon: 'پاک کردن آیکون',
+    deleting: 'در حال حذف...',
 
     // Wallet Convert
     available: 'موجود',
@@ -728,6 +805,61 @@ export const translations = {
     ctaDescription: 'یک حساب کاربری ایجاد کنید تا به کیف پول چند ارزی، اهداف پس‌انداز، بودجه‌ها و پردازش هوشمند رسید دسترسی پیدا کنید.',
     navigation: 'ناوبری',
     converter: 'مبدل',
+
+    // Landing Page - Hero Section
+    heroTitle: 'پلتفرم جامع مدیریت مالی شخصی',
+    heroSubtitle: 'پیگیری هزینه‌ها، مدیریت ارزهای متعدد، تعیین اهداف پس‌انداز و کنترل آینده مالی خود - همه در یک اپلیکیشن قدرتمند.',
+    heroCtaPrimary: 'شروع رایگان',
+    heroCtaSecondary: 'امتحان مبدل ارز',
+
+    // Landing Page - Features
+    featuresTitle: 'همه چیز برای تسلط بر پول شما',
+    featuresSubtitle: 'ابزارهای قدرتمند برای ساده‌سازی زندگی مالی شما',
+    featureWalletTitle: 'کیف پول چند ارزی',
+    featureWalletDesc: 'پیگیری موجودی و تراکنش‌ها در بیش از ۱۶۰ ارز با نرخ لحظه‌ای.',
+    featureGoalsTitle: 'اهداف پس‌انداز هوشمند',
+    featureGoalsDesc: 'تعیین اهداف مالی، پیگیری پیشرفت و تحقق رویاهای خود با مشارکت خودکار.',
+    featureBudgetsTitle: 'پیگیری بودجه',
+    featureBudgetsDesc: 'ایجاد بودجه بر اساس دسته‌بندی، نظارت بر هزینه‌ها و هشدارهای بصری.',
+    featureRecurringTitle: 'تراکنش‌های تکراری',
+    featureRecurringDesc: 'خودکارسازی درآمد و هزینه‌های منظم. هرگز قبضی را فراموش نکنید.',
+    featureReportsTitle: 'گزارش‌ها و تحلیل‌ها',
+    featureReportsDesc: 'تجسم روندهای هزینه، ارزش خالص و خلاصه‌های ماهانه با نمودارهای زیبا.',
+    featureAITitle: 'پردازش هوشمند رسید',
+    featureAIDesc: 'کافیست متن رسید را وارد کنید و بگذارید هوش مصنوعی تراکنش‌ها را استخراج کند.',
+
+    // Landing Page - Stats
+    statsCurrencies: '+۱۶۰',
+    statsCurrenciesLabel: 'ارز پشتیبانی شده',
+    statsRealTime: 'لحظه‌ای',
+    statsRealTimeLabel: 'نرخ ارز',
+    statsFree: '۱۰۰٪',
+    statsFreeLabel: 'برای همیشه رایگان',
+    statsLanguages: '۴',
+    statsLanguagesLabel: 'زبان',
+
+    // Landing Page - How It Works
+    howItWorksTitle: 'در چند دقیقه شروع کنید',
+    howItWorksSubtitle: 'سه گام ساده برای شفافیت مالی',
+    step1Title: 'ایجاد حساب کاربری',
+    step1Desc: 'در چند ثانیه رایگان ثبت‌نام کنید. نیازی به کارت اعتباری نیست.',
+    step2Title: 'اضافه کردن امور مالی',
+    step2Desc: 'تراکنش‌ها را وارد کنید، بودجه تنظیم کنید و اهداف خود را مشخص کنید.',
+    step3Title: 'شاهد رشد ثروت خود باشید',
+    step3Desc: 'پیشرفت را پیگیری کنید، تحلیل‌ها را ببینید و به آزادی مالی برسید.',
+
+    // Landing Page - Trust
+    trustTitle: 'با امنیت در ذهن ساخته شده',
+    trustSecure: 'امنیت بانکی',
+    trustSecureDesc: 'داده‌های شما با امنیت استاندارد صنعتی رمزنگاری و محافظت می‌شوند.',
+    trustPrivacy: 'حریم خصوصی اول',
+    trustPrivacyDesc: 'ما هرگز داده‌های شما را نمی‌فروشیم. اطلاعات مالی شما متعلق به شماست.',
+    trustOpen: 'شفاف و باز',
+    trustOpenDesc: 'نرخ‌های لحظه‌ای از بانک مرکزی اروپا. بدون هزینه پنهان.',
+
+    // Landing Page - Final CTA
+    finalCtaTitle: 'آماده تحول در امور مالی خود هستید؟',
+    finalCtaSubtitle: 'به هزاران کاربری بپیوندید که کنترل پول خود را با کوفایننس در دست گرفته‌اند.',
   },
   ar: {
     // Header
@@ -880,10 +1012,21 @@ export const translations = {
     currency: 'العملة',
     description: 'الوصف',
     optional: 'اختياري',
+    transactionIcon: 'أيقونة المعاملة',
+    selectIcon: 'اختر أيقونة',
     transactionDescription: 'أدخل وصفاً لهذه المعاملة...',
     adding: 'جاري الإضافة...',
     transactionFailed: 'فشلت المعاملة. يرجى المحاولة مرة أخرى.',
     cancel: 'إلغاء',
+    editTransaction: 'تعديل المعاملة',
+    updateFailed: 'فشل تحديث المعاملة',
+    deleteFailed: 'فشل حذف المعاملة',
+    confirmDelete: 'تأكيد الحذف',
+    confirmDeleteTransaction: 'هل أنت متأكد من حذف هذه المعاملة؟ لا يمكن التراجع عن هذا الإجراء.',
+    cannotEditConversion: 'لا يمكن تعديل تحويلات العملة',
+    close: 'إغلاق',
+    clearIcon: 'مسح الأيقونة',
+    deleting: 'جاري الحذف...',
 
     // Wallet Convert
     available: 'المتاح',
@@ -1093,6 +1236,61 @@ export const translations = {
     ctaDescription: 'أنشئ حساباً للوصول إلى المحفظة متعددة العملات وأهداف التوفير والميزانيات وتحليل الإيصالات بالذكاء الاصطناعي.',
     navigation: 'التنقل',
     converter: 'المحول',
+
+    // Landing Page - Hero Section
+    heroTitle: 'منصتك الشاملة لإدارة المالية الشخصية',
+    heroSubtitle: 'تتبع النفقات، وإدارة العملات المتعددة، وتحديد أهداف التوفير، والتحكم في مستقبلك المالي - كل ذلك في تطبيق واحد قوي.',
+    heroCtaPrimary: 'ابدأ مجاناً اليوم',
+    heroCtaSecondary: 'جرب المحول',
+
+    // Landing Page - Features
+    featuresTitle: 'كل ما تحتاجه لإتقان أموالك',
+    featuresSubtitle: 'أدوات قوية مصممة لتبسيط حياتك المالية',
+    featureWalletTitle: 'محفظة متعددة العملات',
+    featureWalletDesc: 'تتبع الأرصدة والمعاملات عبر أكثر من 160 عملة مع أسعار صرف فورية.',
+    featureGoalsTitle: 'أهداف توفير ذكية',
+    featureGoalsDesc: 'حدد أهدافاً مالية، وتتبع التقدم، وحقق أحلامك مع المساهمات التلقائية.',
+    featureBudgetsTitle: 'تتبع الميزانية',
+    featureBudgetsDesc: 'أنشئ ميزانيات حسب الفئة، وراقب الإنفاق، وابق على المسار مع التنبيهات المرئية.',
+    featureRecurringTitle: 'المعاملات المتكررة',
+    featureRecurringDesc: 'أتمتة الدخل والمصروفات المنتظمة. لا تفوت فاتورة أو تنسى دفعة.',
+    featureReportsTitle: 'التقارير والرؤى',
+    featureReportsDesc: 'تصور اتجاهات الإنفاق وصافي القيمة والملخصات الشهرية مع رسوم بيانية جميلة.',
+    featureAITitle: 'تحليل الإيصالات بالذكاء الاصطناعي',
+    featureAIDesc: 'ما عليك سوى لصق نص الإيصال ودع الذكاء الاصطناعي يستخرج المعاملات ويصنفها تلقائياً.',
+
+    // Landing Page - Stats
+    statsCurrencies: '+160',
+    statsCurrenciesLabel: 'عملة مدعومة',
+    statsRealTime: 'فورية',
+    statsRealTimeLabel: 'أسعار الصرف',
+    statsFree: '100%',
+    statsFreeLabel: 'مجاني للأبد',
+    statsLanguages: '4',
+    statsLanguagesLabel: 'لغات',
+
+    // Landing Page - How It Works
+    howItWorksTitle: 'ابدأ في دقائق',
+    howItWorksSubtitle: 'ثلاث خطوات بسيطة للوضوح المالي',
+    step1Title: 'أنشئ حسابك',
+    step1Desc: 'سجل مجاناً في ثوانٍ. لا حاجة لبطاقة ائتمان.',
+    step2Title: 'أضف معاملاتك المالية',
+    step2Desc: 'استورد المعاملات، وأنشئ الميزانيات، وحدد أهدافك.',
+    step3Title: 'شاهد ثروتك تنمو',
+    step3Desc: 'تتبع التقدم، واحصل على رؤى، وحقق الحرية المالية.',
+
+    // Landing Page - Trust
+    trustTitle: 'مبني مع مراعاة الأمان',
+    trustSecure: 'أمان بمستوى البنوك',
+    trustSecureDesc: 'بياناتك مشفرة ومحمية بأمان معياري صناعي.',
+    trustPrivacy: 'الخصوصية أولاً',
+    trustPrivacyDesc: 'لا نبيع بياناتك أبداً. معلوماتك المالية ملكك.',
+    trustOpen: 'مفتوح وشفاف',
+    trustOpenDesc: 'أسعار فورية من البنك المركزي الأوروبي. بدون رسوم خفية.',
+
+    // Landing Page - Final CTA
+    finalCtaTitle: 'مستعد لتحويل أموالك؟',
+    finalCtaSubtitle: 'انضم إلى آلاف المستخدمين الذين تحكموا في أموالهم مع كوفايننس.',
   },
   tr: {
     // Header
@@ -1245,10 +1443,21 @@ export const translations = {
     currency: 'Para Birimi',
     description: 'Açıklama',
     optional: 'isteğe bağlı',
+    transactionIcon: 'İşlem Simgesi',
+    selectIcon: 'Bir simge seçin',
     transactionDescription: 'Bu işlem için açıklama girin...',
     adding: 'Ekleniyor...',
     transactionFailed: 'İşlem başarısız. Lütfen tekrar deneyin.',
     cancel: 'İptal',
+    editTransaction: 'İşlemi Düzenle',
+    updateFailed: 'İşlem güncellenemedi',
+    deleteFailed: 'İşlem silinemedi',
+    confirmDelete: 'Silmeyi Onayla',
+    confirmDeleteTransaction: 'Bu işlemi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
+    cannotEditConversion: 'Döviz çevirileri düzenlenemez',
+    close: 'Kapat',
+    clearIcon: 'Simgeyi temizle',
+    deleting: 'Siliniyor...',
 
     // Wallet Convert
     available: 'Mevcut',
@@ -1458,6 +1667,61 @@ export const translations = {
     ctaDescription: 'Çok para birimli cüzdan, tasarruf hedefleri, bütçeler ve AI destekli fiş ayrıştırmaya erişmek için bir hesap oluşturun.',
     navigation: 'Navigasyon',
     converter: 'Çevirici',
+
+    // Landing Page - Hero Section
+    heroTitle: 'Hepsi Bir Arada Kişisel Finans Platformunuz',
+    heroSubtitle: 'Harcamaları takip edin, birden fazla para birimini yönetin, tasarruf hedefleri belirleyin ve finansal geleceğinizi kontrol altına alın - hepsi tek bir güçlü uygulamada.',
+    heroCtaPrimary: 'Bugün Ücretsiz Başlayın',
+    heroCtaSecondary: 'Çeviriciyi Deneyin',
+
+    // Landing Page - Features
+    featuresTitle: 'Paranızı Yönetmek İçin İhtiyacınız Olan Her Şey',
+    featuresSubtitle: 'Finansal hayatınızı basitleştirmek için tasarlanmış güçlü araçlar',
+    featureWalletTitle: 'Çok Para Birimli Cüzdan',
+    featureWalletDesc: '160\'tan fazla para biriminde anlık döviz kurlarıyla bakiyeleri ve işlemleri takip edin.',
+    featureGoalsTitle: 'Akıllı Tasarruf Hedefleri',
+    featureGoalsDesc: 'Finansal hedefler belirleyin, ilerlemeyi takip edin ve otomatik katkılarla hayallerinize ulaşın.',
+    featureBudgetsTitle: 'Bütçe Takibi',
+    featureBudgetsDesc: 'Kategoriye göre bütçeler oluşturun, harcamaları izleyin ve görsel uyarılarla yolda kalın.',
+    featureRecurringTitle: 'Tekrarlayan İşlemler',
+    featureRecurringDesc: 'Düzenli gelir ve giderleri otomatikleştirin. Hiçbir faturayı kaçırmayın veya ödemeyi unutmayın.',
+    featureReportsTitle: 'Raporlar ve Analizler',
+    featureReportsDesc: 'Harcama trendlerini, net değeri ve aylık özetleri güzel grafiklerle görselleştirin.',
+    featureAITitle: 'AI Fiş Ayrıştırma',
+    featureAIDesc: 'Sadece fiş metnini yapıştırın ve AI\'ın işlemleri otomatik olarak çıkarıp kategorize etmesine izin verin.',
+
+    // Landing Page - Stats
+    statsCurrencies: '160+',
+    statsCurrenciesLabel: 'Desteklenen Para Birimi',
+    statsRealTime: 'Anlık',
+    statsRealTimeLabel: 'Döviz Kurları',
+    statsFree: '%100',
+    statsFreeLabel: 'Sonsuza Kadar Ücretsiz',
+    statsLanguages: '4',
+    statsLanguagesLabel: 'Dil',
+
+    // Landing Page - How It Works
+    howItWorksTitle: 'Dakikalar İçinde Başlayın',
+    howItWorksSubtitle: 'Finansal netlik için üç basit adım',
+    step1Title: 'Hesabınızı Oluşturun',
+    step1Desc: 'Saniyeler içinde ücretsiz kaydolun. Kredi kartı gerekmez.',
+    step2Title: 'Finanslarınızı Ekleyin',
+    step2Desc: 'İşlemleri içe aktarın, bütçeler oluşturun ve hedeflerinizi tanımlayın.',
+    step3Title: 'Servetinizin Büyümesini İzleyin',
+    step3Desc: 'İlerlemeyi takip edin, içgörüler edinin ve finansal özgürlüğe ulaşın.',
+
+    // Landing Page - Trust
+    trustTitle: 'Güvenlik Düşünülerek İnşa Edildi',
+    trustSecure: 'Banka Düzeyinde Güvenlik',
+    trustSecureDesc: 'Verileriniz endüstri standardı güvenlikle şifrelenir ve korunur.',
+    trustPrivacy: 'Önce Gizlilik',
+    trustPrivacyDesc: 'Verilerinizi asla satmıyoruz. Finansal bilgileriniz size ait.',
+    trustOpen: 'Açık ve Şeffaf',
+    trustOpenDesc: 'Avrupa Merkez Bankası\'ndan anlık kurlar. Gizli ücret yok.',
+
+    // Landing Page - Final CTA
+    finalCtaTitle: 'Finanslarınızı Dönüştürmeye Hazır mısınız?',
+    finalCtaSubtitle: 'CoFinance ile paralarının kontrolünü ele alan binlerce kullanıcıya katılın.',
   },
 } as const;
 

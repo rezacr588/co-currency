@@ -23,6 +23,10 @@ func setupTestService() *ExchangeService {
 }
 
 func TestGetCurrencies(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping network test in short mode")
+	}
+
 	svc := setupTestService()
 	ctx := context.Background()
 
@@ -45,6 +49,10 @@ func TestGetCurrencies(t *testing.T) {
 }
 
 func TestGetCurrencies_Cached(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping network test in short mode")
+	}
+
 	svc := setupTestService()
 	ctx := context.Background()
 
@@ -181,6 +189,10 @@ func TestNewExchangeService(t *testing.T) {
 }
 
 func TestGetLatestRates_Cached(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping network test in short mode")
+	}
+
 	svc := setupTestService()
 	ctx := context.Background()
 
@@ -203,6 +215,10 @@ func TestGetLatestRates_Cached(t *testing.T) {
 }
 
 func TestGetHistoricalRates_Cached(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping network test in short mode")
+	}
+
 	svc := setupTestService()
 	ctx := context.Background()
 
@@ -224,6 +240,10 @@ func TestGetHistoricalRates_Cached(t *testing.T) {
 }
 
 func TestConvert_RateNotFound(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping network test in short mode")
+	}
+
 	svc := setupTestService()
 	ctx := context.Background()
 
