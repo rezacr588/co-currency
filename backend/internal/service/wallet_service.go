@@ -166,7 +166,22 @@ func (s *WalletService) GetWalletSummary(ctx context.Context, userID uuid.UUID) 
 		return nil, err
 	}
 
+	// Calculate total balance in USD
+	var totalUSD float64
+	for _, balance := range balances {
+		if balance.Currency == "USD" {
+			totalUSD += balance.Balance
+		} else if s.exchangeService != nil && balance.Balance > 0 {
+			// Convert to USD
+			result, err := s.exchangeService.Convert(ctx, balance.Currency, "USD", balance.Balance)
+			if err == nil && result != nil {
+				totalUSD += result.Result
+			}
+		}
+	}
+
 	return &model.WalletSummary{
+		TotalBalanceUSD:    totalUSD,
 		Balances:           balances,
 		RecentTransactions: transactions,
 	}, nil

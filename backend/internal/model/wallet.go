@@ -107,8 +107,9 @@ type ConvertBalanceResponse struct {
 
 // WalletSummary provides an overview of a user's wallet
 type WalletSummary struct {
-	Balances         []WalletBalance `json:"balances"`
-	RecentTransactions []Transaction `json:"recent_transactions,omitempty"`
+	TotalBalanceUSD    float64         `json:"total_balance_usd"`
+	Balances           []WalletBalance `json:"balances"`
+	RecentTransactions []Transaction   `json:"recent_transactions,omitempty"`
 }
 
 // AIParseResult represents the result of AI parsing a receipt/invoice
