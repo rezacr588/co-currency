@@ -446,14 +446,25 @@ func (r *WalletRepository) AddTransactionAtomic(ctx context.Context, userID uuid
 	}
 
 	// Update or insert balance
+	// For debits, we know the row exists (we just selected it with FOR UPDATE)
+	// so we use direct UPDATE to avoid CHECK constraint issues with INSERT...ON CONFLICT
 	fmt.Printf("[DEBUG] Updating balance: user=%s currency=%s delta=%.2f\n", userID, currency, delta)
-	_, err = tx.Exec(ctx, `
-		INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
-		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (user_id, currency) DO UPDATE SET
-			balance = wallet_balances.balance + EXCLUDED.balance,
-			updated_at = EXCLUDED.updated_at
-	`, uuid.New(), userID, currency, delta, now)
+	if txType == "debit" {
+		_, err = tx.Exec(ctx, `
+			UPDATE wallet_balances
+			SET balance = balance + $1, updated_at = $2
+			WHERE user_id = $3 AND currency = $4
+		`, delta, now, userID, currency)
+	} else {
+		// For credits, use upsert pattern (row may not exist yet)
+		_, err = tx.Exec(ctx, `
+			INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
+			VALUES ($1, $2, $3, $4, $5)
+			ON CONFLICT (user_id, currency) DO UPDATE SET
+				balance = wallet_balances.balance + EXCLUDED.balance,
+				updated_at = EXCLUDED.updated_at
+		`, uuid.New(), userID, currency, delta, now)
+	}
 	if err != nil {
 		fmt.Printf("[DEBUG] Balance update error: %v\n", err)
 		if isBalanceConstraintError(err) {
