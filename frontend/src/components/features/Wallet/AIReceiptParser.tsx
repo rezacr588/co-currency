@@ -118,7 +118,17 @@ export function AIReceiptParser() {
   });
 
   const applyMutation = useMutation({
-    mutationFn: api.ai.applyParsed,
+    mutationFn: async (transactions: ParsedTransaction[]) => {
+      // Apply each transaction sequentially
+      for (const tx of transactions) {
+        await api.ai.applyParsed({
+          amount: tx.amount,
+          currency: tx.currency,
+          type: tx.type,
+          description: tx.description,
+        });
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wallet-summary'] });
       queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
@@ -152,7 +162,7 @@ export function AIReceiptParser() {
       return;
     }
 
-    applyMutation.mutate({ transactions: parsedTransactions });
+    applyMutation.mutate(parsedTransactions);
   };
 
   const handleReset = () => {

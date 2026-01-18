@@ -75,6 +75,10 @@ export interface Budget {
   progress: number;
   is_over_budget: boolean;
   is_near_limit: boolean;
+  daily_allowance: number;
+  remaining_days: number;
+  period_start: string;
+  period_end: string;
   created_at: string;
   updated_at: string;
 }

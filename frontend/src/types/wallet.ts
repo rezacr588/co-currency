@@ -35,10 +35,13 @@ export interface User {
   name: string;
   onboarding_completed?: boolean;
   created_at: string;
+  updated_at?: string;
 }
 
 // Wallet types
 export interface WalletBalance {
+  id?: string;
+  user_id?: string;
   currency: string;
   balance: number;
   updated_at: string;
@@ -52,11 +55,17 @@ export interface WalletSummary {
 
 export interface Transaction {
   id: string;
+  user_id?: string;
   type: 'credit' | 'debit' | 'convert' | 'convert_from' | 'convert_to';
   currency: string;
   amount: number;
+  to_amount?: number;
+  to_currency?: string;
+  rate?: number;
+  source?: string; // 'manual' | 'ai_receipt' | 'ai_invoice'
   category?: string;
   icon?: string;
+  ai_extracted_data?: unknown;
   description: string;
   created_at: string;
   balance_after?: number;
@@ -91,6 +100,7 @@ export interface TransactionFilter {
 
 export interface Category {
   id?: string;
+  user_id?: string;
   name: string;
   icon?: string;
   color?: string;
@@ -115,9 +125,12 @@ export interface WalletConvertRequest {
 }
 
 export interface WalletConvertResponse {
-  from_transaction: Transaction;
-  to_transaction: Transaction;
+  from_currency: string;
+  to_currency: string;
+  from_amount: number;
+  to_amount: number;
   rate: number;
+  transaction?: Transaction;
 }
 
 // AI types
@@ -138,11 +151,13 @@ export interface AIParseResponse {
   raw_text: string;
 }
 
+// AIApplyRequest - single transaction to apply (matches backend ApplyParsedRequest)
 export interface AIApplyRequest {
-  transactions: ParsedTransaction[];
+  amount: number;
+  currency: string;
+  type: 'credit' | 'debit';
+  description: string;
 }
 
-export interface AIApplyResponse {
-  applied_transactions: Transaction[];
-  errors?: string[];
-}
+// AIApplyResponse - backend returns single Transaction directly
+export type AIApplyResponse = Transaction;
