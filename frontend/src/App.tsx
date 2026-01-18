@@ -102,16 +102,16 @@ function BalanceDisplay() {
   return (
     <Link
       to="/wallet"
-      className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 border border-purple-200/50 dark:border-purple-700/30 hover:border-purple-300 dark:hover:border-purple-600 transition-all group"
+      className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700/30 hover:border-primary-300 dark:hover:border-primary-600 transition-all group"
       title={t('totalBalance')}
     >
-      <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 shadow-sm shadow-purple-500/25 group-hover:shadow-purple-500/40 transition-shadow">
+      <div className="flex items-center justify-center w-7 h-7 rounded-md bg-primary-800 dark:bg-primary-700">
         <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </div>
       <div className="flex flex-col">
-        <span className="text-[10px] font-medium text-purple-600/70 dark:text-purple-400/70 uppercase tracking-wider leading-none">
+        <span className="text-[10px] font-medium text-primary-700/70 dark:text-primary-400/70 uppercase tracking-wider leading-none">
           {t('balance')}
         </span>
         {isLoading ? (
@@ -185,10 +185,10 @@ function UserDropdown() {
                 key={item.to}
                 to={item.to}
                 onClick={() => setIsOpen(false)}
-                className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
+                className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm transition-colors ${
                   location.pathname === item.to || location.pathname.startsWith(item.to + '/')
-                    ? 'bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300'
-                    : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
+                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
+                    : 'hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
                 }`}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -229,11 +229,11 @@ function Header() {
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
           <Link to={isAuthenticated ? "/dashboard" : "/"} className="flex items-center gap-2.5 hover:opacity-90 transition-opacity group">
-            <div className="w-9 h-9 rounded-xl shadow-lg shadow-purple-500/25 group-hover:shadow-purple-500/40 transition-shadow overflow-hidden">
+            <div className="w-9 h-9 rounded-md shadow-md overflow-hidden">
               <img src="/logo.svg" alt="CoFinance Logo" className="w-full h-full" loading="eager" />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-violet-600 dark:from-purple-400 dark:to-violet-400 bg-clip-text text-transparent">
+              <h1 className="text-lg font-bold text-primary-800 dark:text-primary-300">
                 {t('appTitle')}
               </h1>
             </div>
@@ -246,9 +246,9 @@ function Header() {
                 <>
                   <Link
                     to="/dashboard"
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                       location.pathname === '/dashboard'
-                        ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
@@ -256,9 +256,9 @@ function Header() {
                   </Link>
                   <Link
                     to="/"
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                       location.pathname === '/'
-                        ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
@@ -266,9 +266,9 @@ function Header() {
                   </Link>
                   <Link
                     to="/about"
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                       location.pathname === '/about'
-                        ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
@@ -281,9 +281,9 @@ function Header() {
                 <>
                   <Link
                     to="/"
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                       location.pathname === '/'
-                        ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
@@ -291,9 +291,9 @@ function Header() {
                   </Link>
                   <Link
                     to="/about"
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                       location.pathname === '/about'
-                        ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
@@ -301,9 +301,9 @@ function Header() {
                   </Link>
                   <Link
                     to="/login"
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                       location.pathname === '/login'
-                        ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
@@ -311,7 +311,7 @@ function Header() {
                   </Link>
                   <Link
                     to="/register"
-                    className="px-3 py-1.5 rounded-lg text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+                    className="px-3 py-1.5 rounded-md text-sm font-medium bg-primary-800 text-white hover:bg-primary-700 transition-colors"
                   >
                     {t('register')}
                   </Link>
@@ -340,7 +340,7 @@ function Footer() {
             href="https://www.frankfurter.app"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300 transition-colors"
+            className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
           >
             Frankfurter API
           </a>

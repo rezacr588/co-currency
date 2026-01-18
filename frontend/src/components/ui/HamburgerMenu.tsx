@@ -73,7 +73,7 @@ export function HamburgerMenu() {
       {/* Hamburger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+        className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-600/30"
         aria-label={isOpen ? t('closeMenu') : t('openMenu')}
         aria-expanded={isOpen}
         aria-haspopup="true"
@@ -102,7 +102,7 @@ export function HamburgerMenu() {
                 onClick={() => setIsOpen(false)}
                 className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
                   location.pathname === '/'
-                    ? 'bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300'
+                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                     : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
                 }`}
                 role="menuitem"
@@ -117,7 +117,7 @@ export function HamburgerMenu() {
                 onClick={() => setIsOpen(false)}
                 className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
                   location.pathname === '/about'
-                    ? 'bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300'
+                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                     : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
                 }`}
                 role="menuitem"
@@ -134,7 +134,7 @@ export function HamburgerMenu() {
                     onClick={() => setIsOpen(false)}
                     className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
                       location.pathname === '/dashboard'
-                        ? 'bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300'
+                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
                     }`}
                     role="menuitem"
@@ -149,7 +149,7 @@ export function HamburgerMenu() {
                     onClick={() => setIsOpen(false)}
                     className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
                       location.pathname.startsWith('/wallet')
-                        ? 'bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300'
+                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
                     }`}
                     role="menuitem"
@@ -164,7 +164,7 @@ export function HamburgerMenu() {
                     onClick={() => setIsOpen(false)}
                     className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
                       location.pathname === '/goals'
-                        ? 'bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300'
+                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
                     }`}
                     role="menuitem"
@@ -179,7 +179,7 @@ export function HamburgerMenu() {
                     onClick={() => setIsOpen(false)}
                     className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
                       location.pathname === '/budgets'
-                        ? 'bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300'
+                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
                     }`}
                     role="menuitem"
@@ -194,7 +194,7 @@ export function HamburgerMenu() {
                     onClick={() => setIsOpen(false)}
                     className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
                       location.pathname === '/recurring'
-                        ? 'bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300'
+                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
                     }`}
                     role="menuitem"
@@ -209,7 +209,7 @@ export function HamburgerMenu() {
                     onClick={() => setIsOpen(false)}
                     className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
                       location.pathname === '/reports'
-                        ? 'bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300'
+                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
                     }`}
                     role="menuitem"
@@ -227,7 +227,7 @@ export function HamburgerMenu() {
                     onClick={() => setIsOpen(false)}
                     className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
                       location.pathname === '/login'
-                        ? 'bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300'
+                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
                     }`}
                     role="menuitem"
@@ -242,7 +242,7 @@ export function HamburgerMenu() {
                     onClick={() => setIsOpen(false)}
                     className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
                       location.pathname === '/register'
-                        ? 'bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300'
+                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
                     }`}
                     role="menuitem"
@@ -271,16 +271,16 @@ export function HamburgerMenu() {
                 <Link
                   to="/wallet"
                   onClick={() => setIsOpen(false)}
-                  className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 border border-purple-200/50 dark:border-purple-700/30"
+                  className="w-full flex items-center gap-3 px-2 py-2.5 rounded-md bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700/30"
                   role="menuitem"
                 >
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 shadow-sm">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary-800 dark:bg-primary-700">
                     <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-medium text-purple-600/70 dark:text-purple-400/70 uppercase tracking-wider">
+                    <span className="text-[10px] font-medium text-primary-700/70 dark:text-primary-400/70 uppercase tracking-wider">
                       {t('totalBalance')}
                     </span>
                     {balanceLoading ? (
@@ -330,7 +330,7 @@ export function HamburgerMenu() {
                   }}
                   className={`w-full flex items-center justify-between px-2 py-2 rounded-lg text-sm transition-colors ${
                     language === lang.code
-                      ? 'bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300'
+                      ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                       : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
                   }`}
                   role="menuitemradio"
@@ -338,7 +338,7 @@ export function HamburgerMenu() {
                 >
                   <span>{lang.native}</span>
                   {language === lang.code && (
-                    <svg className="w-4 h-4 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-4 h-4 text-primary-600" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   )}

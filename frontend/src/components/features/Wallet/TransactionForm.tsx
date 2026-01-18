@@ -109,7 +109,7 @@ export function TransactionForm() {
                   <select
                     value={currency}
                     onChange={(e) => setCurrency(e.target.value)}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all"
+                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-all"
                   >
                     {currencyOptions.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -142,7 +142,7 @@ export function TransactionForm() {
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder={t('transactionDescription')}
                     rows={3}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all resize-none"
+                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-all resize-none"
                     disabled={mutation.isPending}
                   />
                 </div>

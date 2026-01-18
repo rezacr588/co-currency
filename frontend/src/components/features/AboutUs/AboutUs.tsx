@@ -20,7 +20,7 @@ export function AboutUs() {
           </div>
 
           {/* Mission Banner - Compact */}
-          <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 rounded-2xl p-6 mb-10 text-center">
+          <div className="bg-gradient-to-r from-indigo-600 via-primary-700 to-indigo-600 rounded-2xl p-6 mb-10 text-center">
             <p className="text-white text-lg font-medium">
               {t('missionDescription')}
             </p>
@@ -54,9 +54,9 @@ export function AboutUs() {
                   <img
                     src="https://media.licdn.com/dms/image/v2/D4E03AQF3hRqdwxserA/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1718006654218?e=1741219200&v=beta&t=5WdFxbGJfEfF2X5lqSwJXrwf3Fn6z7l5o5rZbKFGbhk"
                     alt="Reza Zeraat"
-                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-4 ring-purple-100 dark:ring-purple-900/50"
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-4 ring-primary-100 dark:ring-primary-900/50"
                   />
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-purple-500 rounded-full border-2 border-white dark:border-slate-800 flex items-center justify-center">
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary-600 rounded-full border-2 border-white dark:border-slate-800 flex items-center justify-center">
                     <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
@@ -69,7 +69,7 @@ export function AboutUs() {
                     <h3 className="text-xl font-bold text-slate-800 dark:text-white">
                       Reza Zeraat
                     </h3>
-                    <span className="px-2 py-0.5 text-xs font-semibold bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded-full">
+                    <span className="px-2 py-0.5 text-xs font-semibold bg-primary-100 dark:bg-primary-900/50 text-primary-800 dark:text-primary-400 rounded-full">
                       {t('coFounder')}
                     </span>
                   </div>
@@ -138,7 +138,7 @@ export function AboutUs() {
               ].map((feature) => (
                 <div
                   key={feature.label}
-                  className="p-4 rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:border-purple-300 dark:hover:border-purple-600 transition-colors"
+                  className="p-4 rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:border-primary-400 dark:hover:border-primary-700 transition-colors"
                 >
                   <span className="text-2xl mb-2 block">{feature.icon}</span>
                   <h3 className="text-sm font-semibold text-slate-800 dark:text-white mb-1">

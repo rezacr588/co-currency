@@ -10,7 +10,7 @@ export function SwapButton({ onClick }: SwapButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="relative flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-md shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center group focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900"
+      className="relative flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-primary-700 shadow-md shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center group focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900"
       aria-label={t('swapCurrencies')}
       title={t('swapCurrencies')}
     >

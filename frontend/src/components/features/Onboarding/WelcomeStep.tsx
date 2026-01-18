@@ -54,7 +54,7 @@ export function WelcomeStep({ onNext, onSkip }: WelcomeStepProps) {
         </div>
 
         <div className="flex items-center justify-center gap-3 text-left max-w-sm mx-auto">
-          <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center shrink-0">
             <span className="text-xl">🤖</span>
           </div>
           <div>

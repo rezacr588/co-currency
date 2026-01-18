@@ -62,9 +62,9 @@ function getTransactionIcon(type: Transaction['type']) {
     case 'convert_from':
     case 'convert_to':
       return (
-        <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
           <svg
-            className="w-4 h-4 text-purple-600 dark:text-purple-400"
+            className="w-4 h-4 text-primary-700 dark:text-primary-400"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"

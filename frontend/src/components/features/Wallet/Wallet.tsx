@@ -97,7 +97,7 @@ export function Wallet() {
                 ) : error ? (
                   <ErrorMessage onRetry={refetch}>{t('failedToLoadWallet')}</ErrorMessage>
                 ) : (
-                  <p className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
+                  <p className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-primary-700 dark:from-indigo-400 dark:to-primary-500 bg-clip-text text-transparent">
                     {formatCurrency(summary?.total_balance_usd || 0, 'USD')}
                   </p>
                 )}

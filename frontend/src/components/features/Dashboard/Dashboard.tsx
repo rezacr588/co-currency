@@ -26,7 +26,7 @@ interface StatsCardProps {
   colorClass?: string;
 }
 
-function StatsCard({ title, value, subtitle, icon, colorClass = 'text-purple-600 dark:text-purple-400' }: StatsCardProps) {
+function StatsCard({ title, value, subtitle, icon, colorClass = 'text-primary-700 dark:text-primary-400' }: StatsCardProps) {
   return (
     <Card>
       <CardContent className="py-4">
@@ -57,7 +57,7 @@ interface FeatureCardProps {
 function FeatureCard({ to, icon, title, description }: FeatureCardProps) {
   return (
     <Link to={to} className="block">
-      <Card className="h-full hover:border-purple-300 dark:hover:border-purple-700 transition-colors cursor-pointer group">
+      <Card className="h-full hover:border-primary-300 dark:hover:border-primary-700 transition-colors cursor-pointer group">
         <CardContent className="py-4 text-center">
           <span className="text-3xl mb-2 block group-hover:scale-110 transition-transform">{icon}</span>
           <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">{title}</h3>
@@ -173,7 +173,7 @@ export function Dashboard() {
                   title={t('activeGoals')}
                   value={activeGoals.length}
                   subtitle={`${overallGoalProgress}% ${t('overallProgress').toLowerCase()}`}
-                  colorClass="text-purple-600 dark:text-purple-400"
+                  colorClass="text-primary-700 dark:text-primary-400"
                   icon={
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />

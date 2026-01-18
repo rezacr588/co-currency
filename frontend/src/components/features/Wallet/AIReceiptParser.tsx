@@ -187,7 +187,7 @@ export function AIReceiptParser() {
                     onChange={(e) => setText(e.target.value)}
                     placeholder={t('pasteReceiptHere')}
                     rows={8}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all resize-none font-mono text-sm"
+                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-all resize-none font-mono text-sm"
                     disabled={parseMutation.isPending}
                   />
                 </div>

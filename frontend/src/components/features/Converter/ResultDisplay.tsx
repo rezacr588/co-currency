@@ -83,7 +83,7 @@ export function ResultDisplay({ result, isLoading, error, onRetry }: ResultDispl
   return (
     <div className="space-y-3 animate-fade-in" aria-live="polite" aria-atomic="true">
       {/* Main Result Card */}
-      <div className="relative p-5 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-500/10 dark:via-purple-500/10 dark:to-pink-500/10 rounded-xl border border-indigo-100/50 dark:border-indigo-500/20">
+      <div className="relative p-5 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-500/10 dark:via-primary-600/10 dark:to-pink-500/10 rounded-xl border border-indigo-100/50 dark:border-indigo-500/20">
         {/* Copy button */}
         <button
           onClick={handleCopy}

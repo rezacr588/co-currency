@@ -145,9 +145,9 @@ export function Reports() {
                       {formatCurrency(monthlyData?.net || 0, currency)}
                     </p>
                   </div>
-                  <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
-                    <p className="text-sm text-purple-600 dark:text-purple-400">{t('savingsRate')}</p>
-                    <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                  <div className="p-4 bg-purple-50 dark:bg-primary-900/20 rounded-xl">
+                    <p className="text-sm text-primary-700 dark:text-primary-500">{t('savingsRate')}</p>
+                    <p className="text-2xl font-bold text-primary-800 dark:text-primary-400">
                       {(monthlyData?.savings_rate || 0).toFixed(1)}%
                     </p>
                   </div>
