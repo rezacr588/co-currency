@@ -73,14 +73,19 @@ function detectBrowserLanguage(): Language | null {
  * Detect language from user's country via IP lookup
  */
 async function detectCountry(): Promise<string | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3000);
+
   try {
     const response = await fetch('https://ipapi.co/json/', {
-      signal: AbortSignal.timeout(3000)
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
     if (!response.ok) return null;
     const data = await response.json();
-    return data.country_code || null;
+    return typeof data?.country_code === 'string' ? data.country_code : null;
   } catch {
+    clearTimeout(timeoutId);
     return null;
   }
 }

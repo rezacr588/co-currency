@@ -39,7 +39,10 @@ export function GoalForm({ goal, onClose }: GoalFormProps) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: UpdateGoalRequest) => api.goals.update(goal!.id, data),
+    mutationFn: (data: UpdateGoalRequest) => {
+      if (!goal) throw new Error('Cannot update: goal not found');
+      return api.goals.update(goal.id, data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goals'] });
       onClose();

@@ -44,7 +44,10 @@ export function RecurringForm({ recurring, onClose }: RecurringFormProps) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: UpdateRecurringRequest) => api.recurring.update(recurring!.id, data),
+    mutationFn: (data: UpdateRecurringRequest) => {
+      if (!recurring) throw new Error('Cannot update: recurring transaction not found');
+      return api.recurring.update(recurring.id, data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recurring'] });
       onClose();

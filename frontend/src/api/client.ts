@@ -119,8 +119,12 @@ async function fetchWithRetry<T>(
       if (!response.ok) {
         // Don't retry on client errors (4xx), only server errors (5xx)
         if (response.status >= 400 && response.status < 500) {
-          const error = await response.json().catch(() => ({ message: 'API request failed' }));
-          throw new Error(error.message || 'API request failed');
+          const errorData = await response.json().catch(() => null);
+          const errorMessage =
+            (errorData && typeof errorData.message === 'string' && errorData.message) ||
+            (errorData && typeof errorData.error === 'string' && errorData.error) ||
+            `Request failed with status ${response.status}`;
+          throw new Error(errorMessage);
         }
 
         // Server error - will retry

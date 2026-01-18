@@ -38,7 +38,10 @@ export function BudgetForm({ budget, onClose }: BudgetFormProps) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: UpdateBudgetRequest) => api.budgets.update(budget!.id, data),
+    mutationFn: (data: UpdateBudgetRequest) => {
+      if (!budget) throw new Error('Cannot update: budget not found');
+      return api.budgets.update(budget.id, data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
       onClose();
