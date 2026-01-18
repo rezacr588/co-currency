@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rezacr588/currency-converter/internal/model"
 )
@@ -18,6 +20,18 @@ var (
 	ErrBalanceNotFound      = errors.New("balance not found")
 	ErrTransactionNotFound  = errors.New("transaction not found")
 )
+
+// isBalanceConstraintError checks if the error is a CHECK constraint violation for non-negative balance
+func isBalanceConstraintError(err error) bool {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		// PostgreSQL error code 23514 is check_violation
+		if pgErr.Code == "23514" && strings.Contains(pgErr.ConstraintName, "non_negative") {
+			return true
+		}
+	}
+	return false
+}
 
 // WalletRepository handles database operations for wallet balances and transactions
 type WalletRepository struct {
@@ -430,6 +444,9 @@ func (r *WalletRepository) AddTransactionAtomic(ctx context.Context, userID uuid
 			updated_at = EXCLUDED.updated_at
 	`, uuid.New(), userID, currency, delta, now)
 	if err != nil {
+		if isBalanceConstraintError(err) {
+			return nil, ErrInsufficientBalance
+		}
 		return nil, fmt.Errorf("updating balance: %w", err)
 	}
 
@@ -496,6 +513,9 @@ func (r *WalletRepository) ExecuteConversion(ctx context.Context, userID uuid.UU
 		WHERE user_id = $3 AND currency = $4
 	`, fromAmount, now, userID, fromCurrency)
 	if err != nil {
+		if isBalanceConstraintError(err) {
+			return nil, ErrInsufficientBalance
+		}
 		return nil, fmt.Errorf("debiting source currency: %w", err)
 	}
 
@@ -573,6 +593,19 @@ func (r *WalletRepository) DeleteTransactionAtomic(ctx context.Context, userID, 
 	switch txType {
 	case "credit":
 		// Original was credit (added money), so subtract
+		// Check if user has sufficient balance to reverse this credit
+		var currentBalance float64
+		err = tx.QueryRow(ctx, `
+			SELECT COALESCE(balance, 0) FROM wallet_balances
+			WHERE user_id = $1 AND currency = $2
+			FOR UPDATE
+		`, userID, currency).Scan(&currentBalance)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("checking balance: %w", err)
+		}
+		if currentBalance < amount {
+			return ErrInsufficientBalance
+		}
 		_, err = tx.Exec(ctx, `
 			UPDATE wallet_balances
 			SET balance = balance - $1, updated_at = $2
@@ -596,6 +629,19 @@ func (r *WalletRepository) DeleteTransactionAtomic(ctx context.Context, userID, 
 			return fmt.Errorf("reversing source balance: %w", err)
 		}
 		if toAmount != nil && toCurrency != nil {
+			// Check if user has sufficient balance in target currency
+			var targetBalance float64
+			err = tx.QueryRow(ctx, `
+				SELECT COALESCE(balance, 0) FROM wallet_balances
+				WHERE user_id = $1 AND currency = $2
+				FOR UPDATE
+			`, userID, *toCurrency).Scan(&targetBalance)
+			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return fmt.Errorf("checking target balance: %w", err)
+			}
+			if targetBalance < *toAmount {
+				return ErrInsufficientBalance
+			}
 			_, err = tx.Exec(ctx, `
 				UPDATE wallet_balances
 				SET balance = balance - $1, updated_at = $2
@@ -604,6 +650,9 @@ func (r *WalletRepository) DeleteTransactionAtomic(ctx context.Context, userID, 
 		}
 	}
 	if err != nil {
+		if isBalanceConstraintError(err) {
+			return ErrInsufficientBalance
+		}
 		return fmt.Errorf("reversing balance: %w", err)
 	}
 
@@ -692,6 +741,19 @@ func (r *WalletRepository) UpdateTransactionAtomic(ctx context.Context, userID, 
 	// Calculate balance adjustments
 	// First, reverse the old transaction's impact
 	if oldTx.Type == "credit" {
+		// Check if user has sufficient balance to reverse this credit
+		var currentBalance float64
+		err = tx.QueryRow(ctx, `
+			SELECT COALESCE(balance, 0) FROM wallet_balances
+			WHERE user_id = $1 AND currency = $2
+			FOR UPDATE
+		`, userID, oldTx.Currency).Scan(&currentBalance)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("checking balance: %w", err)
+		}
+		if currentBalance < oldTx.Amount {
+			return nil, ErrInsufficientBalance
+		}
 		_, err = tx.Exec(ctx, `
 			UPDATE wallet_balances
 			SET balance = balance - $1, updated_at = $2
@@ -705,6 +767,9 @@ func (r *WalletRepository) UpdateTransactionAtomic(ctx context.Context, userID, 
 		`, oldTx.Amount, now, userID, oldTx.Currency)
 	}
 	if err != nil {
+		if isBalanceConstraintError(err) {
+			return nil, ErrInsufficientBalance
+		}
 		return nil, fmt.Errorf("reversing old balance: %w", err)
 	}
 
@@ -740,6 +805,9 @@ func (r *WalletRepository) UpdateTransactionAtomic(ctx context.Context, userID, 
 		`, uuid.New(), userID, newCurrency, -newAmount, now)
 	}
 	if err != nil {
+		if isBalanceConstraintError(err) {
+			return nil, ErrInsufficientBalance
+		}
 		return nil, fmt.Errorf("applying new balance: %w", err)
 	}
 
