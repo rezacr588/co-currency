@@ -96,6 +96,7 @@ export const translations = {
     invalidAmount: 'Please enter a valid amount',
     sameCurrency: 'Please select different currencies',
     amountTooLarge: 'Amount is too large',
+    popularPairs: 'Popular Pairs',
 
     // Loading states
     loading: 'Loading...',
@@ -530,6 +531,7 @@ export const translations = {
     invalidAmount: 'لطفاً مبلغ معتبر وارد کنید',
     sameCurrency: 'لطفاً ارزهای متفاوت انتخاب کنید',
     amountTooLarge: 'مبلغ بیش از حد بزرگ است',
+    popularPairs: 'جفت‌های محبوب',
 
     // Loading states
     loading: 'در حال بارگذاری...',
@@ -964,6 +966,7 @@ export const translations = {
     invalidAmount: 'يرجى إدخال مبلغ صالح',
     sameCurrency: 'يرجى اختيار عملات مختلفة',
     amountTooLarge: 'المبلغ كبير جدًا',
+    popularPairs: 'الأزواج الشائعة',
 
     // Loading states
     loading: 'جاري التحميل...',
@@ -1398,6 +1401,7 @@ export const translations = {
     invalidAmount: 'Lütfen geçerli bir miktar girin',
     sameCurrency: 'Lütfen farklı para birimleri seçin',
     amountTooLarge: 'Miktar çok büyük',
+    popularPairs: 'Popüler Çiftler',
 
     // Loading states
     loading: 'Yükleniyor...',
