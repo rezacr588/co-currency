@@ -474,11 +474,12 @@ func (r *WalletRepository) ExecuteConversion(ctx context.Context, userID uuid.UU
 
 	now := time.Now()
 
-	// Check if user has sufficient balance
+	// Check if user has sufficient balance with row-level lock to prevent race conditions
 	var currentBalance float64
 	err = tx.QueryRow(ctx, `
 		SELECT COALESCE(balance, 0) FROM wallet_balances
 		WHERE user_id = $1 AND currency = $2
+		FOR UPDATE
 	`, userID, fromCurrency).Scan(&currentBalance)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("checking balance: %w", err)
@@ -717,11 +718,12 @@ func (r *WalletRepository) UpdateTransactionAtomic(ctx context.Context, userID, 
 				updated_at = EXCLUDED.updated_at
 		`, uuid.New(), userID, newCurrency, newAmount, now)
 	} else if newType == "debit" {
-		// Check if sufficient balance for debit
+		// Check if sufficient balance for debit with row-level lock
 		var currentBalance float64
 		err = tx.QueryRow(ctx, `
 			SELECT COALESCE(balance, 0) FROM wallet_balances
 			WHERE user_id = $1 AND currency = $2
+			FOR UPDATE
 		`, userID, newCurrency).Scan(&currentBalance)
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("checking balance: %w", err)

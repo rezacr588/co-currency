@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -131,7 +132,7 @@ func (s *AuthService) Login(ctx context.Context, req *model.LoginRequest) (*mode
 		// Increment failed attempts
 		if incErr := s.userRepo.IncrementFailedAttempts(ctx, req.Email); incErr != nil {
 			// Log error but don't expose to user
-			fmt.Printf("failed to increment failed attempts: %v\n", incErr)
+			log.Error().Err(incErr).Str("email", req.Email).Msg("failed to increment failed attempts")
 		}
 		return nil, ErrInvalidCredentials
 	}
@@ -139,7 +140,7 @@ func (s *AuthService) Login(ctx context.Context, req *model.LoginRequest) (*mode
 	// Reset failed attempts on successful login
 	if err := s.userRepo.ResetFailedAttempts(ctx, user.ID); err != nil {
 		// Log error but don't fail login
-		fmt.Printf("failed to reset failed attempts: %v\n", err)
+		log.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to reset failed attempts")
 	}
 
 	// Generate access token
@@ -159,7 +160,7 @@ func (s *AuthService) Login(ctx context.Context, req *model.LoginRequest) (*mode
 		expiresAt := time.Now().Add(s.refreshExpiry)
 		if err := s.refreshTokenRepo.Create(ctx, user.ID, refreshToken, expiresAt); err != nil {
 			// Log error but don't fail login
-			fmt.Printf("failed to create refresh token: %v\n", err)
+			log.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to create refresh token")
 		} else {
 			response.RefreshToken = refreshToken
 		}

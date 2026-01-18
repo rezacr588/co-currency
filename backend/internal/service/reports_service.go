@@ -145,8 +145,14 @@ func (s *ReportsService) GetMonthlyReport(ctx context.Context, userID uuid.UUID,
 
 // GetCategoryReport generates a category-wise spending report
 func (s *ReportsService) GetCategoryReport(ctx context.Context, userID uuid.UUID, fromDate, toDate, currency string) (*CategoryReport, error) {
-	startTime, _ := time.Parse("2006-01-02", fromDate)
-	endTime, _ := time.Parse("2006-01-02", toDate)
+	startTime, err := time.Parse("2006-01-02", fromDate)
+	if err != nil {
+		return nil, fmt.Errorf("invalid from_date format (expected YYYY-MM-DD): %w", err)
+	}
+	endTime, err := time.Parse("2006-01-02", toDate)
+	if err != nil {
+		return nil, fmt.Errorf("invalid to_date format (expected YYYY-MM-DD): %w", err)
+	}
 	endTime = endTime.Add(24*time.Hour - time.Second)
 
 	// Get all transactions

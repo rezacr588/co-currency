@@ -2,8 +2,10 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -178,18 +180,29 @@ func (h *WalletHandler) GetTransactions(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Parse pagination params
+	// Parse pagination params with validation
 	limit := 50
 	offset := 0
+	const maxLimit = 100
 
 	if l := r.URL.Query().Get("limit"); l != "" {
 		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
+			if parsed > maxLimit {
+				httputil.BadRequest(w, fmt.Sprintf("limit must be between 1 and %d", maxLimit))
+				return
+			}
 			limit = parsed
+		} else if err != nil {
+			httputil.BadRequest(w, "invalid limit parameter")
+			return
 		}
 	}
 	if o := r.URL.Query().Get("offset"); o != "" {
 		if parsed, err := strconv.Atoi(o); err == nil && parsed >= 0 {
 			offset = parsed
+		} else if err != nil {
+			httputil.BadRequest(w, "invalid offset parameter")
+			return
 		}
 	}
 
@@ -274,25 +287,27 @@ func (h *WalletHandler) ExportTransactions(w http.ResponseWriter, r *http.Reques
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", "attachment; filename=transactions.csv")
 
-	// Write CSV header
-	csvWriter := "Date,Type,Amount,Currency,Category,Description\n"
+	// Write CSV header and data using strings.Builder for efficiency
+	var csvBuilder strings.Builder
+	csvBuilder.WriteString("Date,Type,Amount,Currency,Category,Description\n")
 
-	// Write data rows
+	// Write data rows with proper escaping to prevent CSV injection
 	for _, tx := range transactions {
-		csvWriter += tx.CreatedAt.Format("2006-01-02 15:04:05") + ","
-		csvWriter += tx.Type + ","
-		csvWriter += strconv.FormatFloat(tx.Amount, 'f', 2, 64) + ","
-		csvWriter += tx.Currency + ","
-		csvWriter += tx.Category + ","
-		// Escape description for CSV
-		desc := tx.Description
-		if desc != "" {
-			desc = "\"" + desc + "\""
-		}
-		csvWriter += desc + "\n"
+		csvBuilder.WriteString(tx.CreatedAt.Format("2006-01-02 15:04:05"))
+		csvBuilder.WriteString(",")
+		csvBuilder.WriteString(escapeCSVField(tx.Type))
+		csvBuilder.WriteString(",")
+		csvBuilder.WriteString(strconv.FormatFloat(tx.Amount, 'f', 2, 64))
+		csvBuilder.WriteString(",")
+		csvBuilder.WriteString(escapeCSVField(tx.Currency))
+		csvBuilder.WriteString(",")
+		csvBuilder.WriteString(escapeCSVField(tx.Category))
+		csvBuilder.WriteString(",")
+		csvBuilder.WriteString(escapeCSVField(tx.Description))
+		csvBuilder.WriteString("\n")
 	}
 
-	w.Write([]byte(csvWriter))
+	w.Write([]byte(csvBuilder.String()))
 }
 
 // GetTransaction handles GET /api/v1/wallet/transactions/{id}
@@ -357,6 +372,26 @@ func (h *WalletHandler) DeleteTransaction(w http.ResponseWriter, r *http.Request
 	}
 
 	httputil.Success(w, map[string]string{"message": "transaction deleted successfully"})
+}
+
+// escapeCSVField properly escapes a field for CSV output to prevent formula injection
+func escapeCSVField(field string) string {
+	// Check for formula injection characters at the start
+	if len(field) > 0 {
+		firstChar := field[0]
+		if firstChar == '=' || firstChar == '+' || firstChar == '-' || firstChar == '@' || firstChar == '\t' || firstChar == '\r' || firstChar == '\n' {
+			// Prefix with single quote to prevent formula execution
+			field = "'" + field
+		}
+	}
+	// Check if field contains special characters that require quoting
+	if strings.ContainsAny(field, ",\"\r\n") {
+		// Escape double quotes by doubling them
+		field = strings.ReplaceAll(field, "\"", "\"\"")
+		// Wrap in double quotes
+		field = "\"" + field + "\""
+	}
+	return field
 }
 
 // UpdateTransaction handles PUT /api/v1/wallet/transactions/{id}

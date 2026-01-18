@@ -2,7 +2,9 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/rezacr588/currency-converter/internal/middleware"
 	"github.com/rezacr588/currency-converter/internal/model"
@@ -64,16 +66,16 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	response, err := h.authService.Login(r.Context(), &req)
 	if err != nil {
-		if err == service.ErrInvalidCredentials {
+		if errors.Is(err, service.ErrInvalidCredentials) {
 			httputil.Unauthorized(w, "invalid email or password")
 			return
 		}
-		if err == service.ErrAccountLocked {
+		if errors.Is(err, service.ErrAccountLocked) {
 			httputil.TooManyRequests(w, "account temporarily locked due to too many failed login attempts")
 			return
 		}
-		// Check if it's an account locked error with time info
-		if len(err.Error()) > 0 && err.Error()[:len("account is temporarily")] == "account is temporarily" {
+		// Check if it's an account locked error with time info (wrapped error)
+		if strings.Contains(err.Error(), "account is temporarily locked") {
 			httputil.TooManyRequests(w, err.Error())
 			return
 		}
@@ -111,12 +113,12 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// In a real app, you would send an email here
-	// For now, we return the token in the response (for testing purposes)
-	// In production, remove the token from response and send via email
+	// In a real app, you would send an email here with the token
+	// For security, never expose the token in the API response
+	// TODO: Implement email service to send reset link with token
+	_ = token // Token should be sent via email, not exposed in response
 	httputil.Success(w, map[string]string{
 		"message": "If an account exists with this email, a password reset link has been sent",
-		"token":   token, // Remove this in production - send via email instead
 	})
 }
 

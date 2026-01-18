@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -164,7 +165,14 @@ func (rl *RateLimiter) getLimiter(key string, limit rate.Limit, burst int) *rate
 // getIP extracts the client IP from request headers
 func getIP(r *http.Request) string {
 	// Try to get real IP from headers (for proxies)
+	// X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
+	// Always use the first IP (the original client)
 	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+		// Split by comma and take the first IP to prevent rate limit bypass
+		ips := strings.Split(forwarded, ",")
+		if len(ips) > 0 {
+			return strings.TrimSpace(ips[0])
+		}
 		return forwarded
 	}
 	if realIP := r.Header.Get("X-Real-IP"); realIP != "" {
