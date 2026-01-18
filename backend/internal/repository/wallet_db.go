@@ -427,10 +427,20 @@ func (r *WalletRepository) AddTransactionAtomic(ctx context.Context, userID uuid
 			WHERE user_id = $1 AND currency = $2
 			FOR UPDATE
 		`, userID, currency).Scan(&currentBalance)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("checking balance: %w", err)
+
+		// Log debug info for troubleshooting
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				fmt.Printf("[DEBUG] No balance record found for user=%s currency=%s\n", userID, currency)
+			} else {
+				return nil, fmt.Errorf("checking balance: %w", err)
+			}
+		} else {
+			fmt.Printf("[DEBUG] Balance check: user=%s currency=%s balance=%.2f amount=%.2f\n", userID, currency, currentBalance, amount)
 		}
+
 		if currentBalance < amount {
+			fmt.Printf("[DEBUG] Insufficient balance: %.2f < %.2f\n", currentBalance, amount)
 			return nil, ErrInsufficientBalance
 		}
 	}
