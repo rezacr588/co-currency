@@ -303,12 +303,19 @@ export function TransactionForm() {
   const { data: currencies } = useCurrencies();
 
   // Fetch user's balances
-  const { data: balancesData } = useQuery({
+  const { data: balancesData, isLoading: isLoadingBalances } = useQuery({
     queryKey: ['wallet-balances'],
     queryFn: api.wallet.getBalances,
   });
 
-  const balances: WalletBalance[] = balancesData?.balances || [];
+  // Ensure balances are properly typed as numbers (API might return strings for NUMERIC fields)
+  const balances: WalletBalance[] = useMemo(() => {
+    const rawBalances = balancesData?.balances || [];
+    return rawBalances.map((b) => ({
+      ...b,
+      balance: typeof b.balance === 'string' ? parseFloat(b.balance) : b.balance,
+    }));
+  }, [balancesData]);
 
   const [type, setType] = useState<'credit' | 'debit'>('credit');
   const [currency, setCurrency] = useState('USD');
@@ -356,7 +363,15 @@ export function TransactionForm() {
     e.preventDefault();
     setError(null);
 
-    const numAmount = parseFloat(amount);
+    // Prevent submission while balances are still loading
+    if (type === 'debit' && isLoadingBalances) {
+      setError(t('loading'));
+      return;
+    }
+
+    // Normalize amount: replace comma with period to handle European locales
+    const normalizedAmount = amount.replace(',', '.');
+    const numAmount = parseFloat(normalizedAmount);
     if (isNaN(numAmount) || numAmount <= 0) {
       setError(t('invalidAmount'));
       return;
