@@ -197,11 +197,10 @@ export function Converter() {
             >
               {/* FROM Section */}
               <div className="p-4 border-b border-slate-200/80 dark:border-slate-700/60">
-                <div className="flex items-center justify-between mb-2">
+                <div className="mb-2">
                   <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                     {t('from') || 'From'}
                   </span>
-                  <span className="text-2xl">{CURRENCY_FLAGS[fromCurrency] || '🌍'}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <CurrencyInput
@@ -226,11 +225,10 @@ export function Converter() {
 
               {/* TO Section */}
               <div className="p-4 bg-white/50 dark:bg-slate-900/30">
-                <div className="flex items-center justify-between mb-2">
+                <div className="mb-2">
                   <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                     {t('to') || 'To'}
                   </span>
-                  <span className="text-2xl">{CURRENCY_FLAGS[toCurrency] || '🌍'}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   {/* Result Display */}
