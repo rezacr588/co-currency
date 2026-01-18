@@ -96,7 +96,7 @@ export function CurrencySelect({ value, onChange, currencies, label }: CurrencyS
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center gap-3 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-left hover:border-indigo-400 dark:hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200 group"
+        className="w-full flex items-center gap-3 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-left hover:border-primary-500 dark:hover:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-all duration-200 group"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
@@ -167,7 +167,7 @@ export function CurrencySelect({ value, onChange, currencies, label }: CurrencyS
                   onChange={(e) => setSearch(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={t('searchCurrency')}
-                  className={`w-full bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 ${isRTL ? 'pr-10 pl-3' : 'pl-10 pr-3'}`}
+                  className={`w-full bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-600/50 focus:border-primary-600 ${isRTL ? 'pr-10 pl-3' : 'pl-10 pr-3'}`}
                 />
               </div>
             </div>
@@ -193,7 +193,7 @@ export function CurrencySelect({ value, onChange, currencies, label }: CurrencyS
                       onClick={() => handleSelect(currency.code)}
                       className={`flex items-center gap-3 px-3 py-3 cursor-pointer transition-all duration-150 rounded-lg ${
                         isSelected
-                          ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300'
+                          ? 'bg-primary-50 dark:bg-primary-600/20 text-primary-800 dark:text-primary-400'
                           : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
                       }`}
                     >
@@ -205,7 +205,7 @@ export function CurrencySelect({ value, onChange, currencies, label }: CurrencyS
                         </span>
                       </div>
                       {isSelected && (
-                        <svg className="w-5 h-5 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-5 h-5 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
                       )}

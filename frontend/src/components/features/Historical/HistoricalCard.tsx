@@ -24,9 +24,9 @@ export function HistoricalCard({ date, baseCurrency, targetCurrency }: Historica
   }
 
   return (
-    <div className="group p-4 bg-slate-50/80 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-700/40 hover:border-indigo-300 dark:hover:border-indigo-500/30 transition-all duration-200">
+    <div className="group p-4 bg-slate-50/80 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-700/40 hover:border-primary-400 dark:hover:border-primary-600/30 transition-all duration-200">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-2 h-2 rounded-full bg-indigo-400 dark:bg-indigo-500"></div>
+        <div className="w-2 h-2 rounded-full bg-primary-500 dark:bg-primary-600"></div>
         <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{formatDate(date)}</p>
       </div>
       <div className="flex items-center justify-between">
@@ -37,7 +37,7 @@ export function HistoricalCard({ date, baseCurrency, targetCurrency }: Historica
         {isLoading ? (
           <Skeleton width={80} height={24} />
         ) : (
-          <span className="font-mono text-lg font-semibold text-indigo-600 dark:text-indigo-400">
+          <span className="font-mono text-lg font-semibold text-primary-700 dark:text-primary-500">
             {rate ? formatRate(rate.rate) : 'N/A'}
           </span>
         )}

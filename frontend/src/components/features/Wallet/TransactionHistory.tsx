@@ -154,7 +154,7 @@ export function TransactionHistory({
           <button
             onClick={onLoadMore}
             disabled={isLoadingMore}
-            className="w-full py-2 text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium disabled:opacity-50"
+            className="w-full py-2 text-sm text-primary-700 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 font-medium disabled:opacity-50"
           >
             {isLoadingMore ? t('loading') : t('loadMore')}
           </button>

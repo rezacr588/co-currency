@@ -135,7 +135,7 @@ export function WalletConvert() {
                   <select
                     value={fromCurrency}
                     onChange={(e) => setFromCurrency(e.target.value)}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-all"
                   >
                     {currencyOptions.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -177,7 +177,7 @@ export function WalletConvert() {
                   <select
                     value={toCurrency}
                     onChange={(e) => setToCurrency(e.target.value)}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-all"
                   >
                     {currencyOptions.map((option) => (
                       <option key={option.value} value={option.value}>

@@ -53,7 +53,7 @@ export function TransactionFilters({
           </svg>
           {t('filters') || 'Filters'}
           {hasActiveFilters && (
-            <span className="w-2 h-2 bg-indigo-600 rounded-full" />
+            <span className="w-2 h-2 bg-primary-700 rounded-full" />
           )}
         </Button>
 

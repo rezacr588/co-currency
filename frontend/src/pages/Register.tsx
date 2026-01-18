@@ -116,7 +116,7 @@ export function Register() {
                   {t('alreadyHaveAccount')}{' '}
                   <Link
                     to="/login"
-                    className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+                    className="text-primary-700 dark:text-primary-500 hover:underline font-medium"
                   >
                     {t('login')}
                   </Link>

@@ -80,7 +80,7 @@ function RecurringCard({ recurring, onEdit }: RecurringCardProps) {
   const isDue = new Date(recurring.next_execution) <= new Date();
 
   return (
-    <Card className={`${!recurring.is_active ? 'opacity-60' : ''} ${isDue && recurring.is_active ? 'ring-2 ring-indigo-500' : ''}`}>
+    <Card className={`${!recurring.is_active ? 'opacity-60' : ''} ${isDue && recurring.is_active ? 'ring-2 ring-primary-600' : ''}`}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -108,7 +108,7 @@ function RecurringCard({ recurring, onEdit }: RecurringCardProps) {
 
         <div className="flex items-center justify-between mb-3 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
           <span className="text-sm text-slate-500 dark:text-slate-400">{t('nextExecution')}</span>
-          <span className={`text-sm font-medium ${isDue ? 'text-indigo-500' : 'text-slate-700 dark:text-slate-200'}`}>
+          <span className={`text-sm font-medium ${isDue ? 'text-primary-600' : 'text-slate-700 dark:text-slate-200'}`}>
             {formatDate(recurring.next_execution)}
             {isDue && ` (${t('due')})`}
           </span>
@@ -237,7 +237,7 @@ export function RecurringList() {
                   </div>
                   <div>
                     <p className="text-sm text-slate-500 dark:text-slate-400">{t('dueNow')}</p>
-                    <p className={`text-2xl font-bold ${dueCount > 0 ? 'text-indigo-500' : 'text-slate-800 dark:text-slate-100'}`}>
+                    <p className={`text-2xl font-bold ${dueCount > 0 ? 'text-primary-600' : 'text-slate-800 dark:text-slate-100'}`}>
                       {dueCount}
                     </p>
                   </div>

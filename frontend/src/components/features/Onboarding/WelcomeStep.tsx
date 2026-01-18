@@ -13,7 +13,7 @@ export function WelcomeStep({ onNext, onSkip }: WelcomeStepProps) {
 
   return (
     <div className="text-center py-8">
-      <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+      <div className="w-20 h-20 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
         <span className="text-4xl">👋</span>
       </div>
       <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">

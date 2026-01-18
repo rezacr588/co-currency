@@ -139,13 +139,13 @@ export function Reports() {
                       {formatCurrency(monthlyData?.expenses || 0, currency)}
                     </p>
                   </div>
-                  <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl">
-                    <p className="text-sm text-indigo-600 dark:text-indigo-400">{t('netSavings')}</p>
-                    <p className={`text-2xl font-bold ${(monthlyData?.net || 0) >= 0 ? 'text-indigo-700 dark:text-indigo-300' : 'text-red-700 dark:text-red-300'}`}>
+                  <div className="p-4 bg-primary-50 dark:bg-primary-900/20 rounded-xl">
+                    <p className="text-sm text-primary-700 dark:text-primary-500">{t('netSavings')}</p>
+                    <p className={`text-2xl font-bold ${(monthlyData?.net || 0) >= 0 ? 'text-primary-800 dark:text-primary-400' : 'text-red-700 dark:text-red-300'}`}>
                       {formatCurrency(monthlyData?.net || 0, currency)}
                     </p>
                   </div>
-                  <div className="p-4 bg-purple-50 dark:bg-primary-900/20 rounded-xl">
+                  <div className="p-4 bg-primary-50 dark:bg-primary-900/20 rounded-xl">
                     <p className="text-sm text-primary-700 dark:text-primary-500">{t('savingsRate')}</p>
                     <p className="text-2xl font-bold text-primary-800 dark:text-primary-400">
                       {(monthlyData?.savings_rate || 0).toFixed(1)}%

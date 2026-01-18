@@ -46,8 +46,8 @@ export function CurrencySetup({
             onClick={() => onCurrencyChange(currency.code)}
             className={`p-4 rounded-xl border-2 transition-all text-center ${
               selectedCurrency === currency.code
-                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700'
+                ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/20'
+                : 'border-slate-200 dark:border-slate-700 hover:border-primary-400 dark:hover:border-primary-800'
             }`}
           >
             <div className="text-2xl mb-1">{currency.flag}</div>

@@ -32,7 +32,7 @@ export function RatesGrid() {
         <select
           value={baseCurrency}
           onChange={(e) => setBaseCurrency(e.target.value)}
-          className="flex-shrink-0 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 rounded-lg text-slate-700 dark:text-slate-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all cursor-pointer w-20"
+          className="flex-shrink-0 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 rounded-lg text-slate-700 dark:text-slate-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-600/30 transition-all cursor-pointer w-20"
         >
           {currencies?.map((c) => (
             <option key={c.code} value={c.code}>
@@ -62,7 +62,7 @@ export function RatesGrid() {
             {rates && rates.rates.length > POPULAR_CURRENCIES.length && (
               <button
                 onClick={() => setShowAll(!showAll)}
-                className="mt-4 w-full py-2 px-4 rounded-lg bg-slate-100 dark:bg-slate-800/60 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-medium text-sm transition-colors"
+                className="mt-4 w-full py-2 px-4 rounded-lg bg-slate-100 dark:bg-slate-800/60 hover:bg-primary-50 dark:hover:bg-primary-600/10 text-primary-700 dark:text-primary-500 font-medium text-sm transition-colors"
               >
                 {showAll ? t('showLess') : `${t('showAll')} (${rates.rates.length} ${t('currencies')})`}
               </button>

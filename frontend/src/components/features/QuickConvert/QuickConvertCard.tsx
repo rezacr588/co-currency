@@ -27,7 +27,7 @@ export function QuickConvertCard({ from, to, amount }: QuickConvertCardProps) {
   }
 
   return (
-    <div className="group p-2.5 bg-slate-50/80 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800/60 rounded-lg border border-slate-200/60 dark:border-slate-700/40 hover:border-indigo-300 dark:hover:border-indigo-500/30 transition-all duration-200">
+    <div className="group p-2.5 bg-slate-50/80 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800/60 rounded-lg border border-slate-200/60 dark:border-slate-700/40 hover:border-primary-400 dark:hover:border-primary-600/30 transition-all duration-200">
       <div className="flex flex-col gap-1">
         {/* From */}
         <div className="flex items-center gap-1.5">
@@ -41,7 +41,7 @@ export function QuickConvertCard({ from, to, amount }: QuickConvertCardProps) {
           {isLoading ? (
             <Skeleton width={50} height={14} />
           ) : (
-            <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 truncate">
+            <span className="text-xs font-semibold text-primary-700 dark:text-primary-500 truncate">
               {toSymbol}{formatNumber(data?.result || 0, 2)}
             </span>
           )}

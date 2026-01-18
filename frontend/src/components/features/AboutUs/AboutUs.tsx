@@ -20,7 +20,7 @@ export function AboutUs() {
           </div>
 
           {/* Mission Banner - Compact */}
-          <div className="bg-gradient-to-r from-indigo-600 via-primary-700 to-indigo-600 rounded-2xl p-6 mb-10 text-center">
+          <div className="bg-gradient-to-r from-primary-700 via-primary-700 to-primary-700 rounded-2xl p-6 mb-10 text-center">
             <p className="text-white text-lg font-medium">
               {t('missionDescription')}
             </p>

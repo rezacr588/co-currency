@@ -44,10 +44,10 @@ export function AmountInput({ value, onChange, error }: AmountInputProps) {
           inputMode="decimal"
           aria-invalid={!!error}
           aria-describedby={error ? errorId : undefined}
-          className={`w-full bg-white dark:bg-slate-800/80 border rounded-xl px-4 py-3 text-2xl sm:text-3xl font-light text-slate-800 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${
+          className={`w-full bg-white dark:bg-slate-800/80 border rounded-xl px-4 py-3 text-2xl sm:text-3xl font-light text-slate-800 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-600/30 ${
             error
               ? 'border-red-400 focus:border-red-500'
-              : 'border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 focus:border-indigo-500'
+              : 'border-slate-200 dark:border-slate-700 hover:border-primary-500 dark:hover:border-primary-600 focus:border-primary-600'
           }`}
           placeholder="0"
         />

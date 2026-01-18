@@ -99,7 +99,7 @@ export function ForgotPassword() {
             <div className="mt-6 text-center">
               <Link
                 to="/login"
-                className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+                className="text-sm text-primary-700 dark:text-primary-500 hover:underline"
               >
                 Back to Login
               </Link>

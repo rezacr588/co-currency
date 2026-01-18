@@ -58,7 +58,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
                       i <= currentIndex
-                        ? 'bg-indigo-600 text-white'
+                        ? 'bg-primary-700 text-white'
                         : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
                     }`}
                   >
@@ -68,7 +68,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                     <div
                       className={`w-16 sm:w-24 h-1 mx-2 transition-colors ${
                         i < currentIndex
-                          ? 'bg-indigo-600'
+                          ? 'bg-primary-700'
                           : 'bg-slate-200 dark:bg-slate-700'
                       }`}
                     />

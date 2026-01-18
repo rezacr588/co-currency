@@ -84,7 +84,7 @@ export function GoalsList() {
                     {t('overallProgress')}
                   </p>
                   <div className="flex items-center justify-center gap-4">
-                    <div className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-primary-700 dark:from-indigo-400 dark:to-primary-500 bg-clip-text text-transparent">
+                    <div className="text-4xl font-bold bg-gradient-to-r from-primary-700 to-primary-700 dark:from-primary-500 dark:to-primary-500 bg-clip-text text-transparent">
                       {overallProgress.toFixed(1)}%
                     </div>
                     <div className="text-left">

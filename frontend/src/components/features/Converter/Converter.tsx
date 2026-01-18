@@ -80,17 +80,17 @@ export function Converter() {
       {/* Main Card */}
       <div className="relative group">
         {/* Ambient glow effect */}
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 via-primary-600/20 to-pink-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-primary-600/20 via-primary-600/20 to-slate-1000/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
 
         {/* Card */}
         <div className="relative bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-lg overflow-hidden">
           {/* Gradient accent line */}
-          <div className="h-0.5 bg-gradient-to-r from-indigo-500 via-primary-600 to-pink-500" />
+          <div className="h-0.5 bg-gradient-to-r from-primary-600 via-primary-600 to-slate-1000" />
 
           {/* Content */}
           <div className="p-4 sm:p-5 space-y-4">
             {/* Single Inline Converter Box */}
-            <div className="relative bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-indigo-400 dark:hover:border-indigo-500 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/30">
+            <div className="relative bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-primary-500 dark:hover:border-primary-600 focus-within:border-primary-600 focus-within:ring-2 focus-within:ring-primary-600/30">
               <div className="flex flex-col sm:flex-row items-stretch">
                 {/* FROM: Amount Input + Currency */}
                 <div className="flex-1 min-w-0 flex items-stretch border-b sm:border-b-0 sm:border-e border-slate-200 dark:border-slate-700">
