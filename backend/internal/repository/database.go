@@ -254,6 +254,57 @@ func (d *Database) initTables(ctx context.Context) error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_recurring_transactions_user_id ON recurring_transactions(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_recurring_transactions_next_execution ON recurring_transactions(next_execution)`,
+
+		// Add CHECK constraints to prevent invalid data (using DO blocks for idempotency)
+		// Prevent negative wallet balances
+		`DO $$ BEGIN
+			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wallet_balances_balance_non_negative') THEN
+				ALTER TABLE wallet_balances ADD CONSTRAINT wallet_balances_balance_non_negative CHECK (balance >= 0);
+			END IF;
+		END $$`,
+
+		// Prevent negative/zero transaction amounts
+		`DO $$ BEGIN
+			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'transactions_amount_positive') THEN
+				ALTER TABLE transactions ADD CONSTRAINT transactions_amount_positive CHECK (amount > 0);
+			END IF;
+		END $$`,
+
+		// Prevent negative budget spent
+		`DO $$ BEGIN
+			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'budgets_spent_non_negative') THEN
+				ALTER TABLE budgets ADD CONSTRAINT budgets_spent_non_negative CHECK (spent >= 0);
+			END IF;
+		END $$`,
+
+		// Prevent negative budget amount
+		`DO $$ BEGIN
+			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'budgets_amount_positive') THEN
+				ALTER TABLE budgets ADD CONSTRAINT budgets_amount_positive CHECK (amount > 0);
+			END IF;
+		END $$`,
+
+		// Prevent negative goal amounts
+		`DO $$ BEGIN
+			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'goals_target_positive') THEN
+				ALTER TABLE goals ADD CONSTRAINT goals_target_positive CHECK (target_amount > 0);
+			END IF;
+		END $$`,
+		`DO $$ BEGIN
+			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'goals_current_non_negative') THEN
+				ALTER TABLE goals ADD CONSTRAINT goals_current_non_negative CHECK (current_amount >= 0);
+			END IF;
+		END $$`,
+
+		// Prevent negative recurring transaction amounts
+		`DO $$ BEGIN
+			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'recurring_amount_positive') THEN
+				ALTER TABLE recurring_transactions ADD CONSTRAINT recurring_amount_positive CHECK (amount > 0);
+			END IF;
+		END $$`,
+
+		// Add index on transaction_tags.tag_id for faster joins
+		`CREATE INDEX IF NOT EXISTS idx_transaction_tags_tag_id ON transaction_tags(tag_id)`,
 	}
 
 	for _, query := range queries {
