@@ -446,6 +446,7 @@ func (r *WalletRepository) AddTransactionAtomic(ctx context.Context, userID uuid
 	}
 
 	// Update or insert balance
+	fmt.Printf("[DEBUG] Updating balance: user=%s currency=%s delta=%.2f\n", userID, currency, delta)
 	_, err = tx.Exec(ctx, `
 		INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
 		VALUES ($1, $2, $3, $4, $5)
@@ -454,11 +455,14 @@ func (r *WalletRepository) AddTransactionAtomic(ctx context.Context, userID uuid
 			updated_at = EXCLUDED.updated_at
 	`, uuid.New(), userID, currency, delta, now)
 	if err != nil {
+		fmt.Printf("[DEBUG] Balance update error: %v\n", err)
 		if isBalanceConstraintError(err) {
+			fmt.Printf("[DEBUG] Constraint error detected!\n")
 			return nil, ErrInsufficientBalance
 		}
 		return nil, fmt.Errorf("updating balance: %w", err)
 	}
+	fmt.Printf("[DEBUG] Balance updated successfully\n")
 
 	// Create transaction record
 	transaction := &model.Transaction{
@@ -481,12 +485,16 @@ func (r *WalletRepository) AddTransactionAtomic(ctx context.Context, userID uuid
 	`, transaction.ID, transaction.UserID, transaction.Type, transaction.Amount, transaction.Currency,
 		transaction.Source, transaction.Category, transaction.Icon, transaction.AIExtractedData, transaction.Description, transaction.CreatedAt)
 	if err != nil {
+		fmt.Printf("[DEBUG] Transaction record insert error: %v\n", err)
 		return nil, fmt.Errorf("recording transaction: %w", err)
 	}
+	fmt.Printf("[DEBUG] Transaction record created\n")
 
 	if err := tx.Commit(ctx); err != nil {
+		fmt.Printf("[DEBUG] Commit error: %v\n", err)
 		return nil, fmt.Errorf("committing transaction: %w", err)
 	}
+	fmt.Printf("[DEBUG] Transaction committed successfully\n")
 
 	return transaction, nil
 }
