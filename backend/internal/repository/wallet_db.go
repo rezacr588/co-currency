@@ -14,8 +14,9 @@ import (
 )
 
 var (
-	ErrInsufficientBalance = errors.New("insufficient balance")
-	ErrBalanceNotFound     = errors.New("balance not found")
+	ErrInsufficientBalance  = errors.New("insufficient balance")
+	ErrBalanceNotFound      = errors.New("balance not found")
+	ErrTransactionNotFound  = errors.New("transaction not found")
 )
 
 // WalletRepository handles database operations for wallet balances and transactions
@@ -197,7 +198,7 @@ func (r *WalletRepository) GetTransactions(ctx context.Context, userID uuid.UUID
 	}
 
 	query := `
-		SELECT id, user_id, type, amount, currency, to_amount, to_currency, rate, source, category, ai_extracted_data, description, created_at
+		SELECT id, user_id, type, amount, currency, to_amount, to_currency, rate, source, category, icon, ai_extracted_data, description, created_at
 		FROM transactions
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -215,9 +216,10 @@ func (r *WalletRepository) GetTransactions(ctx context.Context, userID uuid.UUID
 		var t model.Transaction
 		var aiData []byte
 		var category *string
+		var icon *string
 		if err := rows.Scan(
 			&t.ID, &t.UserID, &t.Type, &t.Amount, &t.Currency,
-			&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &category, &aiData, &t.Description, &t.CreatedAt,
+			&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &category, &icon, &aiData, &t.Description, &t.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scanning transaction: %w", err)
 		}
@@ -226,6 +228,9 @@ func (r *WalletRepository) GetTransactions(ctx context.Context, userID uuid.UUID
 		}
 		if category != nil {
 			t.Category = *category
+		}
+		if icon != nil {
+			t.Icon = *icon
 		}
 		transactions = append(transactions, t)
 	}
@@ -248,7 +253,7 @@ func (r *WalletRepository) GetTransactionsFiltered(ctx context.Context, userID u
 
 	// Build dynamic query
 	query := `
-		SELECT id, user_id, type, amount, currency, to_amount, to_currency, rate, source, category, ai_extracted_data, description, created_at
+		SELECT id, user_id, type, amount, currency, to_amount, to_currency, rate, source, category, icon, ai_extracted_data, description, created_at
 		FROM transactions
 		WHERE user_id = $1
 	`
@@ -320,9 +325,10 @@ func (r *WalletRepository) GetTransactionsFiltered(ctx context.Context, userID u
 		var t model.Transaction
 		var aiData []byte
 		var category *string
+		var icon *string
 		if err := rows.Scan(
 			&t.ID, &t.UserID, &t.Type, &t.Amount, &t.Currency,
-			&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &category, &aiData, &t.Description, &t.CreatedAt,
+			&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &category, &icon, &aiData, &t.Description, &t.CreatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scanning transaction: %w", err)
 		}
@@ -331,6 +337,9 @@ func (r *WalletRepository) GetTransactionsFiltered(ctx context.Context, userID u
 		}
 		if category != nil {
 			t.Category = *category
+		}
+		if icon != nil {
+			t.Icon = *icon
 		}
 		transactions = append(transactions, t)
 	}
@@ -345,22 +354,24 @@ func (r *WalletRepository) GetTransactionsFiltered(ctx context.Context, userID u
 // GetTransaction retrieves a single transaction by ID
 func (r *WalletRepository) GetTransaction(ctx context.Context, userID, txID uuid.UUID) (*model.Transaction, error) {
 	query := `
-		SELECT id, user_id, type, amount, currency, to_amount, to_currency, rate, source, ai_extracted_data, description, created_at
+		SELECT id, user_id, type, amount, currency, to_amount, to_currency, rate, source, category, icon, ai_extracted_data, description, created_at
 		FROM transactions
 		WHERE id = $1 AND user_id = $2
 	`
 
 	t := &model.Transaction{}
 	var aiData []byte
+	var category *string
+	var icon *string
 
 	err := r.pool.QueryRow(ctx, query, txID, userID).Scan(
 		&t.ID, &t.UserID, &t.Type, &t.Amount, &t.Currency,
-		&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &aiData, &t.Description, &t.CreatedAt,
+		&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &category, &icon, &aiData, &t.Description, &t.CreatedAt,
 	)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("transaction not found")
+			return nil, ErrTransactionNotFound
 		}
 		return nil, fmt.Errorf("getting transaction: %w", err)
 	}
@@ -368,12 +379,18 @@ func (r *WalletRepository) GetTransaction(ctx context.Context, userID, txID uuid
 	if aiData != nil {
 		t.AIExtractedData = json.RawMessage(aiData)
 	}
+	if category != nil {
+		t.Category = *category
+	}
+	if icon != nil {
+		t.Icon = *icon
+	}
 
 	return t, nil
 }
 
 // AddTransactionAtomic performs a balance update and transaction creation atomically
-func (r *WalletRepository) AddTransactionAtomic(ctx context.Context, userID uuid.UUID, txType string, amount float64, currency, source, description, category string, aiData json.RawMessage) (*model.Transaction, error) {
+func (r *WalletRepository) AddTransactionAtomic(ctx context.Context, userID uuid.UUID, txType string, amount float64, currency, source, description, category, icon string, aiData json.RawMessage) (*model.Transaction, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("beginning transaction: %w", err)
@@ -426,15 +443,16 @@ func (r *WalletRepository) AddTransactionAtomic(ctx context.Context, userID uuid
 		Source:          source,
 		Description:     description,
 		Category:        category,
+		Icon:            icon,
 		AIExtractedData: aiData,
 		CreatedAt:       now,
 	}
 
 	_, err = tx.Exec(ctx, `
-		INSERT INTO transactions (id, user_id, type, amount, currency, source, category, ai_extracted_data, description, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO transactions (id, user_id, type, amount, currency, source, category, icon, ai_extracted_data, description, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`, transaction.ID, transaction.UserID, transaction.Type, transaction.Amount, transaction.Currency,
-		transaction.Source, transaction.Category, transaction.AIExtractedData, transaction.Description, transaction.CreatedAt)
+		transaction.Source, transaction.Category, transaction.Icon, transaction.AIExtractedData, transaction.Description, transaction.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("recording transaction: %w", err)
 	}
@@ -520,4 +538,223 @@ func (r *WalletRepository) ExecuteConversion(ctx context.Context, userID uuid.UU
 	}
 
 	return transaction, nil
+}
+
+// DeleteTransactionAtomic deletes a transaction and reverses its balance impact atomically
+func (r *WalletRepository) DeleteTransactionAtomic(ctx context.Context, userID, txID uuid.UUID) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Get the transaction to reverse
+	var txType, currency string
+	var amount float64
+	var toAmount *float64
+	var toCurrency *string
+
+	err = tx.QueryRow(ctx, `
+		SELECT type, amount, currency, to_amount, to_currency
+		FROM transactions
+		WHERE id = $1 AND user_id = $2
+	`, txID, userID).Scan(&txType, &amount, &currency, &toAmount, &toCurrency)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrTransactionNotFound
+		}
+		return fmt.Errorf("getting transaction: %w", err)
+	}
+
+	now := time.Now()
+
+	// Reverse the balance impact based on transaction type
+	switch txType {
+	case "credit":
+		// Original was credit (added money), so subtract
+		_, err = tx.Exec(ctx, `
+			UPDATE wallet_balances
+			SET balance = balance - $1, updated_at = $2
+			WHERE user_id = $3 AND currency = $4
+		`, amount, now, userID, currency)
+	case "debit":
+		// Original was debit (removed money), so add back
+		_, err = tx.Exec(ctx, `
+			UPDATE wallet_balances
+			SET balance = balance + $1, updated_at = $2
+			WHERE user_id = $3 AND currency = $4
+		`, amount, now, userID, currency)
+	case "convert":
+		// Reverse conversion: add back to source, subtract from target
+		_, err = tx.Exec(ctx, `
+			UPDATE wallet_balances
+			SET balance = balance + $1, updated_at = $2
+			WHERE user_id = $3 AND currency = $4
+		`, amount, now, userID, currency)
+		if err != nil {
+			return fmt.Errorf("reversing source balance: %w", err)
+		}
+		if toAmount != nil && toCurrency != nil {
+			_, err = tx.Exec(ctx, `
+				UPDATE wallet_balances
+				SET balance = balance - $1, updated_at = $2
+				WHERE user_id = $3 AND currency = $4
+			`, *toAmount, now, userID, *toCurrency)
+		}
+	}
+	if err != nil {
+		return fmt.Errorf("reversing balance: %w", err)
+	}
+
+	// Delete the transaction
+	result, err := tx.Exec(ctx, `
+		DELETE FROM transactions WHERE id = $1 AND user_id = $2
+	`, txID, userID)
+	if err != nil {
+		return fmt.Errorf("deleting transaction: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return ErrTransactionNotFound
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("committing deletion: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateTransactionAtomic updates a transaction and adjusts the balance accordingly
+func (r *WalletRepository) UpdateTransactionAtomic(ctx context.Context, userID, txID uuid.UUID, req *model.UpdateTransactionRequest) (*model.Transaction, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Get the current transaction
+	var oldTx model.Transaction
+	var category, icon *string
+	err = tx.QueryRow(ctx, `
+		SELECT id, user_id, type, amount, currency, category, icon, description
+		FROM transactions
+		WHERE id = $1 AND user_id = $2
+		FOR UPDATE
+	`, txID, userID).Scan(&oldTx.ID, &oldTx.UserID, &oldTx.Type, &oldTx.Amount, &oldTx.Currency, &category, &icon, &oldTx.Description)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrTransactionNotFound
+		}
+		return nil, fmt.Errorf("getting transaction: %w", err)
+	}
+	if category != nil {
+		oldTx.Category = *category
+	}
+	if icon != nil {
+		oldTx.Icon = *icon
+	}
+
+	// Don't allow editing conversion transactions
+	if oldTx.Type == "convert" {
+		return nil, errors.New("cannot edit conversion transactions")
+	}
+
+	now := time.Now()
+
+	// Determine new values (use old values if not specified in request)
+	newType := oldTx.Type
+	if req.Type != "" {
+		newType = req.Type
+	}
+	newAmount := oldTx.Amount
+	if req.Amount > 0 {
+		newAmount = req.Amount
+	}
+	newCurrency := oldTx.Currency
+	if req.Currency != "" {
+		newCurrency = req.Currency
+	}
+	newCategory := oldTx.Category
+	if req.Category != "" {
+		newCategory = req.Category
+	}
+	newIcon := oldTx.Icon
+	if req.Icon != "" {
+		newIcon = req.Icon
+	}
+	newDescription := oldTx.Description
+	if req.Description != "" {
+		newDescription = req.Description
+	}
+
+	// Calculate balance adjustments
+	// First, reverse the old transaction's impact
+	if oldTx.Type == "credit" {
+		_, err = tx.Exec(ctx, `
+			UPDATE wallet_balances
+			SET balance = balance - $1, updated_at = $2
+			WHERE user_id = $3 AND currency = $4
+		`, oldTx.Amount, now, userID, oldTx.Currency)
+	} else if oldTx.Type == "debit" {
+		_, err = tx.Exec(ctx, `
+			UPDATE wallet_balances
+			SET balance = balance + $1, updated_at = $2
+			WHERE user_id = $3 AND currency = $4
+		`, oldTx.Amount, now, userID, oldTx.Currency)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("reversing old balance: %w", err)
+	}
+
+	// Apply the new transaction's impact
+	if newType == "credit" {
+		_, err = tx.Exec(ctx, `
+			INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
+			VALUES ($1, $2, $3, $4, $5)
+			ON CONFLICT (user_id, currency) DO UPDATE SET
+				balance = wallet_balances.balance + EXCLUDED.balance,
+				updated_at = EXCLUDED.updated_at
+		`, uuid.New(), userID, newCurrency, newAmount, now)
+	} else if newType == "debit" {
+		// Check if sufficient balance for debit
+		var currentBalance float64
+		err = tx.QueryRow(ctx, `
+			SELECT COALESCE(balance, 0) FROM wallet_balances
+			WHERE user_id = $1 AND currency = $2
+		`, userID, newCurrency).Scan(&currentBalance)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("checking balance: %w", err)
+		}
+		if currentBalance < newAmount {
+			return nil, ErrInsufficientBalance
+		}
+		_, err = tx.Exec(ctx, `
+			INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
+			VALUES ($1, $2, $3, $4, $5)
+			ON CONFLICT (user_id, currency) DO UPDATE SET
+				balance = wallet_balances.balance + EXCLUDED.balance,
+				updated_at = EXCLUDED.updated_at
+		`, uuid.New(), userID, newCurrency, -newAmount, now)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("applying new balance: %w", err)
+	}
+
+	// Update the transaction record
+	_, err = tx.Exec(ctx, `
+		UPDATE transactions
+		SET type = $1, amount = $2, currency = $3, category = $4, icon = $5, description = $6
+		WHERE id = $7 AND user_id = $8
+	`, newType, newAmount, newCurrency, newCategory, newIcon, newDescription, txID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("updating transaction: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("committing update: %w", err)
+	}
+
+	// Return the updated transaction
+	return r.GetTransaction(ctx, userID, txID)
 }

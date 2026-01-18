@@ -28,6 +28,7 @@ type Transaction struct {
 	Rate            *float64        `json:"rate,omitempty"`
 	Source          string          `json:"source"` // "manual", "ai_receipt", "ai_invoice"
 	Category        string          `json:"category,omitempty"`
+	Icon            string          `json:"icon,omitempty"`
 	AIExtractedData json.RawMessage `json:"ai_extracted_data,omitempty"`
 	Description     string          `json:"description,omitempty"`
 	CreatedAt       time.Time       `json:"created_at"`
@@ -35,10 +36,21 @@ type Transaction struct {
 
 // TransactionRequest represents a manual transaction request
 type TransactionRequest struct {
-	Type        string `json:"type"`        // "credit" or "debit"
+	Type        string  `json:"type"` // "credit" or "debit"
 	Amount      float64 `json:"amount"`
 	Currency    string  `json:"currency"`
 	Category    string  `json:"category,omitempty"`
+	Icon        string  `json:"icon,omitempty"`
+	Description string  `json:"description,omitempty"`
+}
+
+// UpdateTransactionRequest represents a request to update an existing transaction
+type UpdateTransactionRequest struct {
+	Type        string  `json:"type,omitempty"`
+	Amount      float64 `json:"amount,omitempty"`
+	Currency    string  `json:"currency,omitempty"`
+	Category    string  `json:"category,omitempty"`
+	Icon        string  `json:"icon,omitempty"`
 	Description string  `json:"description,omitempty"`
 }
 

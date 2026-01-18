@@ -73,7 +73,7 @@ func (s *WalletService) AddTransaction(ctx context.Context, userID uuid.UUID, re
 	}
 
 	// Use atomic transaction method
-	tx, err := s.walletRepo.AddTransactionAtomic(ctx, userID, req.Type, req.Amount, req.Currency, "manual", req.Description, req.Category, nil)
+	tx, err := s.walletRepo.AddTransactionAtomic(ctx, userID, req.Type, req.Amount, req.Currency, "manual", req.Description, req.Category, req.Icon, nil)
 	if err != nil {
 		if errors.Is(err, repository.ErrInsufficientBalance) {
 			return nil, errors.New("insufficient balance")
@@ -191,7 +191,7 @@ func (s *WalletService) ApplyAIParsedResult(ctx context.Context, userID uuid.UUI
 	aiData, _ := json.Marshal(parsed)
 
 	// Use atomic transaction method
-	tx, err := s.walletRepo.AddTransactionAtomic(ctx, userID, parsed.Type, parsed.Amount, parsed.Currency, "ai_receipt", parsed.Description, "", aiData)
+	tx, err := s.walletRepo.AddTransactionAtomic(ctx, userID, parsed.Type, parsed.Amount, parsed.Currency, "ai_receipt", parsed.Description, "", "", aiData)
 	if err != nil {
 		if errors.Is(err, repository.ErrInsufficientBalance) {
 			return nil, errors.New("insufficient balance")
@@ -199,5 +199,49 @@ func (s *WalletService) ApplyAIParsedResult(ctx context.Context, userID uuid.UUI
 		return nil, fmt.Errorf("applying AI parsed result: %w", err)
 	}
 
+	return tx, nil
+}
+
+// GetTransaction retrieves a single transaction by ID
+func (s *WalletService) GetTransaction(ctx context.Context, userID, txID uuid.UUID) (*model.Transaction, error) {
+	tx, err := s.walletRepo.GetTransaction(ctx, userID, txID)
+	if err != nil {
+		if errors.Is(err, repository.ErrTransactionNotFound) {
+			return nil, errors.New("transaction not found")
+		}
+		return nil, fmt.Errorf("getting transaction: %w", err)
+	}
+	return tx, nil
+}
+
+// DeleteTransaction deletes a transaction and reverses its balance impact
+func (s *WalletService) DeleteTransaction(ctx context.Context, userID, txID uuid.UUID) error {
+	err := s.walletRepo.DeleteTransactionAtomic(ctx, userID, txID)
+	if err != nil {
+		if errors.Is(err, repository.ErrTransactionNotFound) {
+			return errors.New("transaction not found")
+		}
+		return fmt.Errorf("deleting transaction: %w", err)
+	}
+	return nil
+}
+
+// UpdateTransaction updates an existing transaction
+func (s *WalletService) UpdateTransaction(ctx context.Context, userID, txID uuid.UUID, req *model.UpdateTransactionRequest) (*model.Transaction, error) {
+	// Validate type if provided
+	if req.Type != "" && req.Type != "credit" && req.Type != "debit" {
+		return nil, errors.New("type must be 'credit' or 'debit'")
+	}
+
+	tx, err := s.walletRepo.UpdateTransactionAtomic(ctx, userID, txID, req)
+	if err != nil {
+		if errors.Is(err, repository.ErrTransactionNotFound) {
+			return nil, errors.New("transaction not found")
+		}
+		if errors.Is(err, repository.ErrInsufficientBalance) {
+			return nil, errors.New("insufficient balance")
+		}
+		return nil, fmt.Errorf("updating transaction: %w", err)
+	}
 	return tx, nil
 }

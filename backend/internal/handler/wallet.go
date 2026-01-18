@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/rezacr588/currency-converter/internal/middleware"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/service"
@@ -291,4 +293,110 @@ func (h *WalletHandler) ExportTransactions(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.Write([]byte(csvWriter))
+}
+
+// GetTransaction handles GET /api/v1/wallet/transactions/{id}
+func (h *WalletHandler) GetTransaction(w http.ResponseWriter, r *http.Request) {
+	if h.serviceUnavailable(w) {
+		return
+	}
+
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, "user not found in context")
+		return
+	}
+
+	txIDStr := chi.URLParam(r, "id")
+	txID, err := uuid.Parse(txIDStr)
+	if err != nil {
+		httputil.BadRequest(w, "invalid transaction ID")
+		return
+	}
+
+	tx, err := h.walletService.GetTransaction(r.Context(), userID, txID)
+	if err != nil {
+		if err.Error() == "transaction not found" {
+			httputil.NotFound(w, "transaction not found")
+			return
+		}
+		httputil.InternalServerError(w, "failed to get transaction")
+		return
+	}
+
+	httputil.Success(w, tx)
+}
+
+// DeleteTransaction handles DELETE /api/v1/wallet/transactions/{id}
+func (h *WalletHandler) DeleteTransaction(w http.ResponseWriter, r *http.Request) {
+	if h.serviceUnavailable(w) {
+		return
+	}
+
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, "user not found in context")
+		return
+	}
+
+	txIDStr := chi.URLParam(r, "id")
+	txID, err := uuid.Parse(txIDStr)
+	if err != nil {
+		httputil.BadRequest(w, "invalid transaction ID")
+		return
+	}
+
+	err = h.walletService.DeleteTransaction(r.Context(), userID, txID)
+	if err != nil {
+		if err.Error() == "transaction not found" {
+			httputil.NotFound(w, "transaction not found")
+			return
+		}
+		httputil.InternalServerError(w, "failed to delete transaction")
+		return
+	}
+
+	httputil.Success(w, map[string]string{"message": "transaction deleted successfully"})
+}
+
+// UpdateTransaction handles PUT /api/v1/wallet/transactions/{id}
+func (h *WalletHandler) UpdateTransaction(w http.ResponseWriter, r *http.Request) {
+	if h.serviceUnavailable(w) {
+		return
+	}
+
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, "user not found in context")
+		return
+	}
+
+	txIDStr := chi.URLParam(r, "id")
+	txID, err := uuid.Parse(txIDStr)
+	if err != nil {
+		httputil.BadRequest(w, "invalid transaction ID")
+		return
+	}
+
+	var req model.UpdateTransactionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.BadRequest(w, "invalid request body")
+		return
+	}
+
+	tx, err := h.walletService.UpdateTransaction(r.Context(), userID, txID, &req)
+	if err != nil {
+		if err.Error() == "transaction not found" {
+			httputil.NotFound(w, "transaction not found")
+			return
+		}
+		if err.Error() == "insufficient balance" {
+			httputil.BadRequest(w, "insufficient balance")
+			return
+		}
+		httputil.BadRequest(w, err.Error())
+		return
+	}
+
+	httputil.Success(w, tx)
 }

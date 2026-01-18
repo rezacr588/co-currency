@@ -157,6 +157,9 @@ func (d *Database) initTables(ctx context.Context) error {
 		// Add category column if it doesn't exist (for existing databases)
 		`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS category VARCHAR(50)`,
 
+		// Add icon column if it doesn't exist (for existing databases)
+		`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS icon VARCHAR(10)`,
+
 		// Create index after column is ensured to exist
 		`CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category)`,
 
