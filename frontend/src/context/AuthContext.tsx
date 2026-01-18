@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { api, setAuthToken, getAuthToken, clearAuthToken } from '../api/client';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { api, setAuthToken, getAuthToken, clearAuthToken, setOnAuthError } from '../api/client';
 import type { User, LoginRequest, RegisterRequest } from '../types/wallet';
 
 interface AuthContextType {
@@ -17,6 +18,33 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Handle auth errors (401) - redirect to login
+  useEffect(() => {
+    setOnAuthError(() => {
+      setUser(null);
+      // Only redirect if we're on a protected route (not already on login/register)
+      const publicPaths = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/about'];
+      const isPublicPath = publicPaths.some(path =>
+        location.pathname === path || location.pathname.startsWith('/reset-password')
+      );
+
+      if (!isPublicPath) {
+        // Save current path to redirect back after login
+        navigate('/login', {
+          state: { from: location.pathname },
+          replace: true
+        });
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      setOnAuthError(null);
+    };
+  }, [navigate, location.pathname]);
 
   const refreshProfile = useCallback(async () => {
     try {
@@ -59,10 +87,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(response.user);
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     clearAuthToken();
     setUser(null);
-  };
+    navigate('/login', { replace: true });
+  }, [navigate]);
 
   const isAuthenticated = !!user;
 

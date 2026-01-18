@@ -46,6 +46,21 @@ const API_BASE = '/api/v1';
 let authToken: string | null = null;
 let refreshToken: string | null = null;
 
+// Auth error callback - called when 401 is received
+type AuthErrorCallback = () => void;
+let onAuthErrorCallback: AuthErrorCallback | null = null;
+
+export function setOnAuthError(callback: AuthErrorCallback | null) {
+  onAuthErrorCallback = callback;
+}
+
+function handleAuthError() {
+  clearAuthToken();
+  if (onAuthErrorCallback) {
+    onAuthErrorCallback();
+  }
+}
+
 export function setAuthToken(token: string | null) {
   authToken = token;
   if (token) {
@@ -117,6 +132,12 @@ async function fetchWithRetry<T>(
       });
 
       if (!response.ok) {
+        // Handle 401 Unauthorized - token expired or invalid
+        if (response.status === 401) {
+          handleAuthError();
+          throw new Error('Session expired. Please log in again.');
+        }
+
         // Don't retry on client errors (4xx), only server errors (5xx)
         if (response.status >= 400 && response.status < 500) {
           const errorData = await response.json().catch(() => null);
