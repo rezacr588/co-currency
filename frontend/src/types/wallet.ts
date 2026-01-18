@@ -40,7 +40,7 @@ export interface User {
 // Wallet types
 export interface WalletBalance {
   currency: string;
-  amount: number;
+  balance: number;
   updated_at: string;
 }
 

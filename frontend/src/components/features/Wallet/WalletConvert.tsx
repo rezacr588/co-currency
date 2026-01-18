@@ -81,7 +81,7 @@ export function WalletConvert() {
     }
 
     const fromBalance = balances?.balances.find((b: WalletBalance) => b.currency === fromCurrency);
-    if (!fromBalance || fromBalance.amount < numAmount) {
+    if (!fromBalance || fromBalance.balance < numAmount) {
       setError(t('insufficientBalance'));
       return;
     }
@@ -128,7 +128,7 @@ export function WalletConvert() {
                       <Skeleton className="h-4 w-24" />
                     ) : fromBalance ? (
                       <span className="text-xs text-slate-500 dark:text-slate-400">
-                        {t('available')}: {formatCurrency(fromBalance.amount, fromCurrency)}
+                        {t('available')}: {formatCurrency(fromBalance.balance, fromCurrency)}
                       </span>
                     ) : null}
                   </div>

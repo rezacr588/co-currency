@@ -174,7 +174,7 @@ export function WalletCharts({ transactions, balances }: WalletChartsProps) {
                 className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg text-center"
               >
                 <div className="text-2xl font-bold text-slate-900 dark:text-white">
-                  {balance.amount?.toFixed(2) || '0.00'}
+                  {balance.balance?.toFixed(2) || '0.00'}
                 </div>
                 <div className="text-sm text-slate-600 dark:text-slate-400 font-medium">
                   {balance.currency}

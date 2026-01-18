@@ -106,7 +106,12 @@ Key patterns:
 **Wallet (protected):**
 - `GET /api/v1/wallet/balances`, `/summary`, `/transactions`, `/categories`
 - `GET /api/v1/wallet/transactions/export?format=csv`
+- `GET/PUT/DELETE /api/v1/wallet/transactions/{id}`
 - `POST /api/v1/wallet/transaction`, `/convert`
+
+**Tags (protected):**
+- `GET/POST /api/v1/tags`
+- `DELETE /api/v1/tags/{id}`
 
 **Goals (protected):**
 - `GET/POST /api/v1/goals`, `GET /api/v1/goals/categories`
@@ -147,7 +152,7 @@ Backend environment variables (see `/backend/.env.example`):
 PostgreSQL tables (auto-created on startup):
 - `users`: id, email, password_hash, name, failed_login_attempts, locked_until, password_reset_token/expires
 - `wallet_balances`: user_id, currency, balance (unique on user_id+currency)
-- `transactions`: user_id, type, amount, currency, category, description, notes, to_amount, to_currency, rate
+- `transactions`: user_id, type, amount, currency, category, description, notes, icon, to_amount, to_currency, rate
 - `categories`: user_id, name, icon, color, is_default
 - `refresh_tokens`: user_id, token_hash, expires_at
 - `goals`: user_id, name, target_amount, current_amount, currency, category, deadline
@@ -167,3 +172,22 @@ make run-local          # Test production build locally
 CI/CD: GitHub Actions runs tests and auto-deploys to Koyeb on main branch push.
 
 Pre-commit hook runs Go tests and frontend TypeScript/tests before commits.
+
+## Deployment
+
+Production deployment is on Koyeb. Use `koyeb` MCP server to manage:
+- App: `terrible-moselle`
+- Service: `co-currency`
+- URL: https://terrible-moselle-airez-1828dc33.koyeb.app
+
+## Database Access
+
+Neon PostgreSQL database:
+- Project ID: `royal-cake-50541080`
+- Use the `postgres` MCP server to query directly (connection pre-configured)
+
+Example queries:
+```sql
+SELECT * FROM wallet_balances WHERE user_id = '...';
+SELECT * FROM transactions ORDER BY created_at DESC LIMIT 10;
+```

@@ -126,7 +126,7 @@ export function Wallet() {
                       <BalanceCard
                         key={balance.currency}
                         currency={balance.currency}
-                        amount={balance.amount}
+                        amount={balance.balance}
                       />
                     ))}
                   </div>
