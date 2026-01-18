@@ -1,6 +1,6 @@
-import { useState, FormEvent, useRef, useEffect } from 'react';
+import { useState, FormEvent, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { api } from '../../../api/client';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrencies } from '../../../hooks';
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
 import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
 import { ErrorMessage } from '../../ui/ErrorMessage';
+import { WalletBalance } from '../../../types/wallet';
 
 // Common transaction emoji icons
 const TRANSACTION_EMOJIS = [
@@ -107,6 +108,14 @@ export function TransactionForm() {
   const queryClient = useQueryClient();
   const { data: currencies } = useCurrencies();
 
+  // Fetch user's balances
+  const { data: balancesData } = useQuery({
+    queryKey: ['wallet-balances'],
+    queryFn: api.wallet.getBalances,
+  });
+
+  const balances: WalletBalance[] = balancesData?.balances || [];
+
   const [type, setType] = useState<'credit' | 'debit'>('credit');
   const [currency, setCurrency] = useState('USD');
   const [amount, setAmount] = useState('');
@@ -114,6 +123,26 @@ export function TransactionForm() {
   const [icon, setIcon] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Get current balance for selected currency
+  const currentBalance = useMemo(() => {
+    const balance = balances.find((b) => b.currency === currency);
+    return balance?.balance || 0;
+  }, [balances, currency]);
+
+  // For debits, filter to only show currencies with balance
+  const availableCurrenciesForDebit = useMemo(() => {
+    return balances.filter((b) => b.balance > 0).map((b) => b.currency);
+  }, [balances]);
+
+  // When switching to debit, set currency to first available balance
+  useEffect(() => {
+    if (type === 'debit' && availableCurrenciesForDebit.length > 0) {
+      if (!availableCurrenciesForDebit.includes(currency)) {
+        setCurrency(availableCurrenciesForDebit[0]);
+      }
+    }
+  }, [type, availableCurrenciesForDebit, currency]);
 
   const mutation = useMutation({
     mutationFn: api.wallet.addTransaction,
@@ -135,6 +164,12 @@ export function TransactionForm() {
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
       setError(t('invalidAmount'));
+      return;
+    }
+
+    // Validate balance for debits
+    if (type === 'debit' && numAmount > currentBalance) {
+      setError(t('insufficientBalance'));
       return;
     }
 
@@ -205,12 +240,43 @@ export function TransactionForm() {
                     onChange={(e) => setCurrency(e.target.value)}
                     className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-all"
                   >
-                    {currencyOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
+                    {type === 'debit' ? (
+                      // For debits, only show currencies with balance
+                      availableCurrenciesForDebit.length > 0 ? (
+                        availableCurrenciesForDebit.map((code) => {
+                          const currencyInfo = currencies?.find((c) => c.code === code);
+                          const balance = balances.find((b) => b.currency === code)?.balance || 0;
+                          return (
+                            <option key={code} value={code}>
+                              {code} - {currencyInfo?.name || code} ({t('balance')}: {balance.toLocaleString()})
+                            </option>
+                          );
+                        })
+                      ) : (
+                        <option value="" disabled>
+                          {t('noBalanceAvailable')}
+                        </option>
+                      )
+                    ) : (
+                      // For credits, show all currencies
+                      currencyOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))
+                    )}
                   </select>
+                  {/* Show current balance for selected currency */}
+                  {type === 'debit' && currentBalance > 0 && (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {t('availableBalance')}: <span className="font-medium text-slate-700 dark:text-slate-200">{currentBalance.toLocaleString()} {currency}</span>
+                    </p>
+                  )}
+                  {type === 'debit' && currentBalance === 0 && (
+                    <p className="text-sm text-rose-500">
+                      {t('noBalanceInCurrency')}
+                    </p>
+                  )}
                 </div>
 
                 {/* Icon Picker */}

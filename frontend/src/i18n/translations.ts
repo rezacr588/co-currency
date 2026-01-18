@@ -172,9 +172,12 @@ export const translations = {
     convert: 'Convert',
     conversionFailed: 'Conversion failed. Please try again.',
     insufficientBalance: 'Insufficient balance',
+    noBalanceAvailable: 'No balance available',
+    availableBalance: 'Available balance',
+    noBalanceInCurrency: 'No balance in this currency',
+    balance: 'Balance',
 
     // Transaction History
-    balance: 'Balance',
     convertedFrom: 'Converted from',
     convertedTo: 'Converted to',
 
@@ -603,9 +606,12 @@ export const translations = {
     convert: 'تبدیل',
     conversionFailed: 'تبدیل ناموفق بود. لطفاً دوباره تلاش کنید.',
     insufficientBalance: 'موجودی کافی نیست',
+    noBalanceAvailable: 'موجودی در دسترس نیست',
+    availableBalance: 'موجودی قابل برداشت',
+    noBalanceInCurrency: 'موجودی در این ارز وجود ندارد',
+    balance: 'موجودی',
 
     // Transaction History
-    balance: 'موجودی',
     convertedFrom: 'تبدیل از',
     convertedTo: 'تبدیل به',
 
@@ -1034,9 +1040,12 @@ export const translations = {
     convert: 'تحويل',
     conversionFailed: 'فشل التحويل. يرجى المحاولة مرة أخرى.',
     insufficientBalance: 'رصيد غير كافي',
+    noBalanceAvailable: 'لا يوجد رصيد متاح',
+    availableBalance: 'الرصيد المتاح',
+    noBalanceInCurrency: 'لا يوجد رصيد بهذه العملة',
+    balance: 'الرصيد',
 
     // Transaction History
-    balance: 'الرصيد',
     convertedFrom: 'محول من',
     convertedTo: 'محول إلى',
 
@@ -1465,9 +1474,12 @@ export const translations = {
     convert: 'Çevir',
     conversionFailed: 'Çevirme başarısız. Lütfen tekrar deneyin.',
     insufficientBalance: 'Yetersiz bakiye',
+    noBalanceAvailable: 'Kullanılabilir bakiye yok',
+    availableBalance: 'Kullanılabilir bakiye',
+    noBalanceInCurrency: 'Bu para biriminde bakiye yok',
+    balance: 'Bakiye',
 
     // Transaction History
-    balance: 'Bakiye',
     convertedFrom: 'Dönüştürüldü',
     convertedTo: 'Dönüştürüldü',
 
