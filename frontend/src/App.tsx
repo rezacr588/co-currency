@@ -356,19 +356,19 @@ function HeroSection() {
   const { t } = useLanguage();
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-[#1e3a5f] via-[#2d4a6f] to-[#1e3a5f] rounded-2xl">
+    <section className="relative overflow-hidden bg-gradient-to-br from-primary-800 via-primary-700 to-primary-800 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 rounded-2xl border border-primary-700/50 dark:border-slate-700/50">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#d4af37]/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#d4af37]/10 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-amber-500/10 dark:bg-amber-400/5 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-amber-500/10 dark:bg-amber-400/5 rounded-full blur-3xl" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
       </div>
 
       <div className="relative px-6 py-16 sm:py-20 md:py-24 text-center">
         <div className="max-w-4xl mx-auto">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full bg-white/10 border border-white/20 text-white/90 text-sm font-medium backdrop-blur-sm">
-            <svg className="w-4 h-4 text-[#d4af37]" fill="currentColor" viewBox="0 0 20 20">
+          <div className="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 text-white/90 text-sm font-medium backdrop-blur-sm">
+            <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
             <span>{t('statsFreeLabel')}</span>
@@ -380,7 +380,7 @@ function HeroSection() {
           </h1>
 
           {/* Subtitle */}
-          <p className="text-lg sm:text-xl text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-lg sm:text-xl text-white/80 dark:text-slate-300 mb-10 max-w-2xl mx-auto leading-relaxed">
             {t('heroSubtitle')}
           </p>
 
@@ -390,7 +390,7 @@ function HeroSection() {
               <Button
                 variant="primary"
                 size="lg"
-                className="w-full sm:w-auto bg-[#d4af37] hover:bg-[#c9a432] text-[#1e3a5f] font-semibold px-8 py-4 text-lg shadow-lg shadow-[#d4af37]/25 border-0"
+                className="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 dark:bg-amber-500 dark:hover:bg-amber-400 text-slate-900 font-semibold px-8 py-4 text-lg shadow-lg shadow-amber-500/25 border-0"
               >
                 {t('heroCtaPrimary')}
                 <svg className="w-5 h-5 ms-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -402,7 +402,7 @@ function HeroSection() {
               <Button
                 variant="secondary"
                 size="lg"
-                className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border-white/30 px-8 py-4 text-lg backdrop-blur-sm"
+                className="w-full sm:w-auto bg-white/10 hover:bg-white/20 dark:bg-white/5 dark:hover:bg-white/10 text-white border-white/30 dark:border-white/20 px-8 py-4 text-lg backdrop-blur-sm"
               >
                 {t('heroCtaSecondary')}
               </Button>
@@ -410,21 +410,21 @@ function HeroSection() {
           </div>
 
           {/* Trust indicators */}
-          <div className="flex flex-wrap justify-center gap-6 text-white/60 text-sm">
+          <div className="flex flex-wrap justify-center gap-6 text-white/60 dark:text-slate-400 text-sm">
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
               <span>{t('trustSecure')}</span>
             </div>
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
               <span>{t('trustPrivacy')}</span>
             </div>
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
               <span>{t('trustOpen')}</span>
@@ -650,19 +650,19 @@ function FinalCTA() {
 
   return (
     <section className="py-12">
-      <Card className="overflow-hidden bg-gradient-to-br from-[#1e3a5f] via-[#2d4a6f] to-[#1e3a5f] border-0">
+      <Card className="overflow-hidden bg-gradient-to-br from-primary-800 via-primary-700 to-primary-800 dark:from-slate-800 dark:via-slate-700 dark:to-slate-800 border-primary-700/50 dark:border-slate-600/50">
         <CardContent className="py-12 px-6 text-center relative">
           {/* Background decoration */}
           <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute -top-20 -right-20 w-40 h-40 bg-[#d4af37]/20 rounded-full blur-3xl" />
-            <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-[#d4af37]/20 rounded-full blur-3xl" />
+            <div className="absolute -top-20 -right-20 w-40 h-40 bg-amber-500/20 dark:bg-amber-400/10 rounded-full blur-3xl" />
+            <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-amber-500/20 dark:bg-amber-400/10 rounded-full blur-3xl" />
           </div>
 
           <div className="relative max-w-2xl mx-auto">
             <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
               {t('finalCtaTitle')}
             </h2>
-            <p className="text-white/80 mb-8 text-lg">
+            <p className="text-white/80 dark:text-slate-300 mb-8 text-lg">
               {t('finalCtaSubtitle')}
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
@@ -670,7 +670,7 @@ function FinalCTA() {
                 <Button
                   variant="primary"
                   size="lg"
-                  className="w-full sm:w-auto bg-[#d4af37] hover:bg-[#c9a432] text-[#1e3a5f] font-semibold px-8 py-4 text-lg shadow-lg shadow-[#d4af37]/25 border-0"
+                  className="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold px-8 py-4 text-lg shadow-lg shadow-amber-500/25 border-0"
                 >
                   {t('heroCtaPrimary')}
                   <svg className="w-5 h-5 ms-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -682,7 +682,7 @@ function FinalCTA() {
                 <Button
                   variant="secondary"
                   size="lg"
-                  className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border-white/30 px-8 py-4 text-lg backdrop-blur-sm"
+                  className="w-full sm:w-auto bg-white/10 hover:bg-white/20 dark:bg-white/5 dark:hover:bg-white/10 text-white border-white/30 dark:border-white/20 px-8 py-4 text-lg backdrop-blur-sm"
                 >
                   {t('login')}
                 </Button>

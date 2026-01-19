@@ -8,6 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import { Skeleton } from '../../ui/Skeleton';
 import { TransactionHistory } from '../Wallet/TransactionHistory';
+import {
+  Wallet,
+  Target,
+  PieChart,
+  RefreshCw,
+  TrendingUp,
+  Bot,
+} from 'lucide-react';
 
 function formatCurrency(amount: number, currency: string): string {
   return new Intl.NumberFormat('en-US', {
@@ -49,7 +57,7 @@ function StatsCard({ title, value, subtitle, icon, colorClass = 'text-primary-70
 
 interface FeatureCardProps {
   to: string;
-  icon: string;
+  icon: React.ReactNode;
   title: string;
   description: string;
 }
@@ -59,7 +67,9 @@ function FeatureCard({ to, icon, title, description }: FeatureCardProps) {
     <Link to={to} className="block">
       <Card className="h-full hover:border-primary-300 dark:hover:border-primary-700 transition-colors cursor-pointer group">
         <CardContent className="py-4 text-center">
-          <span className="text-3xl mb-2 block group-hover:scale-110 transition-transform">{icon}</span>
+          <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 group-hover:scale-110 transition-transform">
+            {icon}
+          </div>
           <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">{title}</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">{description}</p>
         </CardContent>
@@ -212,37 +222,37 @@ export function Dashboard() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
               <FeatureCard
                 to="/wallet"
-                icon="wallet"
+                icon={<Wallet className="w-5 h-5" />}
                 title={t('wallet')}
                 description={t('walletCardDesc')}
               />
               <FeatureCard
                 to="/goals"
-                icon="target"
+                icon={<Target className="w-5 h-5" />}
                 title={t('financialGoals')}
                 description={t('goalsCardDesc')}
               />
               <FeatureCard
                 to="/budgets"
-                icon="chart"
+                icon={<PieChart className="w-5 h-5" />}
                 title={t('budgets')}
                 description={t('budgetsCardDesc')}
               />
               <FeatureCard
                 to="/recurring"
-                icon="repeat"
+                icon={<RefreshCw className="w-5 h-5" />}
                 title={t('recurring')}
                 description={t('recurringCardDesc')}
               />
               <FeatureCard
                 to="/reports"
-                icon="trending"
+                icon={<TrendingUp className="w-5 h-5" />}
                 title={t('reportsAndStats')}
                 description={t('reportsCardDesc')}
               />
               <FeatureCard
                 to="/wallet/ai"
-                icon="robot"
+                icon={<Bot className="w-5 h-5" />}
                 title={t('aiParser')}
                 description={t('aiCardDesc')}
               />
