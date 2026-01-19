@@ -87,16 +87,16 @@ export function InlineCurrencySelect({ value, onChange, currencies }: InlineCurr
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="h-full px-3 py-2 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-600/50 border-s border-slate-200 dark:border-slate-600 transition-colors flex items-center gap-1.5 sm:gap-2"
+        className="h-full px-2 sm:px-3 py-1.5 sm:py-2 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-600/50 border-s border-slate-200 dark:border-slate-600 transition-colors flex items-center gap-1 sm:gap-1.5 md:gap-2 rounded-e-lg flex-shrink-0"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
-        <span className="text-xl sm:text-2xl">{flag}</span>
-        <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200">
+        <span className="text-lg sm:text-xl md:text-2xl">{flag}</span>
+        <span className="text-[10px] sm:text-xs md:text-sm font-medium text-slate-700 dark:text-slate-200">
           {value}
         </span>
         <svg
-          className={`w-3 h-3 sm:w-4 sm:h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"

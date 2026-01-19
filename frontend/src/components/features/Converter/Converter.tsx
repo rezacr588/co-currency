@@ -139,7 +139,7 @@ export function Converter() {
   }, [result?.rate]);
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4">
+    <div className="w-full max-w-2xl mx-auto px-2 sm:px-4">
       {/* Floating decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 text-6xl opacity-5 animate-float-slow">💱</div>
@@ -158,25 +158,25 @@ export function Converter() {
           <div className="h-1 bg-gradient-to-r from-primary-500 via-purple-500 to-pink-500" />
 
           {/* Header Section */}
-          <div className="px-6 pt-6 pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center shadow-lg shadow-primary-500/30">
-                  <Zap className="w-5 h-5 text-white" />
+          <div className="px-3 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center shadow-lg shadow-primary-500/30 flex-shrink-0">
+                  <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-800 dark:text-white">
+                <div className="min-w-0">
+                  <h2 className="text-sm sm:text-lg font-bold text-slate-800 dark:text-white truncate">
                     {t('currencyConverter') || 'Currency Converter'}
                   </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    160+ currencies • Real-time rates
+                  <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
+                    160+ currencies
                   </p>
                 </div>
               </div>
               {result?.updated_at && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-full">
-                  <Clock className="w-3 h-3 text-slate-400" />
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-slate-100 dark:bg-slate-800 rounded-full flex-shrink-0">
+                  <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400" />
+                  <span className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
                     {new Date(result.updated_at).toLocaleTimeString(undefined, {
                       hour: '2-digit',
                       minute: '2-digit',
@@ -188,21 +188,19 @@ export function Converter() {
           </div>
 
           {/* Main Converter Section */}
-          <div className="px-6 pb-6 space-y-4">
-            {/* Converter Box */}
+          <div className="px-3 sm:px-6 pb-4 sm:pb-6 space-y-3 sm:space-y-4">
+            {/* Converter Box - Minimal Coin Design */}
             <div
-              className={`relative bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-slate-800/80 dark:to-slate-800/40 border border-slate-200/80 dark:border-slate-700/60 rounded-2xl overflow-hidden transition-all duration-300 ${
+              className={`relative transition-all duration-300 ${
                 isSwapping ? 'scale-[0.98]' : 'scale-100'
               }`}
             >
-              {/* FROM Section */}
-              <div className="p-4 border-b border-slate-200/80 dark:border-slate-700/60">
-                <div className="mb-2">
-                  <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                    {t('from') || 'From'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
+              {/* FROM Section - Top Half */}
+              <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-t-3xl p-4 pb-6">
+                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+                  {t('from') || 'From'}
+                </span>
+                <div className="flex items-center gap-2 mt-1">
                   <CurrencyInput
                     value={amount}
                     onChange={setAmount}
@@ -218,40 +216,37 @@ export function Converter() {
                 </div>
               </div>
 
-              {/* Swap Button - Center */}
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+              {/* Swap Button - Coin Divider */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
                 <SwapButton onClick={handleSwap} />
               </div>
 
-              {/* TO Section */}
-              <div className="p-4 bg-white/50 dark:bg-slate-900/30">
-                <div className="mb-2">
-                  <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                    {t('to') || 'To'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  {/* Result Display */}
-                  <div className="flex-1 min-w-0 py-3 px-1">
+              {/* TO Section - Bottom Half */}
+              <div className="relative bg-slate-50 dark:bg-slate-800/50 border border-t-0 border-slate-200 dark:border-slate-700 rounded-b-3xl p-4 pt-6">
+                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+                  {t('to') || 'To'}
+                </span>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex-1 min-w-0 py-2 overflow-hidden">
                     {isLoading ? (
-                      <div className="h-9 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse" />
+                      <div className="h-7 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
                     ) : error ? (
-                      <span className="text-sm text-red-500">Error loading rate</span>
+                      <span className="text-sm text-red-500">Error</span>
                     ) : result ? (
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-lg text-slate-400 dark:text-slate-500">
+                      <div className="flex items-baseline gap-1 overflow-hidden">
+                        <span className="text-base text-slate-400 flex-shrink-0">
                           {CURRENCY_SYMBOLS[toCurrency] || ''}
                         </span>
                         <AnimatedNumber
                           value={result.result}
-                          className="text-3xl sm:text-4xl font-bold text-slate-800 dark:text-white tabular-nums"
+                          className="text-2xl sm:text-3xl font-semibold text-slate-800 dark:text-white tabular-nums truncate"
                         />
                         {rateIndicator && (
                           <div
-                            className={`flex items-center gap-0.5 px-2 py-1 rounded-full text-xs font-medium ${
+                            className={`flex-shrink-0 ml-1 ${
                               rateIndicator === 'up'
-                                ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                                : 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                                ? 'text-emerald-500'
+                                : 'text-amber-500'
                             }`}
                           >
                             {rateIndicator === 'up' ? (
@@ -263,7 +258,7 @@ export function Converter() {
                         )}
                       </div>
                     ) : (
-                      <span className="text-3xl text-slate-300 dark:text-slate-600">—</span>
+                      <span className="text-2xl text-slate-300 dark:text-slate-600">—</span>
                     )}
                   </div>
                   <InlineCurrencySelect
@@ -284,16 +279,16 @@ export function Converter() {
 
             {/* Exchange Rate Pills */}
             {!validationError && result && (
-              <div className="flex flex-wrap justify-center gap-3">
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm">
-                  <span className="text-lg">{CURRENCY_FLAGS[result.from] || '🌍'}</span>
-                  <span className="text-sm text-slate-600 dark:text-slate-300">1 {result.from}</span>
+              <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
+                <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl shadow-sm text-xs sm:text-sm">
+                  <span className="text-base sm:text-lg">{CURRENCY_FLAGS[result.from] || '🌍'}</span>
+                  <span className="text-slate-600 dark:text-slate-300">1 {result.from}</span>
                   <span className="text-slate-300 dark:text-slate-600">=</span>
-                  <span className="font-mono font-bold text-slate-800 dark:text-white">
+                  <span className="font-mono font-bold text-slate-800 dark:text-white truncate max-w-[80px] sm:max-w-none">
                     {formatRate(result.rate)}
                   </span>
-                  <span className="text-lg">{CURRENCY_FLAGS[result.to] || '🌍'}</span>
-                  <span className="text-sm text-slate-600 dark:text-slate-300">{result.to}</span>
+                  <span className="text-base sm:text-lg">{CURRENCY_FLAGS[result.to] || '🌍'}</span>
+                  <span className="text-slate-600 dark:text-slate-300">{result.to}</span>
                 </div>
               </div>
             )}
@@ -314,31 +309,31 @@ export function Converter() {
           </div>
 
           {/* Popular Pairs Section */}
-          <div className="px-6 pb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <Zap className="w-4 h-4 text-primary-500" />
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+          <div className="px-3 sm:px-6 pb-4 sm:pb-6">
+            <div className="flex items-center gap-2 mb-2 sm:mb-3">
+              <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-primary-500" />
+              <span className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 {t('popularPairs') || 'Popular Pairs'}
               </span>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {POPULAR_PAIRS.map((pair) => {
                 const isActive = pair.from === fromCurrency && pair.to === toCurrency;
                 return (
                   <button
                     key={`${pair.from}-${pair.to}`}
                     onClick={() => handleQuickPair(pair.from, pair.to)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center gap-0.5 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-sm font-medium transition-all duration-200 ${
                       isActive
                         ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30 scale-105'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 hover:scale-105'
                     }`}
                   >
-                    <span className="text-base">{CURRENCY_FLAGS[pair.from]}</span>
+                    <span className="text-sm sm:text-base">{CURRENCY_FLAGS[pair.from]}</span>
                     <span>{pair.from}</span>
                     <span className="text-slate-400 dark:text-slate-500">→</span>
                     <span>{pair.to}</span>
-                    <span className="text-base">{CURRENCY_FLAGS[pair.to]}</span>
+                    <span className="text-sm sm:text-base">{CURRENCY_FLAGS[pair.to]}</span>
                   </button>
                 );
               })}
@@ -346,11 +341,11 @@ export function Converter() {
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 bg-slate-50/80 dark:bg-slate-800/50 border-t border-slate-200/80 dark:border-slate-700/50">
-            <div className="flex items-center justify-center gap-4 text-xs text-slate-400 dark:text-slate-500">
+          <div className="px-3 sm:px-6 py-3 sm:py-4 bg-slate-50/80 dark:bg-slate-800/50 border-t border-slate-200/80 dark:border-slate-700/50">
+            <div className="flex items-center justify-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-slate-400 dark:text-slate-500">
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                Live rates from ECB
+                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Live rates
               </span>
               <span>•</span>
               <span>Updated daily</span>

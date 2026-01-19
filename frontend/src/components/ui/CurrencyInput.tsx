@@ -120,8 +120,8 @@ export function CurrencyInput({
     <div className="relative flex-1 min-w-0">
       {/* Currency Symbol */}
       {currencySymbol && displayValue && (
-        <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-          <span className="text-base sm:text-lg text-slate-400 dark:text-slate-500 font-light">
+        <div className="absolute left-2 sm:left-3 md:left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+          <span className="text-sm sm:text-base md:text-lg text-slate-400 dark:text-slate-500 font-light">
             {currencySymbol}
           </span>
         </div>
@@ -137,8 +137,8 @@ export function CurrencyInput({
         onFocus={handleFocus}
         onBlur={handleBlur}
         placeholder={placeholder}
-        className={`w-full bg-transparent py-3 text-xl sm:text-2xl font-light text-slate-800 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 focus:outline-none tabular-nums ${
-          currencySymbol && displayValue ? 'pl-10 sm:pl-12 pr-3 sm:pr-4' : 'px-3 sm:px-4'
+        className={`w-full bg-transparent py-2 sm:py-3 text-lg sm:text-xl md:text-2xl font-light text-slate-800 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 focus:outline-none tabular-nums truncate ${
+          currencySymbol && displayValue ? 'pl-8 sm:pl-10 md:pl-12 pr-2 sm:pr-3 md:pr-4' : 'px-2 sm:px-3 md:px-4'
         } ${className}`}
         aria-label={`Amount in ${currencyCode}`}
       />

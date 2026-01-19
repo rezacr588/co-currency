@@ -19,23 +19,25 @@ export function SwapButton({ onClick }: SwapButtonProps) {
   return (
     <button
       onClick={handleClick}
-      className={`relative flex-shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 via-primary-600 to-purple-600 shadow-xl shadow-primary-500/40 hover:shadow-primary-500/60 hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center group focus:outline-none focus:ring-4 focus:ring-primary-500/30 ${
-        isAnimating ? 'animate-bounce-once' : ''
-      }`}
+      className="relative flex-shrink-0 w-11 h-11 rounded-full transition-all duration-300 flex items-center justify-center group focus:outline-none focus:ring-2 focus:ring-amber-400/40 hover:scale-105 active:scale-95"
       aria-label={t('swapCurrencies')}
       title={t('swapCurrencies')}
     >
-      {/* Pulse ring effect */}
-      <span className="absolute inset-0 rounded-2xl bg-primary-500/20 animate-ping opacity-0 group-hover:opacity-100" />
+      {/* Coin background */}
+      <span className="absolute inset-0 rounded-full bg-gradient-to-b from-amber-400 to-amber-500 shadow-md" />
 
-      {/* Inner glow */}
-      <span className="absolute inset-1 rounded-xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+      {/* Inner face */}
+      <span className="absolute inset-[3px] rounded-full bg-gradient-to-br from-amber-300 to-amber-400" />
+
+      {/* Subtle shine */}
+      <span className="absolute inset-[3px] rounded-full bg-gradient-to-br from-white/40 via-transparent to-transparent" />
 
       {/* Icon */}
       <ArrowUpDown
-        className={`relative w-5 h-5 text-white transition-transform duration-500 ${
+        className={`relative w-4 h-4 text-amber-900 transition-transform duration-400 ${
           isAnimating ? 'rotate-180' : 'group-hover:rotate-180'
         }`}
+        strokeWidth={2.5}
       />
     </button>
   );
