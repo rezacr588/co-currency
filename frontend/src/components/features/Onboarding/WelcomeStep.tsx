@@ -1,3 +1,4 @@
+import { Hand, RefreshCw, BarChart3, Bot } from 'lucide-react';
 import { Button } from '../../ui';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useAuth } from '../../../context/AuthContext';
@@ -14,7 +15,7 @@ export function WelcomeStep({ onNext, onSkip }: WelcomeStepProps) {
   return (
     <div className="text-center py-8">
       <div className="w-20 h-20 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-        <span className="text-4xl">👋</span>
+        <Hand className="w-10 h-10 text-primary-600 dark:text-primary-400" />
       </div>
       <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
         {t('welcomeTitle') || `Welcome, ${user?.name || 'there'}!`}
@@ -27,7 +28,7 @@ export function WelcomeStep({ onNext, onSkip }: WelcomeStepProps) {
       <div className="space-y-4">
         <div className="flex items-center justify-center gap-3 text-left max-w-sm mx-auto">
           <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center shrink-0">
-            <span className="text-xl">💱</span>
+            <RefreshCw className="w-5 h-5 text-green-600 dark:text-green-400" />
           </div>
           <div>
             <h3 className="font-medium text-slate-900 dark:text-white">
@@ -41,7 +42,7 @@ export function WelcomeStep({ onNext, onSkip }: WelcomeStepProps) {
 
         <div className="flex items-center justify-center gap-3 text-left max-w-sm mx-auto">
           <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center shrink-0">
-            <span className="text-xl">📊</span>
+            <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
             <h3 className="font-medium text-slate-900 dark:text-white">
@@ -55,7 +56,7 @@ export function WelcomeStep({ onNext, onSkip }: WelcomeStepProps) {
 
         <div className="flex items-center justify-center gap-3 text-left max-w-sm mx-auto">
           <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center shrink-0">
-            <span className="text-xl">🤖</span>
+            <Bot className="w-5 h-5 text-primary-600 dark:text-primary-400" />
           </div>
           <div>
             <h3 className="font-medium text-slate-900 dark:text-white">

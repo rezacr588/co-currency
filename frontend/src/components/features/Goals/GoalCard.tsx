@@ -7,6 +7,7 @@ import { Card, CardContent } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
 import { GoalProgress } from './GoalProgress';
+import { GOAL_ICONS } from '../../../constants/icons';
 
 interface GoalCardProps {
   goal: Goal;
@@ -30,18 +31,6 @@ function formatDate(dateString: string): string {
   });
 }
 
-const categoryIcons: Record<string, string> = {
-  savings: '💰',
-  emergency_fund: '🚨',
-  vacation: '✈️',
-  home: '🏠',
-  car: '🚗',
-  education: '📚',
-  retirement: '👴',
-  investment: '📈',
-  debt_payoff: '💳',
-  other: '🎯',
-};
 
 export function GoalCard({ goal, onEdit }: GoalCardProps) {
   const { t } = useLanguage();
@@ -81,7 +70,10 @@ export function GoalCard({ goal, onEdit }: GoalCardProps) {
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">{categoryIcons[goal.category || 'other']}</span>
+            {(() => {
+              const IconComponent = GOAL_ICONS[goal.category || 'other'] || GOAL_ICONS.other;
+              return <IconComponent className="w-6 h-6 text-primary-600 dark:text-primary-400" />;
+            })()}
             <div>
               <h3 className="font-semibold text-slate-800 dark:text-slate-100">{goal.name}</h3>
               {goal.deadline && (

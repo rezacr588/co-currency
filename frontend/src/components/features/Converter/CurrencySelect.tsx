@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { Globe } from 'lucide-react';
 import type { Currency } from '../../../types';
 import { CURRENCY_FLAGS } from '../../../utils/constants';
 import { useLanguage } from '../../../context/LanguageContext';
@@ -23,7 +24,7 @@ export function CurrencySelect({ value, onChange, currencies, label }: CurrencyS
     return currencies?.find(c => c.code === value);
   }, [currencies, value]);
 
-  const flag = CURRENCY_FLAGS[value] || '🌍';
+  const flag = CURRENCY_FLAGS[value];
 
   const filteredCurrencies = useMemo(() => {
     if (!currencies) return [];
@@ -100,7 +101,11 @@ export function CurrencySelect({ value, onChange, currencies, label }: CurrencyS
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
-        <span className="text-2xl flex-shrink-0">{flag}</span>
+        {flag ? (
+          <span className="text-2xl flex-shrink-0">{flag}</span>
+        ) : (
+          <Globe className="w-6 h-6 text-slate-400 flex-shrink-0" />
+        )}
         <div className="flex-1 min-w-0">
           <span className="font-semibold text-slate-800 dark:text-white text-sm">{value}</span>
           {selectedCurrency && (
@@ -181,7 +186,7 @@ export function CurrencySelect({ value, onChange, currencies, label }: CurrencyS
             >
               {filteredCurrencies.length > 0 ? (
                 filteredCurrencies.map((currency) => {
-                  const currencyFlag = CURRENCY_FLAGS[currency.code] || '🌍';
+                  const currencyFlag = CURRENCY_FLAGS[currency.code];
                   const isSelected = currency.code === value;
 
                   return (
@@ -197,7 +202,11 @@ export function CurrencySelect({ value, onChange, currencies, label }: CurrencyS
                           : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
                       }`}
                     >
-                      <span className="text-2xl flex-shrink-0">{currencyFlag}</span>
+                      {currencyFlag ? (
+                        <span className="text-2xl flex-shrink-0">{currencyFlag}</span>
+                      ) : (
+                        <Globe className="w-6 h-6 text-slate-400 flex-shrink-0" />
+                      )}
                       <div className="flex-1 min-w-0">
                         <span className="font-semibold text-sm block">{currency.code}</span>
                         <span className="text-xs text-slate-500 dark:text-slate-400 block truncate">

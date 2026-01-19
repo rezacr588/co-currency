@@ -12,6 +12,9 @@ import {
   Clock,
   Zap,
   RefreshCw,
+  ArrowLeftRight,
+  Banknote,
+  Globe,
 } from 'lucide-react';
 
 const STORAGE_KEY = 'currency-converter-state';
@@ -142,9 +145,15 @@ export function Converter() {
     <div className="w-full max-w-2xl mx-auto px-2 sm:px-4">
       {/* Floating decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 text-6xl opacity-5 animate-float-slow">💱</div>
-        <div className="absolute top-40 right-20 text-5xl opacity-5 animate-float-slower">💰</div>
-        <div className="absolute bottom-40 left-20 text-4xl opacity-5 animate-float">🌍</div>
+        <div className="absolute top-20 left-10 opacity-5 animate-float-slow">
+          <ArrowLeftRight className="w-16 h-16 text-slate-600 dark:text-slate-400" />
+        </div>
+        <div className="absolute top-40 right-20 opacity-5 animate-float-slower">
+          <Banknote className="w-14 h-14 text-slate-600 dark:text-slate-400" />
+        </div>
+        <div className="absolute bottom-40 left-20 opacity-5 animate-float">
+          <Globe className="w-12 h-12 text-slate-600 dark:text-slate-400" />
+        </div>
       </div>
 
       {/* Main Card */}
@@ -281,13 +290,21 @@ export function Converter() {
             {!validationError && result && (
               <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
                 <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl shadow-sm text-xs sm:text-sm">
-                  <span className="text-base sm:text-lg">{CURRENCY_FLAGS[result.from] || '🌍'}</span>
+                  {CURRENCY_FLAGS[result.from] ? (
+                    <span className="text-base sm:text-lg">{CURRENCY_FLAGS[result.from]}</span>
+                  ) : (
+                    <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />
+                  )}
                   <span className="text-slate-600 dark:text-slate-300">1 {result.from}</span>
                   <span className="text-slate-300 dark:text-slate-600">=</span>
                   <span className="font-mono font-bold text-slate-800 dark:text-white truncate max-w-[80px] sm:max-w-none">
                     {formatRate(result.rate)}
                   </span>
-                  <span className="text-base sm:text-lg">{CURRENCY_FLAGS[result.to] || '🌍'}</span>
+                  {CURRENCY_FLAGS[result.to] ? (
+                    <span className="text-base sm:text-lg">{CURRENCY_FLAGS[result.to]}</span>
+                  ) : (
+                    <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />
+                  )}
                   <span className="text-slate-600 dark:text-slate-300">{result.to}</span>
                 </div>
               </div>

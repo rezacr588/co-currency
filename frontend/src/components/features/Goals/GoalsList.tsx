@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { Target } from 'lucide-react';
 import { api } from '../../../api/client';
 import { useLanguage } from '../../../context/LanguageContext';
 import type { Goal } from '../../../types/goal';
@@ -113,7 +114,9 @@ export function GoalsList() {
           ) : goals.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
-                <div className="text-4xl mb-4">🎯</div>
+                <div className="flex justify-center mb-4">
+                  <Target className="w-12 h-12 text-primary-600 dark:text-primary-400" />
+                </div>
                 <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">
                   {t('noGoalsYet')}
                 </h3>

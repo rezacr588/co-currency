@@ -1,4 +1,5 @@
 import { useConvert } from '../../../hooks';
+import { Globe } from 'lucide-react';
 import { formatNumber } from '../../../utils/format';
 import { CURRENCY_FLAGS, CURRENCY_SYMBOLS } from '../../../utils/constants';
 import { Skeleton } from '../../ui';
@@ -14,8 +15,8 @@ export function QuickConvertCard({ from, to, amount }: QuickConvertCardProps) {
   const { data, isLoading, error } = useConvert(from, to, amount);
   const { t } = useLanguage();
 
-  const fromFlag = CURRENCY_FLAGS[from] || '🌍';
-  const toFlag = CURRENCY_FLAGS[to] || '🌍';
+  const fromFlag = CURRENCY_FLAGS[from];
+  const toFlag = CURRENCY_FLAGS[to];
   const toSymbol = CURRENCY_SYMBOLS[to] || '';
 
   if (error) {
@@ -31,13 +32,21 @@ export function QuickConvertCard({ from, to, amount }: QuickConvertCardProps) {
       <div className="flex flex-col gap-1">
         {/* From */}
         <div className="flex items-center gap-1.5">
-          <span className="text-base flex-shrink-0">{fromFlag}</span>
+          {fromFlag ? (
+            <span className="text-base flex-shrink-0">{fromFlag}</span>
+          ) : (
+            <Globe className="w-4 h-4 text-slate-400 flex-shrink-0" />
+          )}
           <span className="text-xs font-medium text-slate-700 dark:text-slate-200">{formatNumber(amount, 0)}</span>
           <span className="text-[10px] text-slate-400 dark:text-slate-500">{from}</span>
         </div>
         {/* To */}
         <div className="flex items-center gap-1.5">
-          <span className="text-base flex-shrink-0">{toFlag}</span>
+          {toFlag ? (
+            <span className="text-base flex-shrink-0">{toFlag}</span>
+          ) : (
+            <Globe className="w-4 h-4 text-slate-400 flex-shrink-0" />
+          )}
           {isLoading ? (
             <Skeleton width={50} height={14} />
           ) : (

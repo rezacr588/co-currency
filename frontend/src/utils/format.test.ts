@@ -73,9 +73,9 @@ describe('getCurrencyDisplay', () => {
     expect(gbp.symbol).toBe('£');
   });
 
-  it('should return defaults for unknown currencies', () => {
+  it('should return undefined flag for unknown currencies', () => {
     const unknown = getCurrencyDisplay('XYZ');
-    expect(unknown.flag).toBe('🌍');
+    expect(unknown.flag).toBeUndefined();
     expect(unknown.symbol).toBe('XYZ');
   });
 

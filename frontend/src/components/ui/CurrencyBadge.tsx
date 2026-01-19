@@ -1,4 +1,5 @@
 import { HTMLAttributes, forwardRef } from 'react';
+import { Globe } from 'lucide-react';
 import { getCurrencyDisplay } from '../../utils/format';
 
 interface CurrencyBadgeProps extends HTMLAttributes<HTMLSpanElement> {
@@ -24,7 +25,13 @@ export const CurrencyBadge = forwardRef<HTMLSpanElement, CurrencyBadgeProps>(
         className={`currency-badge ${sizeStyles[size]} ${className}`}
         {...props}
       >
-        {showFlag && <span className="text-base">{flag}</span>}
+        {showFlag && (
+          flag ? (
+            <span className="text-base">{flag}</span>
+          ) : (
+            <Globe className="w-4 h-4 text-slate-400 inline-block" data-testid="globe-fallback" />
+          )
+        )}
         <span className="font-semibold">{code}</span>
         {showSymbol && <span className="text-slate-500 dark:text-slate-400">({symbol})</span>}
       </span>

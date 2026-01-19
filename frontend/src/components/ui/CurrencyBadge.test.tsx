@@ -40,9 +40,9 @@ describe('CurrencyBadge', () => {
     expect(container.querySelector('.currency-badge')).toBeInTheDocument();
   });
 
-  it('should handle unknown currencies with default flag', () => {
+  it('should handle unknown currencies with Globe icon fallback', () => {
     render(<CurrencyBadge code="XYZ" />);
-    expect(screen.getByText('🌍')).toBeInTheDocument();
+    expect(screen.getByTestId('globe-fallback')).toBeInTheDocument();
     expect(screen.getByText('XYZ')).toBeInTheDocument();
   });
 

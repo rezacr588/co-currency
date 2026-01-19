@@ -107,15 +107,16 @@ export interface Category {
   is_default?: boolean;
 }
 
+// Icon names correspond to keys in CATEGORY_ICONS from constants/icons.tsx
 export const DEFAULT_CATEGORIES: Category[] = [
-  { name: 'food', icon: '🍔', color: '#ef4444', is_default: true },
-  { name: 'transportation', icon: '🚗', color: '#f97316', is_default: true },
-  { name: 'entertainment', icon: '🎬', color: '#eab308', is_default: true },
-  { name: 'shopping', icon: '🛒', color: '#22c55e', is_default: true },
-  { name: 'bills', icon: '📄', color: '#3b82f6', is_default: true },
-  { name: 'income', icon: '💰', color: '#10b981', is_default: true },
-  { name: 'transfer', icon: '↔️', color: '#8b5cf6', is_default: true },
-  { name: 'other', icon: '📦', color: '#6b7280', is_default: true },
+  { name: 'food', icon: 'food', color: '#ef4444', is_default: true },
+  { name: 'transportation', icon: 'transportation', color: '#f97316', is_default: true },
+  { name: 'entertainment', icon: 'entertainment', color: '#eab308', is_default: true },
+  { name: 'shopping', icon: 'shopping', color: '#22c55e', is_default: true },
+  { name: 'bills', icon: 'bills', color: '#3b82f6', is_default: true },
+  { name: 'income', icon: 'income', color: '#10b981', is_default: true },
+  { name: 'transfer', icon: 'transfer', color: '#8b5cf6', is_default: true },
+  { name: 'other', icon: 'other', color: '#6b7280', is_default: true },
 ];
 
 export interface WalletConvertRequest {

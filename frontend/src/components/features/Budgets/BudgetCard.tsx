@@ -4,6 +4,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import type { Budget } from '../../../types/goal';
 import { Card, CardContent } from '../../ui/Card';
 import { Button } from '../../ui/Button';
+import { CATEGORY_ICONS } from '../../../constants/icons';
 
 interface BudgetCardProps {
   budget: Budget;
@@ -19,16 +20,6 @@ function formatCurrency(amount: number, currency: string): string {
   }).format(amount);
 }
 
-const categoryIcons: Record<string, string> = {
-  food: '🍔',
-  transportation: '🚗',
-  entertainment: '🎬',
-  shopping: '🛒',
-  bills: '📄',
-  income: '💰',
-  transfer: '↔️',
-  other: '📦',
-};
 
 export function BudgetCard({ budget, onEdit }: BudgetCardProps) {
   const { t } = useLanguage();
@@ -58,7 +49,10 @@ export function BudgetCard({ budget, onEdit }: BudgetCardProps) {
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">{categoryIcons[budget.category] || '📦'}</span>
+            {(() => {
+              const IconComponent = CATEGORY_ICONS[budget.category] || CATEGORY_ICONS.other;
+              return <IconComponent className="w-6 h-6 text-primary-600 dark:text-primary-400" />;
+            })()}
             <div>
               <h3 className="font-semibold text-slate-800 dark:text-slate-100 capitalize">
                 {t(`category_${budget.category}` as any) || budget.category}

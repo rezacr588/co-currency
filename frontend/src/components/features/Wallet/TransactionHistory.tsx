@@ -8,30 +8,8 @@ import { ErrorMessage } from '../../ui/ErrorMessage';
 import { api } from '../../../api/client';
 import { useCurrencies } from '../../../hooks';
 import type { Transaction, UpdateTransactionRequest } from '../../../types/wallet';
-
-// Common transaction emoji icons (same as TransactionForm)
-const TRANSACTION_EMOJIS = [
-  { emoji: '🍔', label: 'Food' },
-  { emoji: '🛒', label: 'Shopping' },
-  { emoji: '💰', label: 'Money' },
-  { emoji: '🏠', label: 'Home' },
-  { emoji: '🚗', label: 'Car' },
-  { emoji: '✈️', label: 'Travel' },
-  { emoji: '💊', label: 'Health' },
-  { emoji: '🎮', label: 'Gaming' },
-  { emoji: '📱', label: 'Phone' },
-  { emoji: '💡', label: 'Utilities' },
-  { emoji: '🎬', label: 'Entertainment' },
-  { emoji: '📚', label: 'Education' },
-  { emoji: '👕', label: 'Clothing' },
-  { emoji: '🎁', label: 'Gift' },
-  { emoji: '💳', label: 'Payment' },
-  { emoji: '🏦', label: 'Bank' },
-  { emoji: '📦', label: 'Package' },
-  { emoji: '☕', label: 'Coffee' },
-  { emoji: '🍕', label: 'Pizza' },
-  { emoji: '🚌', label: 'Transport' },
-];
+import { TRANSACTION_ICONS } from '../../../constants/icons';
+import type { LucideIcon } from 'lucide-react';
 
 interface TransactionHistoryProps {
   transactions: Transaction[];
@@ -61,9 +39,25 @@ function formatDate(dateString: string): string {
   }).format(date);
 }
 
+// Helper to find icon by name
+function getIconByName(iconName: string): LucideIcon | null {
+  const found = TRANSACTION_ICONS.find(item => item.label === iconName);
+  return found ? found.icon : null;
+}
+
 function getTransactionIcon(type: Transaction['type'], icon?: string) {
   // If custom icon is set, show it
   if (icon) {
+    // Try to find matching Lucide icon by name
+    const LucideIconComponent = getIconByName(icon);
+    if (LucideIconComponent) {
+      return (
+        <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+          <LucideIconComponent className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+        </div>
+      );
+    }
+    // Fallback for legacy emoji icons
     return (
       <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-lg">
         {icon}
@@ -123,14 +117,14 @@ function getTransactionIcon(type: Transaction['type'], icon?: string) {
   }
 }
 
-interface EmojiPickerProps {
-  selectedEmoji: string;
-  onSelect: (emoji: string) => void;
+interface IconPickerProps {
+  selectedIcon: string;
+  onSelect: (iconName: string) => void;
   isOpen: boolean;
   onClose: () => void;
 }
 
-function EmojiPicker({ selectedEmoji, onSelect, isOpen, onClose }: EmojiPickerProps) {
+function IconPicker({ selectedIcon, onSelect, isOpen, onClose }: IconPickerProps) {
   const { t } = useLanguage();
   const pickerRef = useRef<HTMLDivElement>(null);
 
@@ -158,24 +152,24 @@ function EmojiPicker({ selectedEmoji, onSelect, isOpen, onClose }: EmojiPickerPr
       className="absolute z-10 mt-1 p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg"
     >
       <div className="grid grid-cols-5 gap-2">
-        {TRANSACTION_EMOJIS.map(({ emoji, label }) => (
+        {TRANSACTION_ICONS.map(({ icon: Icon, label }) => (
           <button
-            key={emoji}
+            key={label}
             type="button"
             onClick={() => {
-              onSelect(emoji);
+              onSelect(label);
               onClose();
             }}
-            className={`w-10 h-10 flex items-center justify-center text-xl rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors ${
-              selectedEmoji === emoji ? 'bg-primary-100 dark:bg-primary-900/30 ring-2 ring-primary-500' : ''
+            className={`w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors ${
+              selectedIcon === label ? 'bg-primary-100 dark:bg-primary-900/30 ring-2 ring-primary-500' : ''
             }`}
             title={label}
           >
-            {emoji}
+            <Icon className="w-5 h-5 text-slate-600 dark:text-slate-400" />
           </button>
         ))}
       </div>
-      {selectedEmoji && (
+      {selectedIcon && (
         <button
           type="button"
           onClick={() => {
@@ -209,7 +203,7 @@ function EditTransactionModal({ transaction, onClose, onSuccess }: EditTransacti
   const [amount, setAmount] = useState(transaction.amount.toString());
   const [description, setDescription] = useState(transaction.description || '');
   const [icon, setIcon] = useState(transaction.icon || '');
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showIconPicker, setShowIconPicker] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const mutation = useMutation({
@@ -338,21 +332,28 @@ function EditTransactionModal({ transaction, onClose, onSuccess }: EditTransacti
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  onClick={() => setShowIconPicker(!showIconPicker)}
                   className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-all text-left flex items-center gap-3"
                   disabled={mutation.isPending}
                 >
                   {icon ? (
-                    <span className="text-2xl">{icon}</span>
+                    (() => {
+                      const SelectedIcon = getIconByName(icon);
+                      return SelectedIcon ? (
+                        <SelectedIcon className="w-6 h-6 text-slate-600 dark:text-slate-400" />
+                      ) : (
+                        <span className="text-2xl">{icon}</span>
+                      );
+                    })()
                   ) : (
                     <span className="text-slate-400 dark:text-slate-500">{t('selectIcon')}</span>
                   )}
                 </button>
-                <EmojiPicker
-                  selectedEmoji={icon}
+                <IconPicker
+                  selectedIcon={icon}
                   onSelect={setIcon}
-                  isOpen={showEmojiPicker}
-                  onClose={() => setShowEmojiPicker(false)}
+                  isOpen={showIconPicker}
+                  onClose={() => setShowIconPicker(false)}
                 />
               </div>
             </div>

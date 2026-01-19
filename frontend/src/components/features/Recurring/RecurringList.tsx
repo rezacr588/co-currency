@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { Repeat } from 'lucide-react';
 import { api } from '../../../api/client';
 import { useLanguage } from '../../../context/LanguageContext';
 import type { RecurringTransaction } from '../../../types/goal';
@@ -10,6 +11,7 @@ import { Button } from '../../ui/Button';
 import { Skeleton } from '../../ui/Skeleton';
 import { ErrorMessage } from '../../ui/ErrorMessage';
 import { RecurringForm } from './RecurringForm';
+import { CATEGORY_ICONS, FREQUENCY_ICONS } from '../../../constants/icons';
 
 function formatCurrency(amount: number, currency: string): string {
   return new Intl.NumberFormat('en-US', {
@@ -28,23 +30,6 @@ function formatDate(dateString: string): string {
   });
 }
 
-const categoryIcons: Record<string, string> = {
-  food: '🍔',
-  transportation: '🚗',
-  entertainment: '🎬',
-  shopping: '🛒',
-  bills: '📄',
-  income: '💰',
-  transfer: '↔️',
-  other: '📦',
-};
-
-const frequencyIcons: Record<string, string> = {
-  daily: '📅',
-  weekly: '📆',
-  monthly: '🗓️',
-  yearly: '📊',
-};
 
 interface RecurringCardProps {
   recurring: RecurringTransaction;
@@ -84,13 +69,19 @@ function RecurringCard({ recurring, onEdit }: RecurringCardProps) {
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">{categoryIcons[recurring.category || 'other']}</span>
+            {(() => {
+              const IconComponent = CATEGORY_ICONS[recurring.category || 'other'] || CATEGORY_ICONS.other;
+              return <IconComponent className="w-6 h-6 text-primary-600 dark:text-primary-400" />;
+            })()}
             <div>
               <h3 className="font-semibold text-slate-800 dark:text-slate-100">
                 {recurring.description || t(`category_${recurring.category}` as any) || recurring.category || t('recurring')}
               </h3>
               <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                <span>{frequencyIcons[recurring.frequency]}</span>
+                {(() => {
+                  const FreqIcon = FREQUENCY_ICONS[recurring.frequency] || FREQUENCY_ICONS.monthly;
+                  return <FreqIcon className="w-3.5 h-3.5" />;
+                })()}
                 <span className="capitalize">{t(`frequency_${recurring.frequency}` as any) || recurring.frequency}</span>
               </div>
             </div>
@@ -258,7 +249,9 @@ export function RecurringList() {
           ) : recurringTransactions.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
-                <div className="text-4xl mb-4">🔄</div>
+                <div className="flex justify-center mb-4">
+                  <Repeat className="w-12 h-12 text-primary-600 dark:text-primary-400" />
+                </div>
                 <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">
                   {t('noRecurringYet')}
                 </h3>

@@ -1,17 +1,18 @@
 import { CURRENCY_FLAGS, CURRENCY_SYMBOLS } from './constants';
 
 export interface CurrencyDisplay {
-  flag: string;
+  flag: string | undefined;
   symbol: string;
 }
 
 /**
  * Get display information for a currency code
- * Returns the flag emoji and symbol for a given currency
+ * Returns the flag emoji (or undefined if not found) and symbol for a given currency
+ * When flag is undefined, consumers should render a Globe icon as fallback
  */
 export function getCurrencyDisplay(code: string): CurrencyDisplay {
   return {
-    flag: CURRENCY_FLAGS[code] || '🌍',
+    flag: CURRENCY_FLAGS[code],
     symbol: CURRENCY_SYMBOLS[code] || code,
   };
 }

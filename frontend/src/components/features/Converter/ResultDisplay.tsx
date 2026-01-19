@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Globe } from 'lucide-react';
 import type { ConversionResult } from '../../../types';
 import { formatNumber, formatRate } from '../../../utils/format';
 import { CURRENCY_FLAGS, CURRENCY_SYMBOLS } from '../../../utils/constants';
@@ -76,8 +77,8 @@ export function ResultDisplay({ result, isLoading, error, onRetry }: ResultDispl
     );
   }
 
-  const fromFlag = CURRENCY_FLAGS[result.from] || '🌍';
-  const toFlag = CURRENCY_FLAGS[result.to] || '🌍';
+  const fromFlag = CURRENCY_FLAGS[result.from];
+  const toFlag = CURRENCY_FLAGS[result.to];
   const toSymbol = CURRENCY_SYMBOLS[result.to] || '';
 
   return (
@@ -111,7 +112,11 @@ export function ResultDisplay({ result, isLoading, error, onRetry }: ResultDispl
         <div className="text-center space-y-2">
           {/* From amount - inline */}
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/50 dark:bg-slate-800/30 rounded-full text-xs text-slate-600 dark:text-slate-300">
-            <span className="text-base">{fromFlag}</span>
+            {fromFlag ? (
+              <span className="text-base">{fromFlag}</span>
+            ) : (
+              <Globe className="w-4 h-4 text-slate-400" />
+            )}
             <span className="font-medium">{formatNumber(result.amount)}</span>
             <span className="text-slate-400">{result.from}</span>
             <span className="text-slate-300 dark:text-slate-600 mx-1">=</span>
@@ -119,7 +124,11 @@ export function ResultDisplay({ result, isLoading, error, onRetry }: ResultDispl
 
           {/* Result */}
           <div className="flex items-center justify-center gap-3 pt-1">
+            {toFlag ? (
             <span className="text-3xl sm:text-4xl">{toFlag}</span>
+          ) : (
+            <Globe className="w-8 h-8 sm:w-10 sm:h-10 text-slate-400" />
+          )}
             <div>
               <p className="text-3xl sm:text-4xl font-light text-gradient leading-none tracking-tight">
                 {toSymbol}{formatNumber(result.result)}

@@ -1,3 +1,17 @@
+import {
+  Zap,
+  CheckCircle,
+  Globe,
+  RefreshCw,
+  Wallet,
+  Target,
+  PieChart,
+  Repeat,
+  BarChart3,
+  Bot,
+  Moon,
+  Languages,
+} from 'lucide-react';
 import { Container } from '../../layout';
 import { useLanguage } from '../../../context/LanguageContext';
 
@@ -29,15 +43,17 @@ export function AboutUs() {
           {/* Features Row - Compact */}
           <div className="grid grid-cols-3 gap-4 mb-10">
             {[
-              { icon: '⚡', label: t('featureFast'), color: 'purple' },
-              { icon: '✓', label: t('featureAccurate'), color: 'violet' },
-              { icon: '🌍', label: t('featureGlobal'), color: 'fuchsia' },
+              { Icon: Zap, label: t('featureFast') },
+              { Icon: CheckCircle, label: t('featureAccurate') },
+              { Icon: Globe, label: t('featureGlobal') },
             ].map((feature) => (
               <div
                 key={feature.label}
                 className="text-center p-4 rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700"
               >
-                <span className="text-2xl mb-2 block">{feature.icon}</span>
+                <div className="flex justify-center mb-2">
+                  <feature.Icon className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+                </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   {feature.label}
                 </span>
@@ -126,21 +142,23 @@ export function AboutUs() {
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {[
-                { icon: '💱', label: t('currencyConverter'), desc: t('converterDesc') },
-                { icon: '💰', label: t('multiCurrencyWallet'), desc: t('walletDesc') },
-                { icon: '🎯', label: t('financialGoals'), desc: t('goalsDesc') },
-                { icon: '📊', label: t('budgets'), desc: t('budgetDesc') },
-                { icon: '🔄', label: t('recurringTransactions'), desc: t('recurringDesc') },
-                { icon: '📈', label: t('reportsAndStats'), desc: t('reportsDesc') },
-                { icon: '🤖', label: t('aiReceiptParsing'), desc: t('aiParsingDesc') },
-                { icon: '🌙', label: t('darkMode'), desc: t('darkModeDesc') },
-                { icon: '🌐', label: t('multiLanguage'), desc: t('multiLangDesc') },
+                { Icon: RefreshCw, label: t('currencyConverter'), desc: t('converterDesc') },
+                { Icon: Wallet, label: t('multiCurrencyWallet'), desc: t('walletDesc') },
+                { Icon: Target, label: t('financialGoals'), desc: t('goalsDesc') },
+                { Icon: PieChart, label: t('budgets'), desc: t('budgetDesc') },
+                { Icon: Repeat, label: t('recurringTransactions'), desc: t('recurringDesc') },
+                { Icon: BarChart3, label: t('reportsAndStats'), desc: t('reportsDesc') },
+                { Icon: Bot, label: t('aiReceiptParsing'), desc: t('aiParsingDesc') },
+                { Icon: Moon, label: t('darkMode'), desc: t('darkModeDesc') },
+                { Icon: Languages, label: t('multiLanguage'), desc: t('multiLangDesc') },
               ].map((feature) => (
                 <div
                   key={feature.label}
                   className="p-4 rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:border-primary-400 dark:hover:border-primary-700 transition-colors"
                 >
-                  <span className="text-2xl mb-2 block">{feature.icon}</span>
+                  <div className="flex justify-center mb-2">
+                    <feature.Icon className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+                  </div>
                   <h3 className="text-sm font-semibold text-slate-800 dark:text-white mb-1">
                     {feature.label}
                   </h3>
