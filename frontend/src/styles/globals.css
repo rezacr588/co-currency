@@ -126,6 +126,14 @@
     @apply btn bg-transparent text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/50 dark:hover:text-slate-100;
   }
 
+  .btn-danger {
+    @apply btn bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-700 dark:hover:bg-rose-600;
+  }
+
+  .btn-success {
+    @apply btn bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600;
+  }
+
   .btn-icon {
     @apply btn p-2 rounded-lg;
   }

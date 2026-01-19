@@ -36,12 +36,13 @@ type Transaction struct {
 
 // TransactionRequest represents a manual transaction request
 type TransactionRequest struct {
-	Type        string  `json:"type"` // "credit" or "debit"
-	Amount      float64 `json:"amount"`
-	Currency    string  `json:"currency"`
-	Category    string  `json:"category,omitempty"`
-	Icon        string  `json:"icon,omitempty"`
-	Description string  `json:"description,omitempty"`
+	Type           string  `json:"type"` // "credit" or "debit"
+	Amount         float64 `json:"amount"`
+	Currency       string  `json:"currency"`                  // Transaction currency (what you're paying/receiving in)
+	WalletCurrency string  `json:"wallet_currency,omitempty"` // Wallet currency to use (defaults to Currency if not set)
+	Category       string  `json:"category,omitempty"`
+	Icon           string  `json:"icon,omitempty"`
+	Description    string  `json:"description,omitempty"`
 }
 
 // UpdateTransactionRequest represents a request to update an existing transaction

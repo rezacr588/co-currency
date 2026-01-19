@@ -73,7 +73,8 @@ export interface Transaction {
 
 export interface TransactionRequest {
   type: 'credit' | 'debit';
-  currency: string;
+  currency: string;           // Transaction currency (what you're paying/receiving in)
+  wallet_currency?: string;   // Wallet currency to use (defaults to currency if not set)
   amount: number;
   category?: string;
   icon?: string;

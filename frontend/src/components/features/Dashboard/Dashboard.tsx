@@ -1,13 +1,15 @@
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../../api/client';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useAuth } from '../../../context/AuthContext';
-import { Container } from '../../layout';
+import { useConvert, useCurrencies } from '../../../hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import { Skeleton } from '../../ui/Skeleton';
 import { TransactionHistory } from '../Wallet/TransactionHistory';
+import { CURRENCY_FLAGS } from '../../../utils/constants';
 import {
   Wallet,
   Target,
@@ -15,6 +17,17 @@ import {
   RefreshCw,
   TrendingUp,
   Bot,
+  Plus,
+  ArrowUpRight,
+  ArrowDownRight,
+  DollarSign,
+  Clock,
+  ChevronRight,
+  Sparkles,
+  Calendar,
+  AlertCircle,
+  ArrowLeftRight,
+  ArrowRight,
 } from 'lucide-react';
 
 function formatCurrency(amount: number, currency: string): string {
@@ -26,55 +39,174 @@ function formatCurrency(amount: number, currency: string): string {
   }).format(amount);
 }
 
-interface StatsCardProps {
+interface QuickStatProps {
   title: string;
   value: string | number;
   subtitle?: string;
   icon: React.ReactNode;
-  colorClass?: string;
+  trend?: 'up' | 'down' | 'neutral';
+  trendValue?: string;
+  bgColor: string;
+  iconColor: string;
 }
 
-function StatsCard({ title, value, subtitle, icon, colorClass = 'text-primary-700 dark:text-primary-400' }: StatsCardProps) {
+function QuickStat({ title, value, subtitle, icon, trend, trendValue, bgColor, iconColor }: QuickStatProps) {
   return (
-    <Card>
-      <CardContent className="py-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm text-slate-500 dark:text-slate-400">{title}</p>
-            <p className={`text-2xl font-bold mt-1 ${colorClass}`}>{value}</p>
-            {subtitle && (
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{subtitle}</p>
-            )}
-          </div>
-          <div className={`p-2 rounded-xl bg-slate-100 dark:bg-slate-800 ${colorClass}`}>
-            {icon}
-          </div>
+    <div className={`${bgColor} rounded-2xl p-5 relative overflow-hidden`}>
+      <div className="relative z-10">
+        <div className={`w-10 h-10 rounded-xl ${iconColor} flex items-center justify-center mb-3`}>
+          {icon}
         </div>
-      </CardContent>
-    </Card>
+        <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">{title}</p>
+        <p className="text-2xl font-bold text-slate-800 dark:text-white">{value}</p>
+        {(subtitle || trendValue) && (
+          <div className="flex items-center gap-2 mt-2">
+            {trend && trendValue && (
+              <span className={`flex items-center gap-1 text-xs font-medium ${
+                trend === 'up' ? 'text-emerald-600' : trend === 'down' ? 'text-rose-600' : 'text-slate-500'
+              }`}>
+                {trend === 'up' ? <ArrowUpRight className="w-3 h-3" /> : trend === 'down' ? <ArrowDownRight className="w-3 h-3" /> : null}
+                {trendValue}
+              </span>
+            )}
+            {subtitle && <span className="text-xs text-slate-500 dark:text-slate-400">{subtitle}</span>}
+          </div>
+        )}
+      </div>
+      {/* Decorative element */}
+      <div className="absolute -right-4 -bottom-4 w-24 h-24 rounded-full bg-white/10 dark:bg-white/5" />
+    </div>
   );
 }
 
-interface FeatureCardProps {
+interface ActionCardProps {
   to: string;
   icon: React.ReactNode;
   title: string;
   description: string;
+  color: string;
 }
 
-function FeatureCard({ to, icon, title, description }: FeatureCardProps) {
+function ActionCard({ to, icon, title, description, color }: ActionCardProps) {
   return (
-    <Link to={to} className="block">
-      <Card className="h-full hover:border-primary-300 dark:hover:border-primary-700 transition-colors cursor-pointer group">
-        <CardContent className="py-4 text-center">
-          <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 group-hover:scale-110 transition-transform">
+    <Link to={to} className="block group">
+      <div className="bg-white dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700/50 hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-lg hover:shadow-primary-500/5 transition-all duration-300">
+        <div className="flex items-start gap-4">
+          <div className={`w-12 h-12 rounded-xl ${color} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
             {icon}
           </div>
-          <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">{title}</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400">{description}</p>
-        </CardContent>
-      </Card>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-slate-800 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+              {title}
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{description}</p>
+          </div>
+          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-primary-500 group-hover:translate-x-1 transition-all" />
+        </div>
+      </div>
     </Link>
+  );
+}
+
+// Quick Balance Converter - shows balance in different currencies
+const POPULAR_CURRENCIES = ['EUR', 'GBP', 'TRY', 'JPY', 'CAD', 'AUD', 'CHF'];
+
+interface QuickBalanceConverterProps {
+  balanceUSD: number;
+}
+
+function QuickBalanceConverter({ balanceUSD }: QuickBalanceConverterProps) {
+  const { t } = useLanguage();
+  const [selectedCurrency, setSelectedCurrency] = useState('EUR');
+  const { data: currencies } = useCurrencies();
+
+  // Get conversion rate
+  const { data: conversionData, isLoading } = useConvert(
+    balanceUSD > 0 ? 'USD' : '',
+    balanceUSD > 0 ? selectedCurrency : '',
+    balanceUSD > 0 ? balanceUSD : 0
+  );
+
+  const currencyOptions = useMemo(() => {
+    if (!currencies) return POPULAR_CURRENCIES;
+    return currencies.map(c => c.code).filter(code => code !== 'USD');
+  }, [currencies]);
+
+  const flag = CURRENCY_FLAGS[selectedCurrency] || '🌍';
+  const usdFlag = CURRENCY_FLAGS['USD'] || '🇺🇸';
+
+  return (
+    <Card className="bg-gradient-to-br from-primary-50 to-sky-50 dark:from-primary-900/20 dark:to-sky-900/20 border-primary-200/50 dark:border-primary-800/50">
+      <CardContent className="p-4 sm:p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <ArrowLeftRight className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+          <h3 className="font-semibold text-slate-800 dark:text-white">{t('balanceConverter')}</h3>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+          {/* USD Balance */}
+          <div className="flex-1 bg-white dark:bg-slate-800/80 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xl">{usdFlag}</span>
+              <span className="text-sm font-medium text-slate-500 dark:text-slate-400">USD</span>
+            </div>
+            <p className="text-2xl font-bold text-slate-800 dark:text-white">
+              ${balanceUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+          </div>
+
+          {/* Arrow */}
+          <div className="hidden sm:flex items-center justify-center">
+            <ArrowRight className="w-5 h-5 text-slate-400" />
+          </div>
+
+          {/* Converted Balance */}
+          <div className="flex-1 bg-white dark:bg-slate-800/80 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xl">{flag}</span>
+              <select
+                value={selectedCurrency}
+                onChange={(e) => setSelectedCurrency(e.target.value)}
+                className="text-sm font-medium text-slate-500 dark:text-slate-400 bg-transparent border-none focus:ring-0 cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors p-0"
+              >
+                {currencyOptions.slice(0, 20).map(code => (
+                  <option key={code} value={code}>{code}</option>
+                ))}
+              </select>
+            </div>
+            {isLoading ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <p className="text-2xl font-bold text-slate-800 dark:text-white">
+                {conversionData?.result.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+              </p>
+            )}
+            {conversionData?.rate && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                1 USD = {conversionData.rate.toFixed(4)} {selectedCurrency}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Currency Buttons */}
+        <div className="flex flex-wrap gap-2 mt-4">
+          {POPULAR_CURRENCIES.map(code => (
+            <button
+              key={code}
+              onClick={() => setSelectedCurrency(code)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                selectedCurrency === code
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-primary-300 dark:hover:border-primary-600'
+              }`}
+            >
+              {CURRENCY_FLAGS[code]} {code}
+            </button>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -129,167 +261,223 @@ export function Dashboard() {
 
   const isLoading = summaryLoading || goalsLoading || budgetsLoading || recurringLoading;
 
+  // Get current time greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return t('goodMorning');
+    if (hour < 18) return t('goodAfternoon');
+    return t('goodEvening');
+  };
+
   return (
-    <main className="flex-1 py-4 sm:py-6">
-      <Container>
-        <div className="space-y-6">
-          {/* Welcome Section */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                {t('welcomeBack')}, {user?.name}!
-              </h1>
-              <p className="text-slate-500 dark:text-slate-400">{t('dashboardSubtitle')}</p>
-            </div>
-            <div className="flex gap-2">
-              <Link to="/wallet/add">
-                <Button variant="primary" size="sm">
-                  {t('addTransaction')}
-                </Button>
-              </Link>
-              <Link to="/wallet">
-                <Button variant="secondary" size="sm">
-                  {t('viewWallet')}
-                </Button>
-              </Link>
-            </div>
-          </div>
-
-          {/* Quick Stats Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {isLoading ? (
-              <>
-                {[1, 2, 3, 4].map((i) => (
-                  <Card key={i}>
-                    <CardContent className="py-4">
-                      <Skeleton className="h-4 w-20 mb-2" />
-                      <Skeleton className="h-8 w-32" />
-                    </CardContent>
-                  </Card>
-                ))}
-              </>
-            ) : (
-              <>
-                <StatsCard
-                  title={t('totalBalance')}
-                  value={formatCurrency(summary?.total_balance_usd || 0, 'USD')}
-                  icon={
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  }
-                />
-                <StatsCard
-                  title={t('activeGoals')}
-                  value={activeGoals.length}
-                  subtitle={`${overallGoalProgress}% ${t('overallProgress').toLowerCase()}`}
-                  colorClass="text-primary-700 dark:text-primary-400"
-                  icon={
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  }
-                />
-                <StatsCard
-                  title={t('budgetStatus')}
-                  value={`${budgetPercentage}%`}
-                  subtitle={`${formatCurrency(totalSpent, 'USD')} / ${formatCurrency(totalBudget, 'USD')}`}
-                  colorClass={budgetPercentage > 90 ? 'text-rose-600 dark:text-rose-400' : budgetPercentage > 70 ? 'text-amber-600 dark:text-amber-400' : 'text-sky-600 dark:text-sky-400'}
-                  icon={
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                  }
-                />
-                <StatsCard
-                  title={t('dueRecurring')}
-                  value={dueRecurring.length}
-                  subtitle={t('pendingExecutions')}
-                  colorClass={dueRecurring.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-400'}
-                  icon={
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                  }
-                />
-              </>
-            )}
-          </div>
-
-          {/* Feature Navigation Cards */}
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+      {/* Header Section */}
+      <div className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">{t('quickAccess')}</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-              <FeatureCard
-                to="/wallet"
-                icon={<Wallet className="w-5 h-5" />}
-                title={t('wallet')}
-                description={t('walletCardDesc')}
-              />
-              <FeatureCard
-                to="/goals"
-                icon={<Target className="w-5 h-5" />}
-                title={t('financialGoals')}
-                description={t('goalsCardDesc')}
-              />
-              <FeatureCard
-                to="/budgets"
-                icon={<PieChart className="w-5 h-5" />}
-                title={t('budgets')}
-                description={t('budgetsCardDesc')}
-              />
-              <FeatureCard
-                to="/recurring"
-                icon={<RefreshCw className="w-5 h-5" />}
-                title={t('recurring')}
-                description={t('recurringCardDesc')}
-              />
-              <FeatureCard
-                to="/reports"
-                icon={<TrendingUp className="w-5 h-5" />}
-                title={t('reportsAndStats')}
-                description={t('reportsCardDesc')}
-              />
-              <FeatureCard
-                to="/wallet/ai"
-                icon={<Bot className="w-5 h-5" />}
-                title={t('aiParser')}
-                description={t('aiCardDesc')}
-              />
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                {getGreeting()}
+              </span>
             </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-white">
+              {user?.name}
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">
+              {t('dashboardSubtitle')}
+            </p>
           </div>
+          <div className="flex gap-2">
+            <Link to="/wallet/add">
+              <Button variant="primary" size="md" className="gap-2">
+                <Plus className="w-4 h-4" />
+                {t('addTransaction')}
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
 
-          {/* Recent Activity */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>{t('recentActivity')}</CardTitle>
+      {/* Quick Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {isLoading ? (
+          <>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-slate-100 dark:bg-slate-800 rounded-2xl p-5">
+                <Skeleton className="h-10 w-10 rounded-xl mb-3" />
+                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-8 w-32" />
+              </div>
+            ))}
+          </>
+        ) : (
+          <>
+            <QuickStat
+              title={t('totalBalance')}
+              value={formatCurrency(summary?.total_balance_usd || 0, 'USD')}
+              subtitle={`${summary?.balances?.length || 0} ${t('currencies')}`}
+              icon={<DollarSign className="w-5 h-5 text-white" />}
+              bgColor="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20"
+              iconColor="bg-gradient-to-br from-emerald-500 to-teal-600"
+            />
+            <QuickStat
+              title={t('activeGoals')}
+              value={activeGoals.length}
+              subtitle={activeGoals.length > 0 ? `${overallGoalProgress}% ${t('progress')}` : t('noActiveGoals')}
+              icon={<Target className="w-5 h-5 text-white" />}
+              bgColor="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20"
+              iconColor="bg-gradient-to-br from-violet-500 to-purple-600"
+            />
+            <QuickStat
+              title={t('budgetStatus')}
+              value={`${budgetPercentage}%`}
+              subtitle={totalBudget > 0 ? `${formatCurrency(totalSpent, 'USD')} / ${formatCurrency(totalBudget, 'USD')}` : t('noBudgets')}
+              trend={budgetPercentage > 90 ? 'down' : budgetPercentage > 70 ? 'neutral' : 'up'}
+              icon={<PieChart className="w-5 h-5 text-white" />}
+              bgColor="bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-900/20 dark:to-blue-900/20"
+              iconColor="bg-gradient-to-br from-sky-500 to-blue-600"
+            />
+            <QuickStat
+              title={t('dueRecurring')}
+              value={dueRecurring.length}
+              subtitle={t('pendingExecutions')}
+              trend={dueRecurring.length > 0 ? 'down' : 'up'}
+              icon={<Clock className="w-5 h-5 text-white" />}
+              bgColor="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20"
+              iconColor="bg-gradient-to-br from-amber-500 to-orange-600"
+            />
+          </>
+        )}
+      </div>
+
+      {/* Balance Converter Widget */}
+      {!isLoading && summary?.total_balance_usd && summary.total_balance_usd > 0 && (
+        <div className="mb-8">
+          <QuickBalanceConverter balanceUSD={summary.total_balance_usd} />
+        </div>
+      )}
+
+      {/* Alert for due recurring transactions */}
+      {dueRecurring.length > 0 && (
+        <div className="mb-8 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-medium text-amber-800 dark:text-amber-200">
+              {t('recurringDueAlert')}
+            </p>
+            <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+              {dueRecurring.length} {t('transactionsDue')}
+            </p>
+          </div>
+          <Link to="/recurring">
+            <Button variant="ghost" size="sm" className="text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40">
+              {t('viewAll')}
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Quick Actions */}
+        <div className="lg:col-span-1">
+          <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary-500" />
+            {t('quickAccess')}
+          </h2>
+          <div className="space-y-3">
+            <ActionCard
+              to="/wallet"
+              icon={<Wallet className="w-5 h-5 text-white" />}
+              title={t('wallet')}
+              description={t('walletCardDesc')}
+              color="bg-gradient-to-br from-emerald-500 to-teal-600"
+            />
+            <ActionCard
+              to="/goals"
+              icon={<Target className="w-5 h-5 text-white" />}
+              title={t('financialGoals')}
+              description={t('goalsCardDesc')}
+              color="bg-gradient-to-br from-violet-500 to-purple-600"
+            />
+            <ActionCard
+              to="/budgets"
+              icon={<PieChart className="w-5 h-5 text-white" />}
+              title={t('budgets')}
+              description={t('budgetsCardDesc')}
+              color="bg-gradient-to-br from-sky-500 to-blue-600"
+            />
+            <ActionCard
+              to="/recurring"
+              icon={<RefreshCw className="w-5 h-5 text-white" />}
+              title={t('recurring')}
+              description={t('recurringCardDesc')}
+              color="bg-gradient-to-br from-amber-500 to-orange-600"
+            />
+            <ActionCard
+              to="/reports"
+              icon={<TrendingUp className="w-5 h-5 text-white" />}
+              title={t('reportsAndStats')}
+              description={t('reportsCardDesc')}
+              color="bg-gradient-to-br from-rose-500 to-pink-600"
+            />
+            <ActionCard
+              to="/wallet/ai"
+              icon={<Bot className="w-5 h-5 text-white" />}
+              title={t('aiParser')}
+              description={t('aiCardDesc')}
+              color="bg-gradient-to-br from-indigo-500 to-blue-600"
+            />
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="lg:col-span-2">
+          <Card className="h-full">
+            <CardHeader className="flex flex-row items-center justify-between pb-4">
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-primary-500" />
+                {t('recentActivity')}
+              </CardTitle>
               <Link to="/wallet/history">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="gap-1">
                   {t('viewAll')}
+                  <ChevronRight className="w-4 h-4" />
                 </Button>
               </Link>
             </CardHeader>
             <CardContent>
               {summaryLoading ? (
                 <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-14 w-full" />
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Skeleton key={i} className="h-16 w-full rounded-xl" />
                   ))}
                 </div>
               ) : summary?.recent_transactions && summary.recent_transactions.length > 0 ? (
                 <TransactionHistory
-                  transactions={summary.recent_transactions.slice(0, 5)}
+                  transactions={summary.recent_transactions.slice(0, 6)}
                   showPagination={false}
                 />
               ) : (
-                <p className="text-center text-slate-500 dark:text-slate-400 py-8">
-                  {t('noTransactions')}
-                </p>
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                    <Wallet className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <p className="text-slate-500 dark:text-slate-400 mb-4">
+                    {t('noTransactions')}
+                  </p>
+                  <Link to="/wallet/add">
+                    <Button variant="primary" size="sm" className="gap-2">
+                      <Plus className="w-4 h-4" />
+                      {t('addTransaction')}
+                    </Button>
+                  </Link>
+                </div>
               )}
             </CardContent>
           </Card>
         </div>
-      </Container>
-    </main>
+      </div>
+    </div>
   );
 }

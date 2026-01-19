@@ -510,6 +510,107 @@ func (r *WalletRepository) AddTransactionAtomic(ctx context.Context, userID uuid
 	return transaction, nil
 }
 
+// AddCrossCurrencyTransactionAtomic performs a cross-currency transaction atomically
+// txAmount/txCurrency = what the user sees (e.g., paid 100 TRY for coffee)
+// walletAmount/walletCurrency = what affects the balance (e.g., deducted 3 USD from wallet)
+func (r *WalletRepository) AddCrossCurrencyTransactionAtomic(ctx context.Context, userID uuid.UUID, txType string,
+	txAmount float64, txCurrency string,
+	walletAmount float64, walletCurrency string,
+	rate float64, source, description, category, icon string, aiData json.RawMessage) (*model.Transaction, error) {
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	now := time.Now()
+
+	// Calculate delta for wallet currency
+	delta := walletAmount
+	if txType == "debit" {
+		delta = -walletAmount
+	}
+
+	// Check current balance for debits with row-level lock
+	if txType == "debit" {
+		var currentBalance float64
+		err = tx.QueryRow(ctx, `
+			SELECT COALESCE(balance, 0) FROM wallet_balances
+			WHERE user_id = $1 AND currency = $2
+			FOR UPDATE
+		`, userID, walletCurrency).Scan(&currentBalance)
+
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("checking balance: %w", err)
+		}
+
+		if currentBalance < walletAmount {
+			return nil, ErrInsufficientBalance
+		}
+	}
+
+	// Update or insert balance for wallet currency
+	if txType == "debit" {
+		_, err = tx.Exec(ctx, `
+			UPDATE wallet_balances
+			SET balance = balance + $1, updated_at = $2
+			WHERE user_id = $3 AND currency = $4
+		`, delta, now, userID, walletCurrency)
+	} else {
+		// For credits, use upsert pattern (row may not exist yet)
+		_, err = tx.Exec(ctx, `
+			INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
+			VALUES ($1, $2, $3, $4, $5)
+			ON CONFLICT (user_id, currency) DO UPDATE SET
+				balance = wallet_balances.balance + EXCLUDED.balance,
+				updated_at = EXCLUDED.updated_at
+		`, uuid.New(), userID, walletCurrency, delta, now)
+	}
+	if err != nil {
+		if isBalanceConstraintError(err) {
+			return nil, ErrInsufficientBalance
+		}
+		return nil, fmt.Errorf("updating balance: %w", err)
+	}
+
+	// Create transaction record with both currencies
+	// Store transaction currency in Currency field, wallet currency in ToCurrency field
+	// Rate stores the conversion rate from transaction currency to wallet currency
+	transaction := &model.Transaction{
+		ID:              uuid.New(),
+		UserID:          userID,
+		Type:            txType,
+		Amount:          txAmount,     // Transaction amount (e.g., 100 TRY)
+		Currency:        txCurrency,   // Transaction currency (e.g., TRY)
+		ToAmount:        &walletAmount,    // Wallet amount (e.g., 3 USD)
+		ToCurrency:      &walletCurrency,  // Wallet currency (e.g., USD)
+		Rate:            &rate,            // Conversion rate
+		Source:          source,
+		Description:     description,
+		Category:        category,
+		Icon:            icon,
+		AIExtractedData: aiData,
+		CreatedAt:       now,
+	}
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO transactions (id, user_id, type, amount, currency, to_amount, to_currency, rate, source, category, icon, ai_extracted_data, description, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+	`, transaction.ID, transaction.UserID, transaction.Type, transaction.Amount, transaction.Currency,
+		transaction.ToAmount, transaction.ToCurrency, transaction.Rate, transaction.Source,
+		transaction.Category, transaction.Icon, transaction.AIExtractedData, transaction.Description, transaction.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("recording transaction: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("committing transaction: %w", err)
+	}
+
+	return transaction, nil
+}
+
 // ExecuteConversion performs an atomic currency conversion
 func (r *WalletRepository) ExecuteConversion(ctx context.Context, userID uuid.UUID, fromCurrency, toCurrency string, fromAmount, toAmount, rate float64) (*model.Transaction, error) {
 	tx, err := r.pool.Begin(ctx)

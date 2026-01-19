@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Container } from './components/layout';
+import { BrowserRouter, Routes, Route, Link, useLocation, Outlet } from 'react-router-dom';
+import { Container, AppLayout } from './components/layout';
 import { Converter } from './components/features/Converter';
 import { RatesGrid } from './components/features/RatesGrid';
 import { QuickConvert } from './components/features/QuickConvert';
@@ -25,6 +25,8 @@ import { Reports } from './pages/Reports';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
+import { ToastContainer } from './components/ui/ToastContainer';
 import { HamburgerMenu } from './components/ui/HamburgerMenu';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Card, CardContent } from './components/ui/Card';
@@ -753,6 +755,26 @@ function HomePage() {
   );
 }
 
+// Layout wrapper for public pages (with header/footer)
+function PublicLayout() {
+  return (
+    <>
+      <Header />
+      <Outlet />
+      <Footer />
+    </>
+  );
+}
+
+// Layout wrapper for authenticated pages (with sidebar)
+function AuthenticatedLayout() {
+  return (
+    <ProtectedRoute>
+      <AppLayout />
+    </ProtectedRoute>
+  );
+}
+
 function AppContent() {
   const { isRTL } = useLanguage();
   const { theme } = useTheme();
@@ -760,99 +782,33 @@ function AppContent() {
   return (
     <div className={`min-h-screen flex flex-col ${isRTL ? 'rtl' : 'ltr'} ${theme}`} dir={isRTL ? 'rtl' : 'ltr'}>
       <SEOHead />
-      <Header />
 
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/about" element={<AboutUs />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/wallet"
-          element={
-            <ProtectedRoute>
-              <Wallet />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/wallet/add"
-          element={
-            <ProtectedRoute>
-              <TransactionForm />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/wallet/history"
-          element={
-            <ProtectedRoute>
-              <TransactionHistoryPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/wallet/convert"
-          element={
-            <ProtectedRoute>
-              <WalletConvert />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/wallet/ai"
-          element={
-            <ProtectedRoute>
-              <AIReceiptParser />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/goals"
-          element={
-            <ProtectedRoute>
-              <GoalsList />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/budgets"
-          element={
-            <ProtectedRoute>
-              <BudgetList />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/recurring"
-          element={
-            <ProtectedRoute>
-              <RecurringList />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reports"
-          element={
-            <ProtectedRoute>
-              <Reports />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+        {/* Public routes with header/footer */}
+        <Route element={<PublicLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/about" element={<AboutUs />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="*" element={<NotFound />} />
+        </Route>
 
-      <Footer />
+        {/* Authenticated routes with sidebar layout */}
+        <Route element={<AuthenticatedLayout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/wallet" element={<Wallet />} />
+          <Route path="/wallet/add" element={<TransactionForm />} />
+          <Route path="/wallet/history" element={<TransactionHistoryPage />} />
+          <Route path="/wallet/convert" element={<WalletConvert />} />
+          <Route path="/wallet/ai" element={<AIReceiptParser />} />
+          <Route path="/goals" element={<GoalsList />} />
+          <Route path="/budgets" element={<BudgetList />} />
+          <Route path="/recurring" element={<RecurringList />} />
+          <Route path="/reports" element={<Reports />} />
+        </Route>
+      </Routes>
     </div>
   );
 }
@@ -865,7 +821,10 @@ function App() {
           <ThemeProvider>
             <LanguageProvider>
               <AuthProvider>
-                <AppContent />
+                <ToastProvider>
+                  <AppContent />
+                  <ToastContainer />
+                </ToastProvider>
               </AuthProvider>
             </LanguageProvider>
           </ThemeProvider>

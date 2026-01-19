@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../../context/LanguageContext';
 import { CurrencyBadge } from '../../ui/CurrencyBadge';
@@ -39,9 +39,11 @@ function formatDate(dateString: string): string {
   }).format(date);
 }
 
-// Helper to find icon by name
+// Helper to find icon by name (case-insensitive)
 function getIconByName(iconName: string): LucideIcon | null {
-  const found = TRANSACTION_ICONS.find(item => item.label === iconName);
+  if (!iconName) return null;
+  const normalizedName = iconName.toLowerCase().trim();
+  const found = TRANSACTION_ICONS.find(item => item.label.toLowerCase() === normalizedName);
   return found ? found.icon : null;
 }
 
@@ -57,10 +59,20 @@ function getTransactionIcon(type: Transaction['type'], icon?: string) {
         </div>
       );
     }
-    // Fallback for legacy emoji icons
+    // Fallback: check if it's an emoji (starts with non-ASCII)
+    const isEmoji = /^[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]/u.test(icon);
+    if (isEmoji) {
+      return (
+        <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-lg">
+          {icon}
+        </div>
+      );
+    }
+    // If it's text that doesn't match any icon, use the first icon from the list as default
+    const DefaultIcon = TRANSACTION_ICONS[0].icon;
     return (
-      <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-lg">
-        {icon}
+      <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+        <DefaultIcon className="w-4 h-4 text-slate-600 dark:text-slate-400" />
       </div>
     );
   }
@@ -126,7 +138,17 @@ interface IconPickerProps {
 
 function IconPicker({ selectedIcon, onSelect, isOpen, onClose }: IconPickerProps) {
   const { t } = useLanguage();
+  const [search, setSearch] = useState('');
   const pickerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filteredIcons = useMemo(() => {
+    if (!search.trim()) return TRANSACTION_ICONS;
+    const searchLower = search.toLowerCase().trim();
+    return TRANSACTION_ICONS.filter(
+      (icon) => icon.label.toLowerCase().includes(searchLower)
+    );
+  }, [search]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -137,6 +159,9 @@ function IconPicker({ selectedIcon, onSelect, isOpen, onClose }: IconPickerProps
 
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    } else {
+      setSearch('');
     }
 
     return () => {
@@ -149,37 +174,62 @@ function IconPicker({ selectedIcon, onSelect, isOpen, onClose }: IconPickerProps
   return (
     <div
       ref={pickerRef}
-      className="absolute z-10 mt-1 p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg"
+      className="absolute z-10 mt-1 w-72 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg overflow-hidden"
     >
-      <div className="grid grid-cols-5 gap-2">
-        {TRANSACTION_ICONS.map(({ icon: Icon, label }) => (
+      {/* Search */}
+      <div className="p-2 border-b border-slate-100 dark:border-slate-700/50">
+        <input
+          ref={inputRef}
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t('searchIcon')}
+          className="w-full bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg py-2 px-3 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-600/50"
+        />
+      </div>
+
+      {/* Icon Grid */}
+      <div className="p-2 grid grid-cols-3 gap-1 max-h-60 overflow-y-auto">
+        {filteredIcons.length > 0 ? (
+          filteredIcons.map(({ icon: Icon, label }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => {
+                onSelect(label);
+                onClose();
+              }}
+              className={`flex flex-col items-center justify-center gap-1 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors ${
+                selectedIcon === label ? 'bg-primary-100 dark:bg-primary-900/30 ring-2 ring-primary-500' : ''
+              }`}
+            >
+              <Icon className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+              <span className="text-xs text-slate-500 dark:text-slate-400 truncate w-full text-center">
+                {label}
+              </span>
+            </button>
+          ))
+        ) : (
+          <div className="col-span-3 py-4 text-center text-sm text-slate-500">
+            {t('noIconsFound')}
+          </div>
+        )}
+      </div>
+
+      {/* Clear Button */}
+      {selectedIcon && (
+        <div className="p-2 border-t border-slate-100 dark:border-slate-700/50">
           <button
-            key={label}
             type="button"
             onClick={() => {
-              onSelect(label);
+              onSelect('');
               onClose();
             }}
-            className={`w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors ${
-              selectedIcon === label ? 'bg-primary-100 dark:bg-primary-900/30 ring-2 ring-primary-500' : ''
-            }`}
-            title={label}
+            className="w-full py-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
           >
-            <Icon className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+            {t('clearIcon')}
           </button>
-        ))}
-      </div>
-      {selectedIcon && (
-        <button
-          type="button"
-          onClick={() => {
-            onSelect('');
-            onClose();
-          }}
-          className="w-full mt-2 py-1 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-        >
-          {t('clearIcon')}
-        </button>
+        </div>
       )}
     </div>
   );

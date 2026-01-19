@@ -58,6 +58,7 @@ func (s *WalletService) GetBalance(ctx context.Context, userID uuid.UUID, curren
 }
 
 // AddTransaction adds a credit or debit transaction atomically
+// Supports cross-currency transactions when wallet_currency differs from currency
 func (s *WalletService) AddTransaction(ctx context.Context, userID uuid.UUID, req *model.TransactionRequest) (*model.Transaction, error) {
 	// Validate request
 	if req.Type != "credit" && req.Type != "debit" {
@@ -72,13 +73,65 @@ func (s *WalletService) AddTransaction(ctx context.Context, userID uuid.UUID, re
 		return nil, errors.New("currency is required")
 	}
 
-	// Use atomic transaction method
+	// Default wallet currency to transaction currency if not specified
+	walletCurrency := req.WalletCurrency
+	if walletCurrency == "" {
+		walletCurrency = req.Currency
+	}
+
+	// If wallet currency differs from transaction currency, perform cross-currency transaction
+	if walletCurrency != req.Currency {
+		return s.addCrossCurrencyTransaction(ctx, userID, req, walletCurrency)
+	}
+
+	// Use atomic transaction method for same-currency transaction
 	tx, err := s.walletRepo.AddTransactionAtomic(ctx, userID, req.Type, req.Amount, req.Currency, "manual", req.Description, req.Category, req.Icon, nil)
 	if err != nil {
 		if errors.Is(err, repository.ErrInsufficientBalance) {
 			return nil, errors.New("insufficient balance")
 		}
 		return nil, fmt.Errorf("adding transaction: %w", err)
+	}
+
+	return tx, nil
+}
+
+// addCrossCurrencyTransaction handles transactions where the transaction currency differs from wallet currency
+func (s *WalletService) addCrossCurrencyTransaction(ctx context.Context, userID uuid.UUID, req *model.TransactionRequest, walletCurrency string) (*model.Transaction, error) {
+	// Get exchange rate from transaction currency to wallet currency
+	// For debit: we need to deduct walletAmount from walletCurrency balance
+	// For credit: we need to add walletAmount to walletCurrency balance
+	var fromCurrency, toCurrency string
+	if req.Type == "debit" {
+		// Paying in transaction currency, deducting from wallet currency
+		// Convert: transaction currency -> wallet currency (how much wallet currency needed)
+		fromCurrency = req.Currency
+		toCurrency = walletCurrency
+	} else {
+		// Receiving in transaction currency, adding to wallet currency
+		// Convert: transaction currency -> wallet currency (how much wallet currency to add)
+		fromCurrency = req.Currency
+		toCurrency = walletCurrency
+	}
+
+	conversion, err := s.exchangeService.Convert(ctx, fromCurrency, toCurrency, req.Amount)
+	if err != nil {
+		return nil, fmt.Errorf("getting exchange rate: %w", err)
+	}
+
+	walletAmount := conversion.Result
+	rate := conversion.Rate
+
+	// Use atomic cross-currency transaction method
+	tx, err := s.walletRepo.AddCrossCurrencyTransactionAtomic(ctx, userID, req.Type,
+		req.Amount, req.Currency,      // Transaction amount and currency (what user sees)
+		walletAmount, walletCurrency,  // Wallet amount and currency (what affects balance)
+		rate, "manual", req.Description, req.Category, req.Icon, nil)
+	if err != nil {
+		if errors.Is(err, repository.ErrInsufficientBalance) {
+			return nil, errors.New("insufficient balance")
+		}
+		return nil, fmt.Errorf("adding cross-currency transaction: %w", err)
 	}
 
 	return tx, nil
