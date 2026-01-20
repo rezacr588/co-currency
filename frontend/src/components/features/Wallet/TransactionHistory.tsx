@@ -10,6 +10,7 @@ import { useCurrencies } from '../../../hooks';
 import type { Transaction, UpdateTransactionRequest } from '../../../types/wallet';
 import { TRANSACTION_ICONS } from '../../../constants/icons';
 import type { LucideIcon } from 'lucide-react';
+import { formatCurrency, formatDate } from '../../../utils/format';
 
 interface TransactionHistoryProps {
   transactions: Transaction[];
@@ -20,23 +21,13 @@ interface TransactionHistoryProps {
   showActions?: boolean;
 }
 
-function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('en-US', {
+function formatTransactionDate(dateString: string): string {
+  return formatDate(dateString, {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  }).format(date);
+  });
 }
 
 // Helper to find icon by name (case-insensitive)
@@ -584,7 +575,7 @@ function TransactionItem({ transaction, showActions, onEdit, onDelete }: Transac
           </span>
         </div>
         <span className="text-xs text-slate-500 dark:text-slate-400">
-          {formatDate(transaction.created_at)}
+          {formatTransactionDate(transaction.created_at)}
         </span>
       </div>
       <div className="text-right flex items-center gap-2">

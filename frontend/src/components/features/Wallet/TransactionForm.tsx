@@ -12,6 +12,7 @@ import { Button } from '../../ui/Button';
 import { ErrorMessage } from '../../ui/ErrorMessage';
 import { WalletBalance } from '../../../types/wallet';
 import { CURRENCY_FLAGS } from '../../../utils/constants';
+import { formatNumber } from '../../../utils/format';
 import {
   Utensils,
   ShoppingCart,
@@ -435,7 +436,7 @@ function CurrencySelectModal({
                   </div>
                   {showBalance && currency.balance !== undefined && (
                     <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                      {currency.balance.toLocaleString()}
+                      {formatNumber(currency.balance, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   )}
                   {isSelected && (
@@ -708,7 +709,7 @@ export function TransactionForm() {
                     </div>
                     {currentBalance > 0 && (
                       <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                        {currentBalance.toLocaleString()}
+                        {formatNumber(currentBalance, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     )}
                     <ChevronDown className="w-5 h-5 text-slate-400" />
@@ -717,7 +718,7 @@ export function TransactionForm() {
                     <p className="text-sm text-slate-500 dark:text-slate-400">
                       {t('availableBalance')}:{' '}
                       <span className="font-medium text-slate-700 dark:text-slate-200">
-                        {currentBalance.toLocaleString()} {walletCurrency}
+                        {formatNumber(currentBalance, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {walletCurrency}
                       </span>
                     </p>
                   )}
@@ -741,14 +742,14 @@ export function TransactionForm() {
                       <div className="space-y-1">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-slate-600 dark:text-slate-400">
-                            {numAmount.toLocaleString()} {currency}
+                            {formatNumber(numAmount, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
                           </span>
                           <span className="font-semibold text-slate-800 dark:text-white">
-                            ≈ {conversionData.result.toLocaleString(undefined, { maximumFractionDigits: 2 })} {walletCurrency}
+                            ≈ {formatNumber(conversionData.result, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {walletCurrency}
                           </span>
                         </div>
                         <div className="text-xs text-slate-500 dark:text-slate-400">
-                          {t('rate')}: 1 {currency} = {conversionData.rate.toLocaleString(undefined, { maximumFractionDigits: 6 })} {walletCurrency}
+                          {t('rate')}: 1 {currency} = {formatNumber(conversionData.rate, { maximumFractionDigits: 6 })} {walletCurrency}
                         </div>
                       </div>
                     ) : null}

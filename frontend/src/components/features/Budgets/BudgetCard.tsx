@@ -5,21 +5,12 @@ import type { Budget } from '../../../types/goal';
 import { Card, CardContent } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import { CATEGORY_ICONS } from '../../../constants/icons';
+import { formatCurrency } from '../../../utils/format';
 
 interface BudgetCardProps {
   budget: Budget;
   onEdit: (budget: Budget) => void;
 }
-
-function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
-
 
 export function BudgetCard({ budget, onEdit }: BudgetCardProps) {
   const { t } = useLanguage();

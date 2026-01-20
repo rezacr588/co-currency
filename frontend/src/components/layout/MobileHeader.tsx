@@ -5,6 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
+import { formatCurrency } from '../../utils/format';
 import {
   Menu,
   X,
@@ -111,7 +112,7 @@ export function MobileHeader() {
         {/* Balance (if available) */}
         <div className="flex-1 flex justify-center">
           <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-            ${totalBalanceUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {formatCurrency(totalBalanceUSD, 'USD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
         </div>
 

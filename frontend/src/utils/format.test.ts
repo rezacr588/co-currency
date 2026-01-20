@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import {
   formatNumber,
   formatRate,
@@ -7,6 +7,12 @@ import {
   getRateChangeStatus,
   calculatePercentChange,
 } from './format';
+
+beforeAll(() => {
+  if (typeof document !== 'undefined') {
+    document.documentElement.lang = 'en-US';
+  }
+});
 
 describe('formatNumber', () => {
   it('should format integers with commas', () => {

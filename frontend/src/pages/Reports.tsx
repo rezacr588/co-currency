@@ -23,14 +23,13 @@ import { Button } from '../components/ui/Button';
 import { Select } from '../components/ui/Select';
 import { Skeleton } from '../components/ui/Skeleton';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
+import { formatCurrency } from '../utils/format';
 
-function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
+function formatReportCurrency(amount: number, currency: string): string {
+  return formatCurrency(amount, currency, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount);
+  });
 }
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6'];
@@ -130,19 +129,19 @@ export function Reports() {
                   <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
                     <p className="text-sm text-green-600 dark:text-green-400">{t('income')}</p>
                     <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                      {formatCurrency(monthlyData?.income || 0, currency)}
+                      {formatReportCurrency(monthlyData?.income || 0, currency)}
                     </p>
                   </div>
                   <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl">
                     <p className="text-sm text-red-600 dark:text-red-400">{t('expenses')}</p>
                     <p className="text-2xl font-bold text-red-700 dark:text-red-300">
-                      {formatCurrency(monthlyData?.expenses || 0, currency)}
+                      {formatReportCurrency(monthlyData?.expenses || 0, currency)}
                     </p>
                   </div>
                   <div className="p-4 bg-primary-50 dark:bg-primary-900/20 rounded-xl">
                     <p className="text-sm text-primary-700 dark:text-primary-500">{t('netSavings')}</p>
                     <p className={`text-2xl font-bold ${(monthlyData?.net || 0) >= 0 ? 'text-primary-800 dark:text-primary-400' : 'text-red-700 dark:text-red-300'}`}>
-                      {formatCurrency(monthlyData?.net || 0, currency)}
+                      {formatReportCurrency(monthlyData?.net || 0, currency)}
                     </p>
                   </div>
                   <div className="p-4 bg-primary-50 dark:bg-primary-900/20 rounded-xl">
@@ -188,7 +187,7 @@ export function Reports() {
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => typeof value === 'number' ? formatCurrency(value, currency) : ''} />
+                      <Tooltip formatter={(value) => typeof value === 'number' ? formatReportCurrency(value, currency) : ''} />
                     </PieChart>
                   </ResponsiveContainer>
                 )}
@@ -214,7 +213,7 @@ export function Reports() {
                     <div className="text-center mb-4">
                       <p className="text-sm text-slate-500 dark:text-slate-400">{t('totalNetWorth')}</p>
                       <p className="text-3xl font-bold text-slate-800 dark:text-slate-100">
-                        {formatCurrency(networthData?.total_balance || 0, currency)}
+                        {formatReportCurrency(networthData?.total_balance || 0, currency)}
                       </p>
                     </div>
                     <ResponsiveContainer width="100%" height={200}>
@@ -231,7 +230,7 @@ export function Reports() {
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(value) => typeof value === 'number' ? formatCurrency(value, currency) : ''} />
+                        <Tooltip formatter={(value) => typeof value === 'number' ? formatReportCurrency(value, currency) : ''} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -264,8 +263,8 @@ export function Reports() {
                   <AreaChart data={trendsChartData}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
                     <XAxis dataKey="period" className="text-sm" />
-                    <YAxis tickFormatter={(value) => formatCurrency(value, currency)} className="text-sm" />
-                    <Tooltip formatter={(value) => typeof value === 'number' ? formatCurrency(value, currency) : ''} />
+                    <YAxis tickFormatter={(value) => formatReportCurrency(value, currency)} className="text-sm" />
+                    <Tooltip formatter={(value) => typeof value === 'number' ? formatReportCurrency(value, currency) : ''} />
                     <Legend />
                     <Area
                       type="monotone"

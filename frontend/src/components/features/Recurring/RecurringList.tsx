@@ -12,18 +12,10 @@ import { Skeleton } from '../../ui/Skeleton';
 import { ErrorMessage } from '../../ui/ErrorMessage';
 import { RecurringForm } from './RecurringForm';
 import { CATEGORY_ICONS, FREQUENCY_ICONS } from '../../../constants/icons';
+import { formatCurrency, formatDate } from '../../../utils/format';
 
-function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
+function formatRecurringDate(dateString: string): string {
+  return formatDate(dateString, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -100,7 +92,7 @@ function RecurringCard({ recurring, onEdit }: RecurringCardProps) {
         <div className="flex items-center justify-between mb-3 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
           <span className="text-sm text-slate-500 dark:text-slate-400">{t('nextExecution')}</span>
           <span className={`text-sm font-medium ${isDue ? 'text-primary-600' : 'text-slate-700 dark:text-slate-200'}`}>
-            {formatDate(recurring.next_execution)}
+            {formatRecurringDate(recurring.next_execution)}
             {isDue && ` (${t('due')})`}
           </span>
         </div>

@@ -3,6 +3,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
+import { formatCurrency } from '../../utils/format';
 import {
   LayoutDashboard,
   Wallet,
@@ -144,7 +145,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             <div className="flex-1 min-w-0">
               <p className="font-medium text-slate-800 dark:text-white truncate">{user?.name}</p>
               <p className="text-sm text-emerald-600 dark:text-emerald-400 font-semibold">
-                ${totalBalanceUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatCurrency(totalBalanceUSD, 'USD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
           </div>

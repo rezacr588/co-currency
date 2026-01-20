@@ -32,6 +32,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Card, CardContent } from './components/ui/Card';
 import { Button } from './components/ui/Button';
 import { api } from './api/client';
+import { formatCompactCurrency } from './utils/format';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -69,20 +70,6 @@ function SEOHead() {
       <meta property="og:locale" content={language === 'fa' ? 'fa_IR' : language === 'ar' ? 'ar_SA' : language === 'tr' ? 'tr_TR' : 'en_US'} />
     </Helmet>
   );
-}
-
-function formatCompactCurrency(amount: number): string {
-  if (amount >= 1000000) {
-    return `$${(amount / 1000000).toFixed(1)}M`;
-  } else if (amount >= 1000) {
-    return `$${(amount / 1000).toFixed(1)}K`;
-  }
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount);
 }
 
 function BalanceDisplay() {
@@ -128,7 +115,7 @@ function BalanceDisplay() {
               ? 'text-rose-600 dark:text-rose-400'
               : 'text-slate-600 dark:text-slate-400'
           }`}>
-            {formatCompactCurrency(balance)}
+            {formatCompactCurrency(balance, 'USD')}
           </span>
         )}
       </div>

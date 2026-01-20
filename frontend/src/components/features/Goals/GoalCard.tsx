@@ -8,23 +8,15 @@ import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
 import { GoalProgress } from './GoalProgress';
 import { GOAL_ICONS } from '../../../constants/icons';
+import { formatCurrency, formatDate } from '../../../utils/format';
 
 interface GoalCardProps {
   goal: Goal;
   onEdit: (goal: Goal) => void;
 }
 
-function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
+function formatGoalDate(dateString: string): string {
+  return formatDate(dateString, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -78,7 +70,7 @@ export function GoalCard({ goal, onEdit }: GoalCardProps) {
               <h3 className="font-semibold text-slate-800 dark:text-slate-100">{goal.name}</h3>
               {goal.deadline && (
                 <p className={`text-xs ${isOverdue ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>
-                  {t('deadline')}: {formatDate(goal.deadline)}
+                  {t('deadline')}: {formatGoalDate(goal.deadline)}
                   {isOverdue && ` (${t('overdue')})`}
                 </p>
               )}

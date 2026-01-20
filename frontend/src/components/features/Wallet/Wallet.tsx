@@ -9,15 +9,7 @@ import { Skeleton } from '../../ui/Skeleton';
 import { ErrorMessage } from '../../ui/ErrorMessage';
 import { CurrencyBadge } from '../../ui/CurrencyBadge';
 import { TransactionHistory } from './TransactionHistory';
-
-function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
+import { formatCurrency } from '../../../utils/format';
 
 function BalanceCard({ currency, amount }: { currency: string; amount: number }) {
   return (

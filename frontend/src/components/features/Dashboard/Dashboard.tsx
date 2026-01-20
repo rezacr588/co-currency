@@ -10,6 +10,7 @@ import { Button } from '../../ui/Button';
 import { Skeleton } from '../../ui/Skeleton';
 import { TransactionHistory } from '../Wallet/TransactionHistory';
 import { CURRENCY_FLAGS } from '../../../utils/constants';
+import { formatCurrency, formatNumber } from '../../../utils/format';
 import {
   Wallet,
   Target,
@@ -29,15 +30,6 @@ import {
   ArrowLeftRight,
   ArrowRight,
 } from 'lucide-react';
-
-function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
 
 interface QuickStatProps {
   title: string;
@@ -151,7 +143,7 @@ function QuickBalanceConverter({ balanceUSD }: QuickBalanceConverterProps) {
               <span className="text-sm font-medium text-slate-500 dark:text-slate-400">USD</span>
             </div>
             <p className="text-2xl font-bold text-slate-800 dark:text-white">
-              ${balanceUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {formatCurrency(balanceUSD, 'USD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           </div>
 
@@ -178,12 +170,14 @@ function QuickBalanceConverter({ balanceUSD }: QuickBalanceConverterProps) {
               <Skeleton className="h-8 w-32" />
             ) : (
               <p className="text-2xl font-bold text-slate-800 dark:text-white">
-                {conversionData?.result.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                {conversionData
+                  ? formatNumber(conversionData.result, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                  : formatNumber(0, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             )}
             {conversionData?.rate && (
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                1 USD = {conversionData.rate.toFixed(4)} {selectedCurrency}
+                1 USD = {formatNumber(conversionData.rate, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} {selectedCurrency}
               </p>
             )}
           </div>

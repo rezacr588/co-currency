@@ -12,15 +12,7 @@ import { ErrorMessage } from '../../ui/ErrorMessage';
 import { CurrencyBadge } from '../../ui/CurrencyBadge';
 import { Skeleton } from '../../ui/Skeleton';
 import type { WalletBalance } from '../../../types/wallet';
-
-function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
+import { formatCurrency, formatNumber } from '../../../utils/format';
 
 export function WalletConvert() {
   const { t } = useLanguage();
@@ -218,7 +210,7 @@ export function WalletConvert() {
                     ) : null}
                     {ratePreview && (
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                        1 {fromCurrency} = {ratePreview.rate.toFixed(4)} {toCurrency}
+                        1 {fromCurrency} = {formatNumber(ratePreview.rate, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} {toCurrency}
                       </p>
                     )}
                   </div>

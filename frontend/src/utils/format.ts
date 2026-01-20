@@ -5,6 +5,19 @@ export interface CurrencyDisplay {
   symbol: string;
 }
 
+function getLocale(): string {
+  if (typeof document !== 'undefined') {
+    const lang = document.documentElement.lang;
+    if (lang) {
+      return lang;
+    }
+  }
+  if (typeof navigator !== 'undefined' && navigator.language) {
+    return navigator.language;
+  }
+  return 'en-US';
+}
+
 /**
  * Get display information for a currency code
  * Returns the flag emoji (or undefined if not found) and symbol for a given currency
@@ -34,46 +47,93 @@ export function calculatePercentChange(current: number, previous: number): numbe
   return ((current - previous) / previous) * 100;
 }
 
-export function formatCurrency(amount: number, currency: string): string {
+export function formatCurrency(
+  amount: number,
+  currency: string,
+  options: Intl.NumberFormatOptions = {}
+): string {
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(getLocale(), {
       style: 'currency',
       currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      ...options,
     }).format(amount);
   } catch {
     return `${amount.toFixed(2)} ${currency}`;
   }
 }
 
-export function formatNumber(amount: number, decimals = 2): string {
+export function formatNumber(
+  amount: number,
+  decimalsOrOptions: number | Intl.NumberFormatOptions = 2
+): string {
   if (!isFinite(amount)) return '0.00';
-  const safeDecimals = Math.min(Math.max(0, decimals), 20);
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: Math.min(2, safeDecimals),
-    maximumFractionDigits: safeDecimals,
-  }).format(amount);
+  if (typeof decimalsOrOptions === 'number') {
+    const safeDecimals = Math.min(Math.max(0, decimalsOrOptions), 20);
+    return new Intl.NumberFormat(getLocale(), {
+      minimumFractionDigits: Math.min(2, safeDecimals),
+      maximumFractionDigits: safeDecimals,
+    }).format(amount);
+  }
+  return new Intl.NumberFormat(getLocale(), decimalsOrOptions).format(amount);
 }
 
 export function formatRate(rate: number): string {
   if (!isFinite(rate)) return '0.000000';
-  return rate.toFixed(6);
+  return new Intl.NumberFormat(getLocale(), {
+    minimumFractionDigits: 6,
+    maximumFractionDigits: 6,
+  }).format(rate);
 }
 
-export function formatDate(date: string): string {
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return 'N/A';
-  return d.toLocaleDateString('en-US', {
+export function formatCompactCurrency(
+  amount: number,
+  currency: string,
+  options: Intl.NumberFormatOptions = {}
+): string {
+  if (!isFinite(amount)) {
+    return formatCurrency(0, currency, options);
+  }
+  if (Math.abs(amount) < 1000) {
+    return formatCurrency(amount, currency, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+      ...options,
+    });
+  }
+  try {
+    return new Intl.NumberFormat(getLocale(), {
+      style: 'currency',
+      currency,
+      notation: 'compact',
+      maximumFractionDigits: 1,
+      ...options,
+    }).format(amount);
+  } catch {
+    return formatCurrency(amount, currency, options);
+  }
+}
+
+export function formatDate(
+  date: string,
+  options: Intl.DateTimeFormatOptions = {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  });
+  }
+): string {
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return 'N/A';
+  return new Intl.DateTimeFormat(getLocale(), options).format(d);
 }
 
 export function formatTime(date: string): string {
   const d = new Date(date);
   if (isNaN(d.getTime())) return 'N/A';
-  return d.toLocaleTimeString('en-US', {
+  return new Intl.DateTimeFormat(getLocale(), {
     hour: '2-digit',
     minute: '2-digit',
-  });
+  }).format(d);
 }

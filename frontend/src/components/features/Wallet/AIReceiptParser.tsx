@@ -9,15 +9,7 @@ import { Button } from '../../ui/Button';
 import { ErrorMessage } from '../../ui/ErrorMessage';
 import { CurrencyBadge } from '../../ui/CurrencyBadge';
 import type { ParsedTransaction, AIParseResponse } from '../../../types/wallet';
-
-function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
+import { formatCurrency } from '../../../utils/format';
 
 function ConfidenceBadge({ confidence }: { confidence: number }) {
   const percent = Math.round(confidence * 100);

@@ -4,7 +4,7 @@ import { SwapButton } from './SwapButton';
 import { InlineCurrencySelect } from './InlineCurrencySelect';
 import { CurrencyInput } from '../../ui/CurrencyInput';
 import { useLanguage } from '../../../context/LanguageContext';
-import { formatRate, formatNumber } from '../../../utils/format';
+import { formatRate, formatNumber, formatTime } from '../../../utils/format';
 import { CURRENCY_SYMBOLS, CURRENCY_FLAGS } from '../../../utils/constants';
 import {
   TrendingUp,
@@ -159,18 +159,18 @@ export function Converter() {
       {/* Main Card */}
       <div className="relative group">
         {/* Animated gradient background */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-primary-500 via-purple-500 to-pink-500 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-all duration-700 animate-gradient-shift" />
+        <div className="absolute -inset-1 bg-gradient-to-r from-primary-600 via-accent-500 to-primary-500 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-all duration-700 animate-gradient-shift" />
 
         {/* Glass Card */}
         <div className="relative bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 shadow-2xl shadow-slate-200/50 dark:shadow-black/30 overflow-hidden">
           {/* Top accent bar with gradient */}
-          <div className="h-1 bg-gradient-to-r from-primary-500 via-purple-500 to-pink-500" />
+          <div className="h-1 bg-gradient-to-r from-primary-600 via-accent-500 to-primary-500" />
 
           {/* Header Section */}
           <div className="px-3 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center shadow-lg shadow-primary-500/30 flex-shrink-0">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary-600 to-accent-500 flex items-center justify-center shadow-lg shadow-primary-500/30 flex-shrink-0">
                   <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </div>
                 <div className="min-w-0">
@@ -186,10 +186,7 @@ export function Converter() {
                 <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-slate-100 dark:bg-slate-800 rounded-full flex-shrink-0">
                   <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400" />
                   <span className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
-                    {new Date(result.updated_at).toLocaleTimeString(undefined, {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {formatTime(result.updated_at)}
                   </span>
                 </div>
               )}

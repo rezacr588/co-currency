@@ -6,6 +6,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { Language } from '../../i18n/translations';
 import { api } from '../../api/client';
+import { formatCompactCurrency } from '../../utils/format';
 
 const LANGUAGES: { code: Language; name: string; native: string }[] = [
   { code: 'en', name: 'English', native: 'English' },
@@ -13,20 +14,6 @@ const LANGUAGES: { code: Language; name: string; native: string }[] = [
   { code: 'ar', name: 'Arabic', native: 'العربية' },
   { code: 'tr', name: 'Turkish', native: 'Türkçe' },
 ];
-
-function formatCompactCurrency(amount: number): string {
-  if (amount >= 1000000) {
-    return `$${(amount / 1000000).toFixed(1)}M`;
-  } else if (amount >= 1000) {
-    return `$${(amount / 1000).toFixed(1)}K`;
-  }
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
 
 export function HamburgerMenu() {
   const [isOpen, setIsOpen] = useState(false);
@@ -219,6 +206,26 @@ export function HamburgerMenu() {
                     </svg>
                     {t('reportsAndStats')}
                   </Link>
+                  <Link
+                    to="/wallet/ai"
+                    onClick={() => setIsOpen(false)}
+                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
+                      location.pathname === '/wallet/ai'
+                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
+                    }`}
+                    role="menuitem"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8V4H8" />
+                      <rect width="16" height="12" x="4" y="8" rx="2" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2 14h2" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20 14h2" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 13v2" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 13v2" />
+                    </svg>
+                    {t('aiParser')}
+                  </Link>
                 </>
               ) : (
                 <>
@@ -283,17 +290,17 @@ export function HamburgerMenu() {
                     <span className="text-[10px] font-medium text-primary-700/70 dark:text-primary-400/70 uppercase tracking-wider">
                       {t('totalBalance')}
                     </span>
-                    {balanceLoading ? (
-                      <span className="text-sm font-bold text-slate-400 dark:text-slate-500 animate-pulse">---</span>
-                    ) : (
-                      <span className={`text-sm font-bold ${
-                        (walletSummary?.total_balance_usd ?? 0) > 0
-                          ? 'text-green-600 dark:text-green-400'
-                          : (walletSummary?.total_balance_usd ?? 0) < 0
-                          ? 'text-rose-600 dark:text-rose-400'
-                          : 'text-slate-600 dark:text-slate-400'
-                      }`}>
-                        {formatCompactCurrency(walletSummary?.total_balance_usd ?? 0)}
+                        {balanceLoading ? (
+                          <span className="text-sm font-bold text-slate-400 dark:text-slate-500 animate-pulse">---</span>
+                        ) : (
+                          <span className={`text-sm font-bold ${
+                            (walletSummary?.total_balance_usd ?? 0) > 0
+                              ? 'text-green-600 dark:text-green-400'
+                              : (walletSummary?.total_balance_usd ?? 0) < 0
+                              ? 'text-rose-600 dark:text-rose-400'
+                              : 'text-slate-600 dark:text-slate-400'
+                        }`}>
+                        {formatCompactCurrency(walletSummary?.total_balance_usd ?? 0, 'USD')}
                       </span>
                     )}
                   </div>
