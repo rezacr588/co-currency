@@ -80,9 +80,8 @@ function AnimatedNumber({ value, className }: { value: number; className?: strin
 
   return (
     <span
-      className={`transition-all duration-300 ${
-        isAnimating ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
-      } ${className}`}
+      className={`transition-all duration-300 ${isAnimating ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
+        } ${className}`}
     >
       {formatNumber(displayValue)}
     </span>
@@ -177,7 +176,7 @@ export function Converter() {
                   <h2 className="text-sm sm:text-lg font-bold text-slate-800 dark:text-white truncate">
                     {t('currencyConverter') || 'Currency Converter'}
                   </h2>
-                  <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     160+ currencies
                   </p>
                 </div>
@@ -185,7 +184,7 @@ export function Converter() {
               {result?.updated_at && (
                 <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-slate-100 dark:bg-slate-800 rounded-full flex-shrink-0">
                   <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400" />
-                  <span className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
+                  <span className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
                     {formatTime(result.updated_at)}
                   </span>
                 </div>
@@ -197,9 +196,8 @@ export function Converter() {
           <div className="px-3 sm:px-6 pb-4 sm:pb-6 space-y-3 sm:space-y-4">
             {/* Converter Box - Minimal Coin Design */}
             <div
-              className={`relative transition-all duration-300 ${
-                isSwapping ? 'scale-[0.98]' : 'scale-100'
-              }`}
+              className={`relative transition-all duration-300 ${isSwapping ? 'scale-[0.98]' : 'scale-100'
+                }`}
             >
               {/* FROM Section - Top Half */}
               <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-t-3xl p-4 pb-6">
@@ -249,11 +247,10 @@ export function Converter() {
                         />
                         {rateIndicator && (
                           <div
-                            className={`flex-shrink-0 ml-1 ${
-                              rateIndicator === 'up'
-                                ? 'text-emerald-500'
-                                : 'text-amber-500'
-                            }`}
+                            className={`flex-shrink-0 ml-1 ${rateIndicator === 'up'
+                              ? 'text-emerald-500'
+                              : 'text-amber-500'
+                              }`}
                           >
                             {rateIndicator === 'up' ? (
                               <TrendingUp className="w-3 h-3" />
@@ -326,7 +323,7 @@ export function Converter() {
           <div className="px-3 sm:px-6 pb-4 sm:pb-6">
             <div className="flex items-center gap-2 mb-2 sm:mb-3">
               <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-primary-500" />
-              <span className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 {t('popularPairs') || 'Popular Pairs'}
               </span>
             </div>
@@ -337,11 +334,10 @@ export function Converter() {
                   <button
                     key={`${pair.from}-${pair.to}`}
                     onClick={() => handleQuickPair(pair.from, pair.to)}
-                    className={`flex items-center gap-0.5 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-sm font-medium transition-all duration-200 ${
-                      isActive
+                    className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 touch-target-sm ${isActive
                         ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30 scale-105'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 hover:scale-105'
-                    }`}
+                      }`}
                   >
                     <span className="text-sm sm:text-base">{CURRENCY_FLAGS[pair.from]}</span>
                     <span>{pair.from}</span>

@@ -28,6 +28,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { ToastContainer } from './components/ui/ToastContainer';
 import { HamburgerMenu } from './components/ui/HamburgerMenu';
+import { OfflineBanner } from './components/ui/OfflineBanner';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Card, CardContent } from './components/ui/Card';
 import { Button } from './components/ui/Button';
@@ -91,30 +92,29 @@ function BalanceDisplay() {
   return (
     <Link
       to="/wallet"
-      className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700/30 hover:border-primary-300 dark:hover:border-primary-600 transition-all group"
+      className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700/30 hover:border-primary-300 dark:hover:border-primary-600 transition-all group"
       title={t('totalBalance')}
     >
-      <div className="flex items-center justify-center w-7 h-7 rounded-md bg-primary-800 dark:bg-primary-700">
-        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <div className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-primary-800 dark:bg-primary-700">
+        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </div>
       <div className="flex flex-col">
-        <span className="text-[10px] font-medium text-primary-700/70 dark:text-primary-400/70 uppercase tracking-wider leading-none">
+        <span className="hidden sm:block text-[10px] font-medium text-primary-700/70 dark:text-primary-400/70 uppercase tracking-wider leading-none">
           {t('balance')}
         </span>
         {isLoading ? (
-          <span className="text-sm font-bold text-slate-400 dark:text-slate-500 animate-pulse">---</span>
+          <span className="text-xs sm:text-sm font-bold text-slate-400 dark:text-slate-500 animate-pulse">---</span>
         ) : error ? (
-          <span className="text-sm font-bold text-rose-500 dark:text-rose-400">--</span>
+          <span className="text-xs sm:text-sm font-bold text-rose-500 dark:text-rose-400">--</span>
         ) : (
-          <span className={`text-sm font-bold leading-tight ${
-            hasBalance && balance > 0
-              ? 'text-green-600 dark:text-green-400'
-              : hasBalance && balance < 0
+          <span className={`text-xs sm:text-sm font-bold leading-tight ${hasBalance && balance > 0
+            ? 'text-green-600 dark:text-green-400'
+            : hasBalance && balance < 0
               ? 'text-rose-600 dark:text-rose-400'
               : 'text-slate-600 dark:text-slate-400'
-          }`}>
+            }`}>
             {formatCompactCurrency(balance, 'USD')}
           </span>
         )}
@@ -174,11 +174,10 @@ function UserDropdown() {
                 key={item.to}
                 to={item.to}
                 onClick={() => setIsOpen(false)}
-                className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm transition-colors ${
-                  location.pathname === item.to || location.pathname.startsWith(item.to + '/')
-                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                    : 'hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                }`}
+                className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm transition-colors ${location.pathname === item.to || location.pathname.startsWith(item.to + '/')
+                  ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
+                  }`}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
@@ -235,31 +234,28 @@ function Header() {
                 <>
                   <Link
                     to="/dashboard"
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      location.pathname === '/dashboard'
-                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${location.pathname === '/dashboard'
+                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
                   >
                     {t('dashboard')}
                   </Link>
                   <Link
                     to="/"
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      location.pathname === '/'
-                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${location.pathname === '/'
+                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
                   >
                     {t('converter')}
                   </Link>
                   <Link
                     to="/about"
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      location.pathname === '/about'
-                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${location.pathname === '/about'
+                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
                   >
                     {t('aboutUs')}
                   </Link>
@@ -270,31 +266,28 @@ function Header() {
                 <>
                   <Link
                     to="/"
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      location.pathname === '/'
-                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${location.pathname === '/'
+                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
                   >
                     {t('home')}
                   </Link>
                   <Link
                     to="/about"
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      location.pathname === '/about'
-                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${location.pathname === '/about'
+                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
                   >
                     {t('aboutUs')}
                   </Link>
                   <Link
                     to="/login"
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      location.pathname === '/login'
-                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${location.pathname === '/login'
+                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
                   >
                     {t('login')}
                   </Link>
@@ -374,12 +367,12 @@ function HeroSection() {
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
-            <Link to="/register">
+          <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12 px-4 sm:px-0">
+            <Link to="/register" className="w-full sm:w-auto">
               <Button
                 variant="primary"
                 size="lg"
-                className="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 dark:bg-amber-500 dark:hover:bg-amber-400 text-slate-900 font-semibold px-8 py-4 text-lg shadow-lg shadow-amber-500/25 border-0"
+                className="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 dark:bg-amber-500 dark:hover:bg-amber-400 text-slate-900 font-semibold px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg shadow-lg shadow-amber-500/25 border-0"
               >
                 {t('heroCtaPrimary')}
                 <svg className="w-5 h-5 ms-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -387,11 +380,11 @@ function HeroSection() {
                 </svg>
               </Button>
             </Link>
-            <a href="#converter">
+            <a href="#converter" className="w-full sm:w-auto">
               <Button
                 variant="secondary"
                 size="lg"
-                className="w-full sm:w-auto bg-white/10 hover:bg-white/20 dark:bg-white/5 dark:hover:bg-white/10 text-white border-white/30 dark:border-white/20 px-8 py-4 text-lg backdrop-blur-sm"
+                className="w-full sm:w-auto bg-white/10 hover:bg-white/20 dark:bg-white/5 dark:hover:bg-white/10 text-white border-white/30 dark:border-white/20 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg backdrop-blur-sm"
               >
                 {t('heroCtaSecondary')}
               </Button>
@@ -769,6 +762,7 @@ function AppContent() {
   return (
     <div className={`min-h-screen flex flex-col ${isRTL ? 'rtl' : 'ltr'} ${theme}`} dir={isRTL ? 'rtl' : 'ltr'}>
       <SEOHead />
+      <OfflineBanner />
 
       <Routes>
         {/* Public routes with header/footer */}

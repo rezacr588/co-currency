@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { MobileHeader } from './MobileHeader';
+import { BottomNav } from './BottomNav';
 
 export function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -33,12 +34,15 @@ export function AppLayout() {
 
       {/* Main Content Area */}
       <main
-        className={`min-h-screen transition-all duration-300 ${
-          isMobile ? 'pt-16' : sidebarCollapsed ? 'ml-[72px]' : 'ml-64'
-        }`}
+        className={`min-h-screen transition-all duration-300 ${isMobile ? 'pt-16 pb-20' : sidebarCollapsed ? 'ml-[72px]' : 'ml-64'
+          }`}
       >
         <Outlet />
       </main>
+
+      {/* Bottom Navigation - shown only on mobile for authenticated users */}
+      {isMobile && <BottomNav />}
     </div>
   );
 }
+

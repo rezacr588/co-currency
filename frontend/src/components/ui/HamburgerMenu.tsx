@@ -60,7 +60,7 @@ export function HamburgerMenu() {
       {/* Hamburger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-600/30"
+        className="p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-600/30 touch-target"
         aria-label={isOpen ? t('closeMenu') : t('openMenu')}
         aria-expanded={isOpen}
         aria-haspopup="true"
@@ -75,7 +75,7 @@ export function HamburgerMenu() {
       {/* Dropdown Menu */}
       {isOpen && (
         <div
-          className={`absolute top-full mt-2 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 overflow-hidden z-50 animate-fade-in ${isRTL ? 'left-0' : 'right-0'}`}
+          className={`absolute top-full mt-2 w-64 sm:w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 overflow-hidden z-50 animate-fade-in ${isRTL ? 'left-0' : 'right-0'}`}
           role="menu"
         >
           {/* Navigation Links - Mobile Only */}
@@ -87,11 +87,10 @@ export function HamburgerMenu() {
               <Link
                 to="/"
                 onClick={() => setIsOpen(false)}
-                className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
-                  location.pathname === '/'
+                className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/'
                     ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                     : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                }`}
+                  }`}
                 role="menuitem"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -102,11 +101,10 @@ export function HamburgerMenu() {
               <Link
                 to="/about"
                 onClick={() => setIsOpen(false)}
-                className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
-                  location.pathname === '/about'
+                className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/about'
                     ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                     : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                }`}
+                  }`}
                 role="menuitem"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -119,11 +117,10 @@ export function HamburgerMenu() {
                   <Link
                     to="/dashboard"
                     onClick={() => setIsOpen(false)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
-                      location.pathname === '/dashboard'
+                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/dashboard'
                         ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                    }`}
+                      }`}
                     role="menuitem"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -134,11 +131,10 @@ export function HamburgerMenu() {
                   <Link
                     to="/wallet"
                     onClick={() => setIsOpen(false)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
-                      location.pathname.startsWith('/wallet')
+                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname.startsWith('/wallet')
                         ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                    }`}
+                      }`}
                     role="menuitem"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -149,11 +145,10 @@ export function HamburgerMenu() {
                   <Link
                     to="/goals"
                     onClick={() => setIsOpen(false)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
-                      location.pathname === '/goals'
+                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/goals'
                         ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                    }`}
+                      }`}
                     role="menuitem"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -164,11 +159,10 @@ export function HamburgerMenu() {
                   <Link
                     to="/budgets"
                     onClick={() => setIsOpen(false)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
-                      location.pathname === '/budgets'
+                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/budgets'
                         ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                    }`}
+                      }`}
                     role="menuitem"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -179,11 +173,10 @@ export function HamburgerMenu() {
                   <Link
                     to="/recurring"
                     onClick={() => setIsOpen(false)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
-                      location.pathname === '/recurring'
+                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/recurring'
                         ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                    }`}
+                      }`}
                     role="menuitem"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -194,11 +187,10 @@ export function HamburgerMenu() {
                   <Link
                     to="/reports"
                     onClick={() => setIsOpen(false)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
-                      location.pathname === '/reports'
+                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/reports'
                         ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                    }`}
+                      }`}
                     role="menuitem"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -209,11 +201,10 @@ export function HamburgerMenu() {
                   <Link
                     to="/wallet/ai"
                     onClick={() => setIsOpen(false)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
-                      location.pathname === '/wallet/ai'
+                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/wallet/ai'
                         ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                    }`}
+                      }`}
                     role="menuitem"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -232,11 +223,10 @@ export function HamburgerMenu() {
                   <Link
                     to="/login"
                     onClick={() => setIsOpen(false)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
-                      location.pathname === '/login'
+                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/login'
                         ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                    }`}
+                      }`}
                     role="menuitem"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -247,11 +237,10 @@ export function HamburgerMenu() {
                   <Link
                     to="/register"
                     onClick={() => setIsOpen(false)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
-                      location.pathname === '/register'
+                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/register'
                         ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                    }`}
+                      }`}
                     role="menuitem"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -290,15 +279,14 @@ export function HamburgerMenu() {
                     <span className="text-[10px] font-medium text-primary-700/70 dark:text-primary-400/70 uppercase tracking-wider">
                       {t('totalBalance')}
                     </span>
-                        {balanceLoading ? (
-                          <span className="text-sm font-bold text-slate-400 dark:text-slate-500 animate-pulse">---</span>
-                        ) : (
-                          <span className={`text-sm font-bold ${
-                            (walletSummary?.total_balance_usd ?? 0) > 0
-                              ? 'text-green-600 dark:text-green-400'
-                              : (walletSummary?.total_balance_usd ?? 0) < 0
-                              ? 'text-rose-600 dark:text-rose-400'
-                              : 'text-slate-600 dark:text-slate-400'
+                    {balanceLoading ? (
+                      <span className="text-sm font-bold text-slate-400 dark:text-slate-500 animate-pulse">---</span>
+                    ) : (
+                      <span className={`text-sm font-bold ${(walletSummary?.total_balance_usd ?? 0) > 0
+                          ? 'text-green-600 dark:text-green-400'
+                          : (walletSummary?.total_balance_usd ?? 0) < 0
+                            ? 'text-rose-600 dark:text-rose-400'
+                            : 'text-slate-600 dark:text-slate-400'
                         }`}>
                         {formatCompactCurrency(walletSummary?.total_balance_usd ?? 0, 'USD')}
                       </span>
@@ -335,11 +323,10 @@ export function HamburgerMenu() {
                     setLanguage(lang.code);
                     setIsOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between px-2 py-2 rounded-lg text-sm transition-colors ${
-                    language === lang.code
+                  className={`w-full flex items-center justify-between px-2 py-2 rounded-lg text-sm transition-colors ${language === lang.code
                       ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
                       : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                  }`}
+                    }`}
                   role="menuitemradio"
                   aria-checked={language === lang.code}
                 >

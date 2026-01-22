@@ -54,9 +54,8 @@ function QuickStat({ title, value, subtitle, icon, trend, trendValue, bgColor, i
         {(subtitle || trendValue) && (
           <div className="flex items-center gap-2 mt-2">
             {trend && trendValue && (
-              <span className={`flex items-center gap-1 text-xs font-medium ${
-                trend === 'up' ? 'text-emerald-600' : trend === 'down' ? 'text-rose-600' : 'text-slate-500'
-              }`}>
+              <span className={`flex items-center gap-1 text-xs font-medium ${trend === 'up' ? 'text-emerald-600' : trend === 'down' ? 'text-rose-600' : 'text-slate-500'
+                }`}>
                 {trend === 'up' ? <ArrowUpRight className="w-3 h-3" /> : trend === 'down' ? <ArrowDownRight className="w-3 h-3" /> : null}
                 {trendValue}
               </span>
@@ -189,11 +188,10 @@ function QuickBalanceConverter({ balanceUSD }: QuickBalanceConverterProps) {
             <button
               key={code}
               onClick={() => setSelectedCurrency(code)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
-                selectedCurrency === code
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${selectedCurrency === code
                   ? 'bg-primary-600 text-white'
                   : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-primary-300 dark:hover:border-primary-600'
-              }`}
+                }`}
             >
               {CURRENCY_FLAGS[code]} {code}
             </button>
@@ -294,7 +292,7 @@ export function Dashboard() {
       </div>
 
       {/* Quick Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
         {isLoading ? (
           <>
             {[1, 2, 3, 4].map((i) => (

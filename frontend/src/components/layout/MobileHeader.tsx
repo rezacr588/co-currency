@@ -99,7 +99,7 @@ export function MobileHeader() {
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-50">
+    <header className="fixed top-0 left-0 right-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-50 safe-area-top" style={{ minHeight: '64px' }}>
       <div className="flex items-center justify-between h-full px-4">
         {/* Logo */}
         <div className="flex items-center gap-2">
@@ -155,10 +155,9 @@ export function MobileHeader() {
                 to={item.to}
                 onClick={handleNavClick}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                    isActive
-                      ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive
+                    ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`
                 }
               >
@@ -199,11 +198,10 @@ export function MobileHeader() {
                       setLanguage(lang.code as 'en' | 'fa' | 'ar' | 'tr');
                       setShowLanguages(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors ${
-                      language === lang.code
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors ${language === lang.code
                         ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300'
                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
+                      }`}
                   >
                     <span>{lang.flag}</span>
                     <span>{lang.name}</span>

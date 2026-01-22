@@ -21,3 +21,7 @@ export { EmptyState } from './EmptyState';
 // Toast components
 export { Toast } from './Toast';
 export { ToastContainer } from './ToastContainer';
+
+// Network status
+export { OfflineBanner } from './OfflineBanner';
+
