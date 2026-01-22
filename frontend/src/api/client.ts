@@ -38,6 +38,14 @@ import type {
   CategoryReport,
   TrendsReport,
   NetWorthReport,
+  Subscription,
+  CreateSubscriptionRequest,
+  UpdateSubscriptionRequest,
+  SubscriptionSummary,
+  Badge,
+  UserBadge,
+  BadgeProgress,
+  BadgeCheckResult,
 } from '../types/goal';
 
 const API_BASE = '/api/v1';
@@ -419,5 +427,47 @@ export const api = {
       const query = params.toString();
       return fetchAPI<NetWorthReport>(`/reports/networth${query ? `?${query}` : ''}`);
     },
+  },
+
+  // Subscriptions
+  subscriptions: {
+    list: () => fetchAPI<{ subscriptions: Subscription[] }>('/subscriptions'),
+    get: (id: string) => fetchAPI<Subscription>(`/subscriptions/${id}`),
+    create: (data: CreateSubscriptionRequest) =>
+      fetchAPI<Subscription>('/subscriptions', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: UpdateSubscriptionRequest) =>
+      fetchAPI<Subscription>(`/subscriptions/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      fetchAPI<{ message: string }>(`/subscriptions/${id}`, {
+        method: 'DELETE',
+      }),
+    getSummary: (currency?: string) => {
+      const params = new URLSearchParams();
+      if (currency) params.set('currency', currency);
+      const query = params.toString();
+      return fetchAPI<SubscriptionSummary>(`/subscriptions/summary${query ? `?${query}` : ''}`);
+    },
+    getUpcoming: (days?: number) => {
+      const params = new URLSearchParams();
+      if (days) params.set('days', days.toString());
+      const query = params.toString();
+      return fetchAPI<{ upcoming: Subscription[]; within_days: number }>(`/subscriptions/upcoming${query ? `?${query}` : ''}`);
+    },
+    getBillingCycles: () => fetchAPI<{ billing_cycles: string[] }>('/subscriptions/billing-cycles'),
+    getCategories: () => fetchAPI<{ categories: string[] }>('/subscriptions/categories'),
+  },
+
+  // Badges
+  badges: {
+    list: () => fetchAPI<{ badges: Badge[] }>('/badges'),
+    getEarned: () => fetchAPI<{ badges: UserBadge[]; count: number }>('/badges/earned'),
+    getProgress: () => fetchAPI<{ progress: BadgeProgress[]; total_badges: number; earned_count: number }>('/badges/progress'),
+    check: () => fetchAPI<BadgeCheckResult>('/badges/check', { method: 'POST' }),
   },
 };

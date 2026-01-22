@@ -22,6 +22,8 @@ import { BudgetList } from './components/features/Budgets';
 import { RecurringList } from './components/features/Recurring';
 import { Login, Register, ForgotPassword, ResetPassword } from './pages';
 import { Reports } from './pages/Reports';
+import { Subscriptions } from './pages/Subscriptions';
+import { Badges } from './pages/Badges';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -788,6 +790,8 @@ function AppContent() {
           <Route path="/budgets" element={<BudgetList />} />
           <Route path="/recurring" element={<RecurringList />} />
           <Route path="/reports" element={<Reports />} />
+          <Route path="/subscriptions" element={<Subscriptions />} />
+          <Route path="/badges" element={<Badges />} />
         </Route>
       </Routes>
     </div>

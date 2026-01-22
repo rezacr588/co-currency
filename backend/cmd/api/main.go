@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"io/fs"
@@ -18,7 +19,71 @@ import (
 	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/router"
 	"github.com/rezacr588/currency-converter/internal/service"
+
+	// Swagger docs
+	_ "github.com/rezacr588/currency-converter/docs"
 )
+
+// @title           CoFinance API
+// @version         1.0
+// @description     CoFinance is a personal finance management API with currency conversion, wallet management, budgets, goals, subscriptions, and achievement badges.
+// @description
+// @description     ## Features
+// @description     - **Currency Conversion**: Real-time exchange rates with support for 30+ currencies including IRR
+// @description     - **Wallet Management**: Multi-currency wallet with transaction tracking
+// @description     - **Budgets**: Set and track spending budgets by category
+// @description     - **Goals**: Create and track financial savings goals
+// @description     - **Subscriptions**: Track recurring subscriptions and bills
+// @description     - **Badges**: Earn achievement badges for financial milestones
+// @description     - **AI Features**: Smart transaction parsing and categorization
+// @description
+// @description     ## Authentication
+// @description     Most endpoints require JWT authentication. Include the token in the Authorization header:
+// @description     `Authorization: Bearer <your-token>`
+
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.url    https://github.com/rezacr588/currency-converter
+// @contact.email  support@cofinance.app
+
+// @license.name  MIT
+// @license.url   https://opensource.org/licenses/MIT
+
+// @host      localhost:8080
+// @BasePath  /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Enter your JWT token with the `Bearer ` prefix, e.g. "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+// @tag.name Exchange
+// @tag.description Currency exchange rate operations
+
+// @tag.name Auth
+// @tag.description User authentication and registration
+
+// @tag.name Wallet
+// @tag.description Multi-currency wallet and transaction management
+
+// @tag.name Goals
+// @tag.description Financial savings goals
+
+// @tag.name Budgets
+// @tag.description Budget tracking and management
+
+// @tag.name Subscriptions
+// @tag.description Recurring subscription and bill tracking
+
+// @tag.name Badges
+// @tag.description Achievement badges and gamification
+
+// @tag.name AI
+// @tag.description AI-powered features like transaction parsing
+
+// @tag.name Reports
+// @tag.description Financial reports and analytics
 
 //go:embed static/*
 var staticFiles embed.FS
@@ -129,6 +194,10 @@ func main() {
 	var recurringService *service.RecurringService
 	var reportsService *service.ReportsService
 
+	// Initialize Phase 4 services (subscriptions, badges)
+	var subscriptionService *service.SubscriptionService
+	var badgeService *service.BadgeService
+
 	if mainDB != nil {
 		goalRepo := repository.NewGoalRepository(mainDB)
 		goalService = service.NewGoalService(goalRepo)
@@ -150,6 +219,20 @@ func main() {
 			reportsService = service.NewReportsService(walletRepo, exchangeService)
 			log.Info().Msg("Reports service initialized")
 		}
+
+		// Initialize subscription service
+		subscriptionRepo := repository.NewSubscriptionRepository(mainDB)
+		subscriptionService = service.NewSubscriptionService(subscriptionRepo)
+		log.Info().Msg("Subscription service initialized")
+
+		// Initialize badge service
+		badgeRepo := repository.NewBadgeRepository(mainDB)
+		// Initialize default badges in database
+		if err := badgeRepo.InitDefaultBadges(context.Background()); err != nil {
+			log.Warn().Err(err).Msg("Failed to initialize default badges")
+		}
+		badgeService = service.NewBadgeService(badgeRepo, walletRepo, budgetRepo, goalRepo, subscriptionRepo)
+		log.Info().Msg("Badge service initialized")
 	}
 
 	// Initialize handlers
@@ -181,16 +264,29 @@ func main() {
 		reportsHandler = handler.NewReportsHandler(reportsService)
 	}
 
+	// Initialize Phase 4 handlers
+	var subscriptionHandler *handler.SubscriptionHandler
+	var badgeHandler *handler.BadgeHandler
+
+	if subscriptionService != nil {
+		subscriptionHandler = handler.NewSubscriptionHandler(subscriptionService)
+	}
+	if badgeService != nil {
+		badgeHandler = handler.NewBadgeHandler(badgeService)
+	}
+
 	handlers := &router.Handlers{
-		Exchange:  exchangeHandler,
-		Auth:      authHandler,
-		Wallet:    walletHandler,
-		AI:        aiHandler,
-		Goal:      goalHandler,
-		Tag:       tagHandler,
-		Budget:    budgetHandler,
-		Recurring: recurringHandler,
-		Reports:   reportsHandler,
+		Exchange:     exchangeHandler,
+		Auth:         authHandler,
+		Wallet:       walletHandler,
+		AI:           aiHandler,
+		Goal:         goalHandler,
+		Tag:          tagHandler,
+		Budget:       budgetHandler,
+		Recurring:    recurringHandler,
+		Reports:      reportsHandler,
+		Subscription: subscriptionHandler,
+		Badge:        badgeHandler,
 	}
 
 	rateLimiter := middleware.NewRateLimiter(cfg.RateLimitPerMin)

@@ -184,3 +184,119 @@ export interface NetWorthReport {
   total_balance: number;
   balances: BalanceBreakdown[];
 }
+
+// Subscription types
+export interface Subscription {
+  id: string;
+  user_id: string;
+  name: string;
+  amount: number;
+  currency: string;
+  billing_cycle: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  category?: string;
+  next_billing_date: string;
+  status: 'active' | 'paused' | 'cancelled';
+  reminder_days: number;
+  notes?: string;
+  logo_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateSubscriptionRequest {
+  name: string;
+  amount: number;
+  currency: string;
+  billing_cycle: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  category?: string;
+  next_billing_date: string;
+  reminder_days?: number;
+  notes?: string;
+  logo_url?: string;
+}
+
+export interface UpdateSubscriptionRequest {
+  name?: string;
+  amount?: number;
+  currency?: string;
+  billing_cycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  category?: string;
+  next_billing_date?: string;
+  status?: 'active' | 'paused' | 'cancelled';
+  reminder_days?: number;
+  notes?: string;
+  logo_url?: string;
+}
+
+export interface SubscriptionSummary {
+  total_monthly: number;
+  total_yearly: number;
+  active_count: number;
+  paused_count: number;
+  cancelled_count: number;
+  currency: string;
+  by_category: Record<string, number>;
+}
+
+export const SUBSCRIPTION_BILLING_CYCLES = ['weekly', 'monthly', 'quarterly', 'yearly'] as const;
+export const SUBSCRIPTION_STATUSES = ['active', 'paused', 'cancelled'] as const;
+export const SUBSCRIPTION_CATEGORIES = [
+  'streaming',
+  'software',
+  'gaming',
+  'fitness',
+  'utilities',
+  'news_media',
+  'cloud_storage',
+  'education',
+  'food_delivery',
+  'shopping',
+  'finance',
+  'productivity',
+  'other',
+] as const;
+
+export type SubscriptionBillingCycle = typeof SUBSCRIPTION_BILLING_CYCLES[number];
+export type SubscriptionStatus = typeof SUBSCRIPTION_STATUSES[number];
+export type SubscriptionCategory = typeof SUBSCRIPTION_CATEGORIES[number];
+
+// Badge types
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: 'milestone' | 'savings' | 'streak' | 'budgeting' | 'special';
+  requirement_type: string;
+  requirement_value?: number;
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  created_at: string;
+}
+
+export interface UserBadge {
+  id: string;
+  user_id: string;
+  badge_id: string;
+  badge?: Badge;
+  earned_at: string;
+}
+
+export interface BadgeProgress {
+  badge: Badge;
+  current_value: number;
+  required_value: number;
+  progress_percent: number;
+  is_earned: boolean;
+  earned_at?: string;
+}
+
+export interface BadgeCheckResult {
+  newly_earned: UserBadge[];
+  total_earned: number;
+}
+
+export const BADGE_RARITIES = ['common', 'rare', 'epic', 'legendary'] as const;
+export const BADGE_CATEGORIES = ['milestone', 'savings', 'streak', 'budgeting', 'special'] as const;
+
+export type BadgeRarity = typeof BADGE_RARITIES[number];
+export type BadgeCategory = typeof BADGE_CATEGORIES[number];

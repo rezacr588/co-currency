@@ -464,6 +464,98 @@ export const translations = {
     // Landing Page - Final CTA
     finalCtaTitle: 'Ready to Transform Your Finances?',
     finalCtaSubtitle: 'Join thousands of users who have taken control of their money with CoFinance.',
+
+    // Subscriptions
+    subscriptions: 'Subscriptions',
+    billingCycle: 'Billing Cycle',
+    nextBilling: 'Next Billing',
+    reminder: 'Reminder',
+    daysBefore: 'days before',
+    activeSubscriptions: 'Active',
+    monthlyTotal: 'Monthly Total',
+    yearlyTotal: 'Yearly Total',
+    upcomingRenewals: 'Upcoming Renewals',
+    noSubscriptions: 'No subscriptions yet',
+    trackRecurringPayments: 'Start tracking your recurring payments and subscriptions',
+    addFirstSubscription: 'Add your first subscription',
+    createSubscription: 'Create Subscription',
+    editSubscription: 'Edit Subscription',
+    updateSubscription: 'Update Subscription',
+    addSubscription: 'Add Subscription',
+    manageRecurringPayments: 'Manage your recurring payments and services',
+    status: 'Status',
+    notes: 'Notes',
+
+    // Subscription Status & Cycles
+    active: 'Active',
+    cancelled: 'Cancelled',
+    weekly: 'Weekly',
+    quarterly: 'Quarterly',
+
+    // Badges
+    badgesAndAchievements: 'Badges & Achievements',
+    trackYourProgress: 'Track your financial milestones and earn rewards',
+    recentBadges: 'Recent Badges',
+    viewAllBadges: 'View All Badges',
+    earnedOn: 'Earned on',
+    complete: 'complete',
+    totalEarned: 'Total Earned',
+    completion: 'Completion',
+    nextMilestone: 'Next Milestone',
+    locked: 'Locked',
+    inProgress: 'In Progress',
+    earned: 'Earned',
+
+    // Badge Categories
+    milestone: 'Milestone',
+    savings: 'Savings',
+    streak: 'Streak',
+    budgeting: 'Budgeting',
+    special: 'Special',
+
+    // Common Actions
+    creating: 'Creating...',
+    updating: 'Updating...',
+    all: 'All',
+
+    // Form Labels
+    subscriptionName: 'Subscription Name',
+    subscriptionNamePlaceholder: 'e.g., Netflix, Spotify, Adobe...',
+    nextBillingDate: 'Next Billing Date',
+    reminderDays: 'Remind me (days before)',
+    optionalNotes: 'Optional notes about this subscription...',
+    logoUrl: 'Logo URL',
+    save: 'Save',
+    create: 'Create',
+
+    // Subscription Categories
+    shopping: 'Shopping',
+    education: 'Education',
+    streaming: 'Streaming',
+    software: 'Software',
+    gaming: 'Gaming',
+    fitness: 'Fitness',
+    utilities: 'Utilities',
+    news_media: 'News & Media',
+    cloud_storage: 'Cloud Storage',
+    food_delivery: 'Food Delivery',
+    productivity: 'Productivity',
+    music: 'Music',
+
+    // Badge Grid Labels
+    badgesEarned: 'Badges Earned',
+    totalBadges: 'Total Badges',
+    earnedBadges: 'Earned Badges',
+    inProgressBadges: 'In Progress',
+    lockedBadges: 'Locked',
+    noBadgesYet: 'No badges yet',
+    startEarningBadges: 'Start using CoFinance to earn achievements!',
+
+    // Misc
+    total: 'total',
+    dueToday: 'Due today',
+    daysLeft: 'days left',
+    other: 'Other',
   },
   fa: {
     // Header
@@ -930,6 +1022,98 @@ export const translations = {
     // Landing Page - Final CTA
     finalCtaTitle: 'آماده تحول در امور مالی خود هستید؟',
     finalCtaSubtitle: 'به هزاران کاربری بپیوندید که کنترل پول خود را با کوفایننس در دست گرفته‌اند.',
+
+    // Subscriptions
+    subscriptions: 'Subscriptions',
+    billingCycle: 'Billing Cycle',
+    nextBilling: 'Next Billing',
+    reminder: 'Reminder',
+    daysBefore: 'days before',
+    activeSubscriptions: 'Active',
+    monthlyTotal: 'Monthly Total',
+    yearlyTotal: 'Yearly Total',
+    upcomingRenewals: 'Upcoming Renewals',
+    noSubscriptions: 'No subscriptions yet',
+    trackRecurringPayments: 'Start tracking your recurring payments and subscriptions',
+    addFirstSubscription: 'Add your first subscription',
+    createSubscription: 'Create Subscription',
+    editSubscription: 'Edit Subscription',
+    updateSubscription: 'Update Subscription',
+    addSubscription: 'Add Subscription',
+    manageRecurringPayments: 'Manage your recurring payments and services',
+    status: 'Status',
+    notes: 'Notes',
+
+    // Subscription Status & Cycles
+    active: 'Active',
+    cancelled: 'Cancelled',
+    weekly: 'Weekly',
+    quarterly: 'Quarterly',
+
+    // Badges
+    badgesAndAchievements: 'Badges & Achievements',
+    trackYourProgress: 'Track your financial milestones and earn rewards',
+    recentBadges: 'Recent Badges',
+    viewAllBadges: 'View All Badges',
+    earnedOn: 'Earned on',
+    complete: 'complete',
+    totalEarned: 'Total Earned',
+    completion: 'Completion',
+    nextMilestone: 'Next Milestone',
+    locked: 'Locked',
+    inProgress: 'In Progress',
+    earned: 'Earned',
+
+    // Badge Categories
+    milestone: 'Milestone',
+    savings: 'Savings',
+    streak: 'Streak',
+    budgeting: 'Budgeting',
+    special: 'Special',
+
+    // Common Actions
+    creating: 'Creating...',
+    updating: 'Updating...',
+    all: 'All',
+
+    // Form Labels
+    subscriptionName: 'Subscription Name',
+    subscriptionNamePlaceholder: 'e.g., Netflix, Spotify, Adobe...',
+    nextBillingDate: 'Next Billing Date',
+    reminderDays: 'Remind me (days before)',
+    optionalNotes: 'Optional notes about this subscription...',
+    logoUrl: 'Logo URL',
+    save: 'Save',
+    create: 'Create',
+
+    // Subscription Categories
+    shopping: 'Shopping',
+    education: 'Education',
+    streaming: 'Streaming',
+    software: 'Software',
+    gaming: 'Gaming',
+    fitness: 'Fitness',
+    utilities: 'Utilities',
+    news_media: 'News & Media',
+    cloud_storage: 'Cloud Storage',
+    food_delivery: 'Food Delivery',
+    productivity: 'Productivity',
+    music: 'Music',
+
+    // Badge Grid Labels
+    badgesEarned: 'Badges Earned',
+    totalBadges: 'Total Badges',
+    earnedBadges: 'Earned Badges',
+    inProgressBadges: 'In Progress',
+    lockedBadges: 'Locked',
+    noBadgesYet: 'No badges yet',
+    startEarningBadges: 'Start using CoFinance to earn achievements!',
+
+    // Misc
+    total: 'total',
+    dueToday: 'Due today',
+    daysLeft: 'days left',
+    other: 'Other',
   },
   ar: {
     // Header
@@ -1396,6 +1580,98 @@ export const translations = {
     // Landing Page - Final CTA
     finalCtaTitle: 'مستعد لتحويل أموالك؟',
     finalCtaSubtitle: 'انضم إلى آلاف المستخدمين الذين تحكموا في أموالهم مع كوفايننس.',
+
+    // Subscriptions
+    subscriptions: 'Subscriptions',
+    billingCycle: 'Billing Cycle',
+    nextBilling: 'Next Billing',
+    reminder: 'Reminder',
+    daysBefore: 'days before',
+    activeSubscriptions: 'Active',
+    monthlyTotal: 'Monthly Total',
+    yearlyTotal: 'Yearly Total',
+    upcomingRenewals: 'Upcoming Renewals',
+    noSubscriptions: 'No subscriptions yet',
+    trackRecurringPayments: 'Start tracking your recurring payments and subscriptions',
+    addFirstSubscription: 'Add your first subscription',
+    createSubscription: 'Create Subscription',
+    editSubscription: 'Edit Subscription',
+    updateSubscription: 'Update Subscription',
+    addSubscription: 'Add Subscription',
+    manageRecurringPayments: 'Manage your recurring payments and services',
+    status: 'Status',
+    notes: 'Notes',
+
+    // Subscription Status & Cycles
+    active: 'Active',
+    cancelled: 'Cancelled',
+    weekly: 'Weekly',
+    quarterly: 'Quarterly',
+
+    // Badges
+    badgesAndAchievements: 'Badges & Achievements',
+    trackYourProgress: 'Track your financial milestones and earn rewards',
+    recentBadges: 'Recent Badges',
+    viewAllBadges: 'View All Badges',
+    earnedOn: 'Earned on',
+    complete: 'complete',
+    totalEarned: 'Total Earned',
+    completion: 'Completion',
+    nextMilestone: 'Next Milestone',
+    locked: 'Locked',
+    inProgress: 'In Progress',
+    earned: 'Earned',
+
+    // Badge Categories
+    milestone: 'Milestone',
+    savings: 'Savings',
+    streak: 'Streak',
+    budgeting: 'Budgeting',
+    special: 'Special',
+
+    // Common Actions
+    creating: 'Creating...',
+    updating: 'Updating...',
+    all: 'All',
+
+    // Form Labels
+    subscriptionName: 'Subscription Name',
+    subscriptionNamePlaceholder: 'e.g., Netflix, Spotify, Adobe...',
+    nextBillingDate: 'Next Billing Date',
+    reminderDays: 'Remind me (days before)',
+    optionalNotes: 'Optional notes about this subscription...',
+    logoUrl: 'Logo URL',
+    save: 'Save',
+    create: 'Create',
+
+    // Subscription Categories
+    shopping: 'Shopping',
+    education: 'Education',
+    streaming: 'Streaming',
+    software: 'Software',
+    gaming: 'Gaming',
+    fitness: 'Fitness',
+    utilities: 'Utilities',
+    news_media: 'News & Media',
+    cloud_storage: 'Cloud Storage',
+    food_delivery: 'Food Delivery',
+    productivity: 'Productivity',
+    music: 'Music',
+
+    // Badge Grid Labels
+    badgesEarned: 'Badges Earned',
+    totalBadges: 'Total Badges',
+    earnedBadges: 'Earned Badges',
+    inProgressBadges: 'In Progress',
+    lockedBadges: 'Locked',
+    noBadgesYet: 'No badges yet',
+    startEarningBadges: 'Start using CoFinance to earn achievements!',
+
+    // Misc
+    total: 'total',
+    dueToday: 'Due today',
+    daysLeft: 'days left',
+    other: 'Other',
   },
   tr: {
     // Header
@@ -1862,6 +2138,98 @@ export const translations = {
     // Landing Page - Final CTA
     finalCtaTitle: 'Finanslarınızı Dönüştürmeye Hazır mısınız?',
     finalCtaSubtitle: 'CoFinance ile paralarının kontrolünü ele alan binlerce kullanıcıya katılın.',
+
+    // Subscriptions
+    subscriptions: 'Subscriptions',
+    billingCycle: 'Billing Cycle',
+    nextBilling: 'Next Billing',
+    reminder: 'Reminder',
+    daysBefore: 'days before',
+    activeSubscriptions: 'Active',
+    monthlyTotal: 'Monthly Total',
+    yearlyTotal: 'Yearly Total',
+    upcomingRenewals: 'Upcoming Renewals',
+    noSubscriptions: 'No subscriptions yet',
+    trackRecurringPayments: 'Start tracking your recurring payments and subscriptions',
+    addFirstSubscription: 'Add your first subscription',
+    createSubscription: 'Create Subscription',
+    editSubscription: 'Edit Subscription',
+    updateSubscription: 'Update Subscription',
+    addSubscription: 'Add Subscription',
+    manageRecurringPayments: 'Manage your recurring payments and services',
+    status: 'Status',
+    notes: 'Notes',
+
+    // Subscription Status & Cycles
+    active: 'Active',
+    cancelled: 'Cancelled',
+    weekly: 'Weekly',
+    quarterly: 'Quarterly',
+
+    // Badges
+    badgesAndAchievements: 'Badges & Achievements',
+    trackYourProgress: 'Track your financial milestones and earn rewards',
+    recentBadges: 'Recent Badges',
+    viewAllBadges: 'View All Badges',
+    earnedOn: 'Earned on',
+    complete: 'complete',
+    totalEarned: 'Total Earned',
+    completion: 'Completion',
+    nextMilestone: 'Next Milestone',
+    locked: 'Locked',
+    inProgress: 'In Progress',
+    earned: 'Earned',
+
+    // Badge Categories
+    milestone: 'Milestone',
+    savings: 'Savings',
+    streak: 'Streak',
+    budgeting: 'Budgeting',
+    special: 'Special',
+
+    // Common Actions
+    creating: 'Creating...',
+    updating: 'Updating...',
+    all: 'All',
+
+    // Form Labels
+    subscriptionName: 'Subscription Name',
+    subscriptionNamePlaceholder: 'e.g., Netflix, Spotify, Adobe...',
+    nextBillingDate: 'Next Billing Date',
+    reminderDays: 'Remind me (days before)',
+    optionalNotes: 'Optional notes about this subscription...',
+    logoUrl: 'Logo URL',
+    save: 'Save',
+    create: 'Create',
+
+    // Subscription Categories
+    shopping: 'Shopping',
+    education: 'Education',
+    streaming: 'Streaming',
+    software: 'Software',
+    gaming: 'Gaming',
+    fitness: 'Fitness',
+    utilities: 'Utilities',
+    news_media: 'News & Media',
+    cloud_storage: 'Cloud Storage',
+    food_delivery: 'Food Delivery',
+    productivity: 'Productivity',
+    music: 'Music',
+
+    // Badge Grid Labels
+    badgesEarned: 'Badges Earned',
+    totalBadges: 'Total Badges',
+    earnedBadges: 'Earned Badges',
+    inProgressBadges: 'In Progress',
+    lockedBadges: 'Locked',
+    noBadgesYet: 'No badges yet',
+    startEarningBadges: 'Start using CoFinance to earn achievements!',
+
+    // Misc
+    total: 'total',
+    dueToday: 'Due today',
+    daysLeft: 'days left',
+    other: 'Other',
   },
 } as const;
 

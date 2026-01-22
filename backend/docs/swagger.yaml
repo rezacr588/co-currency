@@ -1,0 +1,591 @@
+basePath: /api/v1
+definitions:
+  github_com_rezacr588_currency-converter_internal_model.CreateSubscriptionRequest:
+    properties:
+      amount:
+        type: number
+      billing_cycle:
+        type: string
+      category:
+        type: string
+      currency:
+        type: string
+      logo_url:
+        type: string
+      name:
+        type: string
+      next_billing_date:
+        description: ISO date format
+        type: string
+      notes:
+        type: string
+      reminder_days:
+        type: integer
+    type: object
+  github_com_rezacr588_currency-converter_internal_model.Subscription:
+    properties:
+      amount:
+        type: number
+      billing_cycle:
+        description: weekly, monthly, quarterly, yearly
+        type: string
+      category:
+        description: streaming, software, gaming, fitness, utilities, etc.
+        type: string
+      created_at:
+        type: string
+      currency:
+        type: string
+      id:
+        type: string
+      logo_url:
+        type: string
+      name:
+        type: string
+      next_billing_date:
+        type: string
+      notes:
+        type: string
+      reminder_days:
+        type: integer
+      status:
+        description: active, paused, cancelled
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  github_com_rezacr588_currency-converter_internal_model.SubscriptionSummary:
+    properties:
+      active_count:
+        type: integer
+      by_category:
+        additionalProperties:
+          format: float64
+          type: number
+        type: object
+      cancelled_count:
+        type: integer
+      currency:
+        type: string
+      paused_count:
+        type: integer
+      total_monthly:
+        type: number
+      total_yearly:
+        type: number
+    type: object
+  github_com_rezacr588_currency-converter_internal_model.UpdateSubscriptionRequest:
+    properties:
+      amount:
+        type: number
+      billing_cycle:
+        type: string
+      category:
+        type: string
+      currency:
+        type: string
+      logo_url:
+        type: string
+      name:
+        type: string
+      next_billing_date:
+        type: string
+      notes:
+        type: string
+      reminder_days:
+        type: integer
+      status:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@cofinance.app
+    name: API Support
+    url: https://github.com/rezacr588/currency-converter
+  description: |-
+    CoFinance is a personal finance management API with currency conversion, wallet management, budgets, goals, subscriptions, and achievement badges.
+
+    ## Features
+    - **Currency Conversion**: Real-time exchange rates with support for 30+ currencies including IRR
+    - **Wallet Management**: Multi-currency wallet with transaction tracking
+    - **Budgets**: Set and track spending budgets by category
+    - **Goals**: Create and track financial savings goals
+    - **Subscriptions**: Track recurring subscriptions and bills
+    - **Badges**: Earn achievement badges for financial milestones
+    - **AI Features**: Smart transaction parsing and categorization
+
+    ## Authentication
+    Most endpoints require JWT authentication. Include the token in the Authorization header:
+    `Authorization: Bearer <your-token>`
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: CoFinance API
+  version: "1.0"
+paths:
+  /badges:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all system badges
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'badges: []model.Badge'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all available badges
+      tags:
+      - Badges
+  /badges/check:
+    post:
+      consumes:
+      - application/json
+      description: Trigger a check for newly earned badges based on user stats
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'newly_earned: []model.UserBadge, total_earned: int'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Check for new badges
+      tags:
+      - Badges
+  /badges/earned:
+    get:
+      consumes:
+      - application/json
+      description: Get badges earned by the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'badges: []model.UserBadge, count: int'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get earned badges
+      tags:
+      - Badges
+  /badges/progress:
+    get:
+      consumes:
+      - application/json
+      description: Get progress towards all badges for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'progress: []model.BadgeProgress, total_badges: int, earned_count:
+            int'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get badge progress
+      tags:
+      - Badges
+  /subscriptions:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all subscriptions for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'subscriptions: []model.Subscription'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all subscriptions
+      tags:
+      - Subscriptions
+    post:
+      consumes:
+      - application/json
+      description: Create a new subscription
+      parameters:
+      - description: Subscription details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_rezacr588_currency-converter_internal_model.CreateSubscriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_rezacr588_currency-converter_internal_model.Subscription'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a subscription
+      tags:
+      - Subscriptions
+  /subscriptions/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a subscription by ID
+      parameters:
+      - description: Subscription ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: subscription deleted successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Subscription not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a subscription
+      tags:
+      - Subscriptions
+    get:
+      consumes:
+      - application/json
+      description: Get details of a specific subscription by ID
+      parameters:
+      - description: Subscription ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rezacr588_currency-converter_internal_model.Subscription'
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Subscription not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a subscription
+      tags:
+      - Subscriptions
+    put:
+      consumes:
+      - application/json
+      description: Update details of an existing subscription
+      parameters:
+      - description: Subscription ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_rezacr588_currency-converter_internal_model.UpdateSubscriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rezacr588_currency-converter_internal_model.Subscription'
+        "400":
+          description: Invalid request or ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Subscription not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a subscription
+      tags:
+      - Subscriptions
+  /subscriptions/billing-cycles:
+    get:
+      consumes:
+      - application/json
+      description: Get list of supported billing cycles
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'billing_cycles: []string'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get billing cycles
+      tags:
+      - Subscriptions
+  /subscriptions/categories:
+    get:
+      consumes:
+      - application/json
+      description: Get list of supported subscription categories
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'categories: []string'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get subscription categories
+      tags:
+      - Subscriptions
+  /subscriptions/summary:
+    get:
+      consumes:
+      - application/json
+      description: Get a summary of subscription costs (monthly/yearly)
+      parameters:
+      - description: 'Currency code (default: USD)'
+        in: query
+        name: currency
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rezacr588_currency-converter_internal_model.SubscriptionSummary'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get subscription summary
+      tags:
+      - Subscriptions
+  /subscriptions/upcoming:
+    get:
+      consumes:
+      - application/json
+      description: Get subscriptions renewing in the next N days
+      parameters:
+      - description: 'Number of days to check (default: 7)'
+        in: query
+        name: days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get upcoming renewals
+      tags:
+      - Subscriptions
+securityDefinitions:
+  BearerAuth:
+    description: Enter your JWT token with the `Bearer ` prefix, e.g. "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
+tags:
+- description: Currency exchange rate operations
+  name: Exchange
+- description: User authentication and registration
+  name: Auth
+- description: Multi-currency wallet and transaction management
+  name: Wallet
+- description: Financial savings goals
+  name: Goals
+- description: Budget tracking and management
+  name: Budgets
+- description: Recurring subscription and bill tracking
+  name: Subscriptions
+- description: Achievement badges and gamification
+  name: Badges
+- description: AI-powered features like transaction parsing
+  name: AI
+- description: Financial reports and analytics
+  name: Reports

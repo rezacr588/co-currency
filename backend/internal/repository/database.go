@@ -27,10 +27,10 @@ func NewDatabase(databaseURL string) (*Database, error) {
 	}
 
 	// Connection pool settings for production robustness
-	config.MaxConns = 10                       // Maximum connections in pool
-	config.MinConns = 2                        // Keep minimum connections alive
-	config.MaxConnLifetime = 30 * time.Minute  // Max lifetime of a connection
-	config.MaxConnIdleTime = 5 * time.Minute   // Close idle connections after this
+	config.MaxConns = 10                        // Maximum connections in pool
+	config.MinConns = 2                         // Keep minimum connections alive
+	config.MaxConnLifetime = 30 * time.Minute   // Max lifetime of a connection
+	config.MaxConnIdleTime = 5 * time.Minute    // Close idle connections after this
 	config.HealthCheckPeriod = 30 * time.Second // Periodic health checks
 
 	// Connection timeouts
@@ -254,6 +254,51 @@ func (d *Database) initTables(ctx context.Context) error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_recurring_transactions_user_id ON recurring_transactions(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_recurring_transactions_next_execution ON recurring_transactions(next_execution)`,
+
+		// Subscriptions table
+		`CREATE TABLE IF NOT EXISTS subscriptions (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+			name VARCHAR(100) NOT NULL,
+			amount DECIMAL(20, 8) NOT NULL,
+			currency VARCHAR(10) NOT NULL,
+			billing_cycle VARCHAR(20) NOT NULL,
+			category VARCHAR(50),
+			next_billing_date DATE NOT NULL,
+			status VARCHAR(20) DEFAULT 'active',
+			reminder_days INTEGER DEFAULT 3,
+			notes TEXT,
+			logo_url TEXT,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing ON subscriptions(next_billing_date)`,
+		`CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status)`,
+
+		// Badges table (system badges)
+		`CREATE TABLE IF NOT EXISTS badges (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			name VARCHAR(100) NOT NULL UNIQUE,
+			description TEXT,
+			icon VARCHAR(50),
+			category VARCHAR(50),
+			requirement_type VARCHAR(50) NOT NULL,
+			requirement_value DECIMAL(20, 8),
+			rarity VARCHAR(20) DEFAULT 'common',
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_badges_category ON badges(category)`,
+
+		// User badges table (earned badges)
+		`CREATE TABLE IF NOT EXISTS user_badges (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+			badge_id UUID REFERENCES badges(id) ON DELETE CASCADE,
+			earned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			UNIQUE(user_id, badge_id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_user_badges_user_id ON user_badges(user_id)`,
 
 		// Add CHECK constraints to prevent invalid data (using DO blocks for idempotency)
 		// Prevent negative wallet balances
