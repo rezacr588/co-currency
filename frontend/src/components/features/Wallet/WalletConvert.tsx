@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../api/client';
@@ -6,13 +6,15 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrencies } from '../../../hooks';
 import { Container } from '../../layout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
-import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
 import { ErrorMessage } from '../../ui/ErrorMessage';
-import { CurrencyBadge } from '../../ui/CurrencyBadge';
 import { Skeleton } from '../../ui/Skeleton';
 import type { WalletBalance } from '../../../types/wallet';
-import { formatCurrency, formatNumber } from '../../../utils/format';
+import { formatCurrency, formatNumber, formatRate } from '../../../utils/format';
+import { InlineCurrencySelect } from '../Converter/InlineCurrencySelect';
+import { SwapButton } from '../Converter/SwapButton';
+import { CurrencyInput } from '../../ui/CurrencyInput';
+import { CURRENCY_SYMBOLS, CURRENCY_FLAGS } from '../../../utils/constants';
 
 export function WalletConvert() {
   const { t } = useLanguage();
@@ -22,7 +24,7 @@ export function WalletConvert() {
 
   const [fromCurrency, setFromCurrency] = useState('USD');
   const [toCurrency, setToCurrency] = useState('EUR');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
 
   // Get wallet balances to show available amounts
@@ -38,9 +40,9 @@ export function WalletConvert() {
       api.convert({
         from: fromCurrency,
         to: toCurrency,
-        amount: parseFloat(amount) || 1,
+        amount: amount || 1,
       }),
-    enabled: fromCurrency !== toCurrency && parseFloat(amount) > 0,
+    enabled: fromCurrency !== toCurrency && amount > 0,
     staleTime: 30 * 1000,
   });
 
@@ -61,8 +63,7 @@ export function WalletConvert() {
     e.preventDefault();
     setError(null);
 
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
+    if (amount <= 0) {
       setError(t('invalidAmount'));
       return;
     }
@@ -73,7 +74,7 @@ export function WalletConvert() {
     }
 
     const fromBalance = balances?.balances.find((b: WalletBalance) => b.currency === fromCurrency);
-    if (!fromBalance || fromBalance.balance < numAmount) {
+    if (!fromBalance || fromBalance.balance < amount) {
       setError(t('insufficientBalance'));
       return;
     }
@@ -81,7 +82,7 @@ export function WalletConvert() {
     mutation.mutate({
       from_currency: fromCurrency,
       to_currency: toCurrency,
-      amount: numAmount,
+      amount: amount,
     });
   };
 
@@ -90,129 +91,114 @@ export function WalletConvert() {
     setToCurrency(fromCurrency);
   };
 
-  const currencyOptions =
-    currencies?.map((c) => ({
-      value: c.code,
-      label: `${c.code} - ${c.name}`,
-    })) || [{ value: 'USD', label: 'USD - US Dollar' }];
-
   const fromBalance = balances?.balances.find((b: WalletBalance) => b.currency === fromCurrency);
+
+  // Determine if we can submit
+  const canSubmit = useMemo(() => {
+    if (!amount || amount <= 0) return false;
+    if (fromCurrency === toCurrency) return false;
+    if (mutation.isPending) return false;
+    if (fromBalance && fromBalance.balance < amount) return false;
+    return true;
+  }, [amount, fromCurrency, toCurrency, mutation.isPending, fromBalance]);
 
   return (
     <main className="flex-1 py-4 sm:py-6">
       <Container>
         <div className="max-w-lg mx-auto">
-          <Card variant="gradient">
+          <Card variant="gradient" className="overflow-visible">
             <CardHeader>
               <CardTitle>{t('convertCurrency')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 {error && <ErrorMessage>{error}</ErrorMessage>}
 
-                {/* From Currency */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                      {t('from')}
-                    </label>
-                    {balancesLoading ? (
-                      <Skeleton className="h-4 w-24" />
-                    ) : fromBalance ? (
-                      <span className="text-xs text-slate-500 dark:text-slate-400">
-                        {t('available')}: {formatCurrency(fromBalance.balance, fromCurrency)}
+                {/* Converter Box - Minimal Coin Design */}
+                <div className="relative">
+                  {/* FROM Section - Top Half */}
+                  <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-t-3xl p-4 pb-6">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+                        {t('from')}
                       </span>
-                    ) : null}
-                  </div>
-                  <select
-                    value={fromCurrency}
-                    onChange={(e) => setFromCurrency(e.target.value)}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-all"
-                  >
-                    {currencyOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Swap Button */}
-                <div className="flex justify-center">
-                  <button
-                    type="button"
-                    onClick={handleSwap}
-                    className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                    aria-label={t('swapCurrencies')}
-                  >
-                    <svg
-                      className="w-5 h-5 text-slate-600 dark:text-slate-300"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                      />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* To Currency */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {t('to')}
-                  </label>
-                  <select
-                    value={toCurrency}
-                    onChange={(e) => setToCurrency(e.target.value)}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-all"
-                  >
-                    {currencyOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Amount */}
-                <Input
-                  type="number"
-                  label={t('amount')}
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.00"
-                  min="0.01"
-                  step="0.01"
-                  required
-                  disabled={mutation.isPending}
-                />
-
-                {/* Preview */}
-                {parseFloat(amount) > 0 && fromCurrency !== toCurrency && (
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
-                      {t('youWillReceive')}
-                    </p>
-                    {rateLoading ? (
-                      <Skeleton className="h-8 w-32" />
-                    ) : ratePreview ? (
-                      <div className="flex items-center gap-2">
-                        <CurrencyBadge code={toCurrency} size="md" />
-                        <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                          {formatCurrency(ratePreview.result, toCurrency)}
+                      {balancesLoading ? (
+                        <Skeleton className="h-3 w-16" />
+                      ) : (
+                        <span className={`text-[10px] font-medium ${
+                          fromBalance && amount > fromBalance.balance 
+                            ? 'text-rose-500' 
+                            : 'text-slate-500 dark:text-slate-400'
+                        }`}>
+                          {t('available')}: {formatCurrency(fromBalance?.balance || 0, fromCurrency)}
                         </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <CurrencyInput
+                        value={amount}
+                        onChange={setAmount}
+                        currencyCode={fromCurrency}
+                        currencySymbol={CURRENCY_SYMBOLS[fromCurrency]}
+                        placeholder="0.00"
+                        className={fromBalance && amount > fromBalance.balance ? 'text-rose-500' : ''}
+                      />
+                      <InlineCurrencySelect
+                        value={fromCurrency}
+                        onChange={setFromCurrency}
+                        currencies={currencies}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Swap Button - Coin Divider */}
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                    <SwapButton onClick={handleSwap} />
+                  </div>
+
+                  {/* TO Section - Bottom Half */}
+                  <div className="relative bg-slate-50 dark:bg-slate-800/50 border border-t-0 border-slate-200 dark:border-slate-700 rounded-b-3xl p-4 pt-6">
+                    <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+                      {t('to')} ({t('estimated')})
+                    </span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="flex-1 min-w-0 py-2 overflow-hidden">
+                        {rateLoading && amount > 0 ? (
+                          <div className="h-7 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                        ) : ratePreview && amount > 0 ? (
+                          <div className="flex items-baseline gap-1 overflow-hidden">
+                            <span className="text-base text-slate-400 flex-shrink-0">
+                              {CURRENCY_SYMBOLS[toCurrency] || ''}
+                            </span>
+                            <span className="text-2xl sm:text-3xl font-semibold text-slate-800 dark:text-white tabular-nums truncate">
+                              {formatNumber(ratePreview.result)}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-2xl text-slate-300 dark:text-slate-600">—</span>
+                        )}
                       </div>
-                    ) : null}
-                    {ratePreview && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                        1 {fromCurrency} = {formatNumber(ratePreview.rate, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} {toCurrency}
-                      </p>
-                    )}
+                      <InlineCurrencySelect
+                        value={toCurrency}
+                        onChange={setToCurrency}
+                        currencies={currencies}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Exchange Rate Info */}
+                {ratePreview && amount > 0 && (
+                  <div className="flex justify-center">
+                    <div className="flex items-center gap-1 sm:gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-full text-xs text-slate-600 dark:text-slate-400">
+                      {CURRENCY_FLAGS[fromCurrency] && <span>{CURRENCY_FLAGS[fromCurrency]}</span>}
+                      <span>1 {fromCurrency}</span>
+                      <span>=</span>
+                      <span className="font-mono font-medium">{formatRate(ratePreview.rate)}</span>
+                      {CURRENCY_FLAGS[toCurrency] && <span>{CURRENCY_FLAGS[toCurrency]}</span>}
+                      <span>{toCurrency}</span>
+                    </div>
                   </div>
                 )}
 
@@ -220,7 +206,7 @@ export function WalletConvert() {
                 <div className="flex gap-3 pt-2">
                   <Button
                     type="button"
-                    variant="secondary"
+                    variant="ghost"
                     size="lg"
                     className="flex-1"
                     onClick={() => navigate('/wallet')}
@@ -232,10 +218,20 @@ export function WalletConvert() {
                     type="submit"
                     variant="primary"
                     size="lg"
-                    className="flex-1"
-                    disabled={mutation.isPending || fromCurrency === toCurrency}
+                    className="flex-1 bg-amber-500 hover:bg-amber-600 dark:bg-amber-500 dark:hover:bg-amber-600 text-slate-900 font-semibold"
+                    disabled={!canSubmit}
                   >
-                    {mutation.isPending ? t('converting') : t('convert')}
+                    {mutation.isPending ? (
+                      <span className="flex items-center gap-2">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        {t('converting')}...
+                      </span>
+                    ) : (
+                      t('confirmConversion')
+                    )}
                   </Button>
                 </div>
               </form>
@@ -246,3 +242,4 @@ export function WalletConvert() {
     </main>
   );
 }
+

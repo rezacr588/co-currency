@@ -183,6 +183,8 @@ export const translations = {
     deleting: 'Deleting...',
 
     // Wallet Convert
+    estimated: 'Estimated',
+    confirmConversion: 'Confirm Conversion',
     available: 'Available',
     youWillReceive: 'You will receive',
     convert: 'Convert',
@@ -741,6 +743,8 @@ export const translations = {
     deleting: 'در حال حذف...',
 
     // Wallet Convert
+    estimated: 'تخمین زده شده',
+    confirmConversion: 'تایید تبدیل',
     available: 'موجود',
     youWillReceive: 'دریافت خواهید کرد',
     convert: 'تبدیل',
@@ -1299,6 +1303,8 @@ export const translations = {
     deleting: 'جاري الحذف...',
 
     // Wallet Convert
+    estimated: 'مقدار تقريبي',
+    confirmConversion: 'تأكيد التحويل',
     available: 'المتاح',
     youWillReceive: 'ستحصل على',
     convert: 'تحويل',
@@ -1857,6 +1863,8 @@ export const translations = {
     deleting: 'Siliniyor...',
 
     // Wallet Convert
+    estimated: 'Tahmini',
+    confirmConversion: 'Dönüşümü Onayla',
     available: 'Mevcut',
     youWillReceive: 'Alacaksınız',
     convert: 'Çevir',
