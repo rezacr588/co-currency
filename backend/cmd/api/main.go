@@ -98,6 +98,11 @@ func main() {
 	// Setup logging
 	setupLogging(cfg.Environment)
 
+	// Security check for production
+	if cfg.Environment == "production" && (cfg.JWTSecret == "" || cfg.JWTSecret == "change-me-in-production-to-a-secure-secret") {
+		log.Fatal().Msg("JWT_SECRET must be set to a secure value in production")
+	}
+
 	log.Info().
 		Str("environment", cfg.Environment).
 		Str("port", cfg.Port).

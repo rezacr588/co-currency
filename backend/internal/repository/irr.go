@@ -5,15 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 // IRRRates contains Iranian Rial exchange rates
 type IRRRates struct {
-	USD      float64   `json:"usd"`
-	EUR      float64   `json:"eur"`
-	GBP      float64   `json:"gbp"`
+	USD       float64   `json:"usd"`
+	EUR       float64   `json:"eur"`
+	GBP       float64   `json:"gbp"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
@@ -107,7 +110,9 @@ func (c *IRRClient) GetRates(ctx context.Context) (*IRRRates, error) {
 		go func() {
 			saveCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			_ = c.db.SaveRates(saveCtx, rates, "pricedb")
+			if err := c.db.SaveRates(saveCtx, rates, "pricedb"); err != nil {
+				log.Error().Err(err).Msg("Failed to save IRR rates to database in background")
+			}
 		}()
 	}
 
@@ -184,14 +189,7 @@ func (c *IRRClient) fetchPriceDBRate(ctx context.Context, url string) (float64, 
 	}
 
 	// Parse the price string (remove commas and convert to float)
-	priceStr := priceResp.Price
-	// Remove commas from the price string
-	cleanPrice := ""
-	for _, ch := range priceStr {
-		if ch != ',' {
-			cleanPrice += string(ch)
-		}
-	}
+	cleanPrice := strings.ReplaceAll(priceResp.Price, ",", "")
 
 	var rate float64
 	if _, err := fmt.Sscanf(cleanPrice, "%f", &rate); err != nil {

@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/rezacr588/currency-converter/pkg/httputil"
+	"github.com/rs/zerolog/log"
 )
 
 // Convert handles GET /api/v1/convert
@@ -26,6 +27,11 @@ func (h *Handler) Convert(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.exchangeService.Convert(r.Context(), from, to, amount)
 	if err != nil {
+		log.Error().Err(err).
+			Str("from", from).
+			Str("to", to).
+			Float64("amount", amount).
+			Msg("Currency conversion failed")
 		httputil.InternalServerError(w, "Failed to convert currency")
 		return
 	}
