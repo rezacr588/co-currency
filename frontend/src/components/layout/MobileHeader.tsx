@@ -99,27 +99,29 @@ export function MobileHeader() {
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-50 safe-area-top" style={{ minHeight: '64px' }}>
+    <header className="fixed top-0 left-0 right-0 h-14 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-b border-slate-200/80 dark:border-slate-800/80 z-50 safe-area-top">
       <div className="flex items-center justify-between h-full px-4">
         {/* Logo */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/20">
             <Coins className="w-4 h-4 text-white" />
           </div>
-          <span className="font-bold text-slate-800 dark:text-white">CoFinance</span>
+          <span className="font-bold text-slate-800 dark:text-white text-sm">CoFinance</span>
         </div>
 
         {/* Balance (if available) */}
-        <div className="flex-1 flex justify-center">
-          <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-            {formatCurrency(totalBalanceUSD, 'USD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
-        </div>
+        {totalBalanceUSD > 0 && (
+          <div className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-500/10 rounded-full">
+            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              {formatCurrency(totalBalanceUSD, 'USD', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </span>
+          </div>
+        )}
 
         {/* Menu Button */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           aria-label={isOpen ? t('closeMenu') : t('openMenu')}
         >
           {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -130,7 +132,7 @@ export function MobileHeader() {
       {isOpen && (
         <div
           ref={menuRef}
-          className="absolute top-16 left-0 right-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-xl max-h-[calc(100vh-4rem)] overflow-y-auto animate-fade-in"
+          className="absolute top-14 left-0 right-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-xl max-h-[calc(100vh-3.5rem)] overflow-y-auto animate-fade-in"
         >
           {/* User Info */}
           <div className="p-4 border-b border-slate-100 dark:border-slate-800">
@@ -199,8 +201,8 @@ export function MobileHeader() {
                       setShowLanguages(false);
                     }}
                     className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors ${language === lang.code
-                        ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300'
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                       }`}
                   >
                     <span>{lang.flag}</span>

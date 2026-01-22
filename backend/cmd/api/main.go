@@ -203,6 +203,9 @@ func main() {
 	var subscriptionService *service.SubscriptionService
 	var badgeService *service.BadgeService
 
+	// AI Chat service
+	var aiChatService *service.AIChatService
+
 	if mainDB != nil {
 		goalRepo := repository.NewGoalRepository(mainDB)
 		goalService = service.NewGoalService(goalRepo)
@@ -238,6 +241,13 @@ func main() {
 		}
 		badgeService = service.NewBadgeService(badgeRepo, walletRepo, budgetRepo, goalRepo, subscriptionRepo)
 		log.Info().Msg("Badge service initialized")
+
+		// Initialize AI Chat service (requires AI service, wallet, goals, budgets)
+		if aiService != nil {
+			chatRepo := repository.NewChatRepository(mainDB.Pool())
+			aiChatService = service.NewAIChatService(aiService, chatRepo, walletRepo, goalRepo, budgetRepo)
+			log.Info().Msg("AI Chat service initialized")
+		}
 	}
 
 	// Initialize handlers
@@ -280,11 +290,18 @@ func main() {
 		badgeHandler = handler.NewBadgeHandler(badgeService)
 	}
 
+	// Initialize AI Chat handler
+	var aiChatHandler *handler.AIChatHandler
+	if aiChatService != nil {
+		aiChatHandler = handler.NewAIChatHandler(aiChatService, authService)
+	}
+
 	handlers := &router.Handlers{
 		Exchange:     exchangeHandler,
 		Auth:         authHandler,
 		Wallet:       walletHandler,
 		AI:           aiHandler,
+		AIChat:       aiChatHandler,
 		Goal:         goalHandler,
 		Tag:          tagHandler,
 		Budget:       budgetHandler,

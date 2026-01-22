@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui';
 import { HistoricalCard } from './HistoricalCard';
 import { useCurrencies } from '../../../hooks';
@@ -22,6 +22,9 @@ export function Historical() {
     getDateDaysAgo(30),
     getDateDaysAgo(90),
   ];
+
+  // Validation: same currency selected
+  const isSameCurrency = useMemo(() => baseCurrency === targetCurrency, [baseCurrency, targetCurrency]);
 
   return (
     <Card className="w-full">
@@ -56,17 +59,24 @@ export function Historical() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {allDates.map((date) => (
-            <HistoricalCard
-              key={date}
-              date={date}
-              baseCurrency={baseCurrency}
-              targetCurrency={targetCurrency}
-            />
-          ))}
-        </div>
+        {isSameCurrency ? (
+          <div className="p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl text-amber-700 dark:text-amber-400 text-center text-sm">
+            {t('sameCurrency')}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {allDates.map((date) => (
+              <HistoricalCard
+                key={date}
+                date={date}
+                baseCurrency={baseCurrency}
+                targetCurrency={targetCurrency}
+              />
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
+

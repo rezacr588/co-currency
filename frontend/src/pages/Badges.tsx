@@ -6,7 +6,7 @@ export function Badges() {
     const { isAuthenticated } = useAuth();
 
     if (!isAuthenticated) {
-        return <Navigate to="/auth" replace />;
+        return <Navigate to="/login" replace />;
     }
 
     return (

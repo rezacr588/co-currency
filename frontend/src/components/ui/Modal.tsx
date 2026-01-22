@@ -162,7 +162,7 @@ export function Modal({
         )}
 
         {/* Content */}
-        <div className={title ? 'p-6' : 'p-6'}>{children}</div>
+        <div className={`${title ? 'p-6' : 'p-6'} max-h-[70vh] overflow-y-auto`}>{children}</div>
 
         {/* Close button if no title */}
         {!title && (

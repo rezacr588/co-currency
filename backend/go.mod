@@ -1,8 +1,8 @@
 module github.com/rezacr588/currency-converter
 
-go 1.22.0
+go 1.24.0
 
-toolchain go1.23.2
+toolchain go1.24.12
 
 require (
 	github.com/caarlos0/env/v9 v9.0.0
@@ -61,7 +61,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.26.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/oauth2 v0.20.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/tools v0.14.0 // indirect

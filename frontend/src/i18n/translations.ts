@@ -553,6 +553,14 @@ export const translations = {
     noBadgesYet: 'No badges yet',
     startEarningBadges: 'Start using CoFinance to earn achievements!',
 
+    // AI Chat
+    newConversation: 'New Chat',
+    aiAdvisor: 'Finance Advisor',
+    aiAdvisorDesc: 'Powered by AI',
+    aiWelcome: "Hi! I'm your Finance Advisor",
+    aiWelcomeDesc: 'Ask me anything about your finances. I have access to your transactions, budgets, and goals.',
+    typeMessage: 'Ask about your finances...',
+
     // Misc
     total: 'total',
     dueToday: 'Due today',
@@ -1110,8 +1118,16 @@ export const translations = {
     earnedBadges: 'Earned Badges',
     inProgressBadges: 'In Progress',
     lockedBadges: 'Locked',
-    noBadgesYet: 'No badges yet',
-    startEarningBadges: 'Start using CoFinance to earn achievements!',
+    noBadgesYet: 'هنوز نشانی ندارید',
+    startEarningBadges: 'برای کسب دستاوردها از CoFinance استفاده کنید!',
+
+    // AI Chat
+    newConversation: 'گفتگوی جدید',
+    aiAdvisor: 'مشاور مالی',
+    aiAdvisorDesc: 'با هوش مصنوعی',
+    aiWelcome: 'سلام! من مشاور مالی شما هستم',
+    aiWelcomeDesc: 'هر سوالی درباره امور مالی خود دارید بپرسید. من به تراکنش‌ها، بودجه‌ها و اهداف شما دسترسی دارم.',
+    typeMessage: 'درباره امور مالی خود بپرسید...',
 
     // Misc
     total: 'total',
@@ -1670,8 +1686,16 @@ export const translations = {
     earnedBadges: 'Earned Badges',
     inProgressBadges: 'In Progress',
     lockedBadges: 'Locked',
-    noBadgesYet: 'No badges yet',
-    startEarningBadges: 'Start using CoFinance to earn achievements!',
+    noBadgesYet: 'لا توجد شارات بعد',
+    startEarningBadges: 'ابدأ باستخدام CoFinance لكسب الإنجازات!',
+
+    // AI Chat
+    newConversation: 'محادثة جديدة',
+    aiAdvisor: 'المستشار المالي',
+    aiAdvisorDesc: 'مدعوم بالذكاء الاصطناعي',
+    aiWelcome: 'مرحباً! أنا مستشارك المالي',
+    aiWelcomeDesc: 'اسألني أي شيء عن أموالك. لدي إمكانية الوصول إلى معاملاتك وميزانياتك وأهدافك.',
+    typeMessage: 'اسأل عن أموالك...',
 
     // Misc
     total: 'total',
@@ -2230,8 +2254,16 @@ export const translations = {
     earnedBadges: 'Earned Badges',
     inProgressBadges: 'In Progress',
     lockedBadges: 'Locked',
-    noBadgesYet: 'No badges yet',
-    startEarningBadges: 'Start using CoFinance to earn achievements!',
+    noBadgesYet: 'Henüz rozet yok',
+    startEarningBadges: 'Başarılar kazanmak için CoFinance kullanmaya başlayın!',
+
+    // AI Chat
+    newConversation: 'Yeni Sohbet',
+    aiAdvisor: 'Finans Danışmanı',
+    aiAdvisorDesc: 'Yapay Zeka Destekli',
+    aiWelcome: 'Merhaba! Ben finans danışmanınızım',
+    aiWelcomeDesc: 'Finanslarınız hakkında her şeyi sorabilirsiniz. İşlemlerinize, bütçelerinize ve hedeflerinize erişimim var.',
+    typeMessage: 'Finanslarınız hakkında sorun...',
 
     // Misc
     total: 'total',

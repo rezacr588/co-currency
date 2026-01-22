@@ -45,7 +45,7 @@ export function CurrencySelect({ value, onChange, currencies, label }: CurrencyS
       const target = event.target as HTMLElement;
       // Close if clicking on backdrop or outside modal
       if (target.classList.contains('currency-modal-backdrop') ||
-          (containerRef.current && !containerRef.current.contains(event.target as Node))) {
+        (containerRef.current && !containerRef.current.contains(event.target as Node))) {
         setIsOpen(false);
         setSearch('');
       }
@@ -145,7 +145,7 @@ export function CurrencySelect({ value, onChange, currencies, label }: CurrencyS
                   setSearch('');
                 }}
                 className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                aria-label="Close"
+                aria-label={t('close')}
               >
                 <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -196,11 +196,10 @@ export function CurrencySelect({ value, onChange, currencies, label }: CurrencyS
                       role="option"
                       aria-selected={isSelected}
                       onClick={() => handleSelect(currency.code)}
-                      className={`flex items-center gap-3 px-3 py-3 cursor-pointer transition-all duration-150 rounded-lg ${
-                        isSelected
+                      className={`flex items-center gap-3 px-3 py-3 cursor-pointer transition-all duration-150 rounded-lg ${isSelected
                           ? 'bg-primary-50 dark:bg-primary-600/20 text-primary-800 dark:text-primary-400'
                           : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                      }`}
+                        }`}
                     >
                       {currencyFlag ? (
                         <span className="text-2xl flex-shrink-0">{currencyFlag}</span>

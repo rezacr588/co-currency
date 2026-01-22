@@ -17,6 +17,7 @@ type Handlers struct {
 	Auth         *handler.AuthHandler
 	Wallet       *handler.WalletHandler
 	AI           *handler.AIHandler
+	AIChat       *handler.AIChatHandler
 	Goal         *handler.GoalHandler
 	Tag          *handler.TagHandler
 	Budget       *handler.BudgetHandler
@@ -93,6 +94,11 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 			r.Group(func(r chi.Router) {
 				r.Use(authMiddleware.Middleware)
 				r.Post("/apply-parsed", h.AI.ApplyParsed)
+
+				// AI Chat routes (protected)
+				if h.AIChat != nil {
+					h.AIChat.RegisterRoutes(r)
+				}
 			})
 		})
 

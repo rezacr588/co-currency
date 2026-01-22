@@ -14,9 +14,9 @@ import (
 
 // MockUserRepository implements a mock user repository for testing
 type MockUserRepository struct {
-	users       map[string]*model.User
-	createErr   error
-	getByIDErr  error
+	users         map[string]*model.User
+	createErr     error
+	getByIDErr    error
 	getByEmailErr error
 }
 
@@ -608,8 +608,8 @@ func TestNewAuthService(t *testing.T) {
 		t.Errorf("Expected jwt secret 'test-secret', got '%s'", string(service.jwtSecret))
 	}
 
-	if service.jwtExpiry != 15*time.Minute {
-		t.Errorf("Expected jwt expiry 15 minutes, got %v", service.jwtExpiry)
+	if service.jwtExpiry != 1*time.Hour {
+		t.Errorf("Expected jwt expiry 1 hour, got %v", service.jwtExpiry)
 	}
 }
 
@@ -799,9 +799,9 @@ func TestErrInvalidResetToken(t *testing.T) {
 // MockUserRepositoryWithPasswordReset extends MockUserRepository for password reset testing
 type MockUserRepositoryWithPasswordReset struct {
 	*MockUserRepository
-	resetTokens       map[string]*resetTokenInfo
-	lockedAccounts    map[string]*time.Time
-	failedAttempts    map[string]int
+	resetTokens         map[string]*resetTokenInfo
+	lockedAccounts      map[string]*time.Time
+	failedAttempts      map[string]int
 	onboardingCompleted map[uuid.UUID]bool
 }
 
@@ -812,11 +812,11 @@ type resetTokenInfo struct {
 
 func NewMockUserRepositoryWithPasswordReset() *MockUserRepositoryWithPasswordReset {
 	return &MockUserRepositoryWithPasswordReset{
-		MockUserRepository:   NewMockUserRepository(),
-		resetTokens:          make(map[string]*resetTokenInfo),
-		lockedAccounts:       make(map[string]*time.Time),
-		failedAttempts:       make(map[string]int),
-		onboardingCompleted:  make(map[uuid.UUID]bool),
+		MockUserRepository:  NewMockUserRepository(),
+		resetTokens:         make(map[string]*resetTokenInfo),
+		lockedAccounts:      make(map[string]*time.Time),
+		failedAttempts:      make(map[string]int),
+		onboardingCompleted: make(map[uuid.UUID]bool),
 	}
 }
 

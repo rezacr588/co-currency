@@ -665,7 +665,7 @@ func (r *WalletRepository) ExecuteConversion(ctx context.Context, userID uuid.UU
 	transaction := &model.Transaction{
 		ID:         uuid.New(),
 		UserID:     userID,
-		Type:       "convert",
+		Type:       model.TransactionTypeConvert,
 		Amount:     fromAmount,
 		Currency:   fromCurrency,
 		ToAmount:   &toAmount,
@@ -721,7 +721,7 @@ func (r *WalletRepository) DeleteTransactionAtomic(ctx context.Context, userID, 
 
 	// Reverse the balance impact based on transaction type
 	switch txType {
-	case "credit":
+	case model.TransactionTypeCredit:
 		// Original was credit (added money), so subtract
 		// Check if user has sufficient balance to reverse this credit
 		var currentBalance float64
@@ -741,14 +741,14 @@ func (r *WalletRepository) DeleteTransactionAtomic(ctx context.Context, userID, 
 			SET balance = balance - $1, updated_at = $2
 			WHERE user_id = $3 AND currency = $4
 		`, amount, now, userID, currency)
-	case "debit":
+	case model.TransactionTypeDebit:
 		// Original was debit (removed money), so add back
 		_, err = tx.Exec(ctx, `
 			UPDATE wallet_balances
 			SET balance = balance + $1, updated_at = $2
 			WHERE user_id = $3 AND currency = $4
 		`, amount, now, userID, currency)
-	case "convert":
+	case model.TransactionTypeConvert:
 		// Reverse conversion: add back to source, subtract from target
 		_, err = tx.Exec(ctx, `
 			UPDATE wallet_balances

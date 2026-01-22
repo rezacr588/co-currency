@@ -3,6 +3,7 @@ import { Card } from '../../ui';
 import { useLanguage } from '../../../context/LanguageContext';
 import type { Transaction, WalletBalance } from '../../../types/wallet';
 import { DEFAULT_CATEGORIES } from '../../../types/wallet';
+import { formatNumber } from '../../../utils/format';
 
 interface WalletChartsProps {
   transactions: Transaction[];
@@ -75,7 +76,7 @@ export function WalletCharts({ transactions, balances }: WalletChartsProps) {
                         {category.name}
                       </span>
                       <span className="text-slate-600 dark:text-slate-400">
-                        ${category.value.toFixed(2)} ({percentage.toFixed(1)}%)
+                        {formatNumber(category.value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({percentage.toFixed(1)}%)
                       </span>
                     </div>
                     <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
@@ -94,7 +95,7 @@ export function WalletCharts({ transactions, balances }: WalletChartsProps) {
           </div>
         ) : (
           <p className="text-slate-500 dark:text-slate-400 text-center py-8">
-            No spending data yet
+            {t('noDataAvailable')}
           </p>
         )}
       </Card>
@@ -108,18 +109,18 @@ export function WalletCharts({ transactions, balances }: WalletChartsProps) {
           <div className="flex gap-8 mb-6">
             <div className="text-center">
               <div className="text-3xl font-bold text-green-600 dark:text-green-400">
-                ${incomeExpenses.income.toFixed(2)}
+                {formatNumber(incomeExpenses.income, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <div className="text-sm text-slate-600 dark:text-slate-400">
-                {t('income') || 'Income'}
+                {t('income')}
               </div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-red-600 dark:text-red-400">
-                ${incomeExpenses.expenses.toFixed(2)}
+                {formatNumber(incomeExpenses.expenses, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <div className="text-sm text-slate-600 dark:text-slate-400">
-                {t('expenses') || 'Expenses'}
+                {t('expenses')}
               </div>
             </div>
           </div>
@@ -127,8 +128,8 @@ export function WalletCharts({ transactions, balances }: WalletChartsProps) {
           {/* Balance indicator */}
           <div className="w-full max-w-xs">
             <div className="flex justify-between text-sm mb-2">
-              <span className="text-green-600 dark:text-green-400">Income</span>
-              <span className="text-red-600 dark:text-red-400">Expenses</span>
+              <span className="text-green-600 dark:text-green-400">{t('income')}</span>
+              <span className="text-red-600 dark:text-red-400">{t('expenses')}</span>
             </div>
             <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden flex">
               {(incomeExpenses.income + incomeExpenses.expenses) > 0 && (
@@ -149,12 +150,11 @@ export function WalletCharts({ transactions, balances }: WalletChartsProps) {
               )}
             </div>
             <div className="text-center mt-4">
-              <div className={`text-lg font-semibold ${
-                incomeExpenses.income >= incomeExpenses.expenses
+              <div className={`text-lg font-semibold ${incomeExpenses.income >= incomeExpenses.expenses
                   ? 'text-green-600 dark:text-green-400'
                   : 'text-red-600 dark:text-red-400'
-              }`}>
-                Net: ${(incomeExpenses.income - incomeExpenses.expenses).toFixed(2)}
+                }`}>
+                {t('netSavings')}: {formatNumber(incomeExpenses.income - incomeExpenses.expenses, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </div>
           </div>
@@ -184,7 +184,7 @@ export function WalletCharts({ transactions, balances }: WalletChartsProps) {
           </div>
         ) : (
           <p className="text-slate-500 dark:text-slate-400 text-center py-8">
-            No balances yet
+            {t('noBalances')}
           </p>
         )}
       </Card>

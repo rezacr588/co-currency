@@ -1,35 +1,39 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import {
     LayoutDashboard,
     Wallet,
     Plus,
     Target,
-    MoreHorizontal,
+    BarChart3,
 } from 'lucide-react';
 
 interface NavItemProps {
     to: string;
     icon: React.ReactNode;
-    label: string;
     isActive?: boolean;
 }
 
-function NavItem({ to, icon, label, isActive }: NavItemProps) {
+function NavItem({ to, icon, isActive }: NavItemProps) {
     return (
         <NavLink
             to={to}
-            className={`bottom-nav-item ${isActive ? 'active' : ''}`}
+            className={`relative flex items-center justify-center flex-1 h-full transition-all duration-200 ${isActive
+                    ? 'text-primary-600 dark:text-primary-400'
+                    : 'text-slate-400 dark:text-slate-500 active:text-slate-600 dark:active:text-slate-300'
+                }`}
         >
-            <span className="w-6 h-6">{icon}</span>
-            <span className="text-[10px] font-medium">{label}</span>
+            <span className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'active:scale-90'}`}>
+                {icon}
+            </span>
+            {isActive && (
+                <span className="absolute bottom-2 w-1 h-1 rounded-full bg-primary-500" />
+            )}
         </NavLink>
     );
 }
 
 export function BottomNav() {
-    const { t } = useLanguage();
     const { isAuthenticated } = useAuth();
     const location = useLocation();
 
@@ -37,15 +41,18 @@ export function BottomNav() {
     if (!isAuthenticated) return null;
 
     const navItems = [
-        { to: '/dashboard', icon: <LayoutDashboard className="w-6 h-6" />, label: t('dashboard') },
-        { to: '/wallet', icon: <Wallet className="w-6 h-6" />, label: t('wallet') },
-        { to: '/wallet/add', icon: <Plus className="w-6 h-6" />, label: t('addTransaction'), isCenter: true },
-        { to: '/goals', icon: <Target className="w-6 h-6" />, label: t('financialGoals') },
-        { to: '/reports', icon: <MoreHorizontal className="w-6 h-6" />, label: t('reportsAndStats') },
+        { to: '/dashboard', icon: <LayoutDashboard className="w-6 h-6" /> },
+        { to: '/wallet', icon: <Wallet className="w-6 h-6" /> },
+        { to: '/wallet/add', icon: <Plus className="w-7 h-7" />, isCenter: true },
+        { to: '/goals', icon: <Target className="w-6 h-6" /> },
+        { to: '/reports', icon: <BarChart3 className="w-6 h-6" /> },
     ];
 
     return (
-        <nav className="bottom-nav lg:hidden">
+        <nav
+            className="fixed bottom-0 left-0 right-0 h-14 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-slate-200/80 dark:border-slate-800/80 flex items-center justify-around z-50 lg:hidden"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        >
             {navItems.map((item) => {
                 const isActive = location.pathname === item.to ||
                     (item.to !== '/' && location.pathname.startsWith(item.to));
@@ -55,9 +62,9 @@ export function BottomNav() {
                         <NavLink
                             key={item.to}
                             to={item.to}
-                            className="flex items-center justify-center w-14 h-14 -mt-6 rounded-full bg-gradient-to-br from-primary-600 to-primary-700 text-white shadow-lg shadow-primary-500/30 touch-target"
+                            className="flex items-center justify-center w-12 h-12 -mt-4 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30 active:scale-95 transition-all duration-200"
                         >
-                            <Plus className="w-7 h-7" />
+                            <Plus className="w-6 h-6" strokeWidth={2.5} />
                         </NavLink>
                     );
                 }
@@ -67,7 +74,6 @@ export function BottomNav() {
                         key={item.to}
                         to={item.to}
                         icon={item.icon}
-                        label={item.label}
                         isActive={isActive}
                     />
                 );

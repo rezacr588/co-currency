@@ -8,14 +8,16 @@ import (
 	"github.com/rezacr588/currency-converter/internal/config"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
+	"golang.org/x/sync/singleflight"
 )
 
 // ExchangeService handles currency exchange operations
 type ExchangeService struct {
-	client    *repository.FrankfurterClient
-	irrClient *repository.IRRClient
-	cache     repository.Cache
-	config    *config.Config
+	client       *repository.FrankfurterClient
+	irrClient    *repository.IRRClient
+	cache        repository.Cache
+	config       *config.Config
+	requestGroup singleflight.Group
 }
 
 // NewExchangeService creates a new exchange service
@@ -43,19 +45,28 @@ func (s *ExchangeService) GetLatestRates(ctx context.Context, base string) (*mod
 		}
 	}
 
-	// Fetch from API
-	apiRates, err := s.client.GetLatestRates(ctx, base)
+	// Use singleflight to prevent cache stampede
+	result, err, _ := s.requestGroup.Do(cacheKey, func() (interface{}, error) {
+		// Fetch from API
+		apiRates, err := s.client.GetLatestRates(ctx, base)
+		if err != nil {
+			return nil, fmt.Errorf("fetching rates: %w", err)
+		}
+
+		// Transform to our response format
+		rates := s.transformRates(apiRates)
+
+		// Cache the result
+		s.cache.Set(cacheKey, rates, s.config.CacheTTL)
+
+		return rates, nil
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("fetching rates: %w", err)
+		return nil, err
 	}
 
-	// Transform to our response format
-	rates := s.transformRates(apiRates)
-
-	// Cache the result
-	s.cache.Set(cacheKey, rates, s.config.CacheTTL)
-
-	return rates, nil
+	return result.(*model.RatesResponse), nil
 }
 
 // GetHistoricalRates returns historical exchange rates for a specific date
@@ -69,19 +80,28 @@ func (s *ExchangeService) GetHistoricalRates(ctx context.Context, date, base str
 		}
 	}
 
-	// Fetch from API
-	apiRates, err := s.client.GetHistoricalRates(ctx, date, base)
+	// Use singleflight to prevent cache stampede
+	result, err, _ := s.requestGroup.Do(cacheKey, func() (interface{}, error) {
+		// Fetch from API
+		apiRates, err := s.client.GetHistoricalRates(ctx, date, base)
+		if err != nil {
+			return nil, fmt.Errorf("fetching historical rates: %w", err)
+		}
+
+		// Transform to our response format
+		rates := s.transformRates(apiRates)
+
+		// Cache the result (historical rates can be cached longer)
+		s.cache.Set(cacheKey, rates, s.config.CacheTTL*12) // 1 hour for historical
+
+		return rates, nil
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("fetching historical rates: %w", err)
+		return nil, err
 	}
 
-	// Transform to our response format
-	rates := s.transformRates(apiRates)
-
-	// Cache the result (historical rates can be cached longer)
-	s.cache.Set(cacheKey, rates, s.config.CacheTTL*12) // 1 hour for historical
-
-	return rates, nil
+	return result.(*model.RatesResponse), nil
 }
 
 // Convert performs a currency conversion

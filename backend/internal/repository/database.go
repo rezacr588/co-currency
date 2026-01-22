@@ -300,6 +300,27 @@ func (d *Database) initTables(ctx context.Context) error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_user_badges_user_id ON user_badges(user_id)`,
 
+		// Chat conversations table
+		`CREATE TABLE IF NOT EXISTS chat_conversations (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+			title VARCHAR(200),
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_chat_conversations_user_id ON chat_conversations(user_id)`,
+
+		// Chat messages table
+		`CREATE TABLE IF NOT EXISTS chat_messages (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			conversation_id UUID REFERENCES chat_conversations(id) ON DELETE CASCADE,
+			role VARCHAR(20) NOT NULL,
+			content TEXT NOT NULL,
+			tokens_used INTEGER,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_id ON chat_messages(conversation_id)`,
+
 		// Add CHECK constraints to prevent invalid data (using DO blocks for idempotency)
 		// Prevent negative wallet balances
 		`DO $$ BEGIN

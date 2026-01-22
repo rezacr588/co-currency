@@ -7,6 +7,12 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	TransactionTypeCredit  = "credit"
+	TransactionTypeDebit   = "debit"
+	TransactionTypeConvert = "convert"
+)
+
 // WalletBalance represents a user's balance in a specific currency
 type WalletBalance struct {
 	ID        uuid.UUID `json:"id"`
