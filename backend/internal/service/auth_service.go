@@ -43,8 +43,8 @@ func NewAuthService(userRepo *repository.UserRepository, jwtSecret string) *Auth
 	return &AuthService{
 		userRepo:      userRepo,
 		jwtSecret:     []byte(jwtSecret),
-		jwtExpiry:     365 * 10 * 24 * time.Hour, // 10 years - essentially never expires
-		refreshExpiry: 365 * 10 * 24 * time.Hour, // 10 years - essentially never expires
+		jwtExpiry:     1 * time.Hour,
+		refreshExpiry: 7 * 24 * time.Hour,
 	}
 }
 
@@ -54,8 +54,8 @@ func NewAuthServiceWithRefresh(userRepo *repository.UserRepository, refreshToken
 		userRepo:         userRepo,
 		refreshTokenRepo: refreshTokenRepo,
 		jwtSecret:        []byte(jwtSecret),
-		jwtExpiry:        365 * 10 * 24 * time.Hour, // 10 years - essentially never expires
-		refreshExpiry:    365 * 10 * 24 * time.Hour, // 10 years - essentially never expires
+		jwtExpiry:        1 * time.Hour,
+		refreshExpiry:    7 * 24 * time.Hour,
 	}
 }
 

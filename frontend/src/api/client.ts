@@ -118,6 +118,34 @@ async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function refreshAuthToken(): Promise<boolean> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return false;
+
+  try {
+    const response = await fetch(`${API_BASE}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+
+    if (response.ok) {
+      const data: AuthResponse = await response.json();
+      setAuthToken(data.token);
+      if (data.refresh_token) {
+        setRefreshToken(data.refresh_token);
+      }
+      return true;
+    }
+  } catch (error) {
+    console.error('Failed to refresh token:', error);
+  }
+
+  // If refresh failed, clear tokens and logout
+  handleAuthError();
+  return false;
+}
+
 async function fetchWithRetry<T>(
   url: string,
   options?: RequestInit,
@@ -140,8 +168,17 @@ async function fetchWithRetry<T>(
       });
 
       if (!response.ok) {
-        // Handle 401 Unauthorized - token expired or invalid
+        // Handle 401 Unauthorized - try to refresh token
         if (response.status === 401) {
+          // If we haven't tried refreshing yet and have a refresh token
+          if (attempt === 0 && getRefreshToken()) {
+            const refreshed = await refreshAuthToken();
+            if (refreshed) {
+              // Retry the request immediately with the new token
+              continue;
+            }
+          }
+          
           handleAuthError();
           throw new Error('Session expired. Please log in again.');
         }
@@ -164,7 +201,7 @@ async function fetchWithRetry<T>(
     } catch (error) {
       lastError = error instanceof Error ? error : new Error('Unknown error');
 
-      // Don't retry if it's a client error or we've exhausted retries
+      // Don't retry if it's a client error (except 401 which is handled above) or we've exhausted retries
       if (attempt === maxRetries) {
         break;
       }
@@ -174,7 +211,7 @@ async function fetchWithRetry<T>(
         error instanceof TypeError || // Network error
         (lastError.message && lastError.message.includes('Server error'));
 
-      if (!isRetryable) {
+      if (!isRetryable && lastError.message !== 'Session expired. Please log in again.') {
         break;
       }
 

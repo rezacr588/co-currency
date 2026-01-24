@@ -13,6 +13,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/joho/godotenv"
+
 	"github.com/rezacr588/currency-converter/internal/config"
 	"github.com/rezacr588/currency-converter/internal/handler"
 	"github.com/rezacr588/currency-converter/internal/middleware"
@@ -89,6 +91,9 @@ import (
 var staticFiles embed.FS
 
 func main() {
+	// Load .env file if it exists
+	_ = godotenv.Load()
+
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {

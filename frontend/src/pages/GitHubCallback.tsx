@@ -4,6 +4,7 @@ import { setAuthToken, setRefreshToken } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Container } from '../components/layout';
+import { Button } from '../components/ui/Button';
 
 export function GitHubCallback() {
     const { t } = useLanguage();
@@ -20,7 +21,6 @@ export function GitHubCallback() {
 
             if (errorParam) {
                 setError(errorParam);
-                setTimeout(() => navigate('/login', { replace: true }), 3000);
                 return;
             }
 
@@ -37,11 +37,9 @@ export function GitHubCallback() {
                     navigate('/wallet', { replace: true });
                 } catch {
                     setError('Failed to load user profile');
-                    setTimeout(() => navigate('/login', { replace: true }), 3000);
                 }
             } else {
                 setError('No authentication token received');
-                setTimeout(() => navigate('/login', { replace: true }), 3000);
             }
         };
 
@@ -57,10 +55,14 @@ export function GitHubCallback() {
                             <h2 className="text-lg font-semibold text-red-700 dark:text-red-400 mb-2">
                                 {t('authError') || 'Authentication Error'}
                             </h2>
-                            <p className="text-red-600 dark:text-red-300">{error}</p>
-                            <p className="text-sm text-red-500 dark:text-red-400 mt-2">
-                                {t('redirectingToLogin') || 'Redirecting to login...'}
-                            </p>
+                            <p className="text-red-600 dark:text-red-300 mb-6">{error}</p>
+                            <Button 
+                                variant="primary" 
+                                onClick={() => navigate('/login', { replace: true })}
+                                className="w-full"
+                            >
+                                {t('backToHome') || 'Back to Login'}
+                            </Button>
                         </div>
                     ) : (
                         <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-lg">

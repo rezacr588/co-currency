@@ -10,10 +10,14 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.5.5
+	github.com/joho/godotenv v1.5.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/rs/zerolog v1.32.0
+	github.com/swaggo/http-swagger v1.3.4
+	github.com/swaggo/swag v1.16.2
 	github.com/tmc/langchaingo v0.1.12
 	golang.org/x/crypto v0.23.0
+	golang.org/x/sync v0.19.0
 	golang.org/x/time v0.5.0
 )
 
@@ -51,8 +55,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/pkoukk/tiktoken-go v0.1.6 // indirect
 	github.com/swaggo/files v1.0.1 // indirect
-	github.com/swaggo/http-swagger v1.3.4 // indirect
-	github.com/swaggo/swag v1.16.2 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.51.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.51.0 // indirect
@@ -61,7 +63,6 @@ require (
 	go.opentelemetry.io/otel/trace v1.26.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/oauth2 v0.20.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/tools v0.14.0 // indirect
