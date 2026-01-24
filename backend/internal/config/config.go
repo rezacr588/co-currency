@@ -22,7 +22,7 @@ type Config struct {
 	// JWT Authentication
 	JWTSecret string `env:"JWT_SECRET" envDefault:"change-me-in-production-to-a-secure-secret"`
 	// Error handling
-	ExposeErrorDetails bool `env:"EXPOSE_ERROR_DETAILS" envDefault:"false"`
+	ExposeErrorDetails bool `env:"EXPOSE_ERROR_DETAILS" envDefault:"true"`
 
 	// GitHub OAuth
 	GitHubClientID     string `env:"GITHUB_CLIENT_ID" envDefault:""`
