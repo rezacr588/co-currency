@@ -29,6 +29,7 @@ import {
   AlertCircle,
   ArrowLeftRight,
   ArrowRight,
+  TrendingDown,
 } from 'lucide-react';
 
 interface QuickStatProps {
@@ -202,6 +203,65 @@ function QuickBalanceConverter({ balanceUSD }: QuickBalanceConverterProps) {
   );
 }
 
+function ForecastWidget() {
+  const { data: forecast, isLoading } = useQuery({
+    queryKey: ['forecast'],
+    queryFn: () => api.reports.forecast(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (isLoading) return <Skeleton className="h-32 w-full rounded-2xl" />;
+  if (!forecast || forecast.avg_daily_spend === 0) return null;
+
+  const isPositive = forecast.net_daily_flow >= 0;
+
+  return (
+    <Card className="overflow-hidden border-none bg-slate-900 text-white">
+      <CardContent className="p-0">
+        <div className="p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isPositive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+              {isPositive ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
+            </div>
+            <div>
+              <h3 className="font-bold text-lg">Spending Forecast</h3>
+              <p className="text-slate-400 text-sm">Based on your last 30 days</p>
+            </div>
+          </div>
+
+          <div className="text-center sm:text-right">
+            {isPositive ? (
+              <div className="text-emerald-400 font-bold text-lg">Positive Cash Flow</div>
+            ) : (
+              <div>
+                <div className="text-rose-400 font-bold text-2xl">{forecast.days_until_zero} Days</div>
+                <div className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Until Balance reaches zero</div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white/5 p-4 grid grid-cols-3 gap-2 text-center border-t border-white/5">
+          <div>
+            <p className="text-[10px] text-slate-500 uppercase font-bold">Daily Spend</p>
+            <p className="font-semibold text-sm">-{formatNumber(forecast.avg_daily_spend)} {forecast.currency}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-slate-500 uppercase font-bold">Daily Income</p>
+            <p className="font-semibold text-sm">+{formatNumber(forecast.avg_daily_income)} {forecast.currency}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-slate-500 uppercase font-bold">Net Flow</p>
+            <p className={`font-bold text-sm ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {isPositive ? '+' : ''}{formatNumber(forecast.net_daily_flow)}
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function Dashboard() {
   const { t } = useLanguage();
   const { user } = useAuth();
@@ -343,12 +403,11 @@ export function Dashboard() {
         )}
       </div>
 
-      {/* Balance Converter Widget */}
-      {!isLoading && summary?.total_balance_usd && summary.total_balance_usd > 0 && (
-        <div className="mb-8">
-          <QuickBalanceConverter balanceUSD={summary.total_balance_usd} />
-        </div>
-      )}
+      {/* Forecast and Balance Converter Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <ForecastWidget />
+        <QuickBalanceConverter balanceUSD={summary?.total_balance_usd || 0} />
+      </div>
 
       {/* Alert for due recurring transactions */}
       {dueRecurring.length > 0 && (

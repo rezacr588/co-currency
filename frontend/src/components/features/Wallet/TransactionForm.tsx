@@ -6,11 +6,11 @@ import { api } from '../../../api/client';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrencies, useConvert } from '../../../hooks';
 import { Container } from '../../layout';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
+import { Card, CardContent } from '../../ui/Card';
 import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
 import { ErrorMessage } from '../../ui/ErrorMessage';
-import { WalletBalance } from '../../../types/wallet';
+import { WalletBalance, TransactionRequest } from '../../../types/wallet';
 import { CURRENCY_FLAGS } from '../../../utils/constants';
 import { formatNumber } from '../../../utils/format';
 import {
@@ -45,9 +45,15 @@ import {
   ChevronDown,
   TrendingUp,
   TrendingDown,
-  ArrowRightLeft,
   Wallet,
+  Star,
+  Trash2,
 } from 'lucide-react';
+
+interface TransactionTemplate extends TransactionRequest {
+  id: string;
+  name: string;
+}
 
 // Transaction icons organized by category
 interface IconItem {
@@ -478,8 +484,8 @@ export function TransactionForm() {
     }));
   }, [balancesData]);
 
-  const [type, setType] = useState<'credit' | 'debit'>('credit');
-  const [currency, setCurrency] = useState('TRY'); // Transaction currency (what you pay/receive in)
+  const [type, setType] = useState<'credit' | 'debit'>('debit');
+  const [currency, setCurrency] = useState('USD'); // Transaction currency (what you pay/receive in)
   const [walletCurrency, setWalletCurrency] = useState('USD'); // Wallet currency (which balance to use)
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -488,6 +494,69 @@ export function TransactionForm() {
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [showWalletCurrencyPicker, setShowWalletCurrencyPicker] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Quick Templates state
+  const [templates, setTemplates] = useState<TransactionTemplate[]>([]);
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+
+  // Load templates on mount
+  useEffect(() => {
+    const savedTemplates = localStorage.getItem('transaction_templates');
+    if (savedTemplates) {
+      try {
+        setTemplates(jsonSafeParse(savedTemplates, []));
+      } catch (e) {
+        console.error('Failed to parse templates', e);
+      }
+    }
+  }, []);
+
+  const jsonSafeParse = (str: string, fallback: any) => {
+    try {
+      return JSON.parse(str);
+    } catch {
+      return fallback;
+    }
+  };
+
+  const saveTemplates = (newTemplates: TransactionTemplate[]) => {
+    setTemplates(newTemplates);
+    localStorage.setItem('transaction_templates', JSON.stringify(newTemplates));
+  };
+
+  const handleSaveTemplate = () => {
+    if (!templateName.trim()) return;
+    
+    const newTemplate: TransactionTemplate = {
+      id: crypto.randomUUID(),
+      name: templateName,
+      type,
+      currency,
+      wallet_currency: walletCurrency,
+      amount: parseFloat(amount.replace(',', '.')) || 0,
+      description,
+      icon,
+    };
+    
+    saveTemplates([newTemplate, ...templates]);
+    setShowSaveTemplate(false);
+    setTemplateName('');
+  };
+
+  const applyTemplate = (template: TransactionTemplate) => {
+    setType(template.type);
+    setCurrency(template.currency);
+    setWalletCurrency(template.wallet_currency || template.currency);
+    setAmount(template.amount > 0 ? template.amount.toString() : '');
+    setDescription(template.description || '');
+    setIcon(template.icon || '');
+  };
+
+  const deleteTemplate = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    saveTemplates(templates.filter(t => t.id !== id));
+  };
 
   // Check if cross-currency transaction
   const isCrossCurrency = currency !== walletCurrency;
@@ -599,14 +668,6 @@ export function TransactionForm() {
       });
   }, [balances, currencies, type, allCurrencyOptions]);
 
-  const selectedCurrencyInfo = useMemo(() => {
-    return currencies?.find((c) => c.code === currency);
-  }, [currencies, currency]);
-
-  const selectedWalletCurrencyInfo = useMemo(() => {
-    return currencies?.find((c) => c.code === walletCurrency);
-  }, [currencies, walletCurrency]);
-
   const SelectedIcon = icon ? getIconByKey(icon) : null;
   const flag = CURRENCY_FLAGS[currency] || '🌍';
   const walletFlag = CURRENCY_FLAGS[walletCurrency] || '🌍';
@@ -614,232 +675,282 @@ export function TransactionForm() {
   return (
     <main className="flex-1 py-4 sm:py-6">
       <Container>
-        <div className="max-w-lg mx-auto">
-          <Card variant="gradient">
-            <CardHeader>
-              <CardTitle>{t('addTransaction')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-5">
-                {error && <ErrorMessage>{error}</ErrorMessage>}
+        <div className="max-w-2xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-white">
+              {t('addTransaction')}
+            </h1>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/wallet')}
+              className="text-slate-500"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
 
-                {/* Transaction Type */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {t('transactionType')}
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setType('credit')}
-                      className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
-                        type === 'credit'
-                          ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                      }`}
-                    >
-                      <TrendingUp className="w-5 h-5" />
-                      {t('credit')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setType('debit')}
-                      className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
-                        type === 'debit'
-                          ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/25'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                      }`}
-                    >
-                      <TrendingDown className="w-5 h-5" />
-                      {t('debit')}
-                    </button>
-                  </div>
-                </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Main Form */}
+            <div className="lg:col-span-7">
+              <Card variant="default" className="shadow-xl shadow-slate-200/20 dark:shadow-none">
+                <CardContent className="p-6">
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    {error && <ErrorMessage>{error}</ErrorMessage>}
 
-                {/* Transaction Currency - What you're paying/receiving in */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {t('transactionCurrency')}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowCurrencyPicker(true)}
-                    className="w-full flex items-center gap-3 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-left hover:border-primary-500 dark:hover:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600/30 transition-all"
-                  >
-                    <span className="text-2xl flex-shrink-0">{flag}</span>
-                    <div className="flex-1 min-w-0">
-                      <span className="font-semibold text-slate-800 dark:text-white">
-                        {currency}
-                      </span>
-                      {selectedCurrencyInfo && (
-                        <span className="block text-xs text-slate-500 dark:text-slate-400 truncate">
-                          {selectedCurrencyInfo.name}
-                        </span>
-                      )}
-                    </div>
-                    <ChevronDown className="w-5 h-5 text-slate-400" />
-                  </button>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {type === 'debit' ? t('currencyYouPaidIn') : t('currencyYouReceivedIn')}
-                  </p>
-                </div>
-
-                {/* Wallet Currency - Which balance to use */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                    <Wallet className="w-4 h-4" />
-                    {t('walletCurrency')}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowWalletCurrencyPicker(true)}
-                    disabled={type === 'debit' && walletCurrencyOptions.length === 0}
-                    className="w-full flex items-center gap-3 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-left hover:border-primary-500 dark:hover:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <span className="text-2xl flex-shrink-0">{walletFlag}</span>
-                    <div className="flex-1 min-w-0">
-                      <span className="font-semibold text-slate-800 dark:text-white">
-                        {walletCurrency}
-                      </span>
-                      {selectedWalletCurrencyInfo && (
-                        <span className="block text-xs text-slate-500 dark:text-slate-400 truncate">
-                          {selectedWalletCurrencyInfo.name}
-                        </span>
-                      )}
-                    </div>
-                    {currentBalance > 0 && (
-                      <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                        {formatNumber(currentBalance, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    )}
-                    <ChevronDown className="w-5 h-5 text-slate-400" />
-                  </button>
-                  {currentBalance > 0 && (
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {t('availableBalance')}:{' '}
-                      <span className="font-medium text-slate-700 dark:text-slate-200">
-                        {formatNumber(currentBalance, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {walletCurrency}
-                      </span>
-                    </p>
-                  )}
-                  {type === 'debit' && walletCurrencyOptions.length === 0 && (
-                    <p className="text-sm text-rose-500">{t('noBalanceAvailable')}</p>
-                  )}
-                </div>
-
-                {/* Conversion Preview */}
-                {isCrossCurrency && numAmount > 0 && (
-                  <div className="p-4 bg-gradient-to-r from-primary-50 to-primary-100/50 dark:from-primary-900/20 dark:to-primary-800/20 border border-primary-200 dark:border-primary-800 rounded-xl">
-                    <div className="flex items-center gap-2 text-sm text-primary-700 dark:text-primary-300 mb-2">
-                      <ArrowRightLeft className="w-4 h-4" />
-                      <span className="font-medium">{t('conversionPreview')}</span>
-                    </div>
-                    {isLoadingConversion ? (
-                      <div className="text-sm text-slate-500 dark:text-slate-400">
-                        {t('loading')}...
+                    {/* Transaction Type */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                        {t('transactionType')}
+                      </label>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setType('credit')}
+                          className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
+                            type === 'credit'
+                              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          <TrendingUp className="w-5 h-5" />
+                          {t('credit')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setType('debit')}
+                          className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
+                            type === 'debit'
+                              ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/25'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          <TrendingDown className="w-5 h-5" />
+                          {t('debit')}
+                        </button>
                       </div>
-                    ) : conversionData ? (
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-600 dark:text-slate-400">
-                            {formatNumber(numAmount, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Transaction Currency */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                          {t('transactionCurrency')}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrencyPicker(true)}
+                          className="w-full flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-left hover:border-primary-500 transition-all"
+                        >
+                          <span className="text-xl">{flag}</span>
+                          <span className="font-semibold text-slate-800 dark:text-white flex-1 truncate">
+                            {currency}
                           </span>
-                          <span className="font-semibold text-slate-800 dark:text-white">
-                            ≈ {formatNumber(conversionData.result, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {walletCurrency}
-                          </span>
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">
-                          {t('rate')}: 1 {currency} = {formatNumber(conversionData.rate, { maximumFractionDigits: 6 })} {walletCurrency}
-                        </div>
+                          <ChevronDown className="w-4 h-4 text-slate-400" />
+                        </button>
                       </div>
-                    ) : null}
-                  </div>
-                )}
 
-                {/* Icon Picker */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {t('transactionIcon')} ({t('optional')})
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowIconPicker(true)}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-600/30 transition-all text-left flex items-center gap-3"
-                    disabled={mutation.isPending}
-                  >
-                    {SelectedIcon ? (
-                      <div className="w-10 h-10 flex items-center justify-center bg-primary-100 dark:bg-primary-600/30 rounded-lg">
-                        <SelectedIcon className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+                      {/* Wallet Currency */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                          <Wallet className="w-4 h-4 text-primary-500" />
+                          {t('walletCurrency')}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowWalletCurrencyPicker(true)}
+                          disabled={type === 'debit' && walletCurrencyOptions.length === 0}
+                          className="w-full flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-left hover:border-primary-500 transition-all disabled:opacity-50"
+                        >
+                          <span className="text-xl">{walletFlag}</span>
+                          <span className="font-semibold text-slate-800 dark:text-white flex-1 truncate">
+                            {walletCurrency}
+                          </span>
+                          <ChevronDown className="w-4 h-4 text-slate-400" />
+                        </button>
                       </div>
-                    ) : (
-                      <div className="w-10 h-10 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded-lg">
-                        <Package className="w-6 h-6 text-slate-400" />
+                    </div>
+
+                    {/* Conversion Preview */}
+                    {isCrossCurrency && numAmount > 0 && (
+                      <div className="p-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-800/50 rounded-xl">
+                        {isLoadingConversion ? (
+                          <div className="text-xs text-slate-500 animate-pulse">{t('loading')}...</div>
+                        ) : conversionData ? (
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-slate-500">{t('conversionPreview')}</span>
+                            <span className="font-semibold text-primary-700 dark:text-primary-400">
+                              ≈ {formatNumber(conversionData.result)} {walletCurrency}
+                            </span>
+                          </div>
+                        ) : null}
                       </div>
                     )}
-                    <span className={SelectedIcon ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'}>
-                      {SelectedIcon
-                        ? TRANSACTION_ICONS.find((i) => i.key === icon)?.label
-                        : t('selectIcon')}
-                    </span>
-                    <ChevronDown className="w-5 h-5 text-slate-400 ml-auto" />
-                  </button>
-                </div>
 
-                {/* Amount */}
-                <Input
-                  type="number"
-                  label={t('amount')}
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.00"
-                  min="0.01"
-                  step="0.01"
-                  required
-                  disabled={mutation.isPending}
-                />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Icon */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                          {t('transactionIcon')}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowIconPicker(true)}
+                          className="w-full flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-left hover:border-primary-500 transition-all"
+                        >
+                          {SelectedIcon ? (
+                            <SelectedIcon className="w-5 h-5 text-primary-600" />
+                          ) : (
+                            <Package className="w-5 h-5 text-slate-400" />
+                          )}
+                          <span className="text-slate-700 dark:text-slate-200 flex-1 truncate">
+                            {SelectedIcon ? TRANSACTION_ICONS.find(i => i.key === icon)?.label : t('selectIcon')}
+                          </span>
+                          <ChevronDown className="w-4 h-4 text-slate-400" />
+                        </button>
+                      </div>
 
-                {/* Description */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {t('description')} ({t('optional')})
-                  </label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder={t('transactionDescription')}
-                    rows={3}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-all resize-none"
-                    disabled={mutation.isPending}
-                  />
-                </div>
+                      {/* Amount */}
+                      <Input
+                        type="number"
+                        label={t('amount')}
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        placeholder="0.00"
+                        min="0.01"
+                        step="0.01"
+                        required
+                        className="!mt-0"
+                      />
+                    </div>
 
-                {/* Actions */}
-                <div className="flex gap-3 pt-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="lg"
-                    className="flex-1"
-                    onClick={() => navigate('/wallet')}
-                    disabled={mutation.isPending}
-                  >
-                    {t('cancel')}
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    size="lg"
-                    className="flex-1"
-                    disabled={mutation.isPending || (type === 'debit' && walletCurrencyOptions.length === 0) || (isCrossCurrency && isLoadingConversion)}
-                  >
-                    {mutation.isPending ? t('adding') : t('addTransaction')}
-                  </Button>
+                    {/* Description */}
+                    <Input
+                      label={t('description')}
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder={t('transactionDescription')}
+                    />
+
+                    {/* Actions */}
+                    <div className="flex flex-col gap-3 pt-2">
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        size="lg"
+                        className="w-full shadow-lg shadow-primary-500/20"
+                        disabled={mutation.isPending || (type === 'debit' && walletCurrencyOptions.length === 0) || (isCrossCurrency && isLoadingConversion)}
+                      >
+                        {mutation.isPending ? t('adding') : t('addTransaction')}
+                      </Button>
+                      
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="flex-1 text-slate-500"
+                          onClick={() => setShowSaveTemplate(true)}
+                        >
+                          <Star className="w-4 h-4 me-2" />
+                          Save as Template
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="flex-1 text-slate-500"
+                          onClick={() => navigate('/wallet')}
+                        >
+                          {t('cancel')}
+                        </Button>
+                      </div>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Side Templates Panel */}
+            <div className="lg:col-span-5 space-y-4">
+              <div className="flex items-center justify-between px-1">
+                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                  <Star className="w-4 h-4 text-amber-500" />
+                  Templates
+                </h2>
+                <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded">
+                  {templates.length}
+                </span>
+              </div>
+
+              {templates.length > 0 ? (
+                <div className="grid grid-cols-1 gap-2">
+                  {templates.map((template) => {
+                    const TemplateIcon = template.icon ? getIconByKey(template.icon) : Star;
+                    return (
+                      <button
+                        key={template.id}
+                        onClick={() => applyTemplate(template)}
+                        className="group flex items-center gap-3 p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:border-primary-500 hover:shadow-md transition-all text-left"
+                      >
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          template.type === 'credit' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+                        }`}>
+                          {TemplateIcon && <TemplateIcon className="w-5 h-5" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm text-slate-800 dark:text-white truncate">
+                            {template.name}
+                          </p>
+                          <p className="text-[10px] text-slate-500 truncate">
+                            {template.amount} {template.currency} • {template.description || 'No desc'}
+                          </p>
+                        </div>
+                        <button
+                          onClick={(e) => deleteTemplate(template.id, e)}
+                          className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-md transition-all"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </button>
+                    );
+                  })}
                 </div>
-              </form>
-            </CardContent>
-          </Card>
+              ) : (
+                <div className="p-8 text-center bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
+                  <Star className="w-8 h-8 text-slate-300 mx-auto mb-2 opacity-50" />
+                  <p className="text-xs text-slate-500">No templates yet. Save frequent transactions here.</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </Container>
+
+      {/* Save Template Modal */}
+      {showSaveTemplate && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-scale-in">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Save Template</h3>
+            <Input
+              label="Template Name"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              placeholder="e.g., Daily Coffee, Salary, Rent"
+              autoFocus
+            />
+            <div className="flex gap-3 mt-6">
+              <Button variant="secondary" className="flex-1" onClick={() => setShowSaveTemplate(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" className="flex-1" onClick={handleSaveTemplate} disabled={!templateName.trim()}>
+                Save
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Icon Picker Modal */}
       <IconPicker
@@ -873,3 +984,4 @@ export function TransactionForm() {
     </main>
   );
 }
+

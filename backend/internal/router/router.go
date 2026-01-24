@@ -88,6 +88,7 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 			r.Post("/transaction", h.Wallet.AddTransaction)
 			r.Post("/convert", h.Wallet.ConvertBalance)
 			r.Get("/transactions", h.Wallet.GetTransactions)
+			r.Post("/transactions/import", h.Wallet.ImportTransactions)
 			r.Get("/transactions/export", h.Wallet.ExportTransactions)
 			r.Get("/transactions/{id}", h.Wallet.GetTransaction)
 			r.Put("/transactions/{id}", h.Wallet.UpdateTransaction)
@@ -169,9 +170,12 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 			r.Route("/reports", func(r chi.Router) {
 				r.Use(authMiddleware.Middleware)
 				r.Get("/monthly", h.Reports.GetMonthlyReport)
+				r.Get("/yearly", h.Reports.GetYearlyReport)
 				r.Get("/category", h.Reports.GetCategoryReport)
 				r.Get("/trends", h.Reports.GetTrendsReport)
 				r.Get("/networth", h.Reports.GetNetWorthReport)
+				r.Get("/forecast", h.Reports.GetForecast)
+				r.Get("/insights", h.Reports.GetInsights)
 			})
 		}
 

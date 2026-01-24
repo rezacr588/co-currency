@@ -246,7 +246,7 @@ func main() {
 		log.Info().Msg("Recurring transaction service initialized")
 
 		if walletRepo != nil {
-			reportsService = service.NewReportsService(walletRepo, exchangeService)
+			reportsService = service.NewReportsService(walletRepo, exchangeService, aiService)
 			log.Info().Msg("Reports service initialized")
 		}
 

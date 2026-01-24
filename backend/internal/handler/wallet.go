@@ -435,3 +435,35 @@ func (h *WalletHandler) UpdateTransaction(w http.ResponseWriter, r *http.Request
 
 	httputil.Success(w, tx)
 }
+
+// ImportTransactions handles POST /api/v1/wallet/transactions/import
+func (h *WalletHandler) ImportTransactions(w http.ResponseWriter, r *http.Request) {
+	if h.serviceUnavailable(w) {
+		return
+	}
+
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, "user not found in context")
+		return
+	}
+
+	var req struct {
+		Transactions []model.TransactionRequest `json:"transactions"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.BadRequest(w, "invalid request body")
+		return
+	}
+
+	count, err := h.walletService.ImportTransactions(r.Context(), userID, req.Transactions)
+	if err != nil {
+		httputil.InternalServerError(w, "failed to import transactions")
+		return
+	}
+
+	httputil.Success(w, map[string]interface{}{
+		"message": fmt.Sprintf("successfully imported %d transactions", count),
+		"count":   count,
+	})
+}

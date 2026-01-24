@@ -57,6 +57,35 @@ func (h *ReportsHandler) GetMonthlyReport(w http.ResponseWriter, r *http.Request
 	httputil.Success(w, report)
 }
 
+// GetYearlyReport handles GET /api/v1/reports/yearly
+func (h *ReportsHandler) GetYearlyReport(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, "user not found in context")
+		return
+	}
+
+	year := time.Now().Year()
+	if y := r.URL.Query().Get("year"); y != "" {
+		if parsed, err := strconv.Atoi(y); err == nil {
+			year = parsed
+		}
+	}
+
+	currency := r.URL.Query().Get("currency")
+	if currency == "" {
+		currency = "USD"
+	}
+
+	report, err := h.reportsService.GetYearlyReport(r.Context(), userID, year, currency)
+	if err != nil {
+		httputil.InternalServerError(w, "failed to generate yearly report")
+		return
+	}
+
+	httputil.Success(w, report)
+}
+
 // GetCategoryReport handles GET /api/v1/reports/category
 func (h *ReportsHandler) GetCategoryReport(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
@@ -142,4 +171,48 @@ func (h *ReportsHandler) GetNetWorthReport(w http.ResponseWriter, r *http.Reques
 	}
 
 	httputil.Success(w, report)
+}
+
+// GetForecast handles GET /api/v1/reports/forecast
+func (h *ReportsHandler) GetForecast(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, "user not found in context")
+		return
+	}
+
+	currency := r.URL.Query().Get("currency")
+	if currency == "" {
+		currency = "USD"
+	}
+
+	report, err := h.reportsService.GetForecast(r.Context(), userID, currency)
+	if err != nil {
+		httputil.InternalServerError(w, "failed to generate forecast report")
+		return
+	}
+
+	httputil.Success(w, report)
+}
+
+// GetInsights handles GET /api/v1/reports/insights
+func (h *ReportsHandler) GetInsights(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, "user not found in context")
+		return
+	}
+
+	currency := r.URL.Query().Get("currency")
+	if currency == "" {
+		currency = "USD"
+	}
+
+	insights, err := h.reportsService.GetInsights(r.Context(), userID, currency)
+	if err != nil {
+		httputil.InternalServerError(w, "failed to generate insights: "+err.Error())
+		return
+	}
+
+	httputil.Success(w, insights)
 }

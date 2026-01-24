@@ -35,9 +35,11 @@ import type {
   CreateRecurringRequest,
   UpdateRecurringRequest,
   MonthlyReport,
+  YearlyReport,
   CategoryReport,
   TrendsReport,
   NetWorthReport,
+  InsightResponse,
   Subscription,
   CreateSubscriptionRequest,
   UpdateSubscriptionRequest,
@@ -325,6 +327,11 @@ export const api = {
       fetchAPI<{ message: string }>(`/wallet/transactions/${id}`, {
         method: 'DELETE',
       }),
+    importTransactions: (transactions: TransactionRequest[]) =>
+      fetchAPI<{ message: string; count: number }>('/wallet/transactions/import', {
+        method: 'POST',
+        body: JSON.stringify({ transactions }),
+      }),
     convert: (data: WalletConvertRequest) =>
       fetchAPI<WalletConvertResponse>('/wallet/convert', {
         method: 'POST',
@@ -454,6 +461,13 @@ export const api = {
       const query = params.toString();
       return fetchAPI<MonthlyReport>(`/reports/monthly${query ? `?${query}` : ''}`);
     },
+    yearly: (year?: number, currency?: string) => {
+      const params = new URLSearchParams();
+      if (year) params.set('year', year.toString());
+      if (currency) params.set('currency', currency);
+      const query = params.toString();
+      return fetchAPI<YearlyReport>(`/reports/yearly${query ? `?${query}` : ''}`);
+    },
     category: (fromDate?: string, toDate?: string, currency?: string) => {
       const params = new URLSearchParams();
       if (fromDate) params.set('from_date', fromDate);
@@ -474,6 +488,26 @@ export const api = {
       if (currency) params.set('currency', currency);
       const query = params.toString();
       return fetchAPI<NetWorthReport>(`/reports/networth${query ? `?${query}` : ''}`);
+    },
+    forecast: (currency?: string) => {
+      const params = new URLSearchParams();
+      if (currency) params.set('currency', currency);
+      const query = params.toString();
+      return fetchAPI<{
+        currency: string;
+        current_balance: number;
+        avg_daily_spend: number;
+        avg_daily_income: number;
+        net_daily_flow: number;
+        days_until_zero: number;
+        estimated_zero_date?: string;
+      }>(`/reports/forecast${query ? `?${query}` : ''}`);
+    },
+    insights: (currency?: string) => {
+      const params = new URLSearchParams();
+      if (currency) params.set('currency', currency);
+      const query = params.toString();
+      return fetchAPI<InsightResponse>(`/reports/insights${query ? `?${query}` : ''}`);
     },
   },
 

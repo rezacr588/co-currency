@@ -142,6 +142,17 @@ export interface MonthlyReport {
   expenses: number;
   net: number;
   savings_rate: number;
+  categories?: CategoryBreakdown[];
+}
+
+export interface YearlyReport {
+  year: number;
+  currency: string;
+  income: number;
+  expenses: number;
+  net: number;
+  savings_rate: number;
+  months: MonthlyReport[];
 }
 
 export interface CategoryBreakdown {
@@ -183,6 +194,12 @@ export interface NetWorthReport {
   currency: string;
   total_balance: number;
   balances: BalanceBreakdown[];
+}
+
+export interface InsightResponse {
+  advice: string;
+  action_items: string[];
+  sentiment: 'positive' | 'neutral' | 'negative';
 }
 
 // Subscription types

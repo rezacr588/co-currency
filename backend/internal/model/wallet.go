@@ -136,3 +136,10 @@ type ApplyParsedRequest struct {
 	Type        string  `json:"type"`
 	Description string  `json:"description"`
 }
+
+// InsightResponse represents AI-generated financial insights
+type InsightResponse struct {
+	Advice      string   `json:"advice"`
+	ActionItems []string `json:"action_items"`
+	Sentiment   string   `json:"sentiment"` // "positive", "neutral", "negative"
+}

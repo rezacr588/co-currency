@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
 )
 
@@ -13,25 +14,39 @@ import (
 type ReportsService struct {
 	walletRepo      *repository.WalletRepository
 	exchangeService *ExchangeService
+	aiService       *AIService
 }
 
 // NewReportsService creates a new ReportsService
-func NewReportsService(walletRepo *repository.WalletRepository, exchangeService *ExchangeService) *ReportsService {
+func NewReportsService(walletRepo *repository.WalletRepository, exchangeService *ExchangeService, aiService *AIService) *ReportsService {
 	return &ReportsService{
 		walletRepo:      walletRepo,
 		exchangeService: exchangeService,
+		aiService:       aiService,
 	}
 }
 
 // MonthlyReport represents a monthly financial summary
 type MonthlyReport struct {
-	Year     int     `json:"year"`
-	Month    int     `json:"month"`
-	Currency string  `json:"currency"`
-	Income   float64 `json:"income"`
-	Expenses float64 `json:"expenses"`
-	Net      float64 `json:"net"`
-	Savings  float64 `json:"savings_rate"` // Percentage of income saved
+	Year       int                 `json:"year"`
+	Month      int                 `json:"month"`
+	Currency   string              `json:"currency"`
+	Income     float64             `json:"income"`
+	Expenses   float64             `json:"expenses"`
+	Net        float64             `json:"net"`
+	Savings    float64             `json:"savings_rate"` // Percentage of income saved
+	Categories []CategoryBreakdown `json:"categories"`
+}
+
+// YearlyReport represents a yearly financial summary
+type YearlyReport struct {
+	Year     int             `json:"year"`
+	Currency string          `json:"currency"`
+	Income   float64         `json:"income"`
+	Expenses float64         `json:"expenses"`
+	Net      float64         `json:"net"`
+	Savings  float64         `json:"savings_rate"`
+	Months   []MonthlyReport `json:"months"`
 }
 
 // CategoryBreakdown represents spending by category
@@ -91,6 +106,17 @@ type NetWorthReport struct {
 	Goals        []GoalProgress     `json:"goals,omitempty"`
 }
 
+// ForecastReport represents financial projections
+type ForecastReport struct {
+	Currency          string    `json:"currency"`
+	CurrentBalance    float64   `json:"current_balance"`
+	AvgDailySpend     float64   `json:"avg_daily_spend"`
+	AvgDailyIncome    float64   `json:"avg_daily_income"`
+	NetDailyFlow      float64   `json:"net_daily_flow"`
+	DaysUntilZero     int       `json:"days_until_zero"`      // -1 if net flow is positive
+	EstimatedZeroDate *time.Time `json:"estimated_zero_date,omitempty"`
+}
+
 // GetMonthlyReport generates a monthly financial summary
 func (s *ReportsService) GetMonthlyReport(ctx context.Context, userID uuid.UUID, year, month int, currency string) (*MonthlyReport, error) {
 	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
@@ -103,6 +129,8 @@ func (s *ReportsService) GetMonthlyReport(ctx context.Context, userID uuid.UUID,
 	}
 
 	var income, expenses float64
+	categoryTotals := make(map[string]float64)
+	categoryCounts := make(map[string]int)
 
 	for _, tx := range transactions {
 		if tx.CreatedAt.Before(startDate) || tx.CreatedAt.After(endDate) {
@@ -123,6 +151,13 @@ func (s *ReportsService) GetMonthlyReport(ctx context.Context, userID uuid.UUID,
 			income += amount
 		case "debit":
 			expenses += amount
+			
+			category := tx.Category
+			if category == "" {
+				category = "other"
+			}
+			categoryTotals[category] += amount
+			categoryCounts[category]++
 		}
 	}
 
@@ -132,14 +167,62 @@ func (s *ReportsService) GetMonthlyReport(ctx context.Context, userID uuid.UUID,
 		savingsRate = (net / income) * 100
 	}
 
+	categories := make([]CategoryBreakdown, 0, len(categoryTotals))
+	for cat, amount := range categoryTotals {
+		percentage := 0.0
+		if expenses > 0 {
+			percentage = (amount / expenses) * 100
+		}
+		categories = append(categories, CategoryBreakdown{
+			Category:   cat,
+			Amount:     amount,
+			Percentage: percentage,
+			Count:      categoryCounts[cat],
+		})
+	}
+
 	return &MonthlyReport{
+		Year:       year,
+		Month:      month,
+		Currency:   currency,
+		Income:     income,
+		Expenses:   expenses,
+		Net:        net,
+		Savings:    savingsRate,
+		Categories: categories,
+	}, nil
+}
+
+// GetYearlyReport generates a yearly financial summary
+func (s *ReportsService) GetYearlyReport(ctx context.Context, userID uuid.UUID, year int, currency string) (*YearlyReport, error) {
+	var totalIncome, totalExpenses float64
+	var monthlyReports []MonthlyReport
+
+	for month := 1; month <= 12; month++ {
+		report, err := s.GetMonthlyReport(ctx, userID, year, month, currency)
+		if err != nil {
+			return nil, err
+		}
+		
+		totalIncome += report.Income
+		totalExpenses += report.Expenses
+		monthlyReports = append(monthlyReports, *report)
+	}
+
+	net := totalIncome - totalExpenses
+	savingsRate := 0.0
+	if totalIncome > 0 {
+		savingsRate = (net / totalIncome) * 100
+	}
+
+	return &YearlyReport{
 		Year:     year,
-		Month:    month,
 		Currency: currency,
-		Income:   income,
-		Expenses: expenses,
+		Income:   totalIncome,
+		Expenses: totalExpenses,
 		Net:      net,
 		Savings:  savingsRate,
+		Months:   monthlyReports,
 	}, nil
 }
 
@@ -315,4 +398,82 @@ func (s *ReportsService) GetNetWorthReport(ctx context.Context, userID uuid.UUID
 		TotalBalance: totalBalance,
 		Balances:     balanceBreakdowns,
 	}, nil
+}
+
+// GetForecast generates financial projections based on recent activity (last 30 days)
+func (s *ReportsService) GetForecast(ctx context.Context, userID uuid.UUID, currency string) (*ForecastReport, error) {
+	// 1. Get current total balance in target currency
+	nw, err := s.GetNetWorthReport(ctx, userID, currency)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Get last 30 days of transactions
+	endDate := time.Now()
+	startDate := endDate.AddDate(0, 0, -30)
+
+	transactions, _, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, nil, 10000, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	var totalIncome, totalExpenses float64
+	for _, tx := range transactions {
+		if tx.CreatedAt.Before(startDate) || tx.CreatedAt.After(endDate) {
+			continue
+		}
+
+		amount := tx.Amount
+		if tx.Currency != currency {
+			conversion, err := s.exchangeService.Convert(ctx, tx.Currency, currency, tx.Amount)
+			if err == nil {
+				amount = conversion.Result
+			}
+		}
+
+		if tx.Type == "credit" {
+			totalIncome += amount
+		} else if tx.Type == "debit" {
+			totalExpenses += amount
+		}
+	}
+
+	// 3. Calculate averages
+	avgDailySpend := totalExpenses / 30.0
+	avgDailyIncome := totalIncome / 30.0
+	netDailyFlow := avgDailyIncome - avgDailySpend
+
+	daysUntilZero := -1
+	var estimatedZeroDate *time.Time
+
+	if netDailyFlow < 0 && nw.TotalBalance > 0 {
+		// Calculate how many days until balance reaches zero
+		daysUntilZero = int(nw.TotalBalance / (-netDailyFlow))
+		zeroDate := time.Now().AddDate(0, 0, daysUntilZero)
+		estimatedZeroDate = &zeroDate
+	}
+
+	return &ForecastReport{
+		Currency:          currency,
+		CurrentBalance:    nw.TotalBalance,
+		AvgDailySpend:     avgDailySpend,
+		AvgDailyIncome:    avgDailyIncome,
+		NetDailyFlow:      netDailyFlow,
+		DaysUntilZero:     daysUntilZero,
+		EstimatedZeroDate: estimatedZeroDate,
+	}, nil
+}
+
+// GetInsights generates AI-powered insights
+func (s *ReportsService) GetInsights(ctx context.Context, userID uuid.UUID, currency string) (*model.InsightResponse, error) {
+	if s.aiService == nil || !s.aiService.IsConfigured() {
+		return nil, fmt.Errorf("AI service not configured")
+	}
+
+	forecast, err := s.GetForecast(ctx, userID, currency)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.aiService.GetInsights(ctx, forecast)
 }

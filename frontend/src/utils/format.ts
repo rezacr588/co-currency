@@ -126,14 +126,32 @@ export function formatDate(
 ): string {
   const d = new Date(date);
   if (isNaN(d.getTime())) return 'N/A';
-  return new Intl.DateTimeFormat(getLocale(), options).format(d);
+  
+  const locale = getLocale();
+  const formatOptions = { ...options };
+  
+  // Support Jalali calendar for Persian locale
+  if (locale.startsWith('fa')) {
+    (formatOptions as any).calendar = 'persian';
+  }
+  
+  return new Intl.DateTimeFormat(locale, formatOptions).format(d);
 }
 
 export function formatTime(date: string): string {
   const d = new Date(date);
   if (isNaN(d.getTime())) return 'N/A';
-  return new Intl.DateTimeFormat(getLocale(), {
+  
+  const locale = getLocale();
+  const options: Intl.DateTimeFormatOptions = {
     hour: '2-digit',
     minute: '2-digit',
-  }).format(d);
+  };
+  
+  // Support Jalali calendar for Persian locale
+  if (locale.startsWith('fa')) {
+    (options as any).calendar = 'persian';
+  }
+  
+  return new Intl.DateTimeFormat(locale, options).format(d);
 }

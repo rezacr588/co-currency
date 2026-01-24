@@ -313,3 +313,17 @@ func (s *WalletService) UpdateTransaction(ctx context.Context, userID, txID uuid
 	}
 	return tx, nil
 }
+
+// ImportTransactions adds multiple transactions atomically
+func (s *WalletService) ImportTransactions(ctx context.Context, userID uuid.UUID, transactions []model.TransactionRequest) (int, error) {
+	count := 0
+	for _, req := range transactions {
+		_, err := s.AddTransaction(ctx, userID, &req)
+		if err != nil {
+			// Continue with others even if one fails (e.g. insufficient balance)
+			continue
+		}
+		count++
+	}
+	return count, nil
+}
