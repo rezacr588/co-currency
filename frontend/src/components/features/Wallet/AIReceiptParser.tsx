@@ -1,5 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useMutationAction } from '../../../hooks';
@@ -8,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import { ErrorMessage } from '../../ui/ErrorMessage';
 import { CurrencyBadge } from '../../ui/CurrencyBadge';
+import { Select } from '../../ui/Select';
 import type { ParsedTransaction, AIParseResponse } from '../../../types/wallet';
 import { formatCurrency } from '../../../utils/format';
 
@@ -94,7 +96,22 @@ export function AIReceiptParser() {
   const [text, setText] = useState('');
   const [parseResult, setParseResult] = useState<AIParseResponse | null>(null);
   const [parsedTransactions, setParsedTransactions] = useState<ParsedTransaction[]>([]);
+  const [walletCurrency, setWalletCurrency] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+
+  // Fetch wallet balances to get available currencies
+  const { data: balancesData } = useQuery({
+    queryKey: ['wallet-balances'],
+    queryFn: () => api.wallet.getBalances(),
+  });
+
+  // Fetch all currencies for the selector
+  const { data: currenciesData } = useQuery({
+    queryKey: ['currencies'],
+    queryFn: () => api.currencies.list(),
+  });
+
+  const walletBalances = balancesData?.balances || [];
 
   const parseMutation = useMutationAction(api.ai.parseReceipt, {
     onSuccess: (data) => {
@@ -108,17 +125,26 @@ export function AIReceiptParser() {
         confidence: data.confidence,
       };
       setParsedTransactions([transaction]);
+      // Auto-select wallet currency if user has balance in the parsed currency
+      const hasBalanceInParsedCurrency = walletBalances.some(b => b.currency === data.currency);
+      if (hasBalanceInParsedCurrency) {
+        setWalletCurrency(data.currency);
+      } else if (walletBalances.length > 0) {
+        // Default to first available balance currency
+        setWalletCurrency(walletBalances[0].currency);
+      }
       setError(null);
     },
   });
 
   const applyMutation = useMutationAction(
-    async (transactions: ParsedTransaction[]) => {
+    async (data: { transactions: ParsedTransaction[]; walletCurrency: string }) => {
       // Apply each transaction sequentially
-      for (const tx of transactions) {
+      for (const tx of data.transactions) {
         await api.ai.applyParsed({
           amount: tx.amount,
           currency: tx.currency,
+          wallet_currency: data.walletCurrency !== tx.currency ? data.walletCurrency : undefined,
           type: tx.type,
           description: tx.description,
         });
@@ -153,7 +179,7 @@ export function AIReceiptParser() {
       return;
     }
 
-    applyMutation.mutate(parsedTransactions);
+    applyMutation.mutate({ transactions: parsedTransactions, walletCurrency });
   };
 
   const handleReset = () => {
@@ -252,12 +278,38 @@ export function AIReceiptParser() {
                         {parsedTransactions.length} {t('transactionsFound')}
                       </span>
                     </div>
+
+                    {/* Wallet Currency Selector - show when parsed currency differs from wallet currencies */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        {t('applyToWalletCurrency' as any) || 'Apply to wallet currency'}
+                      </label>
+                      <Select
+                        value={walletCurrency}
+                        onChange={(e) => setWalletCurrency(e.target.value)}
+                      >
+                        {currenciesData?.map((c) => (
+                          <option key={c.code} value={c.code}>
+                            {c.code} - {c.name}
+                            {walletBalances.find(b => b.currency === c.code)
+                              ? ` (${t('balance' as any) || 'Balance'}: ${formatCurrency(walletBalances.find(b => b.currency === c.code)!.balance, c.code)})`
+                              : ''}
+                          </option>
+                        ))}
+                      </Select>
+                      {parsedTransactions[0] && walletCurrency && parsedTransactions[0].currency !== walletCurrency && (
+                        <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
+                          {t('crossCurrencyNote' as any) || `Transaction will be converted from ${parsedTransactions[0].currency} to ${walletCurrency}`}
+                        </p>
+                      )}
+                    </div>
+
                     <Button
                       variant="primary"
                       size="lg"
                       className="w-full"
                       onClick={handleApply}
-                      disabled={applyMutation.isPending}
+                      disabled={applyMutation.isPending || !walletCurrency}
                     >
                       {applyMutation.isPending ? t('applying') : t('applyToWallet')}
                     </Button>

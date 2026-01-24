@@ -71,15 +71,17 @@ func (h *AIHandler) ApplyParsed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Convert to AIParseResult
-	parsed := &model.AIParseResult{
-		Amount:      req.Amount,
-		Currency:    req.Currency,
-		Type:        req.Type,
-		Description: req.Description,
+	// Use regular AddTransaction which supports cross-currency
+	txReq := &model.TransactionRequest{
+		Type:           req.Type,
+		Amount:         req.Amount,
+		Currency:       req.Currency,
+		WalletCurrency: req.WalletCurrency, // Support cross-currency transactions
+		Category:       "ai_receipt",
+		Description:    req.Description,
 	}
 
-	tx, err := h.walletService.ApplyAIParsedResult(r.Context(), userID, parsed)
+	tx, err := h.walletService.AddTransaction(r.Context(), userID, txReq)
 	if err != nil {
 		httputil.BadRequestWithContext(r.Context(), w, "failed to apply parsed result", err)
 		return

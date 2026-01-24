@@ -131,10 +131,11 @@ type AIParseResult struct {
 
 // ApplyParsedRequest represents a request to apply an AI-parsed result
 type ApplyParsedRequest struct {
-	Amount      float64 `json:"amount"`
-	Currency    string  `json:"currency"`
-	Type        string  `json:"type"`
-	Description string  `json:"description"`
+	Amount         float64 `json:"amount"`
+	Currency       string  `json:"currency"`                  // Transaction currency (parsed from receipt)
+	WalletCurrency string  `json:"wallet_currency,omitempty"` // Wallet currency to credit/debit (for cross-currency)
+	Type           string  `json:"type"`
+	Description    string  `json:"description"`
 }
 
 // InsightResponse represents AI-generated financial insights

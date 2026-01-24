@@ -162,6 +162,7 @@ export interface AIParseResponse {
 export interface AIApplyRequest {
   amount: number;
   currency: string;
+  wallet_currency?: string; // Target wallet currency for cross-currency transactions
   type: 'credit' | 'debit';
   description: string;
 }

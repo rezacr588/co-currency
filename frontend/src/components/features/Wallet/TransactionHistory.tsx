@@ -480,12 +480,19 @@ function DeleteConfirmModal({ transaction, onClose, onSuccess }: DeleteConfirmMo
 
   const mutation = useMutationAction(() => api.wallet.deleteTransaction(transaction.id), {
     successMessage: t('transactionDeleted' as any),
+    // Custom error message for insufficient balance when deleting credits
+    errorMessage: transaction.type === 'credit'
+      ? (t('cannotDeleteCreditInsufficientBalance' as any) || 'Cannot delete this credit - you have already spent some of these funds')
+      : undefined,
     invalidateQueries: [['wallet-summary'], ['wallet-transactions'], ['wallet-balances']],
     onSuccess: () => {
       onSuccess();
       onClose();
     },
   });
+
+  // Warning for credit transactions
+  const isCredit = transaction.type === 'credit';
 
   return (
     <Modal
@@ -498,6 +505,14 @@ function DeleteConfirmModal({ transaction, onClose, onSuccess }: DeleteConfirmMo
         <p className="text-slate-600 dark:text-slate-400">
           {t('confirmDeleteTransaction')}
         </p>
+
+        {isCredit && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+            <p className="text-sm text-amber-700 dark:text-amber-400">
+              {t('deleteCreditWarning' as any) || 'Deleting a credit will subtract the amount from your balance. This will fail if you have already spent these funds.'}
+            </p>
+          </div>
+        )}
 
         <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4">
           <div className="flex items-center gap-3">
