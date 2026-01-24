@@ -8,6 +8,7 @@ import type { RecurringTransaction } from '../../../types/goal';
 import { Container } from '../../layout';
 import { Card, CardContent } from '../../ui/Card';
 import { Button } from '../../ui/Button';
+import { Modal } from '../../ui/Modal';
 import { Skeleton } from '../../ui/Skeleton';
 import { ErrorMessage } from '../../ui/ErrorMessage';
 import { RecurringForm } from './RecurringForm';
@@ -196,13 +197,17 @@ export function RecurringList() {
             </div>
           </div>
 
-          {/* Recurring Form Modal/Card */}
-          {showForm && (
+          <Modal
+            isOpen={showForm}
+            onClose={handleCloseForm}
+            title={editingRecurring ? t('editRecurring') : t('createRecurring')}
+            size="md"
+          >
             <RecurringForm recurring={editingRecurring} onClose={handleCloseForm} />
-          )}
+          </Modal>
 
           {/* Summary Card */}
-          {!showForm && recurringTransactions.length > 0 && (
+          {recurringTransactions.length > 0 && (
             <Card variant="gradient">
               <CardContent className="py-6">
                 <div className="grid grid-cols-3 gap-4 text-center">

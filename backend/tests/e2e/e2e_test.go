@@ -564,7 +564,34 @@ func TestE2E_Wallet_Operations(t *testing.T) {
 			len(summary.Balances), len(summary.RecentTransactions))
 	})
 
-	// Test 10: Access wallet without token
+	// Test 10: Delete transaction
+	t.Run("DeleteTransaction", func(t *testing.T) {
+		// Get transactions first to find an ID
+		resp, _ := ts.GET("/api/v1/wallet/transactions", token)
+		var result map[string]interface{}
+		parseResponse(resp, &result)
+		txs := result["transactions"].([]interface{})
+		if len(txs) == 0 {
+			t.Fatal("No transactions to delete")
+		}
+		tx := txs[0].(map[string]interface{})
+		txID := tx["id"].(string)
+
+		// Delete it
+		req, _ := http.NewRequest("DELETE", ts.Server.URL+"/api/v1/wallet/transactions/"+txID, nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		resp, err = http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("Delete request failed: %v", err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			t.Fatalf("Expected status 200, got %d: %s", resp.StatusCode, string(body))
+		}
+	})
+
+	// Test 11: Access wallet without token
 	t.Run("Wallet_NoAuth", func(t *testing.T) {
 		resp, err := ts.GET("/api/v1/wallet/balances", "")
 		if err != nil {

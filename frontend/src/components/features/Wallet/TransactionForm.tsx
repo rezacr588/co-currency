@@ -1,11 +1,11 @@
 import { useState, FormEvent, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { createPortal } from 'react-dom';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../api/client';
 import { useLanguage } from '../../../context/LanguageContext';
-import { useCurrencies, useConvert } from '../../../hooks';
+import { useCurrencies, useConvert, useMutationAction } from '../../../hooks';
 import { Container } from '../../layout';
+import { Modal, CurrencySelect } from '../../ui';
 import { Card, CardContent } from '../../ui/Card';
 import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
@@ -41,7 +41,6 @@ import {
   type LucideIcon,
   X,
   Search,
-  Check,
   ChevronDown,
   TrendingUp,
   TrendingDown,
@@ -188,48 +187,32 @@ function IconPicker({ selectedIcon, onSelect, isOpen, onClose }: IconPickerProps
 
   if (!isOpen) return null;
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
-      onClick={onClose}
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('selectIcon')}
+      size="lg"
     >
-      <div
-        className="relative w-full max-w-lg mx-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-scale-in"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-          <h3 className="text-lg font-semibold text-slate-800 dark:text-white">
-            {t('selectIcon')}
-          </h3>
-          <button
-            onClick={onClose}
-            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-slate-500" />
-          </button>
-        </div>
-
+      <div className="space-y-4 -mt-2">
         {/* Search */}
-        <div className="p-3 border-b border-slate-100 dark:border-slate-700/50">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t('searchIcon')}
-              className="w-full bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg py-2.5 pl-10 pr-3 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-600/50"
-            />
-          </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('searchIcon')}
+            className="w-full bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg py-2.5 pl-10 pr-3 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-600/50"
+          />
         </div>
 
         {/* Categorized Icons */}
-        <div className="max-h-[55vh] overflow-y-auto">
+        <div className="max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
           {isSearching ? (
             // Flat search results
-            <div className="p-4">
+            <div className="py-2">
               {filteredIcons.length > 0 ? (
                 <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
                   {filteredIcons.map(({ icon: Icon, label, key }) => (
@@ -263,7 +246,7 @@ function IconPicker({ selectedIcon, onSelect, isOpen, onClose }: IconPickerProps
             // Categorized view
             <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
               {filteredCategories.map((category) => (
-                <div key={category.key} className="p-4">
+                <div key={category.key} className="py-4 first:pt-0">
                   <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
                     {t(category.labelKey as keyof typeof t)}
                   </h4>
@@ -297,22 +280,21 @@ function IconPicker({ selectedIcon, onSelect, isOpen, onClose }: IconPickerProps
 
         {/* Clear Button */}
         {selectedIcon && (
-          <div className="p-3 border-t border-slate-200 dark:border-slate-700">
+          <div className="pt-2">
             <button
               type="button"
               onClick={() => {
                 onSelect('');
                 onClose();
               }}
-              className="w-full py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              className="w-full py-2.5 text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-colors"
             >
               {t('clearIcon')}
             </button>
           </div>
         )}
       </div>
-    </div>,
-    document.body
+    </Modal>
   );
 }
 
@@ -322,151 +304,9 @@ function getIconByKey(key: string): LucideIcon | null {
   return found?.icon || null;
 }
 
-interface CurrencySelectModalProps {
-  value: string;
-  onChange: (value: string) => void;
-  currencies: { code: string; name: string; balance?: number }[];
-  label: string;
-  showBalance?: boolean;
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-function CurrencySelectModal({
-  value,
-  onChange,
-  currencies,
-  label,
-  showBalance,
-  isOpen,
-  onClose,
-}: CurrencySelectModalProps) {
-  const [search, setSearch] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
-  const { t, isRTL } = useLanguage();
-
-  const filteredCurrencies = useMemo(() => {
-    if (!search.trim()) return currencies;
-    const searchLower = search.toLowerCase().trim();
-    return currencies.filter(
-      (c) =>
-        c.code.toLowerCase().includes(searchLower) ||
-        c.name.toLowerCase().includes(searchLower)
-    );
-  }, [currencies, search]);
-
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
-      onClick={onClose}
-    >
-      <div
-        className="relative w-full max-w-md mx-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-scale-in"
-        style={{ maxHeight: '80vh' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-          <h3 className="text-lg font-semibold text-slate-800 dark:text-white">
-            {label}
-          </h3>
-          <button
-            onClick={onClose}
-            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-slate-500" />
-          </button>
-        </div>
-
-        {/* Search */}
-        <div className="p-3 border-b border-slate-100 dark:border-slate-700/50">
-          <div className="relative">
-            <Search
-              className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 ${
-                isRTL ? 'right-3' : 'left-3'
-              }`}
-            />
-            <input
-              ref={inputRef}
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t('searchCurrency')}
-              className={`w-full bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-600/50 ${
-                isRTL ? 'pr-10 pl-3' : 'pl-10 pr-3'
-              }`}
-            />
-          </div>
-        </div>
-
-        {/* Currency List */}
-        <ul
-          className="overflow-y-auto p-2"
-          style={{ maxHeight: 'calc(80vh - 180px)' }}
-        >
-          {filteredCurrencies.length > 0 ? (
-            filteredCurrencies.map((currency) => {
-              const flag = CURRENCY_FLAGS[currency.code] || '🌍';
-              const isSelected = currency.code === value;
-
-              return (
-                <li
-                  key={currency.code}
-                  onClick={() => {
-                    onChange(currency.code);
-                    onClose();
-                    setSearch('');
-                  }}
-                  className={`flex items-center gap-3 px-3 py-3 cursor-pointer transition-all rounded-lg ${
-                    isSelected
-                      ? 'bg-primary-50 dark:bg-primary-600/20 text-primary-800 dark:text-primary-400'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                  }`}
-                >
-                  <span className="text-2xl flex-shrink-0">{flag}</span>
-                  <div className="flex-1 min-w-0">
-                    <span className="font-semibold text-sm block">
-                      {currency.code}
-                    </span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400 block truncate">
-                      {currency.name}
-                    </span>
-                  </div>
-                  {showBalance && currency.balance !== undefined && (
-                    <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                      {formatNumber(currency.balance, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  )}
-                  {isSelected && (
-                    <Check className="w-5 h-5 text-primary-600 flex-shrink-0" />
-                  )}
-                </li>
-              );
-            })
-          ) : (
-            <li className="px-3 py-8 text-center text-sm text-slate-500">
-              {t('noCurrencyFound')}
-            </li>
-          )}
-        </ul>
-      </div>
-    </div>,
-    document.body
-  );
-}
-
 export function TransactionForm() {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { data: currencies } = useCurrencies();
 
   // Fetch user's balances
@@ -589,17 +429,10 @@ export function TransactionForm() {
     }
   }, [type, availableCurrenciesForDebit, walletCurrency]);
 
-  const mutation = useMutation({
-    mutationFn: api.wallet.addTransaction,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['wallet-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['wallet-balances'] });
-      navigate('/wallet');
-    },
-    onError: (err) => {
-      setError(err instanceof Error ? err.message : t('transactionFailed'));
-    },
+  const mutation = useMutationAction(api.wallet.addTransaction, {
+    successMessage: t('transactionAdded' as any),
+    invalidateQueries: [['wallet-summary'], ['wallet-transactions'], ['wallet-balances']],
+    onSuccess: () => navigate('/wallet'),
   });
 
   const handleSubmit = (e: FormEvent) => {
@@ -928,29 +761,30 @@ export function TransactionForm() {
       </Container>
 
       {/* Save Template Modal */}
-      {showSaveTemplate && createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-scale-in">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Save Template</h3>
-            <Input
-              label="Template Name"
-              value={templateName}
-              onChange={(e) => setTemplateName(e.target.value)}
-              placeholder="e.g., Daily Coffee, Salary, Rent"
-              autoFocus
-            />
-            <div className="flex gap-3 mt-6">
-              <Button variant="secondary" className="flex-1" onClick={() => setShowSaveTemplate(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" className="flex-1" onClick={handleSaveTemplate} disabled={!templateName.trim()}>
-                Save
-              </Button>
-            </div>
+      <Modal
+        isOpen={showSaveTemplate}
+        onClose={() => setShowSaveTemplate(false)}
+        title="Save Template"
+        size="sm"
+      >
+        <div className="space-y-6">
+          <Input
+            label="Template Name"
+            value={templateName}
+            onChange={(e) => setTemplateName(e.target.value)}
+            placeholder="e.g., Daily Coffee, Salary, Rent"
+            autoFocus
+          />
+          <div className="flex gap-3">
+            <Button variant="secondary" className="flex-1" onClick={() => setShowSaveTemplate(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" className="flex-1" onClick={handleSaveTemplate} disabled={!templateName.trim()}>
+              Save
+            </Button>
           </div>
-        </div>,
-        document.body
-      )}
+        </div>
+      </Modal>
 
       {/* Icon Picker Modal */}
       <IconPicker
@@ -961,7 +795,7 @@ export function TransactionForm() {
       />
 
       {/* Transaction Currency Picker Modal */}
-      <CurrencySelectModal
+      <CurrencySelect
         value={currency}
         onChange={setCurrency}
         currencies={allCurrencyOptions}
@@ -972,7 +806,7 @@ export function TransactionForm() {
       />
 
       {/* Wallet Currency Picker Modal */}
-      <CurrencySelectModal
+      <CurrencySelect
         value={walletCurrency}
         onChange={setWalletCurrency}
         currencies={walletCurrencyOptions}

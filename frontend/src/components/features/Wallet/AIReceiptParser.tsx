@@ -1,8 +1,8 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../api/client';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useMutationAction } from '../../../hooks';
 import { Container } from '../../layout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
 import { Button } from '../../ui/Button';
@@ -90,27 +90,22 @@ function ParsedTransactionCard({
 export function AIReceiptParser() {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
   const [text, setText] = useState('');
   const [parseResult, setParseResult] = useState<AIParseResponse | null>(null);
   const [parsedTransactions, setParsedTransactions] = useState<ParsedTransaction[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const parseMutation = useMutation({
-    mutationFn: api.ai.parseReceipt,
+  const parseMutation = useMutationAction(api.ai.parseReceipt, {
     onSuccess: (data) => {
       setParseResult(data);
       setParsedTransactions(data.transactions);
       setError(null);
     },
-    onError: (err) => {
-      setError(err instanceof Error ? err.message : t('parseFailed'));
-    },
   });
 
-  const applyMutation = useMutation({
-    mutationFn: async (transactions: ParsedTransaction[]) => {
+  const applyMutation = useMutationAction(
+    async (transactions: ParsedTransaction[]) => {
       // Apply each transaction sequentially
       for (const tx of transactions) {
         await api.ai.applyParsed({
@@ -121,16 +116,12 @@ export function AIReceiptParser() {
         });
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['wallet-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['wallet-balances'] });
-      navigate('/wallet');
-    },
-    onError: (err) => {
-      setError(err instanceof Error ? err.message : t('applyFailed'));
-    },
-  });
+    {
+      successMessage: t('transactionsApplied' as any),
+      invalidateQueries: [['wallet-summary'], ['wallet-transactions'], ['wallet-balances']],
+      onSuccess: () => navigate('/wallet'),
+    }
+  );
 
   const handleParse = (e: FormEvent) => {
     e.preventDefault();

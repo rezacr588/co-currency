@@ -12,7 +12,9 @@ export { CurrencyBadge } from './CurrencyBadge';
 export { RateChange } from './RateChange';
 
 // Modal and dialog components
-export { Modal } from './Modal';
+export * from './LoadingSpinner';
+export * from './CurrencySelect';
+export * from './Modal';
 export { ConfirmDialog } from './ConfirmDialog';
 
 // Empty state component

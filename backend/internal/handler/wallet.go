@@ -13,7 +13,6 @@ import (
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/service"
 	"github.com/rezacr588/currency-converter/pkg/httputil"
-	"github.com/rs/zerolog/log"
 )
 
 // WalletHandler handles wallet endpoints
@@ -108,8 +107,7 @@ func (h *WalletHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 
 	summary, err := h.walletService.GetWalletSummary(r.Context(), userID)
 	if err != nil {
-		log.Error().Err(err).Msg("GetWalletSummary failed")
-		httputil.InternalServerError(w, "failed to get wallet summary")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get wallet summary")
 		return
 	}
 
@@ -234,8 +232,7 @@ func (h *WalletHandler) GetTransactions(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err != nil {
-		log.Error().Err(err).Msg("GetTransactions failed")
-		httputil.InternalServerError(w, "failed to get transactions")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get transactions")
 		return
 	}
 
@@ -367,10 +364,10 @@ func (h *WalletHandler) DeleteTransaction(w http.ResponseWriter, r *http.Request
 	err = h.walletService.DeleteTransaction(r.Context(), userID, txID)
 	if err != nil {
 		if err.Error() == "transaction not found" {
-			httputil.NotFound(w, "transaction not found")
+			httputil.NotFoundWithContext(r.Context(), w, "transaction not found")
 			return
 		}
-		httputil.InternalServerError(w, "failed to delete transaction")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to delete transaction")
 		return
 	}
 

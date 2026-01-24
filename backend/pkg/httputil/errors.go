@@ -3,8 +3,10 @@ package httputil
 import (
 	"context"
 	"net/http"
+	"runtime/debug"
 
 	"github.com/rezacr588/currency-converter/pkg/ctxkeys"
+	"github.com/rs/zerolog/log"
 )
 
 // ErrorResponse represents an API error response
@@ -44,9 +46,17 @@ func Error(w http.ResponseWriter, status int, err string, message string) {
 	JSON(w, status, NewError(status, err, message))
 }
 
-// ErrorWithContext writes an error response with trace ID from context
+// ErrorWithContext writes an error response with trace ID from context and logs it
 func ErrorWithContext(ctx context.Context, w http.ResponseWriter, status int, err string, message string) {
 	traceID := getTraceID(ctx)
+	
+	// Log the error with stack trace if it's a 500
+	logEvent := log.Error().Str("trace_id", traceID).Int("status", status).Str("error", err)
+	if status >= 500 {
+		logEvent = logEvent.Str("stack", string(debug.Stack()))
+	}
+	logEvent.Msg(message)
+
 	JSON(w, status, NewErrorWithTrace(status, err, message, traceID))
 }
 

@@ -1,13 +1,12 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../../context/LanguageContext';
 import { CurrencyBadge } from '../../ui/CurrencyBadge';
 import { Button } from '../../ui/Button';
+import { Modal, CurrencySelect } from '../../ui';
 import { Input } from '../../ui/Input';
 import { ErrorMessage } from '../../ui/ErrorMessage';
 import { api } from '../../../api/client';
-import { useCurrencies } from '../../../hooks';
+import { useCurrencies, useMutationAction } from '../../../hooks';
 import type { Transaction, UpdateTransactionRequest } from '../../../types/wallet';
 import { TRANSACTION_ICONS } from '../../../constants/icons';
 import type { LucideIcon } from 'lucide-react';
@@ -235,7 +234,6 @@ interface EditTransactionModalProps {
 
 function EditTransactionModal({ transaction, onClose, onSuccess }: EditTransactionModalProps) {
   const { t } = useLanguage();
-  const queryClient = useQueryClient();
   const { data: currencies } = useCurrencies();
 
   const [type, setType] = useState<'credit' | 'debit'>(
@@ -246,22 +244,20 @@ function EditTransactionModal({ transaction, onClose, onSuccess }: EditTransacti
   const [description, setDescription] = useState(transaction.description || '');
   const [icon, setIcon] = useState(transaction.icon || '');
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const mutation = useMutation({
-    mutationFn: (data: UpdateTransactionRequest) =>
-      api.wallet.updateTransaction(transaction.id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['wallet-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['wallet-balances'] });
-      onSuccess();
-      onClose();
-    },
-    onError: (err) => {
-      setError(err instanceof Error ? err.message : t('updateFailed'));
-    },
-  });
+  const mutation = useMutationAction(
+    (data: UpdateTransactionRequest) => api.wallet.updateTransaction(transaction.id, data),
+    {
+      successMessage: t('transactionUpdated' as any),
+      invalidateQueries: [['wallet-summary'], ['wallet-transactions'], ['wallet-balances']],
+      onSuccess: () => {
+        onSuccess();
+        onClose();
+      },
+    }
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -282,180 +278,186 @@ function EditTransactionModal({ transaction, onClose, onSuccess }: EditTransacti
     });
   };
 
-  const currencyOptions = currencies?.map((c) => ({
-    value: c.code,
-    label: `${c.code} - ${c.name}`,
-  })) || [{ value: 'USD', label: 'USD - US Dollar' }];
+  const currencyOptions = useMemo(() => {
+    return (currencies as any)?.map((c: any) => ({
+      code: c.code,
+      name: c.name,
+    })) || [{ code: 'USD', name: 'US Dollar' }];
+  }, [currencies]);
 
   // Don't allow editing conversion transactions
   if (transaction.type === 'convert' || transaction.type === 'convert_from' || transaction.type === 'convert_to') {
-    return createPortal(
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl max-w-md w-full p-6 animate-scale-in">
-          <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-4">
-            {t('editTransaction')}
-          </h2>
-          <p className="text-slate-600 dark:text-slate-400 mb-6">
+    return (
+      <Modal
+        isOpen={true}
+        onClose={onClose}
+        title={t('editTransaction')}
+        size="md"
+      >
+        <div className="space-y-6">
+          <p className="text-slate-600 dark:text-slate-400">
             {t('cannotEditConversion')}
           </p>
           <Button variant="secondary" onClick={onClose} className="w-full">
             {t('close')}
           </Button>
         </div>
-      </div>,
-      document.body
+      </Modal>
     );
   }
 
-  return createPortal(
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-scale-in">
-        <div className="p-6">
-          <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-4">
-            {t('editTransaction')}
-          </h2>
+  return (
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title={t('editTransaction')}
+      size="md"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && <ErrorMessage>{error}</ErrorMessage>}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && <ErrorMessage>{error}</ErrorMessage>}
-
-            {/* Transaction Type */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                {t('transactionType')}
-              </label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setType('credit')}
-                  className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all ${
-                    type === 'credit'
-                      ? 'bg-green-500 text-white shadow-lg shadow-green-500/25'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {t('credit')} (+)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setType('debit')}
-                  className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all ${
-                    type === 'debit'
-                      ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/25'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {t('debit')} (-)
-                </button>
-              </div>
-            </div>
-
-            {/* Currency Select */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                {t('currency')}
-              </label>
-              <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-all"
-              >
-                {currencyOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Icon Picker */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                {t('transactionIcon')} ({t('optional')})
-              </label>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowIconPicker(!showIconPicker)}
-                  className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-all text-left flex items-center gap-3"
-                  disabled={mutation.isPending}
-                >
-                  {icon ? (
-                    (() => {
-                      const SelectedIcon = getIconByName(icon);
-                      return SelectedIcon ? (
-                        <SelectedIcon className="w-6 h-6 text-slate-600 dark:text-slate-400" />
-                      ) : (
-                        <span className="text-2xl">{icon}</span>
-                      );
-                    })()
-                  ) : (
-                    <span className="text-slate-400 dark:text-slate-500">{t('selectIcon')}</span>
-                  )}
-                </button>
-                <IconPicker
-                  selectedIcon={icon}
-                  onSelect={setIcon}
-                  isOpen={showIconPicker}
-                  onClose={() => setShowIconPicker(false)}
-                />
-              </div>
-            </div>
-
-            {/* Amount */}
-            <Input
-              type="number"
-              label={t('amount')}
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              min="0.01"
-              step="0.01"
-              required
-              disabled={mutation.isPending}
-            />
-
-            {/* Description */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                {t('description')} ({t('optional')})
-              </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder={t('transactionDescription')}
-                rows={3}
-                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-all resize-none"
-                disabled={mutation.isPending}
-              />
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3 pt-2">
-              <Button
-                type="button"
-                variant="secondary"
-                size="lg"
-                className="flex-1"
-                onClick={onClose}
-                disabled={mutation.isPending}
-              >
-                {t('cancel')}
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                className="flex-1"
-                disabled={mutation.isPending}
-              >
-                {mutation.isPending ? t('saving') : t('saveChanges')}
-              </Button>
-            </div>
-          </form>
+        {/* Transaction Type */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            {t('transactionType')}
+          </label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setType('credit')}
+              className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all ${
+                type === 'credit'
+                  ? 'bg-green-500 text-white shadow-lg shadow-green-500/25'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              {t('credit')} (+)
+            </button>
+            <button
+              type="button"
+              onClick={() => setType('debit')}
+              className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all ${
+                type === 'debit'
+                  ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/25'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              {t('debit')} (-)
+            </button>
+          </div>
         </div>
-      </div>
-    </div>,
-    document.body
+
+        {/* Currency Select */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            {t('currency')}
+          </label>
+          <button
+            type="button"
+            onClick={() => setShowCurrencyPicker(true)}
+            className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-all text-left flex items-center justify-between"
+          >
+            <span>{currency}</span>
+            <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <CurrencySelect
+            value={currency}
+            onChange={setCurrency}
+            currencies={currencyOptions}
+            label={t('selectCurrency' as any)}
+            isOpen={showCurrencyPicker}
+            onClose={() => setShowCurrencyPicker(false)}
+          />
+        </div>
+
+        {/* Icon Picker */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            {t('transactionIcon')} ({t('optional')})
+          </label>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowIconPicker(!showIconPicker)}
+              className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-all text-left flex items-center gap-3"
+              disabled={mutation.isPending}
+            >
+              {icon ? (
+                (() => {
+                  const SelectedIcon = getIconByName(icon);
+                  return SelectedIcon ? (
+                    <SelectedIcon className="w-6 h-6 text-slate-600 dark:text-slate-400" />
+                  ) : (
+                    <span className="text-2xl">{icon}</span>
+                  );
+                })()
+              ) : (
+                <span className="text-slate-400 dark:text-slate-500">{t('selectIcon')}</span>
+              )}
+            </button>
+            <IconPicker
+              selectedIcon={icon}
+              onSelect={setIcon}
+              isOpen={showIconPicker}
+              onClose={() => setShowIconPicker(false)}
+            />
+          </div>
+        </div>
+
+        {/* Amount */}
+        <Input
+          type="number"
+          label={t('amount')}
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="0.00"
+          min="0.01"
+          step="0.01"
+          required
+          disabled={mutation.isPending}
+        />
+
+        {/* Description */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            {t('description')} ({t('optional')})
+          </label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder={t('transactionDescription')}
+            rows={3}
+            className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-all resize-none"
+            disabled={mutation.isPending}
+          />
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3 pt-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            className="flex-1"
+            onClick={onClose}
+            disabled={mutation.isPending}
+          >
+            {t('cancel')}
+          </Button>
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            className="flex-1"
+            disabled={mutation.isPending}
+          >
+            {mutation.isPending ? t('saving') : t('saveChanges')}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -467,8 +469,6 @@ interface DeleteConfirmModalProps {
 
 function DeleteConfirmModal({ transaction, onClose, onSuccess }: DeleteConfirmModalProps) {
   const { t } = useLanguage();
-  const queryClient = useQueryClient();
-  const [error, setError] = useState<string | null>(null);
 
   const typeLabels: Record<Transaction['type'], string> = {
     credit: t('credit'),
@@ -478,34 +478,28 @@ function DeleteConfirmModal({ transaction, onClose, onSuccess }: DeleteConfirmMo
     convert_to: t('convertedTo'),
   };
 
-  const mutation = useMutation({
-    mutationFn: () => api.wallet.deleteTransaction(transaction.id),
+  const mutation = useMutationAction(() => api.wallet.deleteTransaction(transaction.id), {
+    successMessage: t('transactionDeleted' as any),
+    invalidateQueries: [['wallet-summary'], ['wallet-transactions'], ['wallet-balances']],
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['wallet-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['wallet-balances'] });
       onSuccess();
       onClose();
     },
-    onError: (err) => {
-      setError(err instanceof Error ? err.message : t('deleteFailed'));
-    },
   });
 
-  return createPortal(
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl max-w-md w-full p-6 animate-scale-in max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-4">
-          {t('confirmDelete')}
-        </h2>
-
-        {error && <ErrorMessage className="mb-4">{error}</ErrorMessage>}
-
-        <p className="text-slate-600 dark:text-slate-400 mb-6">
+  return (
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title={t('confirmDelete')}
+      size="md"
+    >
+      <div className="space-y-6">
+        <p className="text-slate-600 dark:text-slate-400">
           {t('confirmDeleteTransaction')}
         </p>
 
-        <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 mb-6">
+        <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4">
           <div className="flex items-center gap-3">
             {getTransactionIcon(transaction.type, transaction.icon)}
             <div>
@@ -534,15 +528,14 @@ function DeleteConfirmModal({ transaction, onClose, onSuccess }: DeleteConfirmMo
           <Button
             variant="primary"
             className="flex-1 bg-rose-600 hover:bg-rose-700"
-            onClick={() => mutation.mutate()}
+            onClick={() => mutation.mutate({})}
             disabled={mutation.isPending}
           >
             {mutation.isPending ? t('deleting') : t('delete')}
           </Button>
         </div>
       </div>
-    </div>,
-    document.body
+    </Modal>
   );
 }
 

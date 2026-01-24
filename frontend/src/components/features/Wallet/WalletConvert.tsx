@@ -1,9 +1,9 @@
 import { useState, FormEvent, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../api/client';
 import { useLanguage } from '../../../context/LanguageContext';
-import { useCurrencies } from '../../../hooks';
+import { useCurrencies, useMutationAction } from '../../../hooks';
 import { Container } from '../../layout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
 import { Button } from '../../ui/Button';
@@ -19,7 +19,6 @@ import { CURRENCY_SYMBOLS, CURRENCY_FLAGS } from '../../../utils/constants';
 export function WalletConvert() {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { data: currencies } = useCurrencies();
 
   const [fromCurrency, setFromCurrency] = useState('USD');
@@ -46,17 +45,10 @@ export function WalletConvert() {
     staleTime: 30 * 1000,
   });
 
-  const mutation = useMutation({
-    mutationFn: api.wallet.convert,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['wallet-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['wallet-balances'] });
-      navigate('/wallet');
-    },
-    onError: (err) => {
-      setError(err instanceof Error ? err.message : t('conversionFailed'));
-    },
+  const mutation = useMutationAction(api.wallet.convert, {
+    successMessage: t('conversionSuccessful' as any),
+    invalidateQueries: [['wallet-summary'], ['wallet-transactions'], ['wallet-balances']],
+    onSuccess: () => navigate('/wallet'),
   });
 
   const handleSubmit = (e: FormEvent) => {

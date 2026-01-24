@@ -10,6 +10,7 @@ import { Card, CardContent } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import { Skeleton } from '../../ui/Skeleton';
 import { ErrorMessage } from '../../ui/ErrorMessage';
+import { Modal } from '../../ui/Modal';
 import { GoalCard } from './GoalCard';
 import { GoalForm } from './GoalForm';
 
@@ -71,13 +72,18 @@ export function GoalsList() {
             </div>
           </div>
 
-          {/* Goal Form Modal/Card */}
-          {showForm && (
+          {/* Goal Form Modal */}
+          <Modal
+            isOpen={showForm}
+            onClose={handleCloseForm}
+            title={editingGoal ? t('editGoal') : t('createGoal')}
+            size="md"
+          >
             <GoalForm goal={editingGoal} onClose={handleCloseForm} />
-          )}
+          </Modal>
 
           {/* Summary Card */}
-          {!showForm && activeGoals.length > 0 && (
+          {activeGoals.length > 0 && (
             <Card variant="gradient">
               <CardContent className="py-6">
                 <div className="text-center">

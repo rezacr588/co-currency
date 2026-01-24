@@ -8,16 +8,16 @@ import type { Budget } from '../../../types/goal';
 import { Container } from '../../layout';
 import { Card, CardContent } from '../../ui/Card';
 import { Button } from '../../ui/Button';
+import { Modal } from '../../ui/Modal';
 import { Skeleton } from '../../ui/Skeleton';
 import { ErrorMessage } from '../../ui/ErrorMessage';
 import { BudgetCard } from './BudgetCard';
 import { BudgetForm } from './BudgetForm';
-import { formatCurrency } from '../../../utils/format';
 
 export function BudgetList() {
   const { t } = useLanguage();
   const [showForm, setShowForm] = useState(false);
-  const [editingBudget, setEditingBudget] = useState<Budget | undefined>(undefined);
+  const [editingBudget, setEditingGoal] = useState<Budget | undefined>(undefined);
 
   const {
     data,
@@ -32,20 +32,14 @@ export function BudgetList() {
   const budgets = data?.budgets || [];
 
   const handleEdit = (budget: Budget) => {
-    setEditingBudget(budget);
+    setEditingGoal(budget);
     setShowForm(true);
   };
 
   const handleCloseForm = () => {
     setShowForm(false);
-    setEditingBudget(undefined);
+    setEditingGoal(undefined);
   };
-
-  // Calculate summary
-  const totalBudget = budgets.reduce((sum, b) => sum + b.amount, 0);
-  const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
-  const overBudgetCount = budgets.filter((b) => b.is_over_budget).length;
-  const nearLimitCount = budgets.filter((b) => b.is_near_limit && !b.is_over_budget).length;
 
   return (
     <main className="flex-1 py-4 sm:py-6">
@@ -71,44 +65,14 @@ export function BudgetList() {
             </div>
           </div>
 
-          {/* Budget Form Modal/Card */}
-          {showForm && (
+          <Modal
+            isOpen={showForm}
+            onClose={handleCloseForm}
+            title={editingBudget ? t('editBudget') : t('createBudget')}
+            size="md"
+          >
             <BudgetForm budget={editingBudget} onClose={handleCloseForm} />
-          )}
-
-          {/* Summary Card */}
-          {!showForm && budgets.length > 0 && (
-            <Card variant="gradient">
-              <CardContent className="py-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                  <div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{t('totalBudget')}</p>
-                    <p className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                      {formatCurrency(totalBudget, 'USD')}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{t('totalSpent')}</p>
-                    <p className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                      {formatCurrency(totalSpent, 'USD')}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{t('overBudget')}</p>
-                    <p className={`text-xl font-bold ${overBudgetCount > 0 ? 'text-red-500' : 'text-green-500'}`}>
-                      {overBudgetCount}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{t('nearLimit')}</p>
-                    <p className={`text-xl font-bold ${nearLimitCount > 0 ? 'text-yellow-500' : 'text-green-500'}`}>
-                      {nearLimitCount}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          </Modal>
 
           {/* Budgets List */}
           {isLoading ? (
