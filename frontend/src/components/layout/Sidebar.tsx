@@ -168,7 +168,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             collapsed={collapsed}
           />
           <NavItem
-            to="/"
+            to="/converter"
             icon={<ArrowLeftRight className="w-5 h-5" />}
             label={t('converter')}
             collapsed={collapsed}

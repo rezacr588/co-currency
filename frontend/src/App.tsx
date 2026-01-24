@@ -78,6 +78,7 @@ function AppContent() {
           {/* Authenticated routes with sidebar layout */}
           <Route element={<AuthenticatedLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/converter" element={<Home />} />
             <Route path="/wallet" element={<Wallet />} />
             <Route path="/wallet/add" element={<TransactionForm />} />
             <Route path="/wallet/history" element={<TransactionHistoryPage />} />
