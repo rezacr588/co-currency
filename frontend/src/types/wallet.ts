@@ -148,9 +148,14 @@ export interface ParsedTransaction {
   confidence: number;
 }
 
+// AIParseResponse matches backend AIParseResult - single parsed transaction
 export interface AIParseResponse {
-  transactions: ParsedTransaction[];
-  raw_text: string;
+  amount: number;
+  currency: string;
+  type: 'credit' | 'debit';
+  description: string;
+  confidence: number;
+  raw_text?: string;
 }
 
 // AIApplyRequest - single transaction to apply (matches backend ApplyParsedRequest)

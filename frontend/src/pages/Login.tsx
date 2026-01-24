@@ -113,6 +113,15 @@ export function Login() {
                     disabled={isSubmitting}
                   />
 
+                  <div className="text-right">
+                    <Link
+                      to="/forgot-password"
+                      className="text-sm text-primary-700 dark:text-primary-500 hover:underline"
+                    >
+                      {t('forgotPassword') || 'Forgot password?'}
+                    </Link>
+                  </div>
+
                   <Button
                     type="submit"
                     variant="primary"

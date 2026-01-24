@@ -456,6 +456,7 @@ export function TransactionForm() {
       currency,
       wallet_currency: isCrossCurrency ? walletCurrency : undefined,
       amount: parsedAmount,
+      category: icon || undefined, // Use icon key as category (e.g., 'food', 'shopping')
       icon: icon || undefined,
       description: description || undefined,
     });
