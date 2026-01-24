@@ -23,6 +23,7 @@ const GitHubCallback = lazy(() => import('./pages/GitHubCallback').then(m => ({ 
 const Reports = lazy(() => import('./pages/Reports').then(m => ({ default: m.Reports })));
 const Subscriptions = lazy(() => import('./pages/Subscriptions').then(m => ({ default: m.Subscriptions })));
 const Badges = lazy(() => import('./pages/Badges').then(m => ({ default: m.Badges })));
+const Converter = lazy(() => import('./pages/Converter').then(m => ({ default: m.Converter })));
 const AIChat = lazy(() => import('./pages/AIChat'));
 
 const AboutUs = lazy(() => import('./components/features/AboutUs').then(m => ({ default: m.AboutUs })));
@@ -78,7 +79,7 @@ function AppContent() {
           {/* Authenticated routes with sidebar layout */}
           <Route element={<AuthenticatedLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/converter" element={<Home />} />
+            <Route path="/converter" element={<Converter />} />
             <Route path="/wallet" element={<Wallet />} />
             <Route path="/wallet/add" element={<TransactionForm />} />
             <Route path="/wallet/history" element={<TransactionHistoryPage />} />

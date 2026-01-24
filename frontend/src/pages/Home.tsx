@@ -1,3 +1,4 @@
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Container } from '../components/layout';
 import { Converter } from '../components/features/Converter';
@@ -16,56 +17,51 @@ import {
 export function Home() {
   const { isAuthenticated } = useAuth();
 
+  // Redirect authenticated users to dashboard
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <main className="flex-1 py-4 sm:py-6">
       <Container>
-        {/* Marketing sections for non-authenticated users */}
-        {!isAuthenticated && (
-          <div className="space-y-4">
-            {/* Hero Section */}
-            <HeroSection />
+        <div className="space-y-4">
+          {/* Hero Section */}
+          <HeroSection />
 
-            {/* Stats Section */}
-            <StatsSection />
+          {/* Stats Section */}
+          <StatsSection />
 
-            {/* Features Section */}
-            <FeaturesSection />
-
-            {/* How It Works Section */}
-            <HowItWorksSection />
-
-            {/* Trust Indicators Section */}
-            <TrustSection />
+          {/* Converter Preview for Public Users */}
+          <div id="converter" className="pt-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+              <section className="lg:col-span-7 xl:col-span-6 xl:col-start-1">
+                <Converter />
+              </section>
+              <section className="lg:col-span-5 xl:col-span-6">
+                <QuickConvert />
+              </section>
+              <section className="lg:col-span-12">
+                <RatesGrid />
+              </section>
+              <section className="lg:col-span-12">
+                <Historical />
+              </section>
+            </div>
           </div>
-        )}
 
-        {/* Converter Section - with anchor for navigation */}
-        <div id="converter" className={!isAuthenticated ? 'pt-8' : ''}>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
-            {/* Main Converter - Centered and prominent */}
-            <section className="lg:col-span-7 xl:col-span-6 xl:col-start-1">
-              <Converter />
-            </section>
+          {/* Features Section */}
+          <FeaturesSection />
 
-            {/* Quick Conversions - Side panel on large screens */}
-            <section className="lg:col-span-5 xl:col-span-6">
-              <QuickConvert />
-            </section>
+          {/* How It Works Section */}
+          <HowItWorksSection />
 
-            {/* Exchange Rates Grid - Full width */}
-            <section className="lg:col-span-12">
-              <RatesGrid />
-            </section>
+          {/* Trust Indicators Section */}
+          <TrustSection />
 
-            {/* Historical Rates - Full width */}
-            <section className="lg:col-span-12">
-              <Historical />
-            </section>
-          </div>
+          {/* Final CTA */}
+          <FinalCTA />
         </div>
-
-        {/* Final CTA for non-authenticated users */}
-        {!isAuthenticated && <FinalCTA />}
       </Container>
     </main>
   );
