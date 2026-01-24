@@ -5,7 +5,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { useMutationAction } from '../../../hooks';
 import { Button } from '../../ui/Button';
 import { SUBSCRIPTION_BILLING_CYCLES, SUBSCRIPTION_CATEGORIES } from '../../../types/goal';
-import type { Subscription, CreateSubscriptionRequest, UpdateSubscriptionRequest } from '../../../types/goal';
+import type { Subscription, UpdateSubscriptionRequest } from '../../../types/goal';
 
 interface SubscriptionFormProps {
     subscription?: Subscription | null;
