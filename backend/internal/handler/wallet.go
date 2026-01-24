@@ -107,6 +107,7 @@ func (h *WalletHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 
 	summary, err := h.walletService.GetWalletSummary(r.Context(), userID)
 	if err != nil {
+		fmt.Printf("[ERROR] GetWalletSummary failed: %v\n", err)
 		httputil.InternalServerError(w, "failed to get wallet summary")
 		return
 	}

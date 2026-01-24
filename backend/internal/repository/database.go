@@ -167,6 +167,11 @@ func (d *Database) initTables(ctx context.Context) error {
 		// Add icon column if it doesn't exist (for existing databases)
 		`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS icon VARCHAR(10)`,
 
+		// Add cross-currency columns if they don't exist (for existing databases)
+		`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS to_amount DECIMAL(20, 8)`,
+		`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS to_currency VARCHAR(10)`,
+		`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS rate DECIMAL(20, 8)`,
+
 		// Create index after column is ensured to exist
 		`CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category)`,
 
