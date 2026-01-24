@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -171,7 +172,11 @@ func (c *IRRCrawler) fetchFromAlternativeSources(ctx context.Context) (*IRRRates
 		return rates, nil
 	}
 
-	return nil, ctx.Err()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	return nil, errors.New("all alternative sources failed")
 }
 
 // cleanup removes old rate records

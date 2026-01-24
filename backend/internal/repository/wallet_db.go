@@ -723,31 +723,49 @@ func (r *WalletRepository) DeleteTransactionAtomic(ctx context.Context, userID, 
 	switch txType {
 	case model.TransactionTypeCredit:
 		// Original was credit (added money), so subtract
+		
+		// Handle cross-currency credit (added to wallet in ToCurrency)
+		targetAmount := amount
+		targetCurrency := currency
+		if toAmount != nil && toCurrency != nil {
+			targetAmount = *toAmount
+			targetCurrency = *toCurrency
+		}
+
 		// Check if user has sufficient balance to reverse this credit
 		var currentBalance float64
 		err = tx.QueryRow(ctx, `
 			SELECT COALESCE(balance, 0) FROM wallet_balances
 			WHERE user_id = $1 AND currency = $2
 			FOR UPDATE
-		`, userID, currency).Scan(&currentBalance)
+		`, userID, targetCurrency).Scan(&currentBalance)
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("checking balance: %w", err)
 		}
-		if currentBalance < amount {
+		if currentBalance < targetAmount {
 			return ErrInsufficientBalance
 		}
 		_, err = tx.Exec(ctx, `
 			UPDATE wallet_balances
 			SET balance = balance - $1, updated_at = $2
 			WHERE user_id = $3 AND currency = $4
-		`, amount, now, userID, currency)
+		`, targetAmount, now, userID, targetCurrency)
 	case model.TransactionTypeDebit:
 		// Original was debit (removed money), so add back
+		
+		// Handle cross-currency debit (removed from wallet in ToCurrency)
+		targetAmount := amount
+		targetCurrency := currency
+		if toAmount != nil && toCurrency != nil {
+			targetAmount = *toAmount
+			targetCurrency = *toCurrency
+		}
+
 		_, err = tx.Exec(ctx, `
 			UPDATE wallet_balances
 			SET balance = balance + $1, updated_at = $2
 			WHERE user_id = $3 AND currency = $4
-		`, amount, now, userID, currency)
+		`, targetAmount, now, userID, targetCurrency)
 	case model.TransactionTypeConvert:
 		// Reverse conversion: add back to source, subtract from target
 		_, err = tx.Exec(ctx, `
@@ -816,12 +834,15 @@ func (r *WalletRepository) UpdateTransactionAtomic(ctx context.Context, userID, 
 	// Get the current transaction
 	var oldTx model.Transaction
 	var category, icon *string
+	var toAmount *float64
+	var toCurrency *string
+	
 	err = tx.QueryRow(ctx, `
-		SELECT id, user_id, type, amount, currency, category, icon, description
+		SELECT id, user_id, type, amount, currency, to_amount, to_currency, category, icon, description
 		FROM transactions
 		WHERE id = $1 AND user_id = $2
 		FOR UPDATE
-	`, txID, userID).Scan(&oldTx.ID, &oldTx.UserID, &oldTx.Type, &oldTx.Amount, &oldTx.Currency, &category, &icon, &oldTx.Description)
+	`, txID, userID).Scan(&oldTx.ID, &oldTx.UserID, &oldTx.Type, &oldTx.Amount, &oldTx.Currency, &toAmount, &toCurrency, &category, &icon, &oldTx.Description)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrTransactionNotFound
@@ -838,6 +859,18 @@ func (r *WalletRepository) UpdateTransactionAtomic(ctx context.Context, userID, 
 	// Don't allow editing conversion transactions
 	if oldTx.Type == "convert" {
 		return nil, errors.New("cannot edit conversion transactions")
+	}
+
+	// Check if it's a cross-currency transaction (has ToAmount/ToCurrency but not convert type)
+	isCrossCurrency := toAmount != nil && toCurrency != nil
+
+	// For cross-currency transactions, block editing of amount, currency, or type
+	if isCrossCurrency {
+		if (req.Amount > 0 && req.Amount != oldTx.Amount) || 
+		   (req.Currency != "" && req.Currency != oldTx.Currency) || 
+		   (req.Type != "" && req.Type != oldTx.Type) {
+			return nil, errors.New("cannot edit amount, currency, or type of cross-currency transactions")
+		}
 	}
 
 	now := time.Now()
@@ -868,77 +901,87 @@ func (r *WalletRepository) UpdateTransactionAtomic(ctx context.Context, userID, 
 		newDescription = req.Description
 	}
 
-	// Calculate balance adjustments
-	// First, reverse the old transaction's impact
-	if oldTx.Type == "credit" {
-		// Check if user has sufficient balance to reverse this credit
-		var currentBalance float64
-		err = tx.QueryRow(ctx, `
-			SELECT COALESCE(balance, 0) FROM wallet_balances
-			WHERE user_id = $1 AND currency = $2
-			FOR UPDATE
-		`, userID, oldTx.Currency).Scan(&currentBalance)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("checking balance: %w", err)
-		}
-		if currentBalance < oldTx.Amount {
-			return nil, ErrInsufficientBalance
-		}
-		_, err = tx.Exec(ctx, `
-			UPDATE wallet_balances
-			SET balance = balance - $1, updated_at = $2
-			WHERE user_id = $3 AND currency = $4
-		`, oldTx.Amount, now, userID, oldTx.Currency)
-	} else if oldTx.Type == "debit" {
-		_, err = tx.Exec(ctx, `
-			UPDATE wallet_balances
-			SET balance = balance + $1, updated_at = $2
-			WHERE user_id = $3 AND currency = $4
-		`, oldTx.Amount, now, userID, oldTx.Currency)
-	}
-	if err != nil {
-		if isBalanceConstraintError(err) {
-			return nil, ErrInsufficientBalance
-		}
-		return nil, fmt.Errorf("reversing old balance: %w", err)
-	}
+	// Calculate balance adjustments ONLY if critical fields changed
+	// Since we blocked these for cross-currency, we know we are dealing with single-currency here
+	// if critical fields changed.
+	
+	// If it's cross-currency, we skipped the check above, so newAmount == oldTx.Amount etc.
+	// So we can skip balance updates entirely if it is cross-currency OR if no critical fields changed.
+	
+	criticalFieldsChanged := newType != oldTx.Type || newAmount != oldTx.Amount || newCurrency != oldTx.Currency
 
-	// Apply the new transaction's impact
-	if newType == "credit" {
-		_, err = tx.Exec(ctx, `
-			INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
-			VALUES ($1, $2, $3, $4, $5)
-			ON CONFLICT (user_id, currency) DO UPDATE SET
-				balance = wallet_balances.balance + EXCLUDED.balance,
-				updated_at = EXCLUDED.updated_at
-		`, uuid.New(), userID, newCurrency, newAmount, now)
-	} else if newType == "debit" {
-		// Check if sufficient balance for debit with row-level lock
-		var currentBalance float64
-		err = tx.QueryRow(ctx, `
-			SELECT COALESCE(balance, 0) FROM wallet_balances
-			WHERE user_id = $1 AND currency = $2
-			FOR UPDATE
-		`, userID, newCurrency).Scan(&currentBalance)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("checking balance: %w", err)
+	if criticalFieldsChanged {
+		// First, reverse the old transaction's impact
+		if oldTx.Type == "credit" {
+			// Check if user has sufficient balance to reverse this credit
+			var currentBalance float64
+			err = tx.QueryRow(ctx, `
+				SELECT COALESCE(balance, 0) FROM wallet_balances
+				WHERE user_id = $1 AND currency = $2
+				FOR UPDATE
+			`, userID, oldTx.Currency).Scan(&currentBalance)
+			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return nil, fmt.Errorf("checking balance: %w", err)
+			}
+			if currentBalance < oldTx.Amount {
+				return nil, ErrInsufficientBalance
+			}
+			_, err = tx.Exec(ctx, `
+				UPDATE wallet_balances
+				SET balance = balance - $1, updated_at = $2
+				WHERE user_id = $3 AND currency = $4
+			`, oldTx.Amount, now, userID, oldTx.Currency)
+		} else if oldTx.Type == "debit" {
+			_, err = tx.Exec(ctx, `
+				UPDATE wallet_balances
+				SET balance = balance + $1, updated_at = $2
+				WHERE user_id = $3 AND currency = $4
+			`, oldTx.Amount, now, userID, oldTx.Currency)
 		}
-		if currentBalance < newAmount {
-			return nil, ErrInsufficientBalance
+		if err != nil {
+			if isBalanceConstraintError(err) {
+				return nil, ErrInsufficientBalance
+			}
+			return nil, fmt.Errorf("reversing old balance: %w", err)
 		}
-		_, err = tx.Exec(ctx, `
-			INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
-			VALUES ($1, $2, $3, $4, $5)
-			ON CONFLICT (user_id, currency) DO UPDATE SET
-				balance = wallet_balances.balance + EXCLUDED.balance,
-				updated_at = EXCLUDED.updated_at
-		`, uuid.New(), userID, newCurrency, -newAmount, now)
-	}
-	if err != nil {
-		if isBalanceConstraintError(err) {
-			return nil, ErrInsufficientBalance
+
+		// Apply the new transaction's impact
+		if newType == "credit" {
+			_, err = tx.Exec(ctx, `
+				INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
+				VALUES ($1, $2, $3, $4, $5)
+				ON CONFLICT (user_id, currency) DO UPDATE SET
+					balance = wallet_balances.balance + EXCLUDED.balance,
+					updated_at = EXCLUDED.updated_at
+			`, uuid.New(), userID, newCurrency, newAmount, now)
+		} else if newType == "debit" {
+			// Check if sufficient balance for debit with row-level lock
+			var currentBalance float64
+			err = tx.QueryRow(ctx, `
+				SELECT COALESCE(balance, 0) FROM wallet_balances
+				WHERE user_id = $1 AND currency = $2
+				FOR UPDATE
+			`, userID, newCurrency).Scan(&currentBalance)
+			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return nil, fmt.Errorf("checking balance: %w", err)
+			}
+			if currentBalance < newAmount {
+				return nil, ErrInsufficientBalance
+			}
+			_, err = tx.Exec(ctx, `
+				INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
+				VALUES ($1, $2, $3, $4, $5)
+				ON CONFLICT (user_id, currency) DO UPDATE SET
+					balance = wallet_balances.balance + EXCLUDED.balance,
+					updated_at = EXCLUDED.updated_at
+			`, uuid.New(), userID, newCurrency, -newAmount, now)
 		}
-		return nil, fmt.Errorf("applying new balance: %w", err)
+		if err != nil {
+			if isBalanceConstraintError(err) {
+				return nil, ErrInsufficientBalance
+			}
+			return nil, fmt.Errorf("applying new balance: %w", err)
+		}
 	}
 
 	// Update the transaction record

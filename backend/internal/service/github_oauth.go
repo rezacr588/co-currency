@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -38,6 +39,7 @@ type GitHubOAuthService struct {
 	userRepo    *repository.UserRepository
 	config      *GitHubConfig
 	stateStore  map[string]time.Time // simple in-memory state store
+	stateMutex  sync.Mutex
 }
 
 // GitHubUser represents the user data returned by GitHub API
@@ -80,11 +82,13 @@ func (s *GitHubOAuthService) GetAuthURL() (string, string, error) {
 	// Generate a random state token
 	state := uuid.New().String()
 
+	s.stateMutex.Lock()
 	// Store state with expiry (5 minutes)
 	s.stateStore[state] = time.Now().Add(5 * time.Minute)
 
 	// Clean up expired states
 	s.cleanupExpiredStates()
+	s.stateMutex.Unlock()
 
 	// Build authorization URL
 	params := url.Values{}
@@ -100,6 +104,9 @@ func (s *GitHubOAuthService) GetAuthURL() (string, string, error) {
 
 // ValidateState validates the OAuth state parameter
 func (s *GitHubOAuthService) ValidateState(state string) bool {
+	s.stateMutex.Lock()
+	defer s.stateMutex.Unlock()
+
 	expiry, exists := s.stateStore[state]
 	if !exists {
 		return false
@@ -389,6 +396,7 @@ func (s *GitHubOAuthService) generateAuthResponse(ctx context.Context, user *mod
 }
 
 // cleanupExpiredStates removes expired state tokens
+// NOTE: This must be called while holding stateMutex lock
 func (s *GitHubOAuthService) cleanupExpiredStates() {
 	now := time.Now()
 	for state, expiry := range s.stateStore {
