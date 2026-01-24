@@ -60,7 +60,7 @@ jobs:
           curl -fsSL "$ASSET_URL" -o "$HOME/.koyeb/bin/koyeb"
           chmod +x "$HOME/.koyeb/bin/koyeb"
           echo "$HOME/.koyeb/bin" >> "$GITHUB_PATH"
-          koyeb service update terrible-moselle/co-currency \
+          "$HOME/.koyeb/bin/koyeb" service update terrible-moselle/co-currency \
             --docker ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
   # Tests run in parallel but don't block deploy
