@@ -21,6 +21,8 @@ type Config struct {
 
 	// JWT Authentication
 	JWTSecret string `env:"JWT_SECRET" envDefault:"change-me-in-production-to-a-secure-secret"`
+	// Error handling
+	ExposeErrorDetails bool `env:"EXPOSE_ERROR_DETAILS" envDefault:"false"`
 
 	// GitHub OAuth
 	GitHubClientID     string `env:"GITHUB_CLIENT_ID" envDefault:""`
@@ -31,7 +33,7 @@ type Config struct {
 	// AI Service settings
 	AIProvider     string `env:"AI_PROVIDER" envDefault:"googleai"` // googleai, openai
 	AIAPIKey       string `env:"AI_API_KEY" envDefault:""`
-	AICloudProject string `env:"AI_CLOUD_PROJECT" envDefault:""`    // Google Cloud project ID
+	AICloudProject string `env:"AI_CLOUD_PROJECT" envDefault:""` // Google Cloud project ID
 }
 
 // Load parses environment variables into Config

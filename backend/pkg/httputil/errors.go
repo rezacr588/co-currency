@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"runtime/debug"
+	"sync/atomic"
 
 	"github.com/rezacr588/currency-converter/pkg/ctxkeys"
 	"github.com/rs/zerolog/log"
@@ -16,6 +17,18 @@ type ErrorResponse struct {
 	Message string `json:"message,omitempty"`
 	Details string `json:"details,omitempty"`
 	TraceID string `json:"trace_id,omitempty"`
+}
+
+var exposeErrorDetails atomic.Bool
+
+// SetExposeErrorDetails controls whether internal error details are included in API responses.
+func SetExposeErrorDetails(enabled bool) {
+	exposeErrorDetails.Store(enabled)
+}
+
+// ExposeErrorDetailsEnabled returns whether internal error details are included in API responses.
+func ExposeErrorDetailsEnabled() bool {
+	return exposeErrorDetails.Load()
 }
 
 // NewError creates a new ErrorResponse
@@ -52,19 +65,23 @@ func Error(w http.ResponseWriter, status int, err string, message string) {
 // It takes the actual error object to provide full details in the response.
 func ErrorWithContext(ctx context.Context, w http.ResponseWriter, status int, apiErr string, message string, internalErr error) {
 	traceID := getTraceID(ctx)
-	details := ""
+	logDetails := ""
+	responseDetails := ""
 	if internalErr != nil {
-		details = internalErr.Error()
+		logDetails = internalErr.Error()
+		if exposeErrorDetails.Load() {
+			responseDetails = internalErr.Error()
+		}
 	}
 
 	// Log the error with stack trace if it's a 500
-	logEvent := log.Error().Str("trace_id", traceID).Int("status", status).Str("error", apiErr).Str("details", details)
+	logEvent := log.Error().Str("trace_id", traceID).Int("status", status).Str("error", apiErr).Str("details", logDetails)
 	if status >= 500 {
 		logEvent = logEvent.Str("stack", string(debug.Stack()))
 	}
 	logEvent.Msg(message)
 
-	JSON(w, status, NewErrorWithTrace(status, apiErr, message, details, traceID))
+	JSON(w, status, NewErrorWithTrace(status, apiErr, message, responseDetails, traceID))
 }
 
 func firstError(errs []error) error {

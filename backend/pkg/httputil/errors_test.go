@@ -11,6 +11,14 @@ import (
 	"github.com/rezacr588/currency-converter/pkg/ctxkeys"
 )
 
+func withExposeErrorDetails(t *testing.T, enabled bool) {
+	prev := ExposeErrorDetailsEnabled()
+	SetExposeErrorDetails(enabled)
+	t.Cleanup(func() {
+		SetExposeErrorDetails(prev)
+	})
+}
+
 func TestError(t *testing.T) {
 	rec := httptest.NewRecorder()
 	Error(rec, http.StatusBadRequest, "bad_request", "Invalid input")
@@ -153,6 +161,8 @@ func TestNewErrorWithTrace(t *testing.T) {
 }
 
 func TestErrorWithContext(t *testing.T) {
+	withExposeErrorDetails(t, true)
+
 	traceID := "test-trace-456"
 	ctx := context.WithValue(context.Background(), ctxkeys.TraceID, traceID)
 	rec := httptest.NewRecorder()
@@ -178,6 +188,8 @@ func TestErrorWithContext(t *testing.T) {
 }
 
 func TestBadRequestWithContext(t *testing.T) {
+	withExposeErrorDetails(t, true)
+
 	traceID := "trace-bad-request"
 	ctx := context.WithValue(context.Background(), ctxkeys.TraceID, traceID)
 	rec := httptest.NewRecorder()
@@ -203,6 +215,8 @@ func TestBadRequestWithContext(t *testing.T) {
 }
 
 func TestInternalServerErrorWithContext(t *testing.T) {
+	withExposeErrorDetails(t, true)
+
 	traceID := "trace-internal-error"
 	ctx := context.WithValue(context.Background(), ctxkeys.TraceID, traceID)
 	rec := httptest.NewRecorder()
@@ -261,5 +275,25 @@ func TestContextErrorWithoutTraceID(t *testing.T) {
 
 	if got.TraceID != "" {
 		t.Errorf("Expected empty TraceID when not in context, got %v", got.TraceID)
+	}
+}
+
+func TestErrorWithContext_DetailsHidden(t *testing.T) {
+	withExposeErrorDetails(t, false)
+
+	traceID := "trace-hidden-details"
+	ctx := context.WithValue(context.Background(), ctxkeys.TraceID, traceID)
+	rec := httptest.NewRecorder()
+	internalErr := fmt.Errorf("sensitive error")
+
+	ErrorWithContext(ctx, rec, http.StatusInternalServerError, "internal_error", "failed", internalErr)
+
+	var got ErrorResponse
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if got.Details != "" {
+		t.Errorf("Expected empty Details when exposure disabled, got %v", got.Details)
 	}
 }

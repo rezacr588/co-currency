@@ -13,6 +13,7 @@ func TestLoad_Defaults(t *testing.T) {
 	os.Unsetenv("CACHE_TTL")
 	os.Unsetenv("RATE_LIMIT")
 	os.Unsetenv("FRANKFURTER_URL")
+	os.Unsetenv("EXPOSE_ERROR_DETAILS")
 
 	cfg, err := Load()
 	if err != nil {
@@ -34,6 +35,9 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.FrankfurterURL != "https://api.frankfurter.app" {
 		t.Errorf("FrankfurterURL = %v, want %v", cfg.FrankfurterURL, "https://api.frankfurter.app")
 	}
+	if cfg.ExposeErrorDetails != false {
+		t.Errorf("ExposeErrorDetails = %v, want false", cfg.ExposeErrorDetails)
+	}
 }
 
 func TestLoad_CustomValues(t *testing.T) {
@@ -42,12 +46,14 @@ func TestLoad_CustomValues(t *testing.T) {
 	os.Setenv("CACHE_TTL", "10m")
 	os.Setenv("RATE_LIMIT", "200")
 	os.Setenv("FRANKFURTER_URL", "https://custom.api.com")
+	os.Setenv("EXPOSE_ERROR_DETAILS", "true")
 	defer func() {
 		os.Unsetenv("PORT")
 		os.Unsetenv("ENVIRONMENT")
 		os.Unsetenv("CACHE_TTL")
 		os.Unsetenv("RATE_LIMIT")
 		os.Unsetenv("FRANKFURTER_URL")
+		os.Unsetenv("EXPOSE_ERROR_DETAILS")
 	}()
 
 	cfg, err := Load()
@@ -70,6 +76,9 @@ func TestLoad_CustomValues(t *testing.T) {
 	if cfg.FrankfurterURL != "https://custom.api.com" {
 		t.Errorf("FrankfurterURL = %v, want %v", cfg.FrankfurterURL, "https://custom.api.com")
 	}
+	if cfg.ExposeErrorDetails != true {
+		t.Errorf("ExposeErrorDetails = %v, want true", cfg.ExposeErrorDetails)
+	}
 }
 
 func TestLoad_JWTAndAIDefaults(t *testing.T) {
@@ -78,6 +87,7 @@ func TestLoad_JWTAndAIDefaults(t *testing.T) {
 	os.Unsetenv("AI_PROVIDER")
 	os.Unsetenv("AI_API_KEY")
 	os.Unsetenv("AI_CLOUD_PROJECT")
+	os.Unsetenv("EXPOSE_ERROR_DETAILS")
 
 	cfg, err := Load()
 	if err != nil {
@@ -133,6 +143,7 @@ func TestLoad_DatabaseAndCrawlerDefaults(t *testing.T) {
 	os.Unsetenv("DATABASE_URL")
 	os.Unsetenv("IRR_CRAWLER_INTERVAL")
 	os.Unsetenv("IRR_CRAWLER_ENABLED")
+	os.Unsetenv("EXPOSE_ERROR_DETAILS")
 
 	cfg, err := Load()
 	if err != nil {

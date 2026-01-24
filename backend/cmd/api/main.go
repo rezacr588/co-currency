@@ -21,6 +21,7 @@ import (
 	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/router"
 	"github.com/rezacr588/currency-converter/internal/service"
+	"github.com/rezacr588/currency-converter/pkg/httputil"
 
 	// Swagger docs
 	_ "github.com/rezacr588/currency-converter/docs"
@@ -102,6 +103,7 @@ func main() {
 
 	// Setup logging
 	setupLogging(cfg.Environment)
+	httputil.SetExposeErrorDetails(cfg.ExposeErrorDetails)
 
 	// Security check for production
 	if cfg.Environment == "production" && (cfg.JWTSecret == "" || cfg.JWTSecret == "change-me-in-production-to-a-secure-secret") {
