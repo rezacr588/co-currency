@@ -208,7 +208,10 @@ func main() {
 		if err != nil {
 			log.Warn().Err(err).Msg("Failed to initialize AI service")
 		} else {
-			log.Info().Str("provider", cfg.AIProvider).Str("project", cfg.AICloudProject).Msg("AI service initialized")
+			log.Info().
+				Str("provider", aiService.GetProvider()).
+				Str("project", cfg.AICloudProject).
+				Msg("AI service initialized")
 		}
 	} else {
 		log.Info().Msg("AI_API_KEY not configured, AI features disabled")

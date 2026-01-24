@@ -30,9 +30,19 @@ func NewAIService(provider, apiKey, cloudProject string) (*AIService, error) {
 		return nil, errors.New("AI_API_KEY is required")
 	}
 
+	// Auto-detect provider if default is used but key matches specific patterns
+	p := strings.ToLower(provider)
+	if p == "googleai" || p == "gemini" || p == "" {
+		if strings.HasPrefix(apiKey, "csk-") {
+			p = "cerebras"
+		} else if strings.HasPrefix(apiKey, "sk-") {
+			p = "openai"
+		}
+	}
+
 	// We'll initialize the LLM lazily to avoid requiring context at construction time
 	return &AIService{
-		provider:     strings.ToLower(provider),
+		provider:     p,
 		apiKey:       apiKey,
 		cloudProject: cloudProject,
 	}, nil
