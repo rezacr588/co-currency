@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"runtime/debug"
 
@@ -25,7 +26,14 @@ func Recovery(next http.Handler) http.Handler {
 					Str("path", r.URL.Path).
 					Msg("Panic recovered")
 
-				httputil.InternalServerErrorWithContext(r.Context(), w, "an unexpected error occurred")
+				var internalErr error
+				if e, ok := err.(error); ok {
+					internalErr = e
+				} else {
+					internalErr = fmt.Errorf("%v", err)
+				}
+
+				httputil.InternalServerErrorWithContext(r.Context(), w, "an unexpected error occurred", internalErr)
 			}
 		}()
 

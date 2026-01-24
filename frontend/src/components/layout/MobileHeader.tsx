@@ -4,7 +4,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../api/client';
+import { api } from '../../api';
 import { formatCurrency } from '../../utils/format';
 import {
   Menu,

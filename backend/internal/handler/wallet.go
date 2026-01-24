@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -9,8 +10,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/rezacr588/currency-converter/internal/middleware"
 	"github.com/rezacr588/currency-converter/internal/model"
+	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/service"
 	"github.com/rezacr588/currency-converter/pkg/httputil"
 )
@@ -34,20 +35,10 @@ func NewWalletHandlerWithCategories(walletService *service.WalletService, catego
 	}
 }
 
-// serviceUnavailable returns true and sends an error response if wallet service is not available
-func (h *WalletHandler) serviceUnavailable(w http.ResponseWriter) bool {
-	if h.walletService == nil {
-		httputil.ServiceUnavailable(w, "wallet service not available - database connection failed")
-		return true
-	}
-	return false
-}
-
 // GetCategories handles GET /api/v1/wallet/categories
 func (h *WalletHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
@@ -72,13 +63,12 @@ func (h *WalletHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
 
 // GetBalances handles GET /api/v1/wallet/balances
 func (h *WalletHandler) GetBalances(w http.ResponseWriter, r *http.Request) {
-	if h.serviceUnavailable(w) {
+	if !requireService(w, h.walletService != nil, "wallet service not available - database connection failed") {
 		return
 	}
 
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
@@ -95,13 +85,12 @@ func (h *WalletHandler) GetBalances(w http.ResponseWriter, r *http.Request) {
 
 // GetSummary handles GET /api/v1/wallet/summary
 func (h *WalletHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
-	if h.serviceUnavailable(w) {
+	if !requireService(w, h.walletService != nil, "wallet service not available - database connection failed") {
 		return
 	}
 
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
@@ -116,13 +105,12 @@ func (h *WalletHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 
 // AddTransaction handles POST /api/v1/wallet/transaction
 func (h *WalletHandler) AddTransaction(w http.ResponseWriter, r *http.Request) {
-	if h.serviceUnavailable(w) {
+	if !requireService(w, h.walletService != nil, "wallet service not available - database connection failed") {
 		return
 	}
 
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
@@ -134,6 +122,10 @@ func (h *WalletHandler) AddTransaction(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := h.walletService.AddTransaction(r.Context(), userID, &req)
 	if err != nil {
+		if errors.Is(err, repository.ErrInsufficientBalance) {
+			httputil.BadRequest(w, "insufficient balance")
+			return
+		}
 		httputil.BadRequest(w, err.Error())
 		return
 	}
@@ -143,13 +135,12 @@ func (h *WalletHandler) AddTransaction(w http.ResponseWriter, r *http.Request) {
 
 // ConvertBalance handles POST /api/v1/wallet/convert
 func (h *WalletHandler) ConvertBalance(w http.ResponseWriter, r *http.Request) {
-	if h.serviceUnavailable(w) {
+	if !requireService(w, h.walletService != nil, "wallet service not available - database connection failed") {
 		return
 	}
 
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
@@ -161,6 +152,10 @@ func (h *WalletHandler) ConvertBalance(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.walletService.ConvertBalance(r.Context(), userID, &req)
 	if err != nil {
+		if errors.Is(err, repository.ErrInsufficientBalance) {
+			httputil.BadRequest(w, "insufficient balance")
+			return
+		}
 		httputil.BadRequest(w, err.Error())
 		return
 	}
@@ -170,51 +165,21 @@ func (h *WalletHandler) ConvertBalance(w http.ResponseWriter, r *http.Request) {
 
 // GetTransactions handles GET /api/v1/wallet/transactions
 func (h *WalletHandler) GetTransactions(w http.ResponseWriter, r *http.Request) {
-	if h.serviceUnavailable(w) {
+	if !requireService(w, h.walletService != nil, "wallet service not available - database connection failed") {
 		return
 	}
 
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
-	// Parse pagination params with validation
-	limit := 50
-	offset := 0
-	const maxLimit = 100
-
-	if l := r.URL.Query().Get("limit"); l != "" {
-		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
-			if parsed > maxLimit {
-				httputil.BadRequest(w, fmt.Sprintf("limit must be between 1 and %d", maxLimit))
-				return
-			}
-			limit = parsed
-		} else if err != nil {
-			httputil.BadRequest(w, "invalid limit parameter")
-			return
-		}
-	}
-	if o := r.URL.Query().Get("offset"); o != "" {
-		if parsed, err := strconv.Atoi(o); err == nil && parsed >= 0 {
-			offset = parsed
-		} else if err != nil {
-			httputil.BadRequest(w, "invalid offset parameter")
-			return
-		}
+	limit, offset, ok := parsePaginationParams(w, r)
+	if !ok {
+		return
 	}
 
-	// Parse filter params
-	filter := &model.TransactionFilter{
-		Search:   r.URL.Query().Get("search"),
-		Category: r.URL.Query().Get("category"),
-		Type:     r.URL.Query().Get("type"),
-		Currency: r.URL.Query().Get("currency"),
-		FromDate: r.URL.Query().Get("from_date"),
-		ToDate:   r.URL.Query().Get("to_date"),
-	}
+	filter := parseTransactionFilter(r)
 
 	// Check if any filter is set
 	hasFilter := filter.Search != "" || filter.Category != "" || filter.Type != "" ||
@@ -246,13 +211,12 @@ func (h *WalletHandler) GetTransactions(w http.ResponseWriter, r *http.Request) 
 
 // ExportTransactions handles GET /api/v1/wallet/transactions/export
 func (h *WalletHandler) ExportTransactions(w http.ResponseWriter, r *http.Request) {
-	if h.serviceUnavailable(w) {
+	if !requireService(w, h.walletService != nil, "wallet service not available - database connection failed") {
 		return
 	}
 
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
@@ -266,15 +230,7 @@ func (h *WalletHandler) ExportTransactions(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Parse filter params
-	filter := &model.TransactionFilter{
-		Search:   r.URL.Query().Get("search"),
-		Category: r.URL.Query().Get("category"),
-		Type:     r.URL.Query().Get("type"),
-		Currency: r.URL.Query().Get("currency"),
-		FromDate: r.URL.Query().Get("from_date"),
-		ToDate:   r.URL.Query().Get("to_date"),
-	}
+	filter := parseTransactionFilter(r)
 
 	// Get all transactions (with high limit)
 	transactions, _, err := h.walletService.GetTransactionsFiltered(r.Context(), userID, filter, 10000, 0)
@@ -312,13 +268,12 @@ func (h *WalletHandler) ExportTransactions(w http.ResponseWriter, r *http.Reques
 
 // GetTransaction handles GET /api/v1/wallet/transactions/{id}
 func (h *WalletHandler) GetTransaction(w http.ResponseWriter, r *http.Request) {
-	if h.serviceUnavailable(w) {
+	if !requireService(w, h.walletService != nil, "wallet service not available - database connection failed") {
 		return
 	}
 
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
@@ -331,7 +286,7 @@ func (h *WalletHandler) GetTransaction(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := h.walletService.GetTransaction(r.Context(), userID, txID)
 	if err != nil {
-		if err.Error() == "transaction not found" {
+		if errors.Is(err, repository.ErrTransactionNotFound) {
 			httputil.NotFound(w, "transaction not found")
 			return
 		}
@@ -344,13 +299,12 @@ func (h *WalletHandler) GetTransaction(w http.ResponseWriter, r *http.Request) {
 
 // DeleteTransaction handles DELETE /api/v1/wallet/transactions/{id}
 func (h *WalletHandler) DeleteTransaction(w http.ResponseWriter, r *http.Request) {
-	if h.serviceUnavailable(w) {
+	if !requireService(w, h.walletService != nil, "wallet service not available - database connection failed") {
 		return
 	}
 
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
@@ -363,7 +317,7 @@ func (h *WalletHandler) DeleteTransaction(w http.ResponseWriter, r *http.Request
 
 	err = h.walletService.DeleteTransaction(r.Context(), userID, txID)
 	if err != nil {
-		if err.Error() == "transaction not found" {
+		if errors.Is(err, repository.ErrTransactionNotFound) {
 			httputil.NotFoundWithContext(r.Context(), w, "transaction not found")
 			return
 		}
@@ -394,15 +348,55 @@ func escapeCSVField(field string) string {
 	return field
 }
 
+func parsePaginationParams(w http.ResponseWriter, r *http.Request) (int, int, bool) {
+	limit := 50
+	offset := 0
+	const maxLimit = 100
+
+	if l := r.URL.Query().Get("limit"); l != "" {
+		parsed, err := strconv.Atoi(l)
+		if err != nil {
+			httputil.BadRequest(w, "invalid limit parameter")
+			return 0, 0, false
+		}
+		if parsed <= 0 || parsed > maxLimit {
+			httputil.BadRequest(w, fmt.Sprintf("limit must be between 1 and %d", maxLimit))
+			return 0, 0, false
+		}
+		limit = parsed
+	}
+
+	if o := r.URL.Query().Get("offset"); o != "" {
+		parsed, err := strconv.Atoi(o)
+		if err != nil || parsed < 0 {
+			httputil.BadRequest(w, "invalid offset parameter")
+			return 0, 0, false
+		}
+		offset = parsed
+	}
+
+	return limit, offset, true
+}
+
+func parseTransactionFilter(r *http.Request) *model.TransactionFilter {
+	return &model.TransactionFilter{
+		Search:   r.URL.Query().Get("search"),
+		Category: r.URL.Query().Get("category"),
+		Type:     r.URL.Query().Get("type"),
+		Currency: r.URL.Query().Get("currency"),
+		FromDate: r.URL.Query().Get("from_date"),
+		ToDate:   r.URL.Query().Get("to_date"),
+	}
+}
+
 // UpdateTransaction handles PUT /api/v1/wallet/transactions/{id}
 func (h *WalletHandler) UpdateTransaction(w http.ResponseWriter, r *http.Request) {
-	if h.serviceUnavailable(w) {
+	if !requireService(w, h.walletService != nil, "wallet service not available - database connection failed") {
 		return
 	}
 
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
@@ -421,11 +415,11 @@ func (h *WalletHandler) UpdateTransaction(w http.ResponseWriter, r *http.Request
 
 	tx, err := h.walletService.UpdateTransaction(r.Context(), userID, txID, &req)
 	if err != nil {
-		if err.Error() == "transaction not found" {
+		if errors.Is(err, repository.ErrTransactionNotFound) {
 			httputil.NotFound(w, "transaction not found")
 			return
 		}
-		if err.Error() == "insufficient balance" {
+		if errors.Is(err, repository.ErrInsufficientBalance) {
 			httputil.BadRequest(w, "insufficient balance")
 			return
 		}
@@ -438,13 +432,12 @@ func (h *WalletHandler) UpdateTransaction(w http.ResponseWriter, r *http.Request
 
 // ImportTransactions handles POST /api/v1/wallet/transactions/import
 func (h *WalletHandler) ImportTransactions(w http.ResponseWriter, r *http.Request) {
-	if h.serviceUnavailable(w) {
+	if !requireService(w, h.walletService != nil, "wallet service not available - database connection failed") {
 		return
 	}
 
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 

@@ -13,13 +13,48 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rezacr588/currency-converter/internal/model"
+	"github.com/rs/zerolog/log"
 )
 
 var (
-	ErrInsufficientBalance  = errors.New("insufficient balance")
-	ErrBalanceNotFound      = errors.New("balance not found")
-	ErrTransactionNotFound  = errors.New("transaction not found")
+	ErrInsufficientBalance = errors.New("insufficient balance")
+	ErrBalanceNotFound     = errors.New("balance not found")
+	ErrTransactionNotFound = errors.New("transaction not found")
 )
+
+type transactionScanner interface {
+	Scan(dest ...interface{}) error
+}
+
+func scanTransaction(scanner transactionScanner) (*model.Transaction, error) {
+	var t model.Transaction
+	var aiData []byte
+	var category *string
+	var icon *string
+	var description *string
+
+	if err := scanner.Scan(
+		&t.ID, &t.UserID, &t.Type, &t.Amount, &t.Currency,
+		&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &category, &icon, &aiData, &description, &t.CreatedAt,
+	); err != nil {
+		return nil, err
+	}
+
+	if aiData != nil {
+		t.AIExtractedData = json.RawMessage(aiData)
+	}
+	if category != nil {
+		t.Category = *category
+	}
+	if icon != nil {
+		t.Icon = *icon
+	}
+	if description != nil {
+		t.Description = *description
+	}
+
+	return &t, nil
+}
 
 // isBalanceConstraintError checks if the error is a CHECK constraint violation for non-negative balance
 func isBalanceConstraintError(err error) bool {
@@ -31,6 +66,49 @@ func isBalanceConstraintError(err error) bool {
 		}
 	}
 	return false
+}
+
+func (r *WalletRepository) lockBalanceForUpdate(ctx context.Context, tx pgx.Tx, userID uuid.UUID, currency string) (float64, bool, error) {
+	var balance float64
+	err := tx.QueryRow(ctx, `
+		SELECT balance FROM wallet_balances
+		WHERE user_id = $1 AND currency = $2
+		FOR UPDATE
+	`, userID, currency).Scan(&balance)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, false, nil
+		}
+		return 0, false, err
+	}
+	return balance, true, nil
+}
+
+func (r *WalletRepository) applyBalanceDelta(ctx context.Context, tx pgx.Tx, userID uuid.UUID, currency string, delta float64, now time.Time, allowInsert bool) error {
+	var err error
+	if allowInsert {
+		_, err = tx.Exec(ctx, `
+			INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
+			VALUES ($1, $2, $3, $4, $5)
+			ON CONFLICT (user_id, currency) DO UPDATE SET
+				balance = wallet_balances.balance + EXCLUDED.balance,
+				updated_at = EXCLUDED.updated_at
+		`, uuid.New(), userID, currency, delta, now)
+	} else {
+		_, err = tx.Exec(ctx, `
+			UPDATE wallet_balances
+			SET balance = balance + $1, updated_at = $2
+			WHERE user_id = $3 AND currency = $4
+		`, delta, now, userID, currency)
+	}
+
+	if err != nil {
+		if isBalanceConstraintError(err) {
+			return ErrInsufficientBalance
+		}
+		return fmt.Errorf("updating balance: %w", err)
+	}
+	return nil
 }
 
 // WalletRepository handles database operations for wallet balances and transactions
@@ -227,30 +305,11 @@ func (r *WalletRepository) GetTransactions(ctx context.Context, userID uuid.UUID
 
 	var transactions []model.Transaction
 	for rows.Next() {
-		var t model.Transaction
-		var aiData []byte
-		var category *string
-		var icon *string
-		var description *string
-		if err := rows.Scan(
-			&t.ID, &t.UserID, &t.Type, &t.Amount, &t.Currency,
-			&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &category, &icon, &aiData, &description, &t.CreatedAt,
-		); err != nil {
+		tx, err := scanTransaction(rows)
+		if err != nil {
 			return nil, fmt.Errorf("scanning transaction: %w", err)
 		}
-		if aiData != nil {
-			t.AIExtractedData = json.RawMessage(aiData)
-		}
-		if category != nil {
-			t.Category = *category
-		}
-		if icon != nil {
-			t.Icon = *icon
-		}
-		if description != nil {
-			t.Description = *description
-		}
-		transactions = append(transactions, t)
+		transactions = append(transactions, *tx)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -340,30 +399,11 @@ func (r *WalletRepository) GetTransactionsFiltered(ctx context.Context, userID u
 
 	var transactions []model.Transaction
 	for rows.Next() {
-		var t model.Transaction
-		var aiData []byte
-		var category *string
-		var icon *string
-		var description *string
-		if err := rows.Scan(
-			&t.ID, &t.UserID, &t.Type, &t.Amount, &t.Currency,
-			&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &category, &icon, &aiData, &description, &t.CreatedAt,
-		); err != nil {
+		tx, err := scanTransaction(rows)
+		if err != nil {
 			return nil, 0, fmt.Errorf("scanning transaction: %w", err)
 		}
-		if aiData != nil {
-			t.AIExtractedData = json.RawMessage(aiData)
-		}
-		if category != nil {
-			t.Category = *category
-		}
-		if icon != nil {
-			t.Icon = *icon
-		}
-		if description != nil {
-			t.Description = *description
-		}
-		transactions = append(transactions, t)
+		transactions = append(transactions, *tx)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -381,17 +421,7 @@ func (r *WalletRepository) GetTransaction(ctx context.Context, userID, txID uuid
 		WHERE id = $1 AND user_id = $2
 	`
 
-	t := &model.Transaction{}
-	var aiData []byte
-	var category *string
-	var icon *string
-	var description *string
-
-	err := r.pool.QueryRow(ctx, query, txID, userID).Scan(
-		&t.ID, &t.UserID, &t.Type, &t.Amount, &t.Currency,
-		&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &category, &icon, &aiData, &description, &t.CreatedAt,
-	)
-
+	tx, err := scanTransaction(r.pool.QueryRow(ctx, query, txID, userID))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrTransactionNotFound
@@ -399,20 +429,7 @@ func (r *WalletRepository) GetTransaction(ctx context.Context, userID, txID uuid
 		return nil, fmt.Errorf("getting transaction: %w", err)
 	}
 
-	if aiData != nil {
-		t.AIExtractedData = json.RawMessage(aiData)
-	}
-	if category != nil {
-		t.Category = *category
-	}
-	if icon != nil {
-		t.Icon = *icon
-	}
-	if description != nil {
-		t.Description = *description
-	}
-
-	return t, nil
+	return tx, nil
 }
 
 // AddTransactionAtomic performs a balance update and transaction creation atomically
@@ -433,59 +450,37 @@ func (r *WalletRepository) AddTransactionAtomic(ctx context.Context, userID uuid
 
 	// Check current balance for debits with row-level lock
 	if txType == "debit" {
-		var currentBalance float64
-		err = tx.QueryRow(ctx, `
-			SELECT COALESCE(balance, 0) FROM wallet_balances
-			WHERE user_id = $1 AND currency = $2
-			FOR UPDATE
-		`, userID, currency).Scan(&currentBalance)
-
-		// Log debug info for troubleshooting
+		currentBalance, exists, err := r.lockBalanceForUpdate(ctx, tx, userID, currency)
 		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				fmt.Printf("[DEBUG] No balance record found for user=%s currency=%s\n", userID, currency)
-			} else {
-				return nil, fmt.Errorf("checking balance: %w", err)
-			}
+			return nil, fmt.Errorf("checking balance: %w", err)
+		}
+		if !exists {
+			log.Debug().
+				Str("user_id", userID.String()).
+				Str("currency", currency).
+				Msg("no balance record found for debit")
 		} else {
-			fmt.Printf("[DEBUG] Balance check: user=%s currency=%s balance=%.2f amount=%.2f\n", userID, currency, currentBalance, amount)
+			log.Debug().
+				Str("user_id", userID.String()).
+				Str("currency", currency).
+				Float64("balance", currentBalance).
+				Float64("amount", amount).
+				Msg("balance check")
 		}
 
 		if currentBalance < amount {
-			fmt.Printf("[DEBUG] Insufficient balance: %.2f < %.2f\n", currentBalance, amount)
 			return nil, ErrInsufficientBalance
 		}
 	}
 
-	// Update or insert balance
-	// For debits, we know the row exists (we just selected it with FOR UPDATE)
-	// so we use direct UPDATE to avoid CHECK constraint issues with INSERT...ON CONFLICT
-	fmt.Printf("[DEBUG] Updating balance: user=%s currency=%s delta=%.2f\n", userID, currency, delta)
-	if txType == "debit" {
-		_, err = tx.Exec(ctx, `
-			UPDATE wallet_balances
-			SET balance = balance + $1, updated_at = $2
-			WHERE user_id = $3 AND currency = $4
-		`, delta, now, userID, currency)
-	} else {
-		// For credits, use upsert pattern (row may not exist yet)
-		_, err = tx.Exec(ctx, `
-			INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
-			VALUES ($1, $2, $3, $4, $5)
-			ON CONFLICT (user_id, currency) DO UPDATE SET
-				balance = wallet_balances.balance + EXCLUDED.balance,
-				updated_at = EXCLUDED.updated_at
-		`, uuid.New(), userID, currency, delta, now)
+	if err := r.applyBalanceDelta(ctx, tx, userID, currency, delta, now, txType != "debit"); err != nil {
+		return nil, err
 	}
-	if err != nil {
-		fmt.Printf("[DEBUG] Balance update error: %v\n", err)
-		if isBalanceConstraintError(err) {
-			fmt.Printf("[DEBUG] Constraint error detected!\n")
-			return nil, ErrInsufficientBalance
-		}
-		return nil, fmt.Errorf("updating balance: %w", err)
-	}
-	fmt.Printf("[DEBUG] Balance updated successfully\n")
+	log.Debug().
+		Str("user_id", userID.String()).
+		Str("currency", currency).
+		Float64("delta", delta).
+		Msg("balance updated")
 
 	// Create transaction record
 	transaction := &model.Transaction{
@@ -508,16 +503,16 @@ func (r *WalletRepository) AddTransactionAtomic(ctx context.Context, userID uuid
 	`, transaction.ID, transaction.UserID, transaction.Type, transaction.Amount, transaction.Currency,
 		transaction.Source, transaction.Category, transaction.Icon, transaction.AIExtractedData, transaction.Description, transaction.CreatedAt)
 	if err != nil {
-		fmt.Printf("[DEBUG] Transaction record insert error: %v\n", err)
+		log.Error().Err(err).Msg("transaction record insert failed")
 		return nil, fmt.Errorf("recording transaction: %w", err)
 	}
-	fmt.Printf("[DEBUG] Transaction record created\n")
+	log.Debug().Str("transaction_id", transaction.ID.String()).Msg("transaction recorded")
 
 	if err := tx.Commit(ctx); err != nil {
-		fmt.Printf("[DEBUG] Commit error: %v\n", err)
+		log.Error().Err(err).Msg("transaction commit failed")
 		return nil, fmt.Errorf("committing transaction: %w", err)
 	}
-	fmt.Printf("[DEBUG] Transaction committed successfully\n")
+	log.Debug().Str("transaction_id", transaction.ID.String()).Msg("transaction committed")
 
 	return transaction, nil
 }
@@ -546,44 +541,23 @@ func (r *WalletRepository) AddCrossCurrencyTransactionAtomic(ctx context.Context
 
 	// Check current balance for debits with row-level lock
 	if txType == "debit" {
-		var currentBalance float64
-		err = tx.QueryRow(ctx, `
-			SELECT COALESCE(balance, 0) FROM wallet_balances
-			WHERE user_id = $1 AND currency = $2
-			FOR UPDATE
-		`, userID, walletCurrency).Scan(&currentBalance)
-
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		currentBalance, exists, err := r.lockBalanceForUpdate(ctx, tx, userID, walletCurrency)
+		if err != nil {
 			return nil, fmt.Errorf("checking balance: %w", err)
 		}
-
+		if !exists {
+			log.Debug().
+				Str("user_id", userID.String()).
+				Str("currency", walletCurrency).
+				Msg("no balance record found for debit")
+		}
 		if currentBalance < walletAmount {
 			return nil, ErrInsufficientBalance
 		}
 	}
 
-	// Update or insert balance for wallet currency
-	if txType == "debit" {
-		_, err = tx.Exec(ctx, `
-			UPDATE wallet_balances
-			SET balance = balance + $1, updated_at = $2
-			WHERE user_id = $3 AND currency = $4
-		`, delta, now, userID, walletCurrency)
-	} else {
-		// For credits, use upsert pattern (row may not exist yet)
-		_, err = tx.Exec(ctx, `
-			INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
-			VALUES ($1, $2, $3, $4, $5)
-			ON CONFLICT (user_id, currency) DO UPDATE SET
-				balance = wallet_balances.balance + EXCLUDED.balance,
-				updated_at = EXCLUDED.updated_at
-		`, uuid.New(), userID, walletCurrency, delta, now)
-	}
-	if err != nil {
-		if isBalanceConstraintError(err) {
-			return nil, ErrInsufficientBalance
-		}
-		return nil, fmt.Errorf("updating balance: %w", err)
+	if err := r.applyBalanceDelta(ctx, tx, userID, walletCurrency, delta, now, txType != "debit"); err != nil {
+		return nil, err
 	}
 
 	// Create transaction record with both currencies
@@ -593,11 +567,11 @@ func (r *WalletRepository) AddCrossCurrencyTransactionAtomic(ctx context.Context
 		ID:              uuid.New(),
 		UserID:          userID,
 		Type:            txType,
-		Amount:          txAmount,     // Transaction amount (e.g., 100 TRY)
-		Currency:        txCurrency,   // Transaction currency (e.g., TRY)
-		ToAmount:        &walletAmount,    // Wallet amount (e.g., 3 USD)
-		ToCurrency:      &walletCurrency,  // Wallet currency (e.g., USD)
-		Rate:            &rate,            // Conversion rate
+		Amount:          txAmount,        // Transaction amount (e.g., 100 TRY)
+		Currency:        txCurrency,      // Transaction currency (e.g., TRY)
+		ToAmount:        &walletAmount,   // Wallet amount (e.g., 3 USD)
+		ToCurrency:      &walletCurrency, // Wallet currency (e.g., USD)
+		Rate:            &rate,           // Conversion rate
 		Source:          source,
 		Description:     description,
 		Category:        category,
@@ -634,42 +608,22 @@ func (r *WalletRepository) ExecuteConversion(ctx context.Context, userID uuid.UU
 	now := time.Now()
 
 	// Check if user has sufficient balance with row-level lock to prevent race conditions
-	var currentBalance float64
-	err = tx.QueryRow(ctx, `
-		SELECT COALESCE(balance, 0) FROM wallet_balances
-		WHERE user_id = $1 AND currency = $2
-		FOR UPDATE
-	`, userID, fromCurrency).Scan(&currentBalance)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	currentBalance, _, err := r.lockBalanceForUpdate(ctx, tx, userID, fromCurrency)
+	if err != nil {
 		return nil, fmt.Errorf("checking balance: %w", err)
 	}
-
 	if currentBalance < fromAmount {
 		return nil, ErrInsufficientBalance
 	}
 
-	// Debit from source currency
-	_, err = tx.Exec(ctx, `
-		UPDATE wallet_balances
-		SET balance = balance - $1, updated_at = $2
-		WHERE user_id = $3 AND currency = $4
-	`, fromAmount, now, userID, fromCurrency)
-	if err != nil {
-		if isBalanceConstraintError(err) {
+	if err := r.applyBalanceDelta(ctx, tx, userID, fromCurrency, -fromAmount, now, false); err != nil {
+		if errors.Is(err, ErrInsufficientBalance) {
 			return nil, ErrInsufficientBalance
 		}
 		return nil, fmt.Errorf("debiting source currency: %w", err)
 	}
 
-	// Credit to target currency (upsert)
-	_, err = tx.Exec(ctx, `
-		INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
-		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (user_id, currency) DO UPDATE SET
-			balance = wallet_balances.balance + EXCLUDED.balance,
-			updated_at = EXCLUDED.updated_at
-	`, uuid.New(), userID, toCurrency, toAmount, now)
-	if err != nil {
+	if err := r.applyBalanceDelta(ctx, tx, userID, toCurrency, toAmount, now, true); err != nil {
 		return nil, fmt.Errorf("crediting target currency: %w", err)
 	}
 
@@ -732,10 +686,11 @@ func (r *WalletRepository) DeleteTransactionAtomic(ctx context.Context, userID, 
 	now := time.Now()
 
 	// Reverse the balance impact based on transaction type
+	var balanceErr error
 	switch txType {
 	case model.TransactionTypeCredit:
 		// Original was credit (added money), so subtract
-		
+
 		// Handle cross-currency credit (added to wallet in ToCurrency)
 		targetAmount := amount
 		targetCurrency := currency
@@ -744,27 +699,17 @@ func (r *WalletRepository) DeleteTransactionAtomic(ctx context.Context, userID, 
 			targetCurrency = *toCurrency
 		}
 
-		// Check if user has sufficient balance to reverse this credit
-		var currentBalance float64
-		err = tx.QueryRow(ctx, `
-			SELECT COALESCE(balance, 0) FROM wallet_balances
-			WHERE user_id = $1 AND currency = $2
-			FOR UPDATE
-		`, userID, targetCurrency).Scan(&currentBalance)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		currentBalance, _, err := r.lockBalanceForUpdate(ctx, tx, userID, targetCurrency)
+		if err != nil {
 			return fmt.Errorf("checking balance: %w", err)
 		}
 		if currentBalance < targetAmount {
 			return ErrInsufficientBalance
 		}
-		_, err = tx.Exec(ctx, `
-			UPDATE wallet_balances
-			SET balance = balance - $1, updated_at = $2
-			WHERE user_id = $3 AND currency = $4
-		`, targetAmount, now, userID, targetCurrency)
+		balanceErr = r.applyBalanceDelta(ctx, tx, userID, targetCurrency, -targetAmount, now, false)
 	case model.TransactionTypeDebit:
 		// Original was debit (removed money), so add back
-		
+
 		// Handle cross-currency debit (removed from wallet in ToCurrency)
 		targetAmount := amount
 		targetCurrency := currency
@@ -773,47 +718,29 @@ func (r *WalletRepository) DeleteTransactionAtomic(ctx context.Context, userID, 
 			targetCurrency = *toCurrency
 		}
 
-		_, err = tx.Exec(ctx, `
-			UPDATE wallet_balances
-			SET balance = balance + $1, updated_at = $2
-			WHERE user_id = $3 AND currency = $4
-		`, targetAmount, now, userID, targetCurrency)
+		balanceErr = r.applyBalanceDelta(ctx, tx, userID, targetCurrency, targetAmount, now, true)
 	case model.TransactionTypeConvert:
 		// Reverse conversion: add back to source, subtract from target
-		_, err = tx.Exec(ctx, `
-			UPDATE wallet_balances
-			SET balance = balance + $1, updated_at = $2
-			WHERE user_id = $3 AND currency = $4
-		`, amount, now, userID, currency)
-		if err != nil {
-			return fmt.Errorf("reversing source balance: %w", err)
+		balanceErr = r.applyBalanceDelta(ctx, tx, userID, currency, amount, now, true)
+		if balanceErr != nil {
+			break
 		}
 		if toAmount != nil && toCurrency != nil {
-			// Check if user has sufficient balance in target currency
-			var targetBalance float64
-			err = tx.QueryRow(ctx, `
-				SELECT COALESCE(balance, 0) FROM wallet_balances
-				WHERE user_id = $1 AND currency = $2
-				FOR UPDATE
-			`, userID, *toCurrency).Scan(&targetBalance)
-			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			targetBalance, _, err := r.lockBalanceForUpdate(ctx, tx, userID, *toCurrency)
+			if err != nil {
 				return fmt.Errorf("checking target balance: %w", err)
 			}
 			if targetBalance < *toAmount {
 				return ErrInsufficientBalance
 			}
-			_, err = tx.Exec(ctx, `
-				UPDATE wallet_balances
-				SET balance = balance - $1, updated_at = $2
-				WHERE user_id = $3 AND currency = $4
-			`, *toAmount, now, userID, *toCurrency)
+			balanceErr = r.applyBalanceDelta(ctx, tx, userID, *toCurrency, -*toAmount, now, false)
 		}
 	}
-	if err != nil {
-		if isBalanceConstraintError(err) {
+	if balanceErr != nil {
+		if errors.Is(balanceErr, ErrInsufficientBalance) {
 			return ErrInsufficientBalance
 		}
-		return fmt.Errorf("reversing balance: %w", err)
+		return fmt.Errorf("reversing balance: %w", balanceErr)
 	}
 
 	// Delete the transaction
@@ -848,7 +775,7 @@ func (r *WalletRepository) UpdateTransactionAtomic(ctx context.Context, userID, 
 	var category, icon *string
 	var toAmount *float64
 	var toCurrency *string
-	
+
 	err = tx.QueryRow(ctx, `
 		SELECT id, user_id, type, amount, currency, to_amount, to_currency, category, icon, description
 		FROM transactions
@@ -878,9 +805,9 @@ func (r *WalletRepository) UpdateTransactionAtomic(ctx context.Context, userID, 
 
 	// For cross-currency transactions, block editing of amount, currency, or type
 	if isCrossCurrency {
-		if (req.Amount > 0 && req.Amount != oldTx.Amount) || 
-		   (req.Currency != "" && req.Currency != oldTx.Currency) || 
-		   (req.Type != "" && req.Type != oldTx.Type) {
+		if (req.Amount > 0 && req.Amount != oldTx.Amount) ||
+			(req.Currency != "" && req.Currency != oldTx.Currency) ||
+			(req.Type != "" && req.Type != oldTx.Type) {
 			return nil, errors.New("cannot edit amount, currency, or type of cross-currency transactions")
 		}
 	}
@@ -916,83 +843,60 @@ func (r *WalletRepository) UpdateTransactionAtomic(ctx context.Context, userID, 
 	// Calculate balance adjustments ONLY if critical fields changed
 	// Since we blocked these for cross-currency, we know we are dealing with single-currency here
 	// if critical fields changed.
-	
+
 	// If it's cross-currency, we skipped the check above, so newAmount == oldTx.Amount etc.
 	// So we can skip balance updates entirely if it is cross-currency OR if no critical fields changed.
-	
+
 	criticalFieldsChanged := newType != oldTx.Type || newAmount != oldTx.Amount || newCurrency != oldTx.Currency
 
 	if criticalFieldsChanged {
 		// First, reverse the old transaction's impact
 		if oldTx.Type == "credit" {
-			// Check if user has sufficient balance to reverse this credit
-			var currentBalance float64
-			err = tx.QueryRow(ctx, `
-				SELECT COALESCE(balance, 0) FROM wallet_balances
-				WHERE user_id = $1 AND currency = $2
-				FOR UPDATE
-			`, userID, oldTx.Currency).Scan(&currentBalance)
-			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			currentBalance, _, err := r.lockBalanceForUpdate(ctx, tx, userID, oldTx.Currency)
+			if err != nil {
 				return nil, fmt.Errorf("checking balance: %w", err)
 			}
 			if currentBalance < oldTx.Amount {
 				return nil, ErrInsufficientBalance
 			}
-			_, err = tx.Exec(ctx, `
-				UPDATE wallet_balances
-				SET balance = balance - $1, updated_at = $2
-				WHERE user_id = $3 AND currency = $4
-			`, oldTx.Amount, now, userID, oldTx.Currency)
-		} else if oldTx.Type == "debit" {
-			_, err = tx.Exec(ctx, `
-				UPDATE wallet_balances
-				SET balance = balance + $1, updated_at = $2
-				WHERE user_id = $3 AND currency = $4
-			`, oldTx.Amount, now, userID, oldTx.Currency)
-		}
-		if err != nil {
-			if isBalanceConstraintError(err) {
-				return nil, ErrInsufficientBalance
+			err = r.applyBalanceDelta(ctx, tx, userID, oldTx.Currency, -oldTx.Amount, now, false)
+			if err != nil {
+				if errors.Is(err, ErrInsufficientBalance) {
+					return nil, ErrInsufficientBalance
+				}
+				return nil, fmt.Errorf("reversing old balance: %w", err)
 			}
-			return nil, fmt.Errorf("reversing old balance: %w", err)
+		} else if oldTx.Type == "debit" {
+			if err := r.applyBalanceDelta(ctx, tx, userID, oldTx.Currency, oldTx.Amount, now, true); err != nil {
+				if errors.Is(err, ErrInsufficientBalance) {
+					return nil, ErrInsufficientBalance
+				}
+				return nil, fmt.Errorf("reversing old balance: %w", err)
+			}
 		}
 
 		// Apply the new transaction's impact
 		if newType == "credit" {
-			_, err = tx.Exec(ctx, `
-				INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
-				VALUES ($1, $2, $3, $4, $5)
-				ON CONFLICT (user_id, currency) DO UPDATE SET
-					balance = wallet_balances.balance + EXCLUDED.balance,
-					updated_at = EXCLUDED.updated_at
-			`, uuid.New(), userID, newCurrency, newAmount, now)
+			if err := r.applyBalanceDelta(ctx, tx, userID, newCurrency, newAmount, now, true); err != nil {
+				if errors.Is(err, ErrInsufficientBalance) {
+					return nil, ErrInsufficientBalance
+				}
+				return nil, fmt.Errorf("applying new balance: %w", err)
+			}
 		} else if newType == "debit" {
-			// Check if sufficient balance for debit with row-level lock
-			var currentBalance float64
-			err = tx.QueryRow(ctx, `
-				SELECT COALESCE(balance, 0) FROM wallet_balances
-				WHERE user_id = $1 AND currency = $2
-				FOR UPDATE
-			`, userID, newCurrency).Scan(&currentBalance)
-			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			currentBalance, _, err := r.lockBalanceForUpdate(ctx, tx, userID, newCurrency)
+			if err != nil {
 				return nil, fmt.Errorf("checking balance: %w", err)
 			}
 			if currentBalance < newAmount {
 				return nil, ErrInsufficientBalance
 			}
-			_, err = tx.Exec(ctx, `
-				INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
-				VALUES ($1, $2, $3, $4, $5)
-				ON CONFLICT (user_id, currency) DO UPDATE SET
-					balance = wallet_balances.balance + EXCLUDED.balance,
-					updated_at = EXCLUDED.updated_at
-			`, uuid.New(), userID, newCurrency, -newAmount, now)
-		}
-		if err != nil {
-			if isBalanceConstraintError(err) {
-				return nil, ErrInsufficientBalance
+			if err := r.applyBalanceDelta(ctx, tx, userID, newCurrency, -newAmount, now, false); err != nil {
+				if errors.Is(err, ErrInsufficientBalance) {
+					return nil, ErrInsufficientBalance
+				}
+				return nil, fmt.Errorf("applying new balance: %w", err)
 			}
-			return nil, fmt.Errorf("applying new balance: %w", err)
 		}
 	}
 

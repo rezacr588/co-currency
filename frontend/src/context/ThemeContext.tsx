@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { readStorage, writeStorage } from '../utils/storage';
 
 type Theme = 'light' | 'dark';
 
@@ -16,7 +17,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     // Check localStorage first
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(THEME_STORAGE_KEY);
+      const stored = readStorage(THEME_STORAGE_KEY);
       if (stored === 'light' || stored === 'dark') {
         return stored;
       }
@@ -39,7 +40,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       root.classList.remove('dark');
     }
     // Save to localStorage
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
+    writeStorage(THEME_STORAGE_KEY, theme);
   }, [theme]);
 
   const toggleTheme = () => {

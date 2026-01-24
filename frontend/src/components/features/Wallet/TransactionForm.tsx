@@ -1,7 +1,7 @@
 import { useState, FormEvent, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../api/client';
+import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrencies, useConvert, useMutationAction } from '../../../hooks';
 import { Container } from '../../layout';
@@ -13,6 +13,7 @@ import { ErrorMessage } from '../../ui/ErrorMessage';
 import { WalletBalance, TransactionRequest } from '../../../types/wallet';
 import { CURRENCY_FLAGS } from '../../../utils/constants';
 import { formatNumber } from '../../../utils/format';
+import { readJSON, writeJSON } from '../../../utils/storage';
 import {
   Utensils,
   ShoppingCart,
@@ -342,27 +343,15 @@ export function TransactionForm() {
 
   // Load templates on mount
   useEffect(() => {
-    const savedTemplates = localStorage.getItem('transaction_templates');
+    const savedTemplates = readJSON<TransactionTemplate[]>('transaction_templates');
     if (savedTemplates) {
-      try {
-        setTemplates(jsonSafeParse(savedTemplates, []));
-      } catch (e) {
-        console.error('Failed to parse templates', e);
-      }
+      setTemplates(savedTemplates);
     }
   }, []);
 
-  const jsonSafeParse = (str: string, fallback: any) => {
-    try {
-      return JSON.parse(str);
-    } catch {
-      return fallback;
-    }
-  };
-
   const saveTemplates = (newTemplates: TransactionTemplate[]) => {
     setTemplates(newTemplates);
-    localStorage.setItem('transaction_templates', JSON.stringify(newTemplates));
+    writeJSON('transaction_templates', newTemplates);
   };
 
   const handleSaveTemplate = () => {
@@ -818,4 +807,3 @@ export function TransactionForm() {
     </main>
   );
 }
-

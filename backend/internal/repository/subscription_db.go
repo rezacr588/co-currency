@@ -2,12 +2,17 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/rezacr588/currency-converter/internal/model"
+)
+
+var (
+	ErrSubscriptionNotFound = errors.New("subscription not found")
 )
 
 // SubscriptionRepository handles subscription database operations
@@ -81,7 +86,7 @@ func (r *SubscriptionRepository) GetSubscription(ctx context.Context, userID, su
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("subscription not found")
+			return nil, ErrSubscriptionNotFound
 		}
 		return nil, fmt.Errorf("querying subscription: %w", err)
 	}
@@ -238,7 +243,7 @@ func (r *SubscriptionRepository) DeleteSubscription(ctx context.Context, userID,
 		return fmt.Errorf("deleting subscription: %w", err)
 	}
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("subscription not found")
+		return ErrSubscriptionNotFound
 	}
 	return nil
 }

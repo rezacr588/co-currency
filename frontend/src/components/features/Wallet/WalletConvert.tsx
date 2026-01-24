@@ -1,7 +1,7 @@
 import { useState, FormEvent, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../api/client';
+import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrencies, useMutationAction } from '../../../hooks';
 import { Container } from '../../layout';
@@ -11,7 +11,7 @@ import { ErrorMessage } from '../../ui/ErrorMessage';
 import { Skeleton } from '../../ui/Skeleton';
 import type { WalletBalance } from '../../../types/wallet';
 import { formatCurrency, formatNumber, formatRate } from '../../../utils/format';
-import { InlineCurrencySelect } from '../Converter/InlineCurrencySelect';
+import { CurrencySelect } from '../../ui';
 import { SwapButton } from '../Converter/SwapButton';
 import { CurrencyInput } from '../../ui/CurrencyInput';
 import { CURRENCY_SYMBOLS, CURRENCY_FLAGS } from '../../../utils/constants';
@@ -136,7 +136,8 @@ export function WalletConvert() {
                         placeholder="0.00"
                         className={fromBalance && amount > fromBalance.balance ? 'text-rose-500' : ''}
                       />
-                      <InlineCurrencySelect
+                      <CurrencySelect
+                        variant="inline"
                         value={fromCurrency}
                         onChange={setFromCurrency}
                         currencies={currencies}
@@ -171,7 +172,8 @@ export function WalletConvert() {
                           <span className="text-2xl text-slate-300 dark:text-slate-600">—</span>
                         )}
                       </div>
-                      <InlineCurrencySelect
+                      <CurrencySelect
+                        variant="inline"
                         value={toCurrency}
                         onChange={setToCurrency}
                         currencies={currencies}
@@ -234,4 +236,3 @@ export function WalletConvert() {
     </main>
   );
 }
-

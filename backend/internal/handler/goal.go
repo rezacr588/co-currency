@@ -2,12 +2,13 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/rezacr588/currency-converter/internal/middleware"
 	"github.com/rezacr588/currency-converter/internal/model"
+	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/service"
 	"github.com/rezacr588/currency-converter/pkg/httputil"
 )
@@ -24,15 +25,14 @@ func NewGoalHandler(goalService *service.GoalService) *GoalHandler {
 
 // GetGoals handles GET /api/v1/goals
 func (h *GoalHandler) GetGoals(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
 	goals, err := h.goalService.GetGoals(r.Context(), userID)
 	if err != nil {
-		httputil.InternalServerError(w, "failed to get goals")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get goals")
 		return
 	}
 
@@ -59,26 +59,25 @@ func (h *GoalHandler) GetGoals(w http.ResponseWriter, r *http.Request) {
 
 // GetGoal handles GET /api/v1/goals/{id}
 func (h *GoalHandler) GetGoal(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
 	goalIDStr := chi.URLParam(r, "id")
 	goalID, err := uuid.Parse(goalIDStr)
 	if err != nil {
-		httputil.BadRequest(w, "invalid goal ID")
+		httputil.BadRequestWithContext(r.Context(), w, "invalid goal ID")
 		return
 	}
 
 	goal, err := h.goalService.GetGoal(r.Context(), userID, goalID)
 	if err != nil {
-		if err.Error() == "goal not found" {
-			httputil.NotFound(w, "goal not found")
+		if errors.Is(err, repository.ErrGoalNotFound) {
+			httputil.NotFoundWithContext(r.Context(), w, "goal not found")
 			return
 		}
-		httputil.InternalServerError(w, "failed to get goal")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get goal")
 		return
 	}
 
@@ -91,21 +90,20 @@ func (h *GoalHandler) GetGoal(w http.ResponseWriter, r *http.Request) {
 
 // CreateGoal handles POST /api/v1/goals
 func (h *GoalHandler) CreateGoal(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
 	var req model.CreateGoalRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequest(w, "invalid request body")
+		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
 		return
 	}
 
 	goal, err := h.goalService.CreateGoal(r.Context(), userID, &req)
 	if err != nil {
-		httputil.BadRequest(w, err.Error())
+		httputil.BadRequestWithContext(r.Context(), w, "failed to create goal")
 		return
 	}
 
@@ -118,32 +116,31 @@ func (h *GoalHandler) CreateGoal(w http.ResponseWriter, r *http.Request) {
 
 // UpdateGoal handles PUT /api/v1/goals/{id}
 func (h *GoalHandler) UpdateGoal(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
 	goalIDStr := chi.URLParam(r, "id")
 	goalID, err := uuid.Parse(goalIDStr)
 	if err != nil {
-		httputil.BadRequest(w, "invalid goal ID")
+		httputil.BadRequestWithContext(r.Context(), w, "invalid goal ID")
 		return
 	}
 
 	var req model.UpdateGoalRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequest(w, "invalid request body")
+		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
 		return
 	}
 
 	goal, err := h.goalService.UpdateGoal(r.Context(), userID, goalID, &req)
 	if err != nil {
-		if err.Error() == "goal not found" {
-			httputil.NotFound(w, "goal not found")
+		if errors.Is(err, repository.ErrGoalNotFound) {
+			httputil.NotFoundWithContext(r.Context(), w, "goal not found")
 			return
 		}
-		httputil.BadRequest(w, err.Error())
+		httputil.BadRequestWithContext(r.Context(), w, "failed to update goal")
 		return
 	}
 
@@ -156,25 +153,24 @@ func (h *GoalHandler) UpdateGoal(w http.ResponseWriter, r *http.Request) {
 
 // DeleteGoal handles DELETE /api/v1/goals/{id}
 func (h *GoalHandler) DeleteGoal(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
 	goalIDStr := chi.URLParam(r, "id")
 	goalID, err := uuid.Parse(goalIDStr)
 	if err != nil {
-		httputil.BadRequest(w, "invalid goal ID")
+		httputil.BadRequestWithContext(r.Context(), w, "invalid goal ID")
 		return
 	}
 
 	if err := h.goalService.DeleteGoal(r.Context(), userID, goalID); err != nil {
-		if err.Error() == "goal not found" {
-			httputil.NotFound(w, "goal not found")
+		if errors.Is(err, repository.ErrGoalNotFound) {
+			httputil.NotFoundWithContext(r.Context(), w, "goal not found")
 			return
 		}
-		httputil.InternalServerError(w, "failed to delete goal")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to delete goal")
 		return
 	}
 
@@ -185,32 +181,35 @@ func (h *GoalHandler) DeleteGoal(w http.ResponseWriter, r *http.Request) {
 
 // ContributeToGoal handles POST /api/v1/goals/{id}/contribute
 func (h *GoalHandler) ContributeToGoal(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
 	goalIDStr := chi.URLParam(r, "id")
 	goalID, err := uuid.Parse(goalIDStr)
 	if err != nil {
-		httputil.BadRequest(w, "invalid goal ID")
+		httputil.BadRequestWithContext(r.Context(), w, "invalid goal ID")
 		return
 	}
 
 	var req model.ContributeToGoalRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequest(w, "invalid request body")
+		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
 		return
 	}
 
 	goal, transaction, err := h.goalService.ContributeToGoal(r.Context(), userID, goalID, &req)
 	if err != nil {
-		if err.Error() == "goal not found" {
-			httputil.NotFound(w, "goal not found")
+		if errors.Is(err, repository.ErrGoalNotFound) {
+			httputil.NotFoundWithContext(r.Context(), w, "goal not found")
 			return
 		}
-		httputil.BadRequest(w, err.Error())
+		if errors.Is(err, repository.ErrInsufficientBalance) {
+			httputil.BadRequest(w, "insufficient balance")
+			return
+		}
+		httputil.BadRequestWithContext(r.Context(), w, "failed to contribute to goal")
 		return
 	}
 

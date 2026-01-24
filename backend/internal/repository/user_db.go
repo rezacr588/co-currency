@@ -458,21 +458,3 @@ func (r *UserRepository) UnlinkGitHubAccount(ctx context.Context, userID uuid.UU
 
 	return nil
 }
-
-// isDuplicateKeyError checks if the error is a duplicate key violation
-func isDuplicateKeyError(err error) bool {
-	return err != nil && (contains(err.Error(), "duplicate key") || contains(err.Error(), "23505"))
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}

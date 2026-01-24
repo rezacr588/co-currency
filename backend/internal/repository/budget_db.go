@@ -53,7 +53,7 @@ func (r *BudgetRepository) Create(ctx context.Context, budget *model.Budget) err
 	)
 
 	if err != nil {
-		if contains(err.Error(), "unique") || contains(err.Error(), "duplicate") {
+		if isUniqueViolation(err) {
 			return ErrBudgetExists
 		}
 		return fmt.Errorf("creating budget: %w", err)

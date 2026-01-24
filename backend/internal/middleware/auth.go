@@ -33,36 +33,35 @@ func NewAuth(authService *service.AuthService) *Auth {
 // Middleware returns an HTTP middleware that validates JWT tokens
 func (a *Auth) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Get the Authorization header
+		// Extract token
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
-			httputil.Unauthorized(w, "missing authorization header")
+			httputil.UnauthorizedWithContext(r.Context(), w, "missing authorization header", nil)
 			return
 		}
 
-		// Check for Bearer token
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			httputil.Unauthorized(w, "invalid authorization header format")
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			httputil.UnauthorizedWithContext(r.Context(), w, "invalid authorization format", nil)
 			return
 		}
 
 		tokenString := parts[1]
 
-		// Validate the token
+		// Validate token
 		claims, err := a.authService.ValidateToken(tokenString)
 		if err != nil {
-			switch err {
-			case service.ErrTokenExpired:
-				httputil.Unauthorized(w, "token expired")
-			case service.ErrInvalidToken:
-				httputil.Unauthorized(w, "invalid token")
-			default:
-				httputil.Unauthorized(w, "authentication failed")
+			if strings.Contains(err.Error(), "expired") {
+				httputil.UnauthorizedWithContext(r.Context(), w, "token expired", err)
+				return
 			}
+			if strings.Contains(err.Error(), "invalid") {
+				httputil.UnauthorizedWithContext(r.Context(), w, "invalid token", err)
+				return
+			}
+			httputil.UnauthorizedWithContext(r.Context(), w, "unauthorized", err)
 			return
 		}
-
 		// Add user info to context
 		ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
 		ctx = context.WithValue(ctx, UserEmailKey, claims.Email)

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { api, setAuthToken, getAuthToken, clearAuthToken, setOnAuthError } from '../api/client';
+import { api, setAuthToken, getAuthToken, clearAuthToken, setOnAuthError } from '../api';
 import type { User, LoginRequest, RegisterRequest } from '../types/wallet';
 
 interface AuthContextType {

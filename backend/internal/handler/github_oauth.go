@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/rezacr588/currency-converter/internal/middleware"
 	"github.com/rezacr588/currency-converter/internal/service"
 	"github.com/rezacr588/currency-converter/pkg/httputil"
 )
@@ -21,29 +20,20 @@ func NewGitHubOAuthHandler(githubService *service.GitHubOAuthService) *GitHubOAu
 	return &GitHubOAuthHandler{githubService: githubService}
 }
 
-// serviceUnavailable returns true and sends an error response if GitHub service is not available
-func (h *GitHubOAuthHandler) serviceUnavailable(w http.ResponseWriter) bool {
-	if h.githubService == nil || !h.githubService.IsConfigured() {
-		httputil.ServiceUnavailable(w, "GitHub OAuth not configured")
-		return true
-	}
-	return false
-}
-
 // GetAuthURL handles GET /api/v1/auth/github
 // Redirects to GitHub OAuth authorization page
 func (h *GitHubOAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
-	if h.serviceUnavailable(w) {
+	if !requireService(w, h.githubService != nil && h.githubService.IsConfigured(), "GitHub OAuth not configured") {
 		return
 	}
 
 	authURL, _, err := h.githubService.GetAuthURL()
 	if err != nil {
 		if errors.Is(err, service.ErrGitHubOAuthNotConfigured) {
-			httputil.ServiceUnavailable(w, "GitHub OAuth not configured")
+			httputil.ServiceUnavailableWithContext(r.Context(), w, "GitHub OAuth not configured", err)
 			return
 		}
-		httputil.InternalServerError(w, "failed to generate auth URL")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate auth URL", err)
 		return
 	}
 
@@ -54,7 +44,7 @@ func (h *GitHubOAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 // Callback handles GET /api/v1/auth/github/callback
 // Handles the OAuth callback from GitHub
 func (h *GitHubOAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
-	if h.serviceUnavailable(w) {
+	if !requireService(w, h.githubService != nil && h.githubService.IsConfigured(), "GitHub OAuth not configured") {
 		return
 	}
 
@@ -98,28 +88,27 @@ func (h *GitHubOAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 // LinkAccount handles POST /api/v1/auth/github/link
 // Links GitHub account to the authenticated user
 func (h *GitHubOAuthHandler) LinkAccount(w http.ResponseWriter, r *http.Request) {
-	if h.serviceUnavailable(w) {
+	if !requireService(w, h.githubService != nil && h.githubService.IsConfigured(), "GitHub OAuth not configured") {
 		return
 	}
 
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
 	code := r.URL.Query().Get("code")
 	if code == "" {
-		httputil.BadRequest(w, "authorization code is required")
+		httputil.BadRequestWithContext(r.Context(), w, "authorization code is required", nil)
 		return
 	}
 
 	if err := h.githubService.LinkGitHubAccount(r.Context(), userID, code); err != nil {
 		if errors.Is(err, service.ErrGitHubAccountLinked) {
-			httputil.BadRequest(w, "GitHub account already linked to another user")
+			httputil.BadRequestWithContext(r.Context(), w, "GitHub account already linked to another user", err)
 			return
 		}
-		httputil.BadRequest(w, err.Error())
+		httputil.BadRequestWithContext(r.Context(), w, "failed to link GitHub account", err)
 		return
 	}
 
@@ -129,19 +118,17 @@ func (h *GitHubOAuthHandler) LinkAccount(w http.ResponseWriter, r *http.Request)
 // UnlinkAccount handles DELETE /api/v1/auth/github/link
 // Unlinks GitHub account from the authenticated user
 func (h *GitHubOAuthHandler) UnlinkAccount(w http.ResponseWriter, r *http.Request) {
-	if h.githubService == nil {
-		httputil.ServiceUnavailable(w, "GitHub OAuth not configured")
+	if !requireService(w, h.githubService != nil && h.githubService.IsConfigured(), "GitHub OAuth not configured") {
 		return
 	}
 
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
 	if err := h.githubService.UnlinkGitHubAccount(r.Context(), userID); err != nil {
-		httputil.BadRequest(w, err.Error())
+		httputil.BadRequestWithContext(r.Context(), w, "failed to unlink GitHub account", err)
 		return
 	}
 
@@ -151,19 +138,17 @@ func (h *GitHubOAuthHandler) UnlinkAccount(w http.ResponseWriter, r *http.Reques
 // GetLinkURL handles GET /api/v1/auth/github/link
 // Returns the GitHub OAuth URL for linking (for authenticated users)
 func (h *GitHubOAuthHandler) GetLinkURL(w http.ResponseWriter, r *http.Request) {
-	if h.serviceUnavailable(w) {
+	if !requireService(w, h.githubService != nil && h.githubService.IsConfigured(), "GitHub OAuth not configured") {
 		return
 	}
 
-	_, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
+	if _, ok := requireUserID(w, r); !ok {
 		return
 	}
 
 	authURL, _, err := h.githubService.GetAuthURL()
 	if err != nil {
-		httputil.InternalServerError(w, "failed to generate auth URL")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate auth URL", err)
 		return
 	}
 

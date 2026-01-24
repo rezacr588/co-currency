@@ -41,7 +41,7 @@ func (s *BudgetService) GetBudget(ctx context.Context, userID, budgetID uuid.UUI
 	budget, err := s.budgetRepo.GetByID(ctx, userID, budgetID)
 	if err != nil {
 		if errors.Is(err, repository.ErrBudgetNotFound) {
-			return nil, errors.New("budget not found")
+			return nil, repository.ErrBudgetNotFound
 		}
 		return nil, fmt.Errorf("getting budget: %w", err)
 	}
@@ -85,7 +85,7 @@ func (s *BudgetService) CreateBudget(ctx context.Context, userID uuid.UUID, req 
 
 	if err := s.budgetRepo.Create(ctx, budget); err != nil {
 		if errors.Is(err, repository.ErrBudgetExists) {
-			return nil, errors.New("budget already exists for this category and period")
+			return nil, repository.ErrBudgetExists
 		}
 		return nil, fmt.Errorf("creating budget: %w", err)
 	}
@@ -105,7 +105,7 @@ func (s *BudgetService) UpdateBudget(ctx context.Context, userID, budgetID uuid.
 	budget, err := s.budgetRepo.GetByID(ctx, userID, budgetID)
 	if err != nil {
 		if errors.Is(err, repository.ErrBudgetNotFound) {
-			return nil, errors.New("budget not found")
+			return nil, repository.ErrBudgetNotFound
 		}
 		return nil, fmt.Errorf("getting budget: %w", err)
 	}
@@ -141,7 +141,7 @@ func (s *BudgetService) UpdateBudget(ctx context.Context, userID, budgetID uuid.
 func (s *BudgetService) DeleteBudget(ctx context.Context, userID, budgetID uuid.UUID) error {
 	if err := s.budgetRepo.Delete(ctx, userID, budgetID); err != nil {
 		if errors.Is(err, repository.ErrBudgetNotFound) {
-			return errors.New("budget not found")
+			return repository.ErrBudgetNotFound
 		}
 		return fmt.Errorf("deleting budget: %w", err)
 	}

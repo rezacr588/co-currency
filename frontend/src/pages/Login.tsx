@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
-import { api } from '../api/client';
+import { api } from '../api';
 import { GitHubIcon } from '../constants/icons';
 
 export function Login() {

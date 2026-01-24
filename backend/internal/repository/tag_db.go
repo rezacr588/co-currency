@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	ErrTagNotFound    = errors.New("tag not found")
-	ErrTagExists      = errors.New("tag already exists")
+	ErrTagNotFound = errors.New("tag not found")
+	ErrTagExists   = errors.New("tag already exists")
 )
 
 // TagRepository handles database operations for tags
@@ -46,8 +46,7 @@ func (r *TagRepository) Create(ctx context.Context, tag *model.Tag) error {
 	)
 
 	if err != nil {
-		// Check for unique constraint violation
-		if err.Error() != "" && (contains(err.Error(), "unique") || contains(err.Error(), "duplicate")) {
+		if isUniqueViolation(err) {
 			return ErrTagExists
 		}
 		return fmt.Errorf("creating tag: %w", err)
@@ -201,5 +200,3 @@ func (r *TagRepository) GetTagsForTransaction(ctx context.Context, transactionID
 
 	return tags, nil
 }
-
-// uses contains and containsHelper from user_db.go

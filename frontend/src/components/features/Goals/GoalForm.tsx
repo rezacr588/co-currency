@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../api/client';
+import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useMutationAction } from '../../../hooks';
 import type { Goal, UpdateGoalRequest } from '../../../types/goal';

@@ -42,7 +42,7 @@ func (s *RecurringService) GetRecurringByID(ctx context.Context, userID, recurri
 	recurring, err := s.recurringRepo.GetByID(ctx, userID, recurringID)
 	if err != nil {
 		if errors.Is(err, repository.ErrRecurringNotFound) {
-			return nil, errors.New("recurring transaction not found")
+			return nil, repository.ErrRecurringNotFound
 		}
 		return nil, fmt.Errorf("getting recurring transaction: %w", err)
 	}
@@ -97,7 +97,7 @@ func (s *RecurringService) UpdateRecurring(ctx context.Context, userID, recurrin
 	recurring, err := s.recurringRepo.GetByID(ctx, userID, recurringID)
 	if err != nil {
 		if errors.Is(err, repository.ErrRecurringNotFound) {
-			return nil, errors.New("recurring transaction not found")
+			return nil, repository.ErrRecurringNotFound
 		}
 		return nil, fmt.Errorf("getting recurring transaction: %w", err)
 	}
@@ -149,7 +149,7 @@ func (s *RecurringService) UpdateRecurring(ctx context.Context, userID, recurrin
 func (s *RecurringService) DeleteRecurring(ctx context.Context, userID, recurringID uuid.UUID) error {
 	if err := s.recurringRepo.Delete(ctx, userID, recurringID); err != nil {
 		if errors.Is(err, repository.ErrRecurringNotFound) {
-			return errors.New("recurring transaction not found")
+			return repository.ErrRecurringNotFound
 		}
 		return fmt.Errorf("deleting recurring transaction: %w", err)
 	}
@@ -162,7 +162,7 @@ func (s *RecurringService) ExecuteRecurring(ctx context.Context, userID, recurri
 	recurring, err := s.recurringRepo.GetByID(ctx, userID, recurringID)
 	if err != nil {
 		if errors.Is(err, repository.ErrRecurringNotFound) {
-			return nil, nil, errors.New("recurring transaction not found")
+			return nil, nil, repository.ErrRecurringNotFound
 		}
 		return nil, nil, fmt.Errorf("getting recurring transaction: %w", err)
 	}
@@ -175,7 +175,7 @@ func (s *RecurringService) ExecuteRecurring(ctx context.Context, userID, recurri
 	transaction, err := s.recurringRepo.ExecuteAndScheduleNext(ctx, recurring)
 	if err != nil {
 		if errors.Is(err, repository.ErrInsufficientBalance) {
-			return nil, nil, errors.New("insufficient balance")
+			return nil, nil, repository.ErrInsufficientBalance
 		}
 		return nil, nil, fmt.Errorf("executing recurring transaction: %w", err)
 	}

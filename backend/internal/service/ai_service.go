@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/rezacr588/currency-converter/internal/model"
+	"github.com/rs/zerolog/log"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/googleai"
 	"github.com/tmc/langchaingo/llms/openai"
@@ -91,19 +92,7 @@ func (s *AIService) getLLM(ctx context.Context) (llms.Model, error) {
 	return llm, nil
 }
 
-// ParseReceipt parses a receipt image and extracts transaction data
-func (s *AIService) ParseReceipt(ctx context.Context, imageData []byte, mimeType string) (*model.AIParseResult, error) {
-	if len(imageData) == 0 {
-		return nil, errors.New("image data is required")
-	}
-
-	llm, err := s.getLLM(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("getting LLM: %w", err)
-	}
-
-	// Build the prompt
-	prompt := `Analyze this receipt or invoice image. Extract the following information and return ONLY a valid JSON object (no markdown, no explanation):
+const receiptPromptTemplate = `Analyze this receipt or invoice %s. Extract the following information and return ONLY a valid JSON object (no markdown, no explanation):
 
 {
   "amount": <number - the total amount as a decimal number>,
@@ -119,6 +108,27 @@ Rules:
 - If currency symbol is $ assume USD, € assume EUR, £ assume GBP
 - If you cannot determine a field, use reasonable defaults (USD for currency, "debit" for type)
 - Return ONLY the JSON object, nothing else`
+
+func buildReceiptPrompt(subject, text string) string {
+	prompt := fmt.Sprintf(receiptPromptTemplate, subject)
+	if text == "" {
+		return prompt
+	}
+	return fmt.Sprintf("%s\n\nReceipt text:\n%s", prompt, text)
+}
+
+// ParseReceipt parses a receipt image and extracts transaction data
+func (s *AIService) ParseReceipt(ctx context.Context, imageData []byte, mimeType string) (*model.AIParseResult, error) {
+	if len(imageData) == 0 {
+		return nil, errors.New("image data is required")
+	}
+
+	llm, err := s.getLLM(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting LLM: %w", err)
+	}
+
+	prompt := buildReceiptPrompt("image", "")
 
 	// Create message with image
 	var content []llms.ContentPart
@@ -139,7 +149,11 @@ Rules:
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("calling AI service: %w", err)
+		log.Error().
+			Err(err).
+			Str("provider", s.provider).
+			Msg("AI service call failed")
+		return nil, fmt.Errorf("calling AI service (%s): %w", s.provider, err)
 	}
 
 	if len(response.Choices) == 0 {
@@ -168,25 +182,7 @@ func (s *AIService) ParseReceiptText(ctx context.Context, text string) (*model.A
 		return nil, fmt.Errorf("getting LLM: %w", err)
 	}
 
-	prompt := fmt.Sprintf(`Analyze this receipt or invoice text. Extract the following information and return ONLY a valid JSON object (no markdown, no explanation):
-
-{
-  "amount": <number - the total amount as a decimal number>,
-  "currency": "<3-letter ISO currency code, e.g., USD, EUR, IRR>",
-  "type": "<either 'credit' for income/refund or 'debit' for expense/payment>",
-  "description": "<brief description of the transaction, max 100 characters>"
-}
-
-Rules:
-- For receipts/invoices showing purchases: type should be "debit"
-- For receipts showing refunds or income: type should be "credit"
-- Use the total/grand total amount, not subtotals
-- If currency symbol is $ assume USD, € assume EUR, £ assume GBP
-- If you cannot determine a field, use reasonable defaults (USD for currency, "debit" for type)
-- Return ONLY the JSON object, nothing else
-
-Receipt text:
-%s`, text)
+	prompt := buildReceiptPrompt("text", text)
 
 	response, err := llm.GenerateContent(ctx, []llms.MessageContent{
 		{
@@ -196,7 +192,11 @@ Receipt text:
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("calling AI service: %w", err)
+		log.Error().
+			Err(err).
+			Str("provider", s.provider).
+			Msg("AI service call (text) failed")
+		return nil, fmt.Errorf("calling AI service (text, %s): %w", s.provider, err)
 	}
 
 	if len(response.Choices) == 0 {
@@ -333,7 +333,7 @@ func (s *AIService) GetInsights(ctx context.Context, report *ForecastReport) (*m
 	}
 
 	reportJSON, _ := json.MarshalIndent(report, "", "  ")
-	
+
 	prompt := fmt.Sprintf(`You are a financial advisor. Analyze the following financial forecast report for a user and provide concise, actionable advice.
 
 Report Data:
@@ -367,7 +367,7 @@ Instructions:
 	}
 
 	responseText := response.Choices[0].Content
-	
+
 	// Clean up markdown code blocks if present
 	responseText = strings.TrimSpace(responseText)
 	responseText = strings.TrimPrefix(responseText, "```json")

@@ -5,7 +5,7 @@ import { Button } from '../../ui/Button';
 import { Modal, CurrencySelect } from '../../ui';
 import { Input } from '../../ui/Input';
 import { ErrorMessage } from '../../ui/ErrorMessage';
-import { api } from '../../../api/client';
+import { api } from '../../../api';
 import { useCurrencies, useMutationAction } from '../../../hooks';
 import type { Transaction, UpdateTransactionRequest } from '../../../types/wallet';
 import { TRANSACTION_ICONS } from '../../../constants/icons';

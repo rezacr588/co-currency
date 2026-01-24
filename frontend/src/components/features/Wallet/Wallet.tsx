@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { api } from '../../../api/client';
+import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { Container } from '../../layout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';

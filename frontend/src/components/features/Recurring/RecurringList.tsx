@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Repeat } from 'lucide-react';
-import { api } from '../../../api/client';
+import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import type { RecurringTransaction } from '../../../types/goal';
 import { Container } from '../../layout';

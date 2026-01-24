@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/rezacr588/currency-converter/internal/middleware"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/service"
 	"github.com/rezacr588/currency-converter/pkg/httputil"
@@ -36,15 +35,14 @@ func (h *AIChatHandler) RegisterRoutes(r chi.Router) {
 
 // ListConversations returns all conversations for the user
 func (h *AIChatHandler) ListConversations(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "unauthorized")
 		return
 	}
 
 	conversations, err := h.chatService.ListConversations(r.Context(), userID)
 	if err != nil {
-		httputil.InternalServerError(w, "Failed to list conversations")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "Failed to list conversations", err)
 		return
 	}
 
@@ -59,9 +57,8 @@ func (h *AIChatHandler) ListConversations(w http.ResponseWriter, r *http.Request
 
 // CreateConversation creates a new conversation
 func (h *AIChatHandler) CreateConversation(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "unauthorized")
 		return
 	}
 
@@ -85,7 +82,7 @@ func (h *AIChatHandler) CreateConversation(w http.ResponseWriter, r *http.Reques
 	// Create conversation by sending an initial system message
 	response, err := h.chatService.Chat(r.Context(), userID, userName, "", "Hello! I'm ready to help with my finances.")
 	if err != nil {
-		httputil.InternalServerError(w, "Failed to create conversation")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "Failed to create conversation", err)
 		return
 	}
 
@@ -96,21 +93,20 @@ func (h *AIChatHandler) CreateConversation(w http.ResponseWriter, r *http.Reques
 
 // GetConversation returns a conversation with its messages
 func (h *AIChatHandler) GetConversation(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "unauthorized")
 		return
 	}
 
 	conversationID := chi.URLParam(r, "id")
 	if conversationID == "" {
-		httputil.BadRequest(w, "conversation ID is required")
+		httputil.BadRequestWithContext(r.Context(), w, "conversation ID is required", nil)
 		return
 	}
 
 	result, err := h.chatService.GetConversation(r.Context(), userID, conversationID)
 	if err != nil {
-		httputil.NotFound(w, "Conversation not found")
+		httputil.NotFoundWithContext(r.Context(), w, "Conversation not found", err)
 		return
 	}
 
@@ -119,21 +115,20 @@ func (h *AIChatHandler) GetConversation(w http.ResponseWriter, r *http.Request) 
 
 // DeleteConversation deletes a conversation
 func (h *AIChatHandler) DeleteConversation(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "unauthorized")
 		return
 	}
 
 	conversationID := chi.URLParam(r, "id")
 	if conversationID == "" {
-		httputil.BadRequest(w, "conversation ID is required")
+		httputil.BadRequestWithContext(r.Context(), w, "conversation ID is required", nil)
 		return
 	}
 
 	err := h.chatService.DeleteConversation(r.Context(), userID, conversationID)
 	if err != nil {
-		httputil.NotFound(w, "Conversation not found")
+		httputil.NotFoundWithContext(r.Context(), w, "Conversation not found", err)
 		return
 	}
 
@@ -144,20 +139,19 @@ func (h *AIChatHandler) DeleteConversation(w http.ResponseWriter, r *http.Reques
 
 // Chat handles a chat message and returns AI response
 func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "unauthorized")
 		return
 	}
 
 	var req model.ChatRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequest(w, "Invalid request body")
+		httputil.BadRequestWithContext(r.Context(), w, "Invalid request body", err)
 		return
 	}
 
 	if req.Message == "" {
-		httputil.BadRequest(w, "Message is required")
+		httputil.BadRequestWithContext(r.Context(), w, "Message is required", nil)
 		return
 	}
 
@@ -170,7 +164,7 @@ func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 
 	response, err := h.chatService.Chat(r.Context(), userID, userName, req.ConversationID, req.Message)
 	if err != nil {
-		httputil.InternalServerError(w, "Failed to process chat: "+err.Error())
+		httputil.InternalServerErrorWithContext(r.Context(), w, "Failed to process chat", err)
 		return
 	}
 

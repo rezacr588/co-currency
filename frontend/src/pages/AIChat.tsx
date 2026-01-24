@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { Send, Bot, User, Plus, Trash2, ArrowLeft, Sparkles } from 'lucide-react';
+import { getAuthToken } from '../api';
 
 interface ChatMessage {
     id: string;
@@ -37,12 +38,21 @@ export default function AIChat() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
+    const authHeader = (): Record<string, string> => {
+        const headers: Record<string, string> = {};
+        const token = getAuthToken();
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
+        return headers;
+    };
+
     // Fetch conversations list
     const { data: conversationsData } = useQuery({
         queryKey: ['ai-conversations'],
         queryFn: async () => {
             const res = await fetch('/api/v1/ai/conversations', {
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                headers: authHeader(),
             });
             if (!res.ok) throw new Error('Failed to fetch conversations');
             return res.json();
@@ -55,7 +65,7 @@ export default function AIChat() {
         queryFn: async () => {
             if (!conversationId) return null;
             const res = await fetch(`/api/v1/ai/conversations/${conversationId}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                headers: authHeader(),
             });
             if (!res.ok) throw new Error('Failed to fetch conversation');
             return res.json();
@@ -70,7 +80,7 @@ export default function AIChat() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+                    ...authHeader(),
                 },
                 body: JSON.stringify({
                     conversation_id: conversationId || '',
@@ -98,7 +108,7 @@ export default function AIChat() {
         mutationFn: async (id: string) => {
             const res = await fetch(`/api/v1/ai/conversations/${id}`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                headers: authHeader(),
             });
             if (!res.ok) throw new Error('Failed to delete');
         },

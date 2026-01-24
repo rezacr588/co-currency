@@ -42,7 +42,7 @@ func (s *GoalService) GetGoal(ctx context.Context, userID, goalID uuid.UUID) (*m
 	goal, err := s.goalRepo.GetByID(ctx, userID, goalID)
 	if err != nil {
 		if errors.Is(err, repository.ErrGoalNotFound) {
-			return nil, errors.New("goal not found")
+			return nil, repository.ErrGoalNotFound
 		}
 		return nil, fmt.Errorf("getting goal: %w", err)
 	}
@@ -93,7 +93,7 @@ func (s *GoalService) UpdateGoal(ctx context.Context, userID, goalID uuid.UUID, 
 	goal, err := s.goalRepo.GetByID(ctx, userID, goalID)
 	if err != nil {
 		if errors.Is(err, repository.ErrGoalNotFound) {
-			return nil, errors.New("goal not found")
+			return nil, repository.ErrGoalNotFound
 		}
 		return nil, fmt.Errorf("getting goal: %w", err)
 	}
@@ -124,6 +124,9 @@ func (s *GoalService) UpdateGoal(ctx context.Context, userID, goalID uuid.UUID, 
 	}
 
 	if err := s.goalRepo.Update(ctx, goal); err != nil {
+		if errors.Is(err, repository.ErrGoalNotFound) {
+			return nil, repository.ErrGoalNotFound
+		}
 		return nil, fmt.Errorf("updating goal: %w", err)
 	}
 
@@ -134,7 +137,7 @@ func (s *GoalService) UpdateGoal(ctx context.Context, userID, goalID uuid.UUID, 
 func (s *GoalService) DeleteGoal(ctx context.Context, userID, goalID uuid.UUID) error {
 	if err := s.goalRepo.Delete(ctx, userID, goalID); err != nil {
 		if errors.Is(err, repository.ErrGoalNotFound) {
-			return errors.New("goal not found")
+			return repository.ErrGoalNotFound
 		}
 		return fmt.Errorf("deleting goal: %w", err)
 	}
@@ -152,7 +155,7 @@ func (s *GoalService) ContributeToGoal(ctx context.Context, userID, goalID uuid.
 	goal, err := s.goalRepo.GetByID(ctx, userID, goalID)
 	if err != nil {
 		if errors.Is(err, repository.ErrGoalNotFound) {
-			return nil, nil, errors.New("goal not found")
+			return nil, nil, repository.ErrGoalNotFound
 		}
 		return nil, nil, fmt.Errorf("getting goal: %w", err)
 	}
@@ -161,7 +164,7 @@ func (s *GoalService) ContributeToGoal(ctx context.Context, userID, goalID uuid.
 	updatedGoal, transaction, err := s.goalRepo.ContributeFromWallet(ctx, userID, goalID, req.Amount, goal.Currency)
 	if err != nil {
 		if errors.Is(err, repository.ErrInsufficientBalance) {
-			return nil, nil, errors.New("insufficient balance")
+			return nil, nil, repository.ErrInsufficientBalance
 		}
 		return nil, nil, fmt.Errorf("contributing to goal: %w", err)
 	}

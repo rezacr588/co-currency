@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { translations, Language, TranslationKey } from '../i18n/translations';
+import { readStorage, writeStorage } from '../utils/storage';
 
 interface LanguageContextType {
   language: Language;
@@ -103,7 +104,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function initLanguage() {
       // Priority 1: Check localStorage for saved preference
-      const savedLanguage = localStorage.getItem(STORAGE_KEY);
+      const savedLanguage = readStorage(STORAGE_KEY);
       if (isValidLanguage(savedLanguage)) {
         setLanguageState(savedLanguage);
         setIsInitialized(true);
@@ -115,7 +116,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       const langParam = urlParams.get('lang');
       if (isValidLanguage(langParam)) {
         setLanguageState(langParam);
-        localStorage.setItem(STORAGE_KEY, langParam);
+        writeStorage(STORAGE_KEY, langParam);
         setIsInitialized(true);
         return;
       }
@@ -145,7 +146,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem(STORAGE_KEY, lang);
+    writeStorage(STORAGE_KEY, lang);
   };
 
   const t = (key: TranslationKey): string => {

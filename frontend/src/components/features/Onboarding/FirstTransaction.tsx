@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button, Input, Select } from '../../ui';
 import { useLanguage } from '../../../context/LanguageContext';
-import { api } from '../../../api/client';
+import { api } from '../../../api';
 import { DEFAULT_CATEGORIES } from '../../../types/wallet';
 
 interface FirstTransactionProps {

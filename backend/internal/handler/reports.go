@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/rezacr588/currency-converter/internal/middleware"
 	"github.com/rezacr588/currency-converter/internal/service"
 	"github.com/rezacr588/currency-converter/pkg/httputil"
 )
@@ -22,9 +21,8 @@ func NewReportsHandler(reportsService *service.ReportsService) *ReportsHandler {
 
 // GetMonthlyReport handles GET /api/v1/reports/monthly
 func (h *ReportsHandler) GetMonthlyReport(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
@@ -50,7 +48,7 @@ func (h *ReportsHandler) GetMonthlyReport(w http.ResponseWriter, r *http.Request
 
 	report, err := h.reportsService.GetMonthlyReport(r.Context(), userID, year, month, currency)
 	if err != nil {
-		httputil.InternalServerError(w, "failed to generate monthly report")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate monthly report")
 		return
 	}
 
@@ -59,9 +57,8 @@ func (h *ReportsHandler) GetMonthlyReport(w http.ResponseWriter, r *http.Request
 
 // GetYearlyReport handles GET /api/v1/reports/yearly
 func (h *ReportsHandler) GetYearlyReport(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
@@ -79,7 +76,7 @@ func (h *ReportsHandler) GetYearlyReport(w http.ResponseWriter, r *http.Request)
 
 	report, err := h.reportsService.GetYearlyReport(r.Context(), userID, year, currency)
 	if err != nil {
-		httputil.InternalServerError(w, "failed to generate yearly report")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate yearly report")
 		return
 	}
 
@@ -88,9 +85,8 @@ func (h *ReportsHandler) GetYearlyReport(w http.ResponseWriter, r *http.Request)
 
 // GetCategoryReport handles GET /api/v1/reports/category
 func (h *ReportsHandler) GetCategoryReport(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
@@ -114,7 +110,7 @@ func (h *ReportsHandler) GetCategoryReport(w http.ResponseWriter, r *http.Reques
 
 	report, err := h.reportsService.GetCategoryReport(r.Context(), userID, fromDate, toDate, currency)
 	if err != nil {
-		httputil.InternalServerError(w, "failed to generate category report")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate category report")
 		return
 	}
 
@@ -123,9 +119,8 @@ func (h *ReportsHandler) GetCategoryReport(w http.ResponseWriter, r *http.Reques
 
 // GetTrendsReport handles GET /api/v1/reports/trends
 func (h *ReportsHandler) GetTrendsReport(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
@@ -144,7 +139,7 @@ func (h *ReportsHandler) GetTrendsReport(w http.ResponseWriter, r *http.Request)
 
 	report, err := h.reportsService.GetTrendsReport(r.Context(), userID, months, currency)
 	if err != nil {
-		httputil.InternalServerError(w, "failed to generate trends report")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate trends report")
 		return
 	}
 
@@ -153,9 +148,8 @@ func (h *ReportsHandler) GetTrendsReport(w http.ResponseWriter, r *http.Request)
 
 // GetNetWorthReport handles GET /api/v1/reports/networth
 func (h *ReportsHandler) GetNetWorthReport(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
@@ -166,7 +160,7 @@ func (h *ReportsHandler) GetNetWorthReport(w http.ResponseWriter, r *http.Reques
 
 	report, err := h.reportsService.GetNetWorthReport(r.Context(), userID, currency)
 	if err != nil {
-		httputil.InternalServerError(w, "failed to generate net worth report")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate net worth report")
 		return
 	}
 
@@ -175,9 +169,8 @@ func (h *ReportsHandler) GetNetWorthReport(w http.ResponseWriter, r *http.Reques
 
 // GetForecast handles GET /api/v1/reports/forecast
 func (h *ReportsHandler) GetForecast(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
@@ -188,7 +181,7 @@ func (h *ReportsHandler) GetForecast(w http.ResponseWriter, r *http.Request) {
 
 	report, err := h.reportsService.GetForecast(r.Context(), userID, currency)
 	if err != nil {
-		httputil.InternalServerError(w, "failed to generate forecast report")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate forecast report")
 		return
 	}
 
@@ -197,9 +190,8 @@ func (h *ReportsHandler) GetForecast(w http.ResponseWriter, r *http.Request) {
 
 // GetInsights handles GET /api/v1/reports/insights
 func (h *ReportsHandler) GetInsights(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
@@ -210,7 +202,7 @@ func (h *ReportsHandler) GetInsights(w http.ResponseWriter, r *http.Request) {
 
 	insights, err := h.reportsService.GetInsights(r.Context(), userID, currency)
 	if err != nil {
-		httputil.InternalServerError(w, "failed to generate insights: "+err.Error())
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate insights")
 		return
 	}
 

@@ -3,6 +3,7 @@ package httputil
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -131,7 +132,8 @@ func TestNewError(t *testing.T) {
 
 func TestNewErrorWithTrace(t *testing.T) {
 	traceID := "test-trace-123"
-	err := NewErrorWithTrace(http.StatusBadRequest, "bad_request", "Invalid data", traceID)
+	details := "original error details"
+	err := NewErrorWithTrace(http.StatusBadRequest, "bad_request", "Invalid data", details, traceID)
 
 	if err.Code != http.StatusBadRequest {
 		t.Errorf("NewErrorWithTrace().Code = %v, want %v", err.Code, http.StatusBadRequest)
@@ -142,6 +144,9 @@ func TestNewErrorWithTrace(t *testing.T) {
 	if err.Message != "Invalid data" {
 		t.Errorf("NewErrorWithTrace().Message = %v, want 'Invalid data'", err.Message)
 	}
+	if err.Details != details {
+		t.Errorf("NewErrorWithTrace().Details = %v, want %v", err.Details, details)
+	}
 	if err.TraceID != traceID {
 		t.Errorf("NewErrorWithTrace().TraceID = %v, want %v", err.TraceID, traceID)
 	}
@@ -151,11 +156,12 @@ func TestErrorWithContext(t *testing.T) {
 	traceID := "test-trace-456"
 	ctx := context.WithValue(context.Background(), ctxkeys.TraceID, traceID)
 	rec := httptest.NewRecorder()
+	internalErr := fmt.Errorf("database connection failed")
 
-	ErrorWithContext(ctx, rec, http.StatusBadRequest, "bad_request", "Invalid input")
+	ErrorWithContext(ctx, rec, http.StatusInternalServerError, "internal_error", "failed to fetch data", internalErr)
 
-	if rec.Code != http.StatusBadRequest {
-		t.Errorf("ErrorWithContext() status = %v, want %v", rec.Code, http.StatusBadRequest)
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("ErrorWithContext() status = %v, want %v", rec.Code, http.StatusInternalServerError)
 	}
 
 	var got ErrorResponse
@@ -166,14 +172,18 @@ func TestErrorWithContext(t *testing.T) {
 	if got.TraceID != traceID {
 		t.Errorf("ErrorWithContext() TraceID = %v, want %v", got.TraceID, traceID)
 	}
+	if got.Details != internalErr.Error() {
+		t.Errorf("ErrorWithContext() Details = %v, want %v", got.Details, internalErr.Error())
+	}
 }
 
 func TestBadRequestWithContext(t *testing.T) {
 	traceID := "trace-bad-request"
 	ctx := context.WithValue(context.Background(), ctxkeys.TraceID, traceID)
 	rec := httptest.NewRecorder()
+	internalErr := fmt.Errorf("invalid amount")
 
-	BadRequestWithContext(ctx, rec, "test message")
+	BadRequestWithContext(ctx, rec, "test message", internalErr)
 
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("BadRequestWithContext() status = %v, want %v", rec.Code, http.StatusBadRequest)
@@ -187,14 +197,18 @@ func TestBadRequestWithContext(t *testing.T) {
 	if got.TraceID != traceID {
 		t.Errorf("BadRequestWithContext() TraceID = %v, want %v", got.TraceID, traceID)
 	}
+	if got.Details != internalErr.Error() {
+		t.Errorf("BadRequestWithContext() Details = %v, want %v", got.Details, internalErr.Error())
+	}
 }
 
 func TestInternalServerErrorWithContext(t *testing.T) {
 	traceID := "trace-internal-error"
 	ctx := context.WithValue(context.Background(), ctxkeys.TraceID, traceID)
 	rec := httptest.NewRecorder()
+	internalErr := fmt.Errorf("unexpected panic")
 
-	InternalServerErrorWithContext(ctx, rec, "something went wrong")
+	InternalServerErrorWithContext(ctx, rec, "something went wrong", internalErr)
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Errorf("InternalServerErrorWithContext() status = %v, want %v", rec.Code, http.StatusInternalServerError)
@@ -208,6 +222,9 @@ func TestInternalServerErrorWithContext(t *testing.T) {
 	if got.TraceID != traceID {
 		t.Errorf("InternalServerErrorWithContext() TraceID = %v, want %v", got.TraceID, traceID)
 	}
+	if got.Details != internalErr.Error() {
+		t.Errorf("InternalServerErrorWithContext() Details = %v, want %v", got.Details, internalErr.Error())
+	}
 }
 
 func TestUnauthorizedWithContext(t *testing.T) {
@@ -215,7 +232,7 @@ func TestUnauthorizedWithContext(t *testing.T) {
 	ctx := context.WithValue(context.Background(), ctxkeys.TraceID, traceID)
 	rec := httptest.NewRecorder()
 
-	UnauthorizedWithContext(ctx, rec, "not allowed")
+	UnauthorizedWithContext(ctx, rec, "not allowed", nil)
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Errorf("UnauthorizedWithContext() status = %v, want %v", rec.Code, http.StatusUnauthorized)
@@ -235,7 +252,7 @@ func TestContextErrorWithoutTraceID(t *testing.T) {
 	ctx := context.Background() // No trace ID in context
 	rec := httptest.NewRecorder()
 
-	BadRequestWithContext(ctx, rec, "test message")
+	BadRequestWithContext(ctx, rec, "test message", nil)
 
 	var got ErrorResponse
 	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {

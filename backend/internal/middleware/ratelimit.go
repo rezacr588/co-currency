@@ -20,26 +20,26 @@ type rateLimiterEntry struct {
 
 // RateLimiter implements per-IP rate limiting with automatic cleanup
 type RateLimiter struct {
-	limiters         map[string]*rateLimiterEntry
-	mu               sync.RWMutex
-	limit            rate.Limit
-	burst            int
-	cleanupInterval  time.Duration
-	entryTTL         time.Duration
-	stopCleanup      chan struct{}
-	authLimit        rate.Limit // Higher limit for authenticated users
-	authBurst        int
-	loginLimit       rate.Limit // Stricter limit for login attempts
-	loginBurst       int
+	limiters        map[string]*rateLimiterEntry
+	mu              sync.RWMutex
+	limit           rate.Limit
+	burst           int
+	cleanupInterval time.Duration
+	entryTTL        time.Duration
+	stopCleanup     chan struct{}
+	authLimit       rate.Limit // Higher limit for authenticated users
+	authBurst       int
+	loginLimit      rate.Limit // Stricter limit for login attempts
+	loginBurst      int
 }
 
 // RateLimiterConfig holds configuration for the rate limiter
 type RateLimiterConfig struct {
-	RequestsPerMinute     int           // Default limit for anonymous users
-	AuthRequestsPerMinute int           // Limit for authenticated users (0 = use default)
-	LoginAttemptsPerMinute int          // Limit for login endpoint (0 = use 5)
-	CleanupInterval       time.Duration // How often to clean up stale entries (0 = 10 minutes)
-	EntryTTL              time.Duration // How long to keep inactive entries (0 = 30 minutes)
+	RequestsPerMinute      int           // Default limit for anonymous users
+	AuthRequestsPerMinute  int           // Limit for authenticated users (0 = use default)
+	LoginAttemptsPerMinute int           // Limit for login endpoint (0 = use 5)
+	CleanupInterval        time.Duration // How often to clean up stale entries (0 = 10 minutes)
+	EntryTTL               time.Duration // How long to keep inactive entries (0 = 30 minutes)
 }
 
 // NewRateLimiter creates a new rate limiter with cleanup goroutine
@@ -204,7 +204,7 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 		}
 
 		if !limiter.Allow() {
-			httputil.TooManyRequests(w, "Rate limit exceeded. Please try again later.")
+			httputil.TooManyRequestsWithContext(r.Context(), w, "rate limit exceeded", nil)
 			return
 		}
 
@@ -221,7 +221,7 @@ func (rl *RateLimiter) LoginMiddleware(next http.Handler) http.Handler {
 		limiter := rl.getLimiter(key, rl.loginLimit, rl.loginBurst)
 
 		if !limiter.Allow() {
-			httputil.TooManyRequests(w, "Too many login attempts. Please try again later.")
+			httputil.TooManyRequestsWithContext(r.Context(), w, "too many login attempts", nil)
 			return
 		}
 

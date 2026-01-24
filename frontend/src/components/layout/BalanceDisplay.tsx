@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
-import { api } from '../../api/client';
+import { api } from '../../api';
 import { formatCompactCurrency } from '../../utils/format';
 
 export function BalanceDisplay() {

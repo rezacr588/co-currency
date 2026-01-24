@@ -3,7 +3,6 @@ package handler
 import (
 	"net/http"
 
-	"github.com/rezacr588/currency-converter/internal/middleware"
 	"github.com/rezacr588/currency-converter/internal/service"
 	"github.com/rezacr588/currency-converter/pkg/httputil"
 )
@@ -30,7 +29,7 @@ func NewBadgeHandler(badgeService *service.BadgeService) *BadgeHandler {
 func (h *BadgeHandler) GetAllBadges(w http.ResponseWriter, r *http.Request) {
 	badges, err := h.badgeService.GetAllBadges(r.Context())
 	if err != nil {
-		httputil.InternalServerError(w, "failed to get badges")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get badges", err)
 		return
 	}
 
@@ -51,15 +50,14 @@ func (h *BadgeHandler) GetAllBadges(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object}  map[string]string       "Internal Server Error"
 // @Router       /badges/earned [get]
 func (h *BadgeHandler) GetEarnedBadges(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
 	badges, err := h.badgeService.GetUserBadges(r.Context(), userID)
 	if err != nil {
-		httputil.InternalServerError(w, "failed to get earned badges")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get earned badges", err)
 		return
 	}
 
@@ -81,15 +79,14 @@ func (h *BadgeHandler) GetEarnedBadges(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object}  map[string]string       "Internal Server Error"
 // @Router       /badges/progress [get]
 func (h *BadgeHandler) GetBadgeProgress(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
 	progress, err := h.badgeService.GetBadgeProgress(r.Context(), userID)
 	if err != nil {
-		httputil.InternalServerError(w, "failed to get badge progress")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get badge progress", err)
 		return
 	}
 
@@ -120,15 +117,14 @@ func (h *BadgeHandler) GetBadgeProgress(w http.ResponseWriter, r *http.Request) 
 // @Failure      500  {object}  map[string]string       "Internal Server Error"
 // @Router       /badges/check [post]
 func (h *BadgeHandler) CheckBadges(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
 	result, err := h.badgeService.CheckAndAwardBadges(r.Context(), userID)
 	if err != nil {
-		httputil.InternalServerError(w, "failed to check badges")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to check badges", err)
 		return
 	}
 

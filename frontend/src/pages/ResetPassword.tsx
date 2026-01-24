@@ -3,7 +3,7 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Container } from '../components/layout';
 import { Button, Input, Card } from '../components/ui';
 import { useLanguage } from '../context/LanguageContext';
-import { api } from '../api/client';
+import { api } from '../api';
 
 export function ResetPassword() {
   const { t } = useLanguage();

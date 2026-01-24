@@ -5,7 +5,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { Language } from '../../i18n/translations';
-import { api } from '../../api/client';
+import { api } from '../../api';
 import { formatCompactCurrency } from '../../utils/format';
 
 const LANGUAGES: { code: Language; name: string; native: string }[] = [

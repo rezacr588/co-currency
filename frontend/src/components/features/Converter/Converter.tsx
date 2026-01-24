@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useConvert, useCurrencies } from '../../../hooks';
 import { SwapButton } from './SwapButton';
-import { InlineCurrencySelect } from './InlineCurrencySelect';
+import { CurrencySelect } from '../../ui';
 import { CurrencyInput } from '../../ui/CurrencyInput';
 import { useLanguage } from '../../../context/LanguageContext';
 import { formatRate, formatNumber, formatTime } from '../../../utils/format';
@@ -16,6 +16,7 @@ import {
   Banknote,
   Globe,
 } from 'lucide-react';
+import { readJSON, writeJSON } from '../../../utils/storage';
 
 const STORAGE_KEY = 'currency-converter-state';
 
@@ -36,28 +37,19 @@ interface ConverterState {
 }
 
 function loadState(): ConverterState {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return {
-        amount: typeof parsed.amount === 'number' && parsed.amount > 0 ? parsed.amount : 1,
-        fromCurrency: typeof parsed.fromCurrency === 'string' ? parsed.fromCurrency : 'USD',
-        toCurrency: typeof parsed.toCurrency === 'string' ? parsed.toCurrency : 'EUR',
-      };
-    }
-  } catch {
-    // Ignore parse errors
+  const saved = readJSON<Partial<ConverterState>>(STORAGE_KEY);
+  if (saved) {
+    return {
+      amount: typeof saved.amount === 'number' && saved.amount > 0 ? saved.amount : 1,
+      fromCurrency: typeof saved.fromCurrency === 'string' ? saved.fromCurrency : 'USD',
+      toCurrency: typeof saved.toCurrency === 'string' ? saved.toCurrency : 'EUR',
+    };
   }
   return { amount: 1, fromCurrency: 'USD', toCurrency: 'EUR' };
 }
 
 function saveState(state: ConverterState): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // Ignore storage errors (e.g., quota exceeded)
-  }
+  writeJSON(STORAGE_KEY, state);
 }
 
 // Animated number component
@@ -212,7 +204,8 @@ export function Converter() {
                     currencySymbol={CURRENCY_SYMBOLS[fromCurrency]}
                     placeholder="0"
                   />
-                  <InlineCurrencySelect
+                  <CurrencySelect
+                    variant="inline"
                     value={fromCurrency}
                     onChange={setFromCurrency}
                     currencies={currencies}
@@ -264,11 +257,12 @@ export function Converter() {
                       <span className="text-2xl text-slate-300 dark:text-slate-600">—</span>
                     )}
                   </div>
-                  <InlineCurrencySelect
-                    value={toCurrency}
-                    onChange={setToCurrency}
-                    currencies={currencies}
-                  />
+                      <CurrencySelect
+                        variant="inline"
+                        value={toCurrency}
+                        onChange={setToCurrency}
+                        currencies={currencies}
+                      />
                 </div>
               </div>
             </div>

@@ -88,7 +88,7 @@ func (s *WalletService) AddTransaction(ctx context.Context, userID uuid.UUID, re
 	tx, err := s.walletRepo.AddTransactionAtomic(ctx, userID, req.Type, req.Amount, req.Currency, "manual", req.Description, req.Category, req.Icon, nil)
 	if err != nil {
 		if errors.Is(err, repository.ErrInsufficientBalance) {
-			return nil, errors.New("insufficient balance")
+			return nil, repository.ErrInsufficientBalance
 		}
 		return nil, fmt.Errorf("adding transaction: %w", err)
 	}
@@ -124,12 +124,12 @@ func (s *WalletService) addCrossCurrencyTransaction(ctx context.Context, userID 
 
 	// Use atomic cross-currency transaction method
 	tx, err := s.walletRepo.AddCrossCurrencyTransactionAtomic(ctx, userID, req.Type,
-		req.Amount, req.Currency,      // Transaction amount and currency (what user sees)
-		walletAmount, walletCurrency,  // Wallet amount and currency (what affects balance)
+		req.Amount, req.Currency, // Transaction amount and currency (what user sees)
+		walletAmount, walletCurrency, // Wallet amount and currency (what affects balance)
 		rate, "manual", req.Description, req.Category, req.Icon, nil)
 	if err != nil {
 		if errors.Is(err, repository.ErrInsufficientBalance) {
-			return nil, errors.New("insufficient balance")
+			return nil, repository.ErrInsufficientBalance
 		}
 		return nil, fmt.Errorf("adding cross-currency transaction: %w", err)
 	}
@@ -164,7 +164,7 @@ func (s *WalletService) ConvertBalance(ctx context.Context, userID uuid.UUID, re
 		req.Amount, conversion.Result, conversion.Rate)
 	if err != nil {
 		if errors.Is(err, repository.ErrInsufficientBalance) {
-			return nil, errors.New("insufficient balance")
+			return nil, repository.ErrInsufficientBalance
 		}
 		return nil, fmt.Errorf("executing conversion: %w", err)
 	}
@@ -262,7 +262,7 @@ func (s *WalletService) ApplyAIParsedResult(ctx context.Context, userID uuid.UUI
 	tx, err := s.walletRepo.AddTransactionAtomic(ctx, userID, parsed.Type, parsed.Amount, parsed.Currency, "ai_receipt", parsed.Description, "", "", aiData)
 	if err != nil {
 		if errors.Is(err, repository.ErrInsufficientBalance) {
-			return nil, errors.New("insufficient balance")
+			return nil, repository.ErrInsufficientBalance
 		}
 		return nil, fmt.Errorf("applying AI parsed result: %w", err)
 	}
@@ -275,7 +275,7 @@ func (s *WalletService) GetTransaction(ctx context.Context, userID, txID uuid.UU
 	tx, err := s.walletRepo.GetTransaction(ctx, userID, txID)
 	if err != nil {
 		if errors.Is(err, repository.ErrTransactionNotFound) {
-			return nil, errors.New("transaction not found")
+			return nil, repository.ErrTransactionNotFound
 		}
 		return nil, fmt.Errorf("getting transaction: %w", err)
 	}
@@ -287,7 +287,7 @@ func (s *WalletService) DeleteTransaction(ctx context.Context, userID, txID uuid
 	err := s.walletRepo.DeleteTransactionAtomic(ctx, userID, txID)
 	if err != nil {
 		if errors.Is(err, repository.ErrTransactionNotFound) {
-			return errors.New("transaction not found")
+			return repository.ErrTransactionNotFound
 		}
 		return fmt.Errorf("deleting transaction: %w", err)
 	}
@@ -304,10 +304,10 @@ func (s *WalletService) UpdateTransaction(ctx context.Context, userID, txID uuid
 	tx, err := s.walletRepo.UpdateTransactionAtomic(ctx, userID, txID, req)
 	if err != nil {
 		if errors.Is(err, repository.ErrTransactionNotFound) {
-			return nil, errors.New("transaction not found")
+			return nil, repository.ErrTransactionNotFound
 		}
 		if errors.Is(err, repository.ErrInsufficientBalance) {
-			return nil, errors.New("insufficient balance")
+			return nil, repository.ErrInsufficientBalance
 		}
 		return nil, fmt.Errorf("updating transaction: %w", err)
 	}

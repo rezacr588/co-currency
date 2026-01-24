@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/rezacr588/currency-converter/internal/middleware"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/service"
 	"github.com/rezacr588/currency-converter/pkg/httputil"
@@ -33,7 +32,7 @@ func (h *AIHandler) ParseReceipt(w http.ResponseWriter, r *http.Request) {
 // ParseReceiptText handles POST /api/v1/ai/parse-text
 func (h *AIHandler) ParseReceiptText(w http.ResponseWriter, r *http.Request) {
 	if h.aiService == nil {
-		httputil.InternalServerError(w, "AI service not configured")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "AI service not configured", nil)
 		return
 	}
 
@@ -41,18 +40,18 @@ func (h *AIHandler) ParseReceiptText(w http.ResponseWriter, r *http.Request) {
 		Text string `json:"text"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequest(w, "invalid request body")
+		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
 		return
 	}
 
 	if req.Text == "" {
-		httputil.BadRequest(w, "text is required")
+		httputil.BadRequestWithContext(r.Context(), w, "text is required", nil)
 		return
 	}
 
 	result, err := h.aiService.ParseReceiptText(r.Context(), req.Text)
 	if err != nil {
-		httputil.InternalServerError(w, "failed to parse text: "+err.Error())
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to parse text", err)
 		return
 	}
 
@@ -61,15 +60,14 @@ func (h *AIHandler) ParseReceiptText(w http.ResponseWriter, r *http.Request) {
 
 // ApplyParsed handles POST /api/v1/ai/apply-parsed
 func (h *AIHandler) ApplyParsed(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.Unauthorized(w, "user not found in context")
 		return
 	}
 
 	var req model.ApplyParsedRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequest(w, "invalid request body")
+		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
 		return
 	}
 
@@ -83,7 +81,7 @@ func (h *AIHandler) ApplyParsed(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := h.walletService.ApplyAIParsedResult(r.Context(), userID, parsed)
 	if err != nil {
-		httputil.BadRequest(w, err.Error())
+		httputil.BadRequestWithContext(r.Context(), w, "failed to apply parsed result", err)
 		return
 	}
 

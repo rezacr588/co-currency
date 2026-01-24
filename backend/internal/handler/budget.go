@@ -2,12 +2,13 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/rezacr588/currency-converter/internal/middleware"
 	"github.com/rezacr588/currency-converter/internal/model"
+	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/service"
 	"github.com/rezacr588/currency-converter/pkg/httputil"
 )
@@ -25,9 +26,8 @@ func NewBudgetHandler(budgetService *service.BudgetService) *BudgetHandler {
 // GetBudgets handles GET /api/v1/budgets
 func (h *BudgetHandler) GetBudgets(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	userID, ok := middleware.GetUserIDFromContext(ctx)
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.UnauthorizedWithContext(ctx, w, "user not found in context")
 		return
 	}
 
@@ -51,9 +51,8 @@ func (h *BudgetHandler) GetBudgets(w http.ResponseWriter, r *http.Request) {
 // CreateBudget handles POST /api/v1/budgets
 func (h *BudgetHandler) CreateBudget(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	userID, ok := middleware.GetUserIDFromContext(ctx)
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.UnauthorizedWithContext(ctx, w, "user not found in context")
 		return
 	}
 
@@ -65,7 +64,11 @@ func (h *BudgetHandler) CreateBudget(w http.ResponseWriter, r *http.Request) {
 
 	budget, err := h.budgetService.CreateBudget(ctx, userID, &req)
 	if err != nil {
-		httputil.BadRequestWithContext(ctx, w, err.Error())
+		if errors.Is(err, repository.ErrBudgetExists) {
+			httputil.BadRequest(w, "budget already exists for this category and period")
+			return
+		}
+		httputil.BadRequestWithContext(ctx, w, "failed to create budget")
 		return
 	}
 
@@ -75,9 +78,8 @@ func (h *BudgetHandler) CreateBudget(w http.ResponseWriter, r *http.Request) {
 // UpdateBudget handles PUT /api/v1/budgets/{id}
 func (h *BudgetHandler) UpdateBudget(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	userID, ok := middleware.GetUserIDFromContext(ctx)
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.UnauthorizedWithContext(ctx, w, "user not found in context")
 		return
 	}
 
@@ -96,11 +98,11 @@ func (h *BudgetHandler) UpdateBudget(w http.ResponseWriter, r *http.Request) {
 
 	budget, err := h.budgetService.UpdateBudget(ctx, userID, budgetID, &req)
 	if err != nil {
-		if err.Error() == "budget not found" {
+		if errors.Is(err, repository.ErrBudgetNotFound) {
 			httputil.NotFoundWithContext(ctx, w, "budget not found")
 			return
 		}
-		httputil.BadRequestWithContext(ctx, w, err.Error())
+		httputil.BadRequestWithContext(ctx, w, "failed to update budget")
 		return
 	}
 
@@ -110,9 +112,8 @@ func (h *BudgetHandler) UpdateBudget(w http.ResponseWriter, r *http.Request) {
 // DeleteBudget handles DELETE /api/v1/budgets/{id}
 func (h *BudgetHandler) DeleteBudget(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	userID, ok := middleware.GetUserIDFromContext(ctx)
+	userID, ok := requireUserID(w, r)
 	if !ok {
-		httputil.UnauthorizedWithContext(ctx, w, "user not found in context")
 		return
 	}
 
@@ -124,7 +125,7 @@ func (h *BudgetHandler) DeleteBudget(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.budgetService.DeleteBudget(ctx, userID, budgetID); err != nil {
-		if err.Error() == "budget not found" {
+		if errors.Is(err, repository.ErrBudgetNotFound) {
 			httputil.NotFoundWithContext(ctx, w, "budget not found")
 			return
 		}

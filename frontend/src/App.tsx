@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
@@ -12,6 +12,7 @@ import { SEOHead } from './components/SEOHead';
 import { PublicLayout } from './components/layout/PublicLayout';
 import { AuthenticatedLayout } from './components/layout/AuthenticatedLayout';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
+import { queryClient } from './queryClient';
 
 // Lazy load pages and features
 const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
@@ -39,15 +40,6 @@ const TransactionForm = lazy(() => import('./components/features/Wallet').then(m
 const TransactionHistoryPage = lazy(() => import('./components/features/Wallet').then(m => ({ default: m.TransactionHistoryPage })));
 const WalletConvert = lazy(() => import('./components/features/Wallet').then(m => ({ default: m.WalletConvert })));
 const AIReceiptParser = lazy(() => import('./components/features/Wallet').then(m => ({ default: m.AIReceiptParser })));
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
 
 function AppContent() {
   const { isRTL } = useLanguage();

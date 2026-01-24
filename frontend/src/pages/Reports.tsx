@@ -17,7 +17,7 @@ import {
   BarChart,
   Bar,
 } from 'recharts';
-import { api } from '../api/client';
+import { api } from '../api';
 import { useLanguage } from '../context/LanguageContext';
 import { Container } from '../components/layout';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';

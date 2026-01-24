@@ -50,7 +50,7 @@ func (s *TagService) CreateTag(ctx context.Context, userID uuid.UUID, req *model
 
 	if err := s.tagRepo.Create(ctx, tag); err != nil {
 		if errors.Is(err, repository.ErrTagExists) {
-			return nil, errors.New("tag already exists")
+			return nil, repository.ErrTagExists
 		}
 		return nil, fmt.Errorf("creating tag: %w", err)
 	}
@@ -62,7 +62,7 @@ func (s *TagService) CreateTag(ctx context.Context, userID uuid.UUID, req *model
 func (s *TagService) DeleteTag(ctx context.Context, userID, tagID uuid.UUID) error {
 	if err := s.tagRepo.Delete(ctx, userID, tagID); err != nil {
 		if errors.Is(err, repository.ErrTagNotFound) {
-			return errors.New("tag not found")
+			return repository.ErrTagNotFound
 		}
 		return fmt.Errorf("deleting tag: %w", err)
 	}

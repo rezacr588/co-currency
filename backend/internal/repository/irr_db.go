@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rezacr588/currency-converter/internal/migrations"
 	"github.com/rs/zerolog/log"
 )
 
@@ -52,43 +53,13 @@ func NewIRRDatabase(databaseURL string) (*IRRDatabase, error) {
 	irrDB := &IRRDatabase{pool: pool}
 
 	// Initialize tables
-	if err := irrDB.initTables(ctx); err != nil {
+	if err := migrations.ApplyIRR(ctx, pool); err != nil {
 		pool.Close()
-		return nil, fmt.Errorf("initializing tables: %w", err)
+		return nil, fmt.Errorf("applying migrations: %w", err)
 	}
 
 	log.Info().Msg("Connected to PostgreSQL database for IRR rates")
 	return irrDB, nil
-}
-
-// initTables creates the required database tables
-func (d *IRRDatabase) initTables(ctx context.Context) error {
-	queries := []string{
-		`CREATE TABLE IF NOT EXISTS irr_rates (
-			id SERIAL PRIMARY KEY,
-			currency VARCHAR(10) NOT NULL,
-			rate DOUBLE PRECISION NOT NULL,
-			source VARCHAR(50) NOT NULL,
-			fetched_at TIMESTAMP WITH TIME ZONE NOT NULL,
-			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_irr_rates_currency ON irr_rates(currency)`,
-		`CREATE INDEX IF NOT EXISTS idx_irr_rates_fetched_at ON irr_rates(fetched_at)`,
-		`CREATE TABLE IF NOT EXISTS irr_latest_rates (
-			currency VARCHAR(10) PRIMARY KEY,
-			rate DOUBLE PRECISION NOT NULL,
-			source VARCHAR(50) NOT NULL,
-			updated_at TIMESTAMP WITH TIME ZONE NOT NULL
-		)`,
-	}
-
-	for _, query := range queries {
-		if _, err := d.pool.Exec(ctx, query); err != nil {
-			return fmt.Errorf("executing query: %w", err)
-		}
-	}
-
-	return nil
 }
 
 // SaveRates stores the current exchange rates in the database
