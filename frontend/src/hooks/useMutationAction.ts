@@ -1,8 +1,7 @@
 import { useMutation, useQueryClient, UseMutationOptions } from '@tanstack/react-query';
 import { useToast } from '../context/ToastContext';
-import { useLanguage } from '../context/LanguageContext';
 
-interface MutationActionOptions<TData, TError, TVariables, TContext> 
+interface MutationActionOptions<TData, TError, TVariables, TContext>
   extends UseMutationOptions<TData, TError, TVariables, TContext> {
   successMessage?: string;
   errorMessage?: string;
@@ -16,13 +15,12 @@ interface MutationActionOptions<TData, TError, TVariables, TContext>
  * - Invalidating related queries
  * - Translating generic error messages
  */
-export function useMutationAction<TData = any, TError = any, TVariables = any, TContext = any>(
+export function useMutationAction<TData = unknown, TError = Error, TVariables = void, TContext = unknown>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   options: MutationActionOptions<TData, TError, TVariables, TContext> = {}
 ) {
   const queryClient = useQueryClient();
   const { success, error: showErrorToast } = useToast();
-  const { t } = useLanguage();
 
   return useMutation({
     mutationFn,
@@ -54,9 +52,9 @@ export function useMutationAction<TData = any, TError = any, TVariables = any, T
     onError: (err, variables, context) => {
       // Extract error message
       const msg = err instanceof Error ? err.message : String(err);
-      
+
       // Show error toast
-      showErrorToast(options.errorMessage || msg || t('operationFailed' as any));
+      showErrorToast(options.errorMessage || msg || 'Operation failed');
 
       // Call original onError if provided
       if (options.onError) {

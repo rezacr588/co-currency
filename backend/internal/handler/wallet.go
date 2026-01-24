@@ -321,6 +321,10 @@ func (h *WalletHandler) DeleteTransaction(w http.ResponseWriter, r *http.Request
 			httputil.NotFoundWithContext(r.Context(), w, "transaction not found")
 			return
 		}
+		if errors.Is(err, repository.ErrInsufficientBalance) {
+			httputil.BadRequest(w, "cannot delete this transaction: it would result in a negative balance. Please adjust your balance first.")
+			return
+		}
 		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to delete transaction")
 		return
 	}

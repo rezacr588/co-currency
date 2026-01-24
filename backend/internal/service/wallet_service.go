@@ -289,6 +289,9 @@ func (s *WalletService) DeleteTransaction(ctx context.Context, userID, txID uuid
 		if errors.Is(err, repository.ErrTransactionNotFound) {
 			return repository.ErrTransactionNotFound
 		}
+		if errors.Is(err, repository.ErrInsufficientBalance) {
+			return repository.ErrInsufficientBalance
+		}
 		return fmt.Errorf("deleting transaction: %w", err)
 	}
 	return nil

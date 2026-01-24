@@ -36,6 +36,7 @@ function formatReportCurrency(amount: number, currency: string): string {
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6'];
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface ChartProps {
   data: any[];
   currency: string;
@@ -52,15 +53,15 @@ function InsightsCard({ currency }: { currency: string }) {
   if (isLoading) return <Skeleton className="h-48 w-full rounded-2xl mb-6" />;
   if (!insights) return null;
 
-  const sentimentColor = 
+  const sentimentColor =
     insights.sentiment === 'positive' ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' :
-    insights.sentiment === 'negative' ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800' :
-    'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
+      insights.sentiment === 'negative' ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800' :
+        'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
 
-  const iconColor = 
+  const iconColor =
     insights.sentiment === 'positive' ? 'text-emerald-600 dark:text-emerald-400' :
-    insights.sentiment === 'negative' ? 'text-rose-600 dark:text-rose-400' :
-    'text-blue-600 dark:text-blue-400';
+      insights.sentiment === 'negative' ? 'text-rose-600 dark:text-rose-400' :
+        'text-blue-600 dark:text-blue-400';
 
   return (
     <Card className={`mb-6 border ${sentimentColor}`}>
@@ -79,7 +80,7 @@ function InsightsCard({ currency }: { currency: string }) {
             <p className="text-slate-700 dark:text-slate-300 mb-4 leading-relaxed">
               {insights.advice}
             </p>
-            
+
             <div className="space-y-2">
               {insights.action_items.map((item, i) => (
                 <div key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
@@ -227,21 +228,19 @@ export function Reports() {
               <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
                 <button
                   onClick={() => setView('monthly')}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                    view === 'monthly'
-                      ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                  }`}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${view === 'monthly'
+                    ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                    }`}
                 >
                   {t('monthly')}
                 </button>
                 <button
                   onClick={() => setView('yearly')}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                    view === 'yearly'
-                      ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                  }`}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${view === 'yearly'
+                    ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                    }`}
                 >
                   {t('yearly')}
                 </button>
@@ -275,7 +274,7 @@ export function Reports() {
           {view === 'monthly' && (
             <div className="space-y-6 animate-fade-in">
               <InsightsCard currency={currency} />
-              
+
               {monthlyLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {[1, 2, 3].map((i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)}
