@@ -46,7 +46,7 @@ jobs:
         env:
           KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
         run: |
-          curl -fsSL https://raw.githubusercontent.com/koyeb/koyeb-cli/main/install.sh | bash
+          curl -fsSL https://raw.githubusercontent.com/koyeb/koyeb-cli/master/install.sh | bash
           ~/.koyeb/bin/koyeb service update terrible-moselle/co-currency \
             --docker ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
