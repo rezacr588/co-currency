@@ -231,9 +231,10 @@ func (r *WalletRepository) GetTransactions(ctx context.Context, userID uuid.UUID
 		var aiData []byte
 		var category *string
 		var icon *string
+		var description *string
 		if err := rows.Scan(
 			&t.ID, &t.UserID, &t.Type, &t.Amount, &t.Currency,
-			&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &category, &icon, &aiData, &t.Description, &t.CreatedAt,
+			&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &category, &icon, &aiData, &description, &t.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scanning transaction: %w", err)
 		}
@@ -245,6 +246,9 @@ func (r *WalletRepository) GetTransactions(ctx context.Context, userID uuid.UUID
 		}
 		if icon != nil {
 			t.Icon = *icon
+		}
+		if description != nil {
+			t.Description = *description
 		}
 		transactions = append(transactions, t)
 	}
@@ -340,9 +344,10 @@ func (r *WalletRepository) GetTransactionsFiltered(ctx context.Context, userID u
 		var aiData []byte
 		var category *string
 		var icon *string
+		var description *string
 		if err := rows.Scan(
 			&t.ID, &t.UserID, &t.Type, &t.Amount, &t.Currency,
-			&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &category, &icon, &aiData, &t.Description, &t.CreatedAt,
+			&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &category, &icon, &aiData, &description, &t.CreatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scanning transaction: %w", err)
 		}
@@ -354,6 +359,9 @@ func (r *WalletRepository) GetTransactionsFiltered(ctx context.Context, userID u
 		}
 		if icon != nil {
 			t.Icon = *icon
+		}
+		if description != nil {
+			t.Description = *description
 		}
 		transactions = append(transactions, t)
 	}
@@ -377,10 +385,11 @@ func (r *WalletRepository) GetTransaction(ctx context.Context, userID, txID uuid
 	var aiData []byte
 	var category *string
 	var icon *string
+	var description *string
 
 	err := r.pool.QueryRow(ctx, query, txID, userID).Scan(
 		&t.ID, &t.UserID, &t.Type, &t.Amount, &t.Currency,
-		&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &category, &icon, &aiData, &t.Description, &t.CreatedAt,
+		&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &category, &icon, &aiData, &description, &t.CreatedAt,
 	)
 
 	if err != nil {
@@ -398,6 +407,9 @@ func (r *WalletRepository) GetTransaction(ctx context.Context, userID, txID uuid
 	}
 	if icon != nil {
 		t.Icon = *icon
+	}
+	if description != nil {
+		t.Description = *description
 	}
 
 	return t, nil
