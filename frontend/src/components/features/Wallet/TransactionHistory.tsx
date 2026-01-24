@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../../context/LanguageContext';
 import { CurrencyBadge } from '../../ui/CurrencyBadge';
@@ -288,9 +289,9 @@ function EditTransactionModal({ transaction, onClose, onSuccess }: EditTransacti
 
   // Don't allow editing conversion transactions
   if (transaction.type === 'convert' || transaction.type === 'convert_from' || transaction.type === 'convert_to') {
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl max-w-md w-full p-6">
+    return createPortal(
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl max-w-md w-full p-6 animate-scale-in">
           <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-4">
             {t('editTransaction')}
           </h2>
@@ -301,13 +302,14 @@ function EditTransactionModal({ transaction, onClose, onSuccess }: EditTransacti
             {t('close')}
           </Button>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-scale-in">
         <div className="p-6">
           <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-4">
             {t('editTransaction')}
@@ -452,7 +454,8 @@ function EditTransactionModal({ transaction, onClose, onSuccess }: EditTransacti
           </form>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -489,9 +492,9 @@ function DeleteConfirmModal({ transaction, onClose, onSuccess }: DeleteConfirmMo
     },
   });
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl max-w-md w-full p-6">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl max-w-md w-full p-6 animate-scale-in max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-4">
           {t('confirmDelete')}
         </h2>
@@ -538,7 +541,8 @@ function DeleteConfirmModal({ transaction, onClose, onSuccess }: DeleteConfirmMo
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -595,7 +599,7 @@ function TransactionItem({ transaction, showActions, onEdit, onDelete }: Transac
           )}
         </div>
         {showActions && (
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
             {canEdit && (
               <button
                 onClick={() => onEdit?.(transaction)}

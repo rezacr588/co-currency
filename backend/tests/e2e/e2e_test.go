@@ -26,6 +26,7 @@ type TestServer struct {
 	AuthService    *service.AuthService
 	WalletService  *service.WalletService
 	AIService      *service.AIService
+	ReportsService *service.ReportsService
 }
 
 // SetupTestServer creates a test server with all dependencies
@@ -70,17 +71,22 @@ func SetupTestServer(t *testing.T) *TestServer {
 		aiService, _ = service.NewAIService(cfg.AIProvider, cfg.AIAPIKey, cfg.AICloudProject)
 	}
 
+	// Initialize Reports service
+	reportsService := service.NewReportsService(walletRepo, exchangeService, aiService)
+
 	// Initialize handlers
 	exchangeHandler := handler.New(exchangeService)
 	authHandler := handler.NewAuthHandler(authService)
 	walletHandler := handler.NewWalletHandler(walletService)
 	aiHandler := handler.NewAIHandler(aiService, walletService)
+	reportsHandler := handler.NewReportsHandler(reportsService)
 
 	handlers := &router.Handlers{
 		Exchange: exchangeHandler,
 		Auth:     authHandler,
 		Wallet:   walletHandler,
 		AI:       aiHandler,
+		Reports:  reportsHandler,
 	}
 
 	rateLimiter := middleware.NewRateLimiter(1000) // High limit for tests
@@ -96,6 +102,7 @@ func SetupTestServer(t *testing.T) *TestServer {
 		AuthService:   authService,
 		WalletService: walletService,
 		AIService:     aiService,
+		ReportsService: reportsService,
 	}
 }
 
