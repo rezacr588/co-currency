@@ -121,8 +121,15 @@ func (d *Database) initTables(ctx context.Context) error {
 		`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMP WITH TIME ZONE`,
 		`ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE`,
 
+		// GitHub OAuth columns
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS github_id VARCHAR(255) UNIQUE`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`,
+		// Make password_hash nullable for OAuth-only users
+		`ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL`,
+
 		// Create index after column is ensured to exist
 		`CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users(password_reset_token)`,
+		`CREATE INDEX IF NOT EXISTS idx_users_github_id ON users(github_id)`,
 
 		// Wallet balances (one row per user per currency)
 		`CREATE TABLE IF NOT EXISTS wallet_balances (

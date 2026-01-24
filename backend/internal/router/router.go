@@ -15,6 +15,7 @@ import (
 type Handlers struct {
 	Exchange     *handler.Handler
 	Auth         *handler.AuthHandler
+	GitHubOAuth  *handler.GitHubOAuthHandler
 	Wallet       *handler.WalletHandler
 	AI           *handler.AIHandler
 	AIChat       *handler.AIChatHandler
@@ -59,10 +60,23 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 			r.Post("/refresh", h.Auth.RefreshToken)
 			r.Post("/logout", h.Auth.Logout)
 
+			// GitHub OAuth routes (public)
+			if h.GitHubOAuth != nil {
+				r.Get("/github", h.GitHubOAuth.GetAuthURL)
+				r.Get("/github/callback", h.GitHubOAuth.Callback)
+			}
+
 			// Protected auth routes
 			r.Group(func(r chi.Router) {
 				r.Use(authMiddleware.Middleware)
 				r.Get("/profile", h.Auth.GetProfile)
+
+				// GitHub account linking (protected)
+				if h.GitHubOAuth != nil {
+					r.Get("/github/link", h.GitHubOAuth.GetLinkURL)
+					r.Post("/github/link", h.GitHubOAuth.LinkAccount)
+					r.Delete("/github/link", h.GitHubOAuth.UnlinkAccount)
+				}
 			})
 		})
 

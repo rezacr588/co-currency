@@ -566,6 +566,17 @@ export const translations = {
     dueToday: 'Due today',
     daysLeft: 'days left',
     other: 'Other',
+
+    // GitHub OAuth
+    continueWithGitHub: 'Continue with GitHub',
+    signUpWithGitHub: 'Sign up with GitHub',
+    or: 'or',
+    authError: 'Authentication Error',
+    redirectingToLogin: 'Redirecting to login...',
+    completingLogin: 'Completing login...',
+    githubLinkSuccess: 'GitHub account linked successfully',
+    githubUnlinkSuccess: 'GitHub account unlinked',
+    githubAuthError: 'GitHub authentication failed',
   },
   fa: {
     // Header
@@ -1134,6 +1145,17 @@ export const translations = {
     dueToday: 'Due today',
     daysLeft: 'days left',
     other: 'Other',
+
+    // GitHub OAuth
+    continueWithGitHub: 'ادامه با گیت‌هاب',
+    signUpWithGitHub: 'ثبت نام با گیت‌هاب',
+    or: 'یا',
+    authError: 'خطای احراز هویت',
+    redirectingToLogin: 'در حال انتقال به صفحه ورود...',
+    completingLogin: 'در حال تکمیل ورود...',
+    githubLinkSuccess: 'حساب گیت‌هاب با موفقیت متصل شد',
+    githubUnlinkSuccess: 'حساب گیت‌هاب قطع شد',
+    githubAuthError: 'احراز هویت گیت‌هاب ناموفق بود',
   },
   ar: {
     // Header
@@ -1702,6 +1724,17 @@ export const translations = {
     dueToday: 'Due today',
     daysLeft: 'days left',
     other: 'Other',
+
+    // GitHub OAuth
+    continueWithGitHub: 'المتابعة مع غيت‌هاب',
+    signUpWithGitHub: 'التسجيل مع غيت‌هاب',
+    or: 'أو',
+    authError: 'خطأ في المصادقة',
+    redirectingToLogin: 'جاري التحويل لصفحة الدخول...',
+    completingLogin: 'جاري إكمال الدخول...',
+    githubLinkSuccess: 'تم ربط حساب غيت‌هاب بنجاح',
+    githubUnlinkSuccess: 'تم إلغاء ربط حساب غيت‌هاب',
+    githubAuthError: 'فشلت مصادقة غيت‌هاب',
   },
   tr: {
     // Header
@@ -2270,6 +2303,17 @@ export const translations = {
     dueToday: 'Due today',
     daysLeft: 'days left',
     other: 'Other',
+
+    // GitHub OAuth
+    continueWithGitHub: 'GitHub ile devam et',
+    signUpWithGitHub: 'GitHub ile kaydol',
+    or: 'veya',
+    authError: 'Kimlik doğrulama hatası',
+    redirectingToLogin: 'Giriş sayfasına yönlendiriliyor...',
+    completingLogin: 'Giriş tamamlanıyor...',
+    githubLinkSuccess: 'GitHub hesabı başarıyla bağlandı',
+    githubUnlinkSuccess: 'GitHub hesabı bağlantısı kaldırıldı',
+    githubAuthError: 'GitHub kimlik doğrulaması başarısız',
   },
 } as const;
 

@@ -161,10 +161,27 @@ func main() {
 	// Initialize auth service (requires database)
 	var authService *service.AuthService
 	var authMiddleware *middleware.Auth
+	var githubOAuthService *service.GitHubOAuthService
 	if userRepo != nil {
-		authService = service.NewAuthService(userRepo, cfg.JWTSecret)
+		// Create refresh token repository for better token management
+		refreshTokenRepo := repository.NewRefreshTokenRepository(mainDB)
+		authService = service.NewAuthServiceWithRefresh(userRepo, refreshTokenRepo, cfg.JWTSecret)
 		authMiddleware = middleware.NewAuth(authService)
 		log.Info().Msg("Authentication service initialized")
+
+		// Initialize GitHub OAuth service if configured
+		if cfg.GitHubClientID != "" && cfg.GitHubClientSecret != "" {
+			githubConfig := &service.GitHubConfig{
+				ClientID:     cfg.GitHubClientID,
+				ClientSecret: cfg.GitHubClientSecret,
+				RedirectURI:  cfg.GitHubRedirectURI,
+				FrontendURL:  cfg.FrontendURL,
+			}
+			githubOAuthService = service.NewGitHubOAuthService(authService, userRepo, githubConfig)
+			log.Info().Msg("GitHub OAuth service initialized")
+		} else {
+			log.Info().Msg("GitHub OAuth not configured (GITHUB_CLIENT_ID/GITHUB_CLIENT_SECRET not set)")
+		}
 	} else {
 		log.Warn().Msg("Authentication service not available - no database connection")
 	}
@@ -296,9 +313,16 @@ func main() {
 		aiChatHandler = handler.NewAIChatHandler(aiChatService, authService)
 	}
 
+	// Initialize GitHub OAuth handler
+	var githubOAuthHandler *handler.GitHubOAuthHandler
+	if githubOAuthService != nil {
+		githubOAuthHandler = handler.NewGitHubOAuthHandler(githubOAuthService)
+	}
+
 	handlers := &router.Handlers{
 		Exchange:     exchangeHandler,
 		Auth:         authHandler,
+		GitHubOAuth:  githubOAuthHandler,
 		Wallet:       walletHandler,
 		AI:           aiHandler,
 		AIChat:       aiChatHandler,

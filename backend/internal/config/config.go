@@ -22,6 +22,12 @@ type Config struct {
 	// JWT Authentication
 	JWTSecret string `env:"JWT_SECRET" envDefault:"change-me-in-production-to-a-secure-secret"`
 
+	// GitHub OAuth
+	GitHubClientID     string `env:"GITHUB_CLIENT_ID" envDefault:""`
+	GitHubClientSecret string `env:"GITHUB_CLIENT_SECRET" envDefault:""`
+	GitHubRedirectURI  string `env:"GITHUB_REDIRECT_URI" envDefault:"http://localhost:8080/api/v1/auth/github/callback"`
+	FrontendURL        string `env:"FRONTEND_URL" envDefault:"http://localhost:5173"`
+
 	// AI Service settings
 	AIProvider     string `env:"AI_PROVIDER" envDefault:"googleai"` // googleai, openai
 	AIAPIKey       string `env:"AI_API_KEY" envDefault:""`

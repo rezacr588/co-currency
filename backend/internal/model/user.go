@@ -17,6 +17,8 @@ type User struct {
 	PasswordResetToken   *string    `json:"-"` // Never expose
 	PasswordResetExpires *time.Time `json:"-"` // Never expose
 	OnboardingCompleted  bool       `json:"onboarding_completed"`
+	GithubID             *string    `json:"-"`                    // GitHub OAuth ID
+	AvatarURL            *string    `json:"avatar_url,omitempty"` // Profile picture from OAuth
 	CreatedAt            time.Time  `json:"created_at"`
 	UpdatedAt            time.Time  `json:"updated_at"`
 }
@@ -57,20 +59,30 @@ type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+// GitHubCallbackRequest represents the OAuth callback request
+type GitHubCallbackRequest struct {
+	Code  string `json:"code"`
+	State string `json:"state"`
+}
+
 // UserProfile is a safe representation of user data for API responses
 type UserProfile struct {
-	ID        uuid.UUID `json:"id"`
-	Email     string    `json:"email"`
-	Name      string    `json:"name,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	ID              uuid.UUID `json:"id"`
+	Email           string    `json:"email"`
+	Name            string    `json:"name,omitempty"`
+	AvatarURL       *string   `json:"avatar_url,omitempty"`
+	HasGitHubLinked bool      `json:"has_github_linked"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 // ToProfile converts a User to UserProfile
 func (u *User) ToProfile() *UserProfile {
 	return &UserProfile{
-		ID:        u.ID,
-		Email:     u.Email,
-		Name:      u.Name,
-		CreatedAt: u.CreatedAt,
+		ID:              u.ID,
+		Email:           u.Email,
+		Name:            u.Name,
+		AvatarURL:       u.AvatarURL,
+		HasGitHubLinked: u.GithubID != nil,
+		CreatedAt:       u.CreatedAt,
 	}
 }

@@ -19,6 +19,7 @@ const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login }
 const Register = lazy(() => import('./pages/Register').then(m => ({ default: m.Register })));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
 const ResetPassword = lazy(() => import('./pages/ResetPassword').then(m => ({ default: m.ResetPassword })));
+const GitHubCallback = lazy(() => import('./pages/GitHubCallback').then(m => ({ default: m.GitHubCallback })));
 const Reports = lazy(() => import('./pages/Reports').then(m => ({ default: m.Reports })));
 const Subscriptions = lazy(() => import('./pages/Subscriptions').then(m => ({ default: m.Subscriptions })));
 const Badges = lazy(() => import('./pages/Badges').then(m => ({ default: m.Badges })));
@@ -70,6 +71,7 @@ function AppContent() {
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/auth/github/callback" element={<GitHubCallback />} />
             <Route path="*" element={<NotFound />} />
           </Route>
 

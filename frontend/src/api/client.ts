@@ -239,6 +239,17 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ refresh_token: refreshToken }),
       }),
+    // GitHub OAuth
+    getGitHubAuthUrl: () => `${API_BASE}/auth/github`,
+    getGitHubLinkUrl: () => fetchAPI<{ url: string }>('/auth/github/link'),
+    linkGitHub: (code: string) =>
+      fetchAPI<{ message: string }>(`/auth/github/link?code=${code}`, {
+        method: 'POST',
+      }),
+    unlinkGitHub: () =>
+      fetchAPI<{ message: string }>('/auth/github/link', {
+        method: 'DELETE',
+      }),
   },
 
   // Wallet
