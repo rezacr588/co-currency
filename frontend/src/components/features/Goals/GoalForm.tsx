@@ -50,10 +50,15 @@ export function GoalForm({ goal, onClose }: GoalFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const parsedAmount = parseFloat(targetAmount) || 0;
+
     if (isEditing) {
       const updateData: UpdateGoalRequest = {};
       if (name !== goal.name) updateData.name = name;
-      if (parseFloat(targetAmount) !== goal.target_amount) updateData.target_amount = parseFloat(targetAmount);
+      // Only update amount if it changed and is valid
+      if (parsedAmount > 0 && parsedAmount !== goal.target_amount) {
+        updateData.target_amount = parsedAmount;
+      }
       if (category !== goal.category) updateData.category = category;
       if (deadline !== goal.deadline?.split('T')[0]) updateData.deadline = deadline || undefined;
 
@@ -61,7 +66,7 @@ export function GoalForm({ goal, onClose }: GoalFormProps) {
     } else {
       createMutation.mutate({
         name,
-        target_amount: parseFloat(targetAmount),
+        target_amount: parsedAmount,
         currency,
         category: category || undefined,
         deadline: deadline || undefined,
@@ -95,7 +100,7 @@ export function GoalForm({ goal, onClose }: GoalFormProps) {
             value={targetAmount}
             onChange={(e) => setTargetAmount(e.target.value)}
             placeholder="0.00"
-            min="0"
+            min="0.01"
             step="0.01"
             required
           />

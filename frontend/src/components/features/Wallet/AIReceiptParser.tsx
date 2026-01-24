@@ -99,7 +99,15 @@ export function AIReceiptParser() {
   const parseMutation = useMutationAction(api.ai.parseReceipt, {
     onSuccess: (data) => {
       setParseResult(data);
-      setParsedTransactions(data.transactions);
+      // Backend returns a single parsed transaction, convert to array for UI
+      const transaction: ParsedTransaction = {
+        type: data.type,
+        currency: data.currency,
+        amount: data.amount,
+        description: data.description,
+        confidence: data.confidence,
+      };
+      setParsedTransactions([transaction]);
       setError(null);
     },
   });

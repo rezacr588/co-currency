@@ -49,16 +49,21 @@ export function BudgetForm({ budget, onClose }: BudgetFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const parsedAmount = parseFloat(amount) || 0;
+
     if (isEditing) {
       const updateData: UpdateBudgetRequest = {};
-      if (parseFloat(amount) !== budget.amount) updateData.amount = parseFloat(amount);
+      // Only update amount if it changed and is valid
+      if (parsedAmount > 0 && parsedAmount !== budget.amount) {
+        updateData.amount = parsedAmount;
+      }
       if (period !== budget.period) updateData.period = period;
 
       updateMutation.mutate(updateData);
     } else {
       createMutation.mutate({
         category,
-        amount: parseFloat(amount),
+        amount: parsedAmount,
         currency,
         period,
       });
@@ -82,7 +87,7 @@ export function BudgetForm({ budget, onClose }: BudgetFormProps) {
           <option value="">{t('selectCategory')}</option>
           {DEFAULT_CATEGORIES.map((cat) => (
             <option key={cat.name} value={cat.name}>
-              {cat.icon} {t(`category_${cat.name}` as any) || cat.name}
+              {t(`category_${cat.name}` as any) || cat.name}
             </option>
           ))}
         </Select>
@@ -98,7 +103,7 @@ export function BudgetForm({ budget, onClose }: BudgetFormProps) {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            min="0"
+            min="0.01"
             step="0.01"
             required
           />

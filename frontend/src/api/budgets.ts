@@ -3,13 +3,14 @@ import { fetchAPI } from './base';
 
 export const budgets = {
   list: () => fetchAPI<{ budgets: Budget[] }>('/budgets'),
+  // Backend returns Budget directly, not wrapped in { budget: ... }
   create: (data: CreateBudgetRequest) =>
-    fetchAPI<{ budget: Budget }>('/budgets', {
+    fetchAPI<Budget>('/budgets', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   update: (id: string, data: UpdateBudgetRequest) =>
-    fetchAPI<{ budget: Budget }>(`/budgets/${id}`, {
+    fetchAPI<Budget>(`/budgets/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),

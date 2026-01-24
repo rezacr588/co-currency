@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
-import { useToast } from '../../../context/ToastContext';
+import { useMutationAction } from '../../../hooks';
 import { Button } from '../../ui/Button';
 import { SUBSCRIPTION_BILLING_CYCLES, SUBSCRIPTION_CATEGORIES } from '../../../types/goal';
 import type { Subscription, CreateSubscriptionRequest, UpdateSubscriptionRequest } from '../../../types/goal';
@@ -14,8 +14,6 @@ interface SubscriptionFormProps {
 
 export function SubscriptionForm({ subscription, onClose }: SubscriptionFormProps) {
     const { t } = useLanguage();
-    const toast = useToast();
-    const queryClient = useQueryClient();
     const isEditing = !!subscription;
 
     const [formData, setFormData] = useState({
@@ -30,32 +28,26 @@ export function SubscriptionForm({ subscription, onClose }: SubscriptionFormProp
         logo_url: subscription?.logo_url || '',
     });
 
-    const createMutation = useMutation({
-        mutationFn: (data: CreateSubscriptionRequest) => api.subscriptions.create(data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
-            queryClient.invalidateQueries({ queryKey: ['subscription-summary'] });
-            queryClient.invalidateQueries({ queryKey: ['badges'] });
-            toast.success('Subscription created');
-            onClose();
-        },
-        onError: () => {
-            toast.error('Error creating subscription');
-        },
+    // Fetch currencies from API
+    const { data: currenciesData } = useQuery({
+        queryKey: ['currencies'],
+        queryFn: () => api.currencies.list(),
     });
 
-    const updateMutation = useMutation({
-        mutationFn: (data: UpdateSubscriptionRequest) => api.subscriptions.update(subscription!.id, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
-            queryClient.invalidateQueries({ queryKey: ['subscription-summary'] });
-            toast.success('Subscription updated');
-            onClose();
-        },
-        onError: () => {
-            toast.error('Error updating subscription');
-        },
+    const createMutation = useMutationAction(api.subscriptions.create, {
+        successMessage: t('subscriptionCreated' as any) || 'Subscription created',
+        invalidateQueries: [['subscriptions'], ['subscription-summary'], ['badges']],
+        onSuccess: onClose,
     });
+
+    const updateMutation = useMutationAction(
+        (data: UpdateSubscriptionRequest) => api.subscriptions.update(subscription!.id, data),
+        {
+            successMessage: t('subscriptionUpdated' as any) || 'Subscription updated',
+            invalidateQueries: [['subscriptions'], ['subscription-summary']],
+            onSuccess: onClose,
+        }
+    );
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -79,7 +71,12 @@ export function SubscriptionForm({ subscription, onClose }: SubscriptionFormProp
         }
     };
 
-    const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'TRY', 'IRR'];
+    // Use currencies from API, fallback to common currencies
+    const currencies = currenciesData || [
+        { code: 'USD', name: 'US Dollar' },
+        { code: 'EUR', name: 'Euro' },
+        { code: 'GBP', name: 'British Pound' },
+    ];
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -146,7 +143,7 @@ export function SubscriptionForm({ subscription, onClose }: SubscriptionFormProp
                                 className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                             >
                                 {currencies.map((c) => (
-                                    <option key={c} value={c}>{c}</option>
+                                    <option key={c.code} value={c.code}>{c.code} - {c.name}</option>
                                 ))}
                             </select>
                         </div>

@@ -3,9 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useMutationAction } from '../../../hooks';
-import type { RecurringTransaction, UpdateRecurringRequest } from '../../../types/goal';
+import type { RecurringTransaction, UpdateRecurringRequest, CreateRecurringRequest } from '../../../types/goal';
 import { DEFAULT_CATEGORIES } from '../../../types/wallet';
 import { RECURRING_FREQUENCIES } from '../../../types/goal';
+
+type RecurringFrequency = CreateRecurringRequest['frequency'];
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
 import { Select } from '../../ui/Select';
@@ -24,7 +26,7 @@ export function RecurringForm({ recurring, onClose }: RecurringFormProps) {
   const [currency, setCurrency] = useState(recurring?.currency || 'USD');
   const [category, setCategory] = useState(recurring?.category || '');
   const [description, setDescription] = useState(recurring?.description || '');
-  const [frequency, setFrequency] = useState(recurring?.frequency || 'monthly');
+  const [frequency, setFrequency] = useState<RecurringFrequency>(recurring?.frequency || 'monthly');
   const [nextExecution, setNextExecution] = useState(
     recurring?.next_execution?.split('T')[0] || new Date().toISOString().split('T')[0]
   );
@@ -55,24 +57,29 @@ export function RecurringForm({ recurring, onClose }: RecurringFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const parsedAmount = parseFloat(amount) || 0;
+
     if (isEditing) {
       const updateData: UpdateRecurringRequest = {};
       if (type !== recurring.type) updateData.type = type;
-      if (parseFloat(amount) !== recurring.amount) updateData.amount = parseFloat(amount);
+      // Only update amount if it changed and is valid
+      if (parsedAmount > 0 && parsedAmount !== recurring.amount) {
+        updateData.amount = parsedAmount;
+      }
       if (category !== recurring.category) updateData.category = category;
       if (description !== recurring.description) updateData.description = description;
-      if (frequency !== recurring.frequency) updateData.frequency = frequency as any;
+      if (frequency !== recurring.frequency) updateData.frequency = frequency;
       if (nextExecution !== recurring.next_execution?.split('T')[0]) updateData.next_execution = nextExecution;
 
       updateMutation.mutate(updateData);
     } else {
       createMutation.mutate({
         type,
-        amount: parseFloat(amount),
+        amount: parsedAmount,
         currency,
         category: category || undefined,
         description: description || undefined,
-        frequency: frequency as any,
+        frequency,
         next_execution: nextExecution,
       });
     }
@@ -116,7 +123,7 @@ export function RecurringForm({ recurring, onClose }: RecurringFormProps) {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            min="0"
+            min="0.01"
             step="0.01"
             required
           />
@@ -145,7 +152,7 @@ export function RecurringForm({ recurring, onClose }: RecurringFormProps) {
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             {t('frequency')}
           </label>
-          <Select value={frequency} onChange={(e) => setFrequency(e.target.value as typeof frequency)}>
+          <Select value={frequency} onChange={(e) => setFrequency(e.target.value as RecurringFrequency)}>
             {RECURRING_FREQUENCIES.map((freq) => (
               <option key={freq} value={freq}>
                 {t(`frequency_${freq}` as any) || freq}
@@ -175,7 +182,7 @@ export function RecurringForm({ recurring, onClose }: RecurringFormProps) {
           <option value="">{t('selectCategory')}</option>
           {DEFAULT_CATEGORIES.map((cat) => (
             <option key={cat.name} value={cat.name}>
-              {cat.icon} {t(`category_${cat.name}` as any) || cat.name}
+              {t(`category_${cat.name}` as any) || cat.name}
             </option>
           ))}
         </Select>
