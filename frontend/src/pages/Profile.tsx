@@ -24,6 +24,7 @@ export function Profile() {
     avatar_url: '',
   });
   const [profileSaving, setProfileSaving] = useState(false);
+  const [avatarLoading, setAvatarLoading] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     current: '',
@@ -89,6 +90,30 @@ export function Profile() {
     }
   };
 
+  const handleAvatarUpload = async (file: File) => {
+    const MAX_SIZE_BYTES = 1024 * 1024; // 1MB
+    if (file.size > MAX_SIZE_BYTES) {
+      toast.error(t('uploadPhotoHint') || 'Image must be under 1MB.');
+      return;
+    }
+
+    setAvatarLoading(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+      });
+
+      setProfileForm(prev => ({ ...prev, avatar_url: dataUrl }));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('updateFailed'));
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (passwordForm.next.length < 6) {
@@ -146,6 +171,33 @@ export function Profile() {
                     )}
                   </div>
                   <div className="flex-1 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handleAvatarUpload(file);
+                            }
+                          }}
+                        />
+                        {avatarLoading ? t('saving') : t('uploadPhoto')}
+                      </label>
+                      {profileForm.avatar_url && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setProfileForm(prev => ({ ...prev, avatar_url: '' }))}
+                        >
+                          {t('remove') || 'Remove'}
+                        </Button>
+                      )}
+                      <span className="text-xs text-slate-400">{t('uploadPhotoHint')}</span>
+                    </div>
                     <Input
                       type="url"
                       label={t('avatarUrl')}

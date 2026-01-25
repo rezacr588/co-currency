@@ -139,6 +139,8 @@ export const translations = {
     passwordSet: 'Password set',
     noChanges: 'No changes to save',
     githubLinked: 'GitHub account linked',
+    uploadPhoto: 'Upload Photo',
+    uploadPhotoHint: 'Max 1MB. JPG, PNG, or GIF.',
 
     // Wallet
     wallet: 'Wallet',
@@ -730,6 +732,8 @@ export const translations = {
     passwordSet: 'رمز عبور تنظیم شد',
     noChanges: 'تغییری برای ذخیره وجود ندارد',
     githubLinked: 'حساب گیت‌هاب متصل است',
+    uploadPhoto: 'بارگذاری تصویر',
+    uploadPhotoHint: 'حداکثر ۱ مگابایت. JPG، PNG یا GIF.',
 
     // Wallet
     wallet: 'کیف پول',
@@ -1321,6 +1325,8 @@ export const translations = {
     passwordSet: 'تم تعيين كلمة المرور',
     noChanges: 'لا توجد تغييرات للحفظ',
     githubLinked: 'تم ربط حساب GitHub',
+    uploadPhoto: 'رفع صورة',
+    uploadPhotoHint: 'الحد الأقصى 1 ميجابايت. JPG أو PNG أو GIF.',
 
     // Wallet
     wallet: 'المحفظة',
@@ -1912,6 +1918,8 @@ export const translations = {
     passwordSet: 'Şifre ayarlandı',
     noChanges: 'Kaydedilecek değişiklik yok',
     githubLinked: 'GitHub hesabı bağlı',
+    uploadPhoto: 'Fotoğraf Yükle',
+    uploadPhotoHint: 'Maks 1MB. JPG, PNG veya GIF.',
 
     // Wallet
     wallet: 'Cüzdan',

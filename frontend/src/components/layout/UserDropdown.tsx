@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { AUTH_NAV_ITEMS } from '../../constants/navigation';
+import { ROUTES } from '../../constants/routes';
 
 export function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
@@ -62,6 +63,21 @@ export function UserDropdown() {
                 {t(item.labelKey)}
               </Link>
             )})}
+            <Link
+              to={ROUTES.profile}
+              onClick={() => setIsOpen(false)}
+              className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm transition-colors ${
+                location.pathname === ROUTES.profile
+                  ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5.121 17.804A9 9 0 1118.88 6.196 9 9 0 015.12 17.804z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              {t('profile')}
+            </Link>
           </div>
           <div className="p-2">
             <button
