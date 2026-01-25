@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import { Button } from '../ui/Button';
+import { ROUTES } from '../../constants/routes';
 
 export function HeroSection() {
   const { t } = useLanguage();
@@ -36,7 +37,7 @@ export function HeroSection() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12 px-4 sm:px-0">
-            <Link to="/register" className="w-full sm:w-auto">
+            <Link to={ROUTES.register} className="w-full sm:w-auto">
               <Button
                 variant="primary"
                 size="lg"

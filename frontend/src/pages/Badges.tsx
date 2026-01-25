@@ -1,12 +1,13 @@
 import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { BadgeGrid } from '../components/features/Badges';
+import { ROUTES } from '../constants/routes';
 
 export function Badges() {
     const { isAuthenticated } = useAuth();
 
     if (!isAuthenticated) {
-        return <Navigate to="/login" replace />;
+        return <Navigate to={ROUTES.login} replace />;
     }
 
     return (

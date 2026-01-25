@@ -2,6 +2,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Skeleton } from './ui/Skeleton';
 import { Container } from './layout';
+import { ROUTES } from '../constants/routes';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -27,7 +28,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!isAuthenticated) {
     // Redirect to login with the current location saved
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    return <Navigate to={ROUTES.login} state={{ from: location.pathname }} replace />;
   }
 
   return <>{children}</>;

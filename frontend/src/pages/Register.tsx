@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
+import { ROUTES } from '../constants/routes';
 
 export function Register() {
   const { t } = useLanguage();
@@ -38,7 +39,7 @@ export function Register() {
 
     try {
       await register({ email, password, name });
-      navigate('/wallet', { replace: true });
+      navigate(ROUTES.wallet, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : t('registrationFailed'));
     } finally {
@@ -115,7 +116,7 @@ export function Register() {
                 <p className="text-center text-sm text-slate-600 dark:text-slate-400">
                   {t('alreadyHaveAccount')}{' '}
                   <Link
-                    to="/login"
+                    to={ROUTES.login}
                     className="text-primary-700 dark:text-primary-500 hover:underline font-medium"
                   >
                     {t('login')}

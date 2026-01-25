@@ -13,6 +13,7 @@ import { ErrorMessage } from '../../ui/ErrorMessage';
 import { Modal } from '../../ui/Modal';
 import { GoalCard } from './GoalCard';
 import { GoalForm } from './GoalForm';
+import { ROUTES } from '../../../constants/routes';
 
 export function GoalsList() {
   const { t } = useLanguage();
@@ -61,7 +62,7 @@ export function GoalsList() {
               <p className="text-slate-500 dark:text-slate-400">{t('goalsDescription')}</p>
             </div>
             <div className="flex gap-2">
-              <Link to="/wallet">
+              <Link to={ROUTES.wallet}>
                 <Button variant="ghost" size="sm">
                   {t('backToWallet')}
                 </Button>

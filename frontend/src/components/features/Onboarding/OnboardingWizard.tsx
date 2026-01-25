@@ -6,6 +6,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { WelcomeStep } from './WelcomeStep';
 import { CurrencySetup } from './CurrencySetup';
 import { FirstTransaction } from './FirstTransaction';
+import { ROUTES } from '../../../constants/routes';
 
 interface OnboardingWizardProps {
   onComplete: () => void;
@@ -38,12 +39,12 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
   const handleComplete = () => {
     onComplete();
-    navigate('/wallet');
+    navigate(ROUTES.wallet);
   };
 
   const handleSkip = () => {
     onComplete();
-    navigate('/wallet');
+    navigate(ROUTES.wallet);
   };
 
   return (

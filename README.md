@@ -246,16 +246,27 @@ curl "https://your-app.koyeb.app/api/v1/historical/2024-01-15?base=USD"
 
 ### Response Format
 
+Successful responses return the payload directly:
+
 ```json
 {
-  "success": true,
-  "data": {
-    "from": "USD",
-    "to": "EUR",
-    "amount": 100,
-    "result": 92.45,
-    "rate": 0.9245
-  }
+  "from": "USD",
+  "to": "EUR",
+  "amount": 100,
+  "result": 92.45,
+  "rate": 0.9245
+}
+```
+
+Errors return a structured object:
+
+```json
+{
+  "error": "internal_error",
+  "code": 500,
+  "message": "Failed to convert currency",
+  "details": "optional internal details",
+  "trace_id": "optional trace id"
 }
 ```
 

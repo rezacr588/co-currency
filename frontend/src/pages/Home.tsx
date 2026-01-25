@@ -13,13 +13,14 @@ import {
   TrustSection,
   FinalCTA
 } from '../components/home';
+import { ROUTES } from '../constants/routes';
 
 export function Home() {
   const { isAuthenticated } = useAuth();
 
   // Redirect authenticated users to dashboard
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={ROUTES.dashboard} replace />;
   }
 
   return (

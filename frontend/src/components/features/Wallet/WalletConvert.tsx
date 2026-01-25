@@ -15,6 +15,7 @@ import { CurrencySelect } from '../../ui';
 import { SwapButton } from '../Converter/SwapButton';
 import { CurrencyInput } from '../../ui/CurrencyInput';
 import { CURRENCY_SYMBOLS, CURRENCY_FLAGS } from '../../../utils/constants';
+import { ROUTES } from '../../../constants/routes';
 
 export function WalletConvert() {
   const { t } = useLanguage();
@@ -48,7 +49,7 @@ export function WalletConvert() {
   const mutation = useMutationAction(api.wallet.convert, {
     successMessage: t('conversionSuccessful' as any),
     invalidateQueries: [['wallet-summary'], ['wallet-transactions'], ['wallet-balances']],
-    onSuccess: () => navigate('/wallet'),
+    onSuccess: () => navigate(ROUTES.wallet),
   });
 
   const handleSubmit = (e: FormEvent) => {
@@ -203,7 +204,7 @@ export function WalletConvert() {
                     variant="ghost"
                     size="lg"
                     className="flex-1"
-                    onClick={() => navigate('/wallet')}
+                    onClick={() => navigate(ROUTES.wallet)}
                     disabled={mutation.isPending}
                   >
                     {t('cancel')}

@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { Send, Bot, User, Plus, Trash2, ArrowLeft, Sparkles } from 'lucide-react';
 import { getAuthToken } from '../api';
+import { ROUTES } from '../constants/routes';
 
 interface ChatMessage {
     id: string;
@@ -92,7 +93,7 @@ export default function AIChat() {
         },
         onSuccess: (data) => {
             if (!conversationId) {
-                navigate(`/ai-chat/${data.conversation_id}`);
+                navigate(`${ROUTES.aiChat}/${data.conversation_id}`);
             }
             queryClient.invalidateQueries({ queryKey: ['ai-conversation', data.conversation_id] });
             queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
@@ -114,7 +115,7 @@ export default function AIChat() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
-            if (conversationId) navigate('/ai-chat');
+            if (conversationId) navigate(ROUTES.aiChat);
         },
     });
 
@@ -151,7 +152,7 @@ export default function AIChat() {
             <div className="hidden md:flex w-72 flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
                 <div className="p-4 border-b border-slate-200 dark:border-slate-800">
                     <button
-                        onClick={() => navigate('/ai-chat')}
+                        onClick={() => navigate(ROUTES.aiChat)}
                         className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-medium hover:from-primary-600 hover:to-primary-700 transition-all shadow-lg shadow-primary-500/20"
                     >
                         <Plus className="w-5 h-5" />
@@ -166,7 +167,7 @@ export default function AIChat() {
                                 ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
                                 : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
                                 }`}
-                            onClick={() => navigate(`/ai-chat/${conv.id}`)}
+                            onClick={() => navigate(`${ROUTES.aiChat}/${conv.id}`)}
                         >
                             <Bot className="w-4 h-4 flex-shrink-0" />
                             <span className="flex-1 truncate text-sm">{conv.title}</span>
@@ -190,7 +191,7 @@ export default function AIChat() {
                 <div className="h-14 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                     <div className="flex items-center gap-3">
                         <button
-                            onClick={() => navigate('/dashboard')}
+                            onClick={() => navigate(ROUTES.dashboard)}
                             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors md:hidden"
                         >
                             <ArrowLeft className="w-5 h-5" />

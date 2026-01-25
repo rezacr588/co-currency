@@ -1,0 +1,26 @@
+export const ROUTES = {
+  home: '/',
+  about: '/about',
+  login: '/login',
+  register: '/register',
+  forgotPassword: '/forgot-password',
+  resetPassword: '/reset-password',
+  githubCallback: '/auth/github/callback',
+  dashboard: '/dashboard',
+  converter: '/converter',
+  wallet: '/wallet',
+  walletAdd: '/wallet/add',
+  walletHistory: '/wallet/history',
+  walletConvert: '/wallet/convert',
+  walletAI: '/wallet/ai',
+  goals: '/goals',
+  budgets: '/budgets',
+  recurring: '/recurring',
+  reports: '/reports',
+  subscriptions: '/subscriptions',
+  badges: '/badges',
+  aiChat: '/ai-chat',
+  aiChatConversation: '/ai-chat/:conversationId',
+} as const;
+
+export type RouteKey = keyof typeof ROUTES;

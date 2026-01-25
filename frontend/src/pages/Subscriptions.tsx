@@ -1,12 +1,13 @@
 import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { SubscriptionList } from '../components/features/Subscriptions';
+import { ROUTES } from '../constants/routes';
 
 export function Subscriptions() {
     const { isAuthenticated } = useAuth();
 
     if (!isAuthenticated) {
-        return <Navigate to="/login" replace />;
+        return <Navigate to={ROUTES.login} replace />;
     }
 
     return (

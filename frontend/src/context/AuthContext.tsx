@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api, setAuthToken, setRefreshToken, getAuthToken, clearAuthToken, setOnAuthError } from '../api';
 import type { User, LoginRequest, RegisterRequest } from '../types/wallet';
+import { ROUTES } from '../constants/routes';
 
 interface AuthContextType {
   user: User | null;
@@ -26,14 +27,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOnAuthError(() => {
       setUser(null);
       // Only redirect if we're on a protected route (not already on login/register)
-      const publicPaths = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/about'];
+      const publicPaths = [
+        ROUTES.home,
+        ROUTES.login,
+        ROUTES.register,
+        ROUTES.forgotPassword,
+        ROUTES.resetPassword,
+        ROUTES.about,
+      ];
       const isPublicPath = publicPaths.some(path =>
-        location.pathname === path || location.pathname.startsWith('/reset-password')
+        location.pathname === path || location.pathname.startsWith(ROUTES.resetPassword)
       );
 
       if (!isPublicPath) {
         // Save current path to redirect back after login
-        navigate('/login', {
+        navigate(ROUTES.login, {
           state: { from: location.pathname },
           replace: true
         });
@@ -96,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     clearAuthToken();
     setUser(null);
-    navigate('/login', { replace: true });
+    navigate(ROUTES.login, { replace: true });
   }, [navigate]);
 
   const isAuthenticated = !!user;

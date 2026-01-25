@@ -1,12 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import {
-    LayoutDashboard,
-    Wallet,
-    Plus,
-    Target,
-    BarChart3,
-} from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
+import { BOTTOM_NAV_ITEMS } from '../../constants/navigation';
 
 interface NavItemProps {
     to: string;
@@ -36,44 +31,39 @@ function NavItem({ to, icon, isActive }: NavItemProps) {
 export function BottomNav() {
     const { isAuthenticated } = useAuth();
     const location = useLocation();
+    const { t } = useLanguage();
 
     // Only show for authenticated users on mobile
     if (!isAuthenticated) return null;
-
-    const navItems = [
-        { to: '/dashboard', icon: <LayoutDashboard className="w-6 h-6" /> },
-        { to: '/wallet', icon: <Wallet className="w-6 h-6" /> },
-        { to: '/wallet/add', icon: <Plus className="w-7 h-7" />, isCenter: true },
-        { to: '/goals', icon: <Target className="w-6 h-6" /> },
-        { to: '/reports', icon: <BarChart3 className="w-6 h-6" /> },
-    ];
 
     return (
         <nav
             className="fixed bottom-0 left-0 right-0 h-14 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-slate-200/80 dark:border-slate-800/80 flex items-center justify-around z-50 lg:hidden"
             style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
-            {navItems.map((item) => {
+            {BOTTOM_NAV_ITEMS.map((item) => {
                 const isActive = location.pathname === item.to ||
                     (item.to !== '/' && location.pathname.startsWith(item.to));
 
                 if (item.isCenter) {
+                    const Icon = item.icon;
                     return (
                         <NavLink
-                            key={item.to}
+                            key={item.id}
                             to={item.to}
                             className="flex items-center justify-center w-12 h-12 -mt-4 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30 active:scale-95 transition-all duration-200"
+                            aria-label={t(item.labelKey)}
                         >
-                            <Plus className="w-6 h-6" strokeWidth={2.5} />
+                            <Icon className="w-6 h-6" strokeWidth={2.5} />
                         </NavLink>
                     );
                 }
 
                 return (
                     <NavItem
-                        key={item.to}
+                        key={item.id}
                         to={item.to}
-                        icon={item.icon}
+                        icon={<item.icon className="w-6 h-6" />}
                         isActive={isActive}
                     />
                 );

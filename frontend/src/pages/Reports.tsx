@@ -19,6 +19,7 @@ import {
 } from 'recharts';
 import { api } from '../api';
 import { useLanguage } from '../context/LanguageContext';
+import { ROUTES } from '../constants/routes';
 import { Container } from '../components/layout';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Select } from '../components/ui/Select';
@@ -212,7 +213,7 @@ export function Reports() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <Link to="/wallet" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+                <Link to={ROUTES.wallet} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
                   <ArrowLeft className="w-5 h-5" />
                 </Link>
                 <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">

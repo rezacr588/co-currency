@@ -9,6 +9,7 @@ import { Button } from '../components/ui/Button';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
 import { api } from '../api';
 import { GitHubIcon } from '../constants/icons';
+import { ROUTES } from '../constants/routes';
 
 export function Login() {
   const { t } = useLanguage();
@@ -22,7 +23,7 @@ export function Login() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const from = (location.state as { from?: string })?.from || '/wallet';
+  const from = (location.state as { from?: string })?.from || ROUTES.wallet;
 
   // Check for error from OAuth callback
   useEffect(() => {
@@ -115,7 +116,7 @@ export function Login() {
 
                   <div className="text-right">
                     <Link
-                      to="/forgot-password"
+                      to={ROUTES.forgotPassword}
                       className="text-sm text-primary-700 dark:text-primary-500 hover:underline"
                     >
                       {t('forgotPassword') || 'Forgot password?'}
@@ -136,7 +137,7 @@ export function Login() {
                 <p className="text-center text-sm text-slate-600 dark:text-slate-400">
                   {t('noAccount')}{' '}
                   <Link
-                    to="/register"
+                    to={ROUTES.register}
                     className="text-primary-700 dark:text-primary-500 hover:underline font-medium"
                   >
                     {t('register')}
@@ -150,4 +151,3 @@ export function Login() {
     </main>
   );
 }
-

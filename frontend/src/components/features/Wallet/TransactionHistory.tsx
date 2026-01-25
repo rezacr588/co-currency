@@ -543,7 +543,7 @@ function DeleteConfirmModal({ transaction, onClose, onSuccess }: DeleteConfirmMo
           <Button
             variant="primary"
             className="flex-1 bg-rose-600 hover:bg-rose-700"
-            onClick={() => mutation.mutate({})}
+            onClick={() => mutation.mutate()}
             disabled={mutation.isPending}
           >
             {mutation.isPending ? t('deleting') : t('delete')}

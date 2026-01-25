@@ -14,6 +14,7 @@ import { ErrorMessage } from '../../ui/ErrorMessage';
 import { RecurringForm } from './RecurringForm';
 import { CATEGORY_ICONS, FREQUENCY_ICONS } from '../../../constants/icons';
 import { formatCurrency, formatDate } from '../../../utils/format';
+import { ROUTES } from '../../../constants/routes';
 
 function formatRecurringDate(dateString: string): string {
   return formatDate(dateString, {
@@ -186,7 +187,7 @@ export function RecurringList() {
               <p className="text-slate-500 dark:text-slate-400">{t('recurringDescription')}</p>
             </div>
             <div className="flex gap-2">
-              <Link to="/wallet">
+              <Link to={ROUTES.wallet}>
                 <Button variant="ghost" size="sm">
                   {t('backToWallet')}
                 </Button>

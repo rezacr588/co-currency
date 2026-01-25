@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Container } from '../components/layout';
 import { Button } from '../components/ui/Button';
+import { ROUTES } from '../constants/routes';
 
 export function GitHubCallback() {
     const { t } = useLanguage();
@@ -34,7 +35,7 @@ export function GitHubCallback() {
                 // Refresh the user profile
                 try {
                     await refreshProfile();
-                    navigate('/wallet', { replace: true });
+                    navigate(ROUTES.wallet, { replace: true });
                 } catch {
                     setError('Failed to load user profile');
                 }
@@ -58,7 +59,7 @@ export function GitHubCallback() {
                             <p className="text-red-600 dark:text-red-300 mb-6">{error}</p>
                             <Button 
                                 variant="primary" 
-                                onClick={() => navigate('/login', { replace: true })}
+                                onClick={() => navigate(ROUTES.login, { replace: true })}
                                 className="w-full"
                             >
                                 {t('backToHome') || 'Back to Login'}

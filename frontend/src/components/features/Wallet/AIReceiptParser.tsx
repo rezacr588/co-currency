@@ -12,6 +12,7 @@ import { CurrencyBadge } from '../../ui/CurrencyBadge';
 import { Select } from '../../ui/Select';
 import type { ParsedTransaction, AIParseResponse } from '../../../types/wallet';
 import { formatCurrency } from '../../../utils/format';
+import { ROUTES } from '../../../constants/routes';
 
 function ConfidenceBadge({ confidence }: { confidence: number }) {
   const percent = Math.round(confidence * 100);
@@ -153,7 +154,7 @@ export function AIReceiptParser() {
     {
       successMessage: t('transactionsApplied' as any),
       invalidateQueries: [['wallet-summary'], ['wallet-transactions'], ['wallet-balances']],
-      onSuccess: () => navigate('/wallet'),
+      onSuccess: () => navigate(ROUTES.wallet),
     }
   );
 
@@ -225,7 +226,7 @@ export function AIReceiptParser() {
                     variant="secondary"
                     size="lg"
                     className="flex-1"
-                    onClick={() => navigate('/wallet')}
+                    onClick={() => navigate(ROUTES.wallet)}
                     disabled={parseMutation.isPending}
                   >
                     {t('cancel')}

@@ -4,6 +4,7 @@ import { Container } from '../components/layout';
 import { Button, Input, Card } from '../components/ui';
 import { useLanguage } from '../context/LanguageContext';
 import { api } from '../api';
+import { ROUTES } from '../constants/routes';
 
 export function ResetPassword() {
   const { t } = useLanguage();
@@ -37,7 +38,7 @@ export function ResetPassword() {
       await api.auth.resetPassword({ token, new_password: newPassword });
       setSuccess(true);
       setTimeout(() => {
-        navigate('/login');
+        navigate(ROUTES.login);
       }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to reset password');
@@ -64,7 +65,7 @@ export function ResetPassword() {
                 <p className="text-slate-600 dark:text-slate-400 mb-6">
                   The password reset link is invalid or has expired.
                 </p>
-                <Link to="/forgot-password">
+                <Link to={ROUTES.forgotPassword}>
                   <Button variant="primary">Request New Link</Button>
                 </Link>
               </div>
@@ -93,7 +94,7 @@ export function ResetPassword() {
                 <p className="text-slate-600 dark:text-slate-400 mb-6">
                   Your password has been reset. Redirecting to login...
                 </p>
-                <Link to="/login">
+                <Link to={ROUTES.login}>
                   <Button variant="primary">Go to Login</Button>
                 </Link>
               </div>

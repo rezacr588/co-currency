@@ -11,6 +11,7 @@ import { Skeleton } from '../../ui/Skeleton';
 import { TransactionHistory } from '../Wallet/TransactionHistory';
 import { CURRENCY_FLAGS } from '../../../utils/constants';
 import { formatCurrency, formatNumber } from '../../../utils/format';
+import { ROUTES } from '../../../constants/routes';
 import {
   Wallet,
   Target,
@@ -341,7 +342,7 @@ export function Dashboard() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Link to="/wallet/add">
+            <Link to={ROUTES.walletAdd}>
               <Button variant="primary" size="md" className="gap-2">
                 <Plus className="w-4 h-4" />
                 {t('addTransaction')}
@@ -421,7 +422,7 @@ export function Dashboard() {
               {dueRecurring.length} {t('transactionsDue')}
             </p>
           </div>
-          <Link to="/recurring">
+          <Link to={ROUTES.recurring}>
             <Button variant="ghost" size="sm" className="text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40">
               {t('viewAll')}
             </Button>
@@ -438,42 +439,42 @@ export function Dashboard() {
           </h2>
           <div className="space-y-3">
             <ActionCard
-              to="/wallet"
+              to={ROUTES.wallet}
               icon={<Wallet className="w-5 h-5 text-white" />}
               title={t('wallet')}
               description={t('walletCardDesc')}
               color="bg-gradient-to-br from-emerald-500 to-teal-600"
             />
             <ActionCard
-              to="/goals"
+              to={ROUTES.goals}
               icon={<Target className="w-5 h-5 text-white" />}
               title={t('financialGoals')}
               description={t('goalsCardDesc')}
               color="bg-gradient-to-br from-violet-500 to-purple-600"
             />
             <ActionCard
-              to="/budgets"
+              to={ROUTES.budgets}
               icon={<PieChart className="w-5 h-5 text-white" />}
               title={t('budgets')}
               description={t('budgetsCardDesc')}
               color="bg-gradient-to-br from-sky-500 to-blue-600"
             />
             <ActionCard
-              to="/recurring"
+              to={ROUTES.recurring}
               icon={<RefreshCw className="w-5 h-5 text-white" />}
               title={t('recurring')}
               description={t('recurringCardDesc')}
               color="bg-gradient-to-br from-amber-500 to-orange-600"
             />
             <ActionCard
-              to="/reports"
+              to={ROUTES.reports}
               icon={<TrendingUp className="w-5 h-5 text-white" />}
               title={t('reportsAndStats')}
               description={t('reportsCardDesc')}
               color="bg-gradient-to-br from-rose-500 to-pink-600"
             />
             <ActionCard
-              to="/wallet/ai"
+              to={ROUTES.walletAI}
               icon={<Bot className="w-5 h-5 text-white" />}
               title={t('aiParser')}
               description={t('aiCardDesc')}
@@ -490,7 +491,7 @@ export function Dashboard() {
                 <Calendar className="w-5 h-5 text-primary-500" />
                 {t('recentActivity')}
               </CardTitle>
-              <Link to="/wallet/history">
+              <Link to={ROUTES.walletHistory}>
                 <Button variant="ghost" size="sm" className="gap-1">
                   {t('viewAll')}
                   <ChevronRight className="w-4 h-4" />
@@ -517,7 +518,7 @@ export function Dashboard() {
                   <p className="text-slate-500 dark:text-slate-400 mb-4">
                     {t('noTransactions')}
                   </p>
-                  <Link to="/wallet/add">
+                  <Link to={ROUTES.walletAdd}>
                     <Button variant="primary" size="sm" className="gap-2">
                       <Plus className="w-4 h-4" />
                       {t('addTransaction')}

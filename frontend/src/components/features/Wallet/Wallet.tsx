@@ -10,6 +10,7 @@ import { ErrorMessage } from '../../ui/ErrorMessage';
 import { CurrencyBadge } from '../../ui/CurrencyBadge';
 import { TransactionHistory } from './TransactionHistory';
 import { formatCurrency } from '../../../utils/format';
+import { ROUTES } from '../../../constants/routes';
 
 function BalanceCard({ currency, amount }: { currency: string; amount: number }) {
   return (
@@ -54,22 +55,22 @@ export function Wallet() {
               <p className="text-slate-500 dark:text-slate-400">{t('walletOverview')}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link to="/wallet/add">
+              <Link to={ROUTES.walletAdd}>
                 <Button variant="primary" size="sm">
                   {t('addTransaction')}
                 </Button>
               </Link>
-              <Link to="/wallet/convert">
+              <Link to={ROUTES.walletConvert}>
                 <Button variant="secondary" size="sm">
                   {t('convertCurrency')}
                 </Button>
               </Link>
-              <Link to="/wallet/history">
+              <Link to={ROUTES.walletHistory}>
                 <Button variant="ghost" size="sm">
                   {t('transactionHistory')}
                 </Button>
               </Link>
-              <Link to="/wallet/ai">
+              <Link to={ROUTES.walletAI}>
                 <Button variant="ghost" size="sm">
                   {t('aiParser')}
                 </Button>
@@ -134,7 +135,7 @@ export function Wallet() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>{t('recentTransactions')}</CardTitle>
-                <Link to="/wallet/history">
+                <Link to={ROUTES.walletHistory}>
                   <Button variant="ghost" size="sm">
                     {t('viewAll')}
                   </Button>

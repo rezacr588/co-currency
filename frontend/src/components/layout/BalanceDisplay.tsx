@@ -4,6 +4,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api';
 import { formatCompactCurrency } from '../../utils/format';
+import { ROUTES } from '../../constants/routes';
 
 export function BalanceDisplay() {
   const { t } = useLanguage();
@@ -23,7 +24,7 @@ export function BalanceDisplay() {
 
   return (
     <Link
-      to="/wallet"
+      to={ROUTES.wallet}
       className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700/30 hover:border-primary-300 dark:hover:border-primary-600 transition-all group"
       title={t('totalBalance')}
     >

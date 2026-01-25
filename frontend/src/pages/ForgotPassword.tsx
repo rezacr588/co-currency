@@ -4,6 +4,7 @@ import { Container } from '../components/layout';
 import { Button, Input, Card } from '../components/ui';
 import { useLanguage } from '../context/LanguageContext';
 import { api } from '../api';
+import { ROUTES } from '../constants/routes';
 
 export function ForgotPassword() {
   const { t } = useLanguage();
@@ -45,7 +46,7 @@ export function ForgotPassword() {
                 <p className="text-slate-600 dark:text-slate-400 mb-6">
                   If an account exists with {email}, we've sent a password reset link.
                 </p>
-                <Link to="/login">
+                <Link to={ROUTES.login}>
                   <Button variant="primary">Back to Login</Button>
                 </Link>
               </div>
@@ -98,7 +99,7 @@ export function ForgotPassword() {
 
             <div className="mt-6 text-center">
               <Link
-                to="/login"
+                to={ROUTES.login}
                 className="text-sm text-primary-700 dark:text-primary-500 hover:underline"
               >
                 Back to Login

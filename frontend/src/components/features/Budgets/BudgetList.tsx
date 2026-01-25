@@ -13,6 +13,7 @@ import { Skeleton } from '../../ui/Skeleton';
 import { ErrorMessage } from '../../ui/ErrorMessage';
 import { BudgetCard } from './BudgetCard';
 import { BudgetForm } from './BudgetForm';
+import { ROUTES } from '../../../constants/routes';
 
 export function BudgetList() {
   const { t } = useLanguage();
@@ -54,7 +55,7 @@ export function BudgetList() {
               <p className="text-slate-500 dark:text-slate-400">{t('budgetsDescription')}</p>
             </div>
             <div className="flex gap-2">
-              <Link to="/wallet">
+              <Link to={ROUTES.wallet}>
                 <Button variant="ghost" size="sm">
                   {t('backToWallet')}
                 </Button>

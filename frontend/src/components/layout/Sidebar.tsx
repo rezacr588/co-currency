@@ -5,20 +5,12 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api';
 import { formatCurrency } from '../../utils/format';
 import {
-  LayoutDashboard,
-  Wallet,
-  Target,
-  PieChart,
-  RefreshCw,
-  BarChart3,
-  Bot,
-  ArrowLeftRight,
-  HelpCircle,
   ChevronLeft,
   ChevronRight,
   LogOut,
   Coins,
 } from 'lucide-react';
+import { AUTH_NAV_FOOTER_ITEMS, AUTH_NAV_SECTIONS } from '../../constants/navigation';
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -154,74 +146,42 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-        <NavSection title={t('main')} collapsed={collapsed}>
-          <NavItem
-            to="/dashboard"
-            icon={<LayoutDashboard className="w-5 h-5" />}
-            label={t('dashboard')}
-            collapsed={collapsed}
-          />
-          <NavItem
-            to="/wallet"
-            icon={<Wallet className="w-5 h-5" />}
-            label={t('wallet')}
-            collapsed={collapsed}
-          />
-          <NavItem
-            to="/converter"
-            icon={<ArrowLeftRight className="w-5 h-5" />}
-            label={t('converter')}
-            collapsed={collapsed}
-          />
-        </NavSection>
-
-        <NavSection title={t('finance')} collapsed={collapsed}>
-          <NavItem
-            to="/goals"
-            icon={<Target className="w-5 h-5" />}
-            label={t('financialGoals')}
-            collapsed={collapsed}
-          />
-          <NavItem
-            to="/budgets"
-            icon={<PieChart className="w-5 h-5" />}
-            label={t('budgets')}
-            collapsed={collapsed}
-          />
-          <NavItem
-            to="/recurring"
-            icon={<RefreshCw className="w-5 h-5" />}
-            label={t('recurring')}
-            collapsed={collapsed}
-            badge={dueRecurring.length > 0 ? dueRecurring.length : undefined}
-            badgeColor="bg-amber-500"
-          />
-        </NavSection>
-
-        <NavSection title={t('insights')} collapsed={collapsed}>
-          <NavItem
-            to="/reports"
-            icon={<BarChart3 className="w-5 h-5" />}
-            label={t('reportsAndStats')}
-            collapsed={collapsed}
-          />
-          <NavItem
-            to="/wallet/ai"
-            icon={<Bot className="w-5 h-5" />}
-            label={t('aiParser')}
-            collapsed={collapsed}
-          />
-        </NavSection>
+        {AUTH_NAV_SECTIONS.map((section) => (
+          <NavSection key={section.id} title={t(section.titleKey)} collapsed={collapsed}>
+            {section.items.map((item) => {
+              const Icon = item.icon;
+              const badge =
+                item.id === 'recurring' && dueRecurring.length > 0 ? dueRecurring.length : undefined;
+              return (
+                <NavItem
+                  key={item.id}
+                  to={item.to}
+                  icon={<Icon className="w-5 h-5" />}
+                  label={t(item.labelKey)}
+                  collapsed={collapsed}
+                  badge={badge}
+                  badgeColor={badge ? 'bg-amber-500' : undefined}
+                />
+              );
+            })}
+          </NavSection>
+        ))}
       </nav>
 
       {/* Bottom Section */}
       <div className="p-3 border-t border-slate-200 dark:border-slate-800 space-y-1">
-        <NavItem
-          to="/about"
-          icon={<HelpCircle className="w-5 h-5" />}
-          label={t('aboutUs')}
-          collapsed={collapsed}
-        />
+        {AUTH_NAV_FOOTER_ITEMS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavItem
+              key={item.id}
+              to={item.to}
+              icon={<Icon className="w-5 h-5" />}
+              label={t(item.labelKey)}
+              collapsed={collapsed}
+            />
+          );
+        })}
         <button
           onClick={logout}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-600 dark:hover:text-rose-400 transition-all duration-200 ${

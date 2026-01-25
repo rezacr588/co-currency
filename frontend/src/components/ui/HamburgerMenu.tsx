@@ -7,6 +7,8 @@ import { useAuth } from '../../context/AuthContext';
 import { Language } from '../../i18n/translations';
 import { api } from '../../api';
 import { formatCompactCurrency } from '../../utils/format';
+import { AUTH_NAV_WITH_FOOTER, PUBLIC_AUTH_ITEMS, PUBLIC_NAV_ITEMS, type NavItem } from '../../constants/navigation';
+import { ROUTES } from '../../constants/routes';
 
 const LANGUAGES: { code: Language; name: string; native: string }[] = [
   { code: 'en', name: 'English', native: 'English' },
@@ -22,6 +24,32 @@ export function HamburgerMenu() {
   const { theme, toggleTheme } = useTheme();
   const { isAuthenticated, user, logout } = useAuth();
   const location = useLocation();
+  const authNavItems = AUTH_NAV_WITH_FOOTER;
+  const publicNavItems = [...PUBLIC_NAV_ITEMS, ...PUBLIC_AUTH_ITEMS];
+
+  const renderNavItem = (item: NavItem) => {
+    const Icon = item.icon;
+    const isActive =
+      item.to === ROUTES.home
+        ? location.pathname === ROUTES.home
+        : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
+    return (
+      <Link
+        key={item.id}
+        to={item.to}
+        onClick={() => setIsOpen(false)}
+        className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
+          isActive
+            ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
+            : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
+        }`}
+        role="menuitem"
+      >
+        <Icon className="w-4 h-4" />
+        {t(item.labelKey)}
+      </Link>
+    );
+  };
 
   // Fetch wallet summary for balance display
   const { data: walletSummary, isLoading: balanceLoading } = useQuery({
@@ -84,172 +112,7 @@ export function HamburgerMenu() {
               {t('menu')}
             </p>
             <div className="mt-1 space-y-0.5">
-              <Link
-                to="/"
-                onClick={() => setIsOpen(false)}
-                className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/'
-                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                    : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                  }`}
-                role="menuitem"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-                {t('home')}
-              </Link>
-              <Link
-                to="/about"
-                onClick={() => setIsOpen(false)}
-                className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/about'
-                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                    : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                  }`}
-                role="menuitem"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {t('aboutUs')}
-              </Link>
-              {isAuthenticated ? (
-                <>
-                  <Link
-                    to="/dashboard"
-                    onClick={() => setIsOpen(false)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/dashboard'
-                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                      }`}
-                    role="menuitem"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-                    </svg>
-                    {t('dashboard')}
-                  </Link>
-                  <Link
-                    to="/wallet"
-                    onClick={() => setIsOpen(false)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname.startsWith('/wallet')
-                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                      }`}
-                    role="menuitem"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
-                    {t('wallet')}
-                  </Link>
-                  <Link
-                    to="/goals"
-                    onClick={() => setIsOpen(false)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/goals'
-                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                      }`}
-                    role="menuitem"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {t('financialGoals')}
-                  </Link>
-                  <Link
-                    to="/budgets"
-                    onClick={() => setIsOpen(false)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/budgets'
-                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                      }`}
-                    role="menuitem"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    {t('budgets')}
-                  </Link>
-                  <Link
-                    to="/recurring"
-                    onClick={() => setIsOpen(false)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/recurring'
-                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                      }`}
-                    role="menuitem"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    {t('recurring')}
-                  </Link>
-                  <Link
-                    to="/reports"
-                    onClick={() => setIsOpen(false)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/reports'
-                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                      }`}
-                    role="menuitem"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    {t('reportsAndStats')}
-                  </Link>
-                  <Link
-                    to="/wallet/ai"
-                    onClick={() => setIsOpen(false)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/wallet/ai'
-                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                      }`}
-                    role="menuitem"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8V4H8" />
-                      <rect width="16" height="12" x="4" y="8" rx="2" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2 14h2" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M20 14h2" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 13v2" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 13v2" />
-                    </svg>
-                    {t('aiParser')}
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link
-                    to="/login"
-                    onClick={() => setIsOpen(false)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/login'
-                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                      }`}
-                    role="menuitem"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                    </svg>
-                    {t('login')}
-                  </Link>
-                  <Link
-                    to="/register"
-                    onClick={() => setIsOpen(false)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${location.pathname === '/register'
-                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                      }`}
-                    role="menuitem"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                    </svg>
-                    {t('register')}
-                  </Link>
-                </>
-              )}
+              {(isAuthenticated ? authNavItems : publicNavItems).map(renderNavItem)}
             </div>
           </div>
 
@@ -265,7 +128,7 @@ export function HamburgerMenu() {
                 </div>
                 {/* Balance Display for Mobile */}
                 <Link
-                  to="/wallet"
+                  to={ROUTES.wallet}
                   onClick={() => setIsOpen(false)}
                   className="w-full flex items-center gap-3 px-2 py-2.5 rounded-md bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700/30"
                   role="menuitem"

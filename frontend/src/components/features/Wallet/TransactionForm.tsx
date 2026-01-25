@@ -14,6 +14,7 @@ import { WalletBalance, TransactionRequest } from '../../../types/wallet';
 import { CURRENCY_FLAGS } from '../../../utils/constants';
 import { formatNumber } from '../../../utils/format';
 import { readJSON, writeJSON } from '../../../utils/storage';
+import { ROUTES } from '../../../constants/routes';
 import {
   Utensils,
   ShoppingCart,
@@ -421,7 +422,7 @@ export function TransactionForm() {
   const mutation = useMutationAction(api.wallet.addTransaction, {
     successMessage: t('transactionAdded' as any),
     invalidateQueries: [['wallet-summary'], ['wallet-transactions'], ['wallet-balances']],
-    onSuccess: () => navigate('/wallet'),
+    onSuccess: () => navigate(ROUTES.wallet),
   });
 
   const handleSubmit = (e: FormEvent) => {
@@ -506,7 +507,7 @@ export function TransactionForm() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate('/wallet')}
+              onClick={() => navigate(ROUTES.wallet)}
               className="text-slate-500"
             >
               <X className="w-5 h-5" />
@@ -683,7 +684,7 @@ export function TransactionForm() {
                           variant="ghost"
                           size="sm"
                           className="flex-1 text-slate-500"
-                          onClick={() => navigate('/wallet')}
+                        onClick={() => navigate(ROUTES.wallet)}
                         >
                           {t('cancel')}
                         </Button>

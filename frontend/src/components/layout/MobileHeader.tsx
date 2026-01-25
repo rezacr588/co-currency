@@ -9,15 +9,6 @@ import { formatCurrency } from '../../utils/format';
 import {
   Menu,
   X,
-  LayoutDashboard,
-  Wallet,
-  Target,
-  PieChart,
-  RefreshCw,
-  BarChart3,
-  Bot,
-  ArrowLeftRight,
-  HelpCircle,
   LogOut,
   Sun,
   Moon,
@@ -25,6 +16,8 @@ import {
   ChevronRight,
   Coins,
 } from 'lucide-react';
+import { AUTH_NAV_WITH_FOOTER } from '../../constants/navigation';
+import { ROUTES } from '../../constants/routes';
 
 const languages = [
   { code: 'en', name: 'English', flag: '🇺🇸' },
@@ -83,20 +76,10 @@ export function MobileHeader() {
   const handleLogout = () => {
     logout();
     setIsOpen(false);
-    navigate('/login');
+    navigate(ROUTES.login);
   };
 
-  const navItems = [
-    { to: '/dashboard', icon: LayoutDashboard, label: t('dashboard') },
-    { to: '/wallet', icon: Wallet, label: t('wallet') },
-    { to: '/', icon: ArrowLeftRight, label: t('converter') },
-    { to: '/goals', icon: Target, label: t('financialGoals') },
-    { to: '/budgets', icon: PieChart, label: t('budgets') },
-    { to: '/recurring', icon: RefreshCw, label: t('recurring') },
-    { to: '/reports', icon: BarChart3, label: t('reportsAndStats') },
-    { to: '/wallet/ai', icon: Bot, label: t('aiParser') },
-    { to: '/about', icon: HelpCircle, label: t('aboutUs') },
-  ];
+  const navItems = AUTH_NAV_WITH_FOOTER;
 
   return (
     <header className="fixed top-0 left-0 right-0 h-14 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-b border-slate-200/80 dark:border-slate-800/80 z-50 safe-area-top">
@@ -151,9 +134,11 @@ export function MobileHeader() {
 
           {/* Navigation */}
           <nav className="p-2">
-            {navItems.map((item) => (
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
               <NavLink
-                key={item.to}
+                key={item.id}
                 to={item.to}
                 onClick={handleNavClick}
                 className={({ isActive }) =>
@@ -163,10 +148,10 @@ export function MobileHeader() {
                   }`
                 }
               >
-                <item.icon className="w-5 h-5" />
-                <span>{item.label}</span>
+                <Icon className="w-5 h-5" />
+                <span>{t(item.labelKey)}</span>
               </NavLink>
-            ))}
+            )})}
           </nav>
 
           {/* Settings Section */}

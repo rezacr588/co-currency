@@ -13,6 +13,7 @@ import { PublicLayout } from './components/layout/PublicLayout';
 import { AuthenticatedLayout } from './components/layout/AuthenticatedLayout';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import { queryClient } from './queryClient';
+import { ROUTES } from './constants/routes';
 
 // Lazy load pages and features
 const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
@@ -58,33 +59,33 @@ function AppContent() {
         <Routes>
           {/* Public routes with header/footer */}
           <Route element={<PublicLayout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<AboutUs />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/auth/github/callback" element={<GitHubCallback />} />
+            <Route path={ROUTES.home} element={<Home />} />
+            <Route path={ROUTES.about} element={<AboutUs />} />
+            <Route path={ROUTES.login} element={<Login />} />
+            <Route path={ROUTES.register} element={<Register />} />
+            <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
+            <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
+            <Route path={ROUTES.githubCallback} element={<GitHubCallback />} />
             <Route path="*" element={<NotFound />} />
           </Route>
 
           {/* Authenticated routes with sidebar layout */}
           <Route element={<AuthenticatedLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/converter" element={<Converter />} />
-            <Route path="/wallet" element={<Wallet />} />
-            <Route path="/wallet/add" element={<TransactionForm />} />
-            <Route path="/wallet/history" element={<TransactionHistoryPage />} />
-            <Route path="/wallet/convert" element={<WalletConvert />} />
-            <Route path="/wallet/ai" element={<AIReceiptParser />} />
-            <Route path="/goals" element={<GoalsList />} />
-            <Route path="/budgets" element={<BudgetList />} />
-            <Route path="/recurring" element={<RecurringList />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/subscriptions" element={<Subscriptions />} />
-            <Route path="/badges" element={<Badges />} />
-            <Route path="/ai-chat" element={<AIChat />} />
-            <Route path="/ai-chat/:conversationId" element={<AIChat />} />
+            <Route path={ROUTES.dashboard} element={<Dashboard />} />
+            <Route path={ROUTES.converter} element={<Converter />} />
+            <Route path={ROUTES.wallet} element={<Wallet />} />
+            <Route path={ROUTES.walletAdd} element={<TransactionForm />} />
+            <Route path={ROUTES.walletHistory} element={<TransactionHistoryPage />} />
+            <Route path={ROUTES.walletConvert} element={<WalletConvert />} />
+            <Route path={ROUTES.walletAI} element={<AIReceiptParser />} />
+            <Route path={ROUTES.goals} element={<GoalsList />} />
+            <Route path={ROUTES.budgets} element={<BudgetList />} />
+            <Route path={ROUTES.recurring} element={<RecurringList />} />
+            <Route path={ROUTES.reports} element={<Reports />} />
+            <Route path={ROUTES.subscriptions} element={<Subscriptions />} />
+            <Route path={ROUTES.badges} element={<Badges />} />
+            <Route path={ROUTES.aiChat} element={<AIChat />} />
+            <Route path={ROUTES.aiChatConversation} element={<AIChat />} />
           </Route>
         </Routes>
       </Suspense>

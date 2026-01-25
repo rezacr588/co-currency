@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import { Card, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { ROUTES } from '../../constants/routes';
 
 export function FinalCTA() {
   const { t } = useLanguage();
@@ -24,7 +25,7 @@ export function FinalCTA() {
               {t('finalCtaSubtitle')}
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Link to="/register">
+              <Link to={ROUTES.register}>
                 <Button
                   variant="primary"
                   size="lg"
@@ -36,7 +37,7 @@ export function FinalCTA() {
                   </svg>
                 </Button>
               </Link>
-              <Link to="/login">
+              <Link to={ROUTES.login}>
                 <Button
                   variant="secondary"
                   size="lg"
