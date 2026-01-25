@@ -63,7 +63,7 @@ func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
 // GetByID retrieves a user by ID
 func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	query := `
-		SELECT id, email, password_hash, name, failed_login_attempts, locked_until,
+		SELECT id, email, COALESCE(password_hash, '') AS password_hash, name, failed_login_attempts, locked_until,
 		       password_reset_token, password_reset_expires, onboarding_completed,
 		       github_id, avatar_url, created_at, updated_at
 		FROM users
@@ -100,7 +100,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.User
 // GetByEmail retrieves a user by email
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
 	query := `
-		SELECT id, email, password_hash, name, failed_login_attempts, locked_until,
+		SELECT id, email, COALESCE(password_hash, '') AS password_hash, name, failed_login_attempts, locked_until,
 		       password_reset_token, password_reset_expires, onboarding_completed,
 		       github_id, avatar_url, created_at, updated_at
 		FROM users
@@ -156,6 +156,35 @@ func (r *UserRepository) Update(ctx context.Context, user *model.User) error {
 			return ErrUserAlreadyExists
 		}
 		return fmt.Errorf("updating user: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return ErrUserNotFound
+	}
+
+	return nil
+}
+
+// UpdateProfile updates a user's profile information
+func (r *UserRepository) UpdateProfile(ctx context.Context, user *model.User) error {
+	query := `
+		UPDATE users
+		SET email = $2, name = $3, avatar_url = $4, updated_at = NOW()
+		WHERE id = $1
+	`
+
+	result, err := r.pool.Exec(ctx, query,
+		user.ID,
+		user.Email,
+		user.Name,
+		user.AvatarURL,
+	)
+
+	if err != nil {
+		if isDuplicateKeyError(err) {
+			return ErrUserAlreadyExists
+		}
+		return fmt.Errorf("updating user profile: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
@@ -266,7 +295,7 @@ func (r *UserRepository) SetPasswordResetToken(ctx context.Context, email, token
 // GetByResetToken retrieves a user by password reset token
 func (r *UserRepository) GetByResetToken(ctx context.Context, token string) (*model.User, error) {
 	query := `
-		SELECT id, email, password_hash, name, failed_login_attempts, locked_until,
+		SELECT id, email, COALESCE(password_hash, '') AS password_hash, name, failed_login_attempts, locked_until,
 		       password_reset_token, password_reset_expires, onboarding_completed,
 		       github_id, avatar_url, created_at, updated_at
 		FROM users
@@ -336,7 +365,7 @@ func (r *UserRepository) SetOnboardingCompleted(ctx context.Context, userID uuid
 // GetByGitHubID retrieves a user by GitHub ID
 func (r *UserRepository) GetByGitHubID(ctx context.Context, githubID string) (*model.User, error) {
 	query := `
-		SELECT id, email, password_hash, name, failed_login_attempts, locked_until,
+		SELECT id, email, COALESCE(password_hash, '') AS password_hash, name, failed_login_attempts, locked_until,
 		       password_reset_token, password_reset_expires, onboarding_completed,
 		       github_id, avatar_url, created_at, updated_at
 		FROM users

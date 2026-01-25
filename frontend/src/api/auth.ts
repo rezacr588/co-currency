@@ -6,6 +6,8 @@ import type {
   RefreshTokenRequest,
   AuthResponse,
   User,
+  UpdateProfileRequest,
+  ChangePasswordRequest,
 } from '../types/wallet';
 import { API_BASE, fetchAPI } from './base';
 
@@ -33,6 +35,16 @@ export const auth = {
     }),
   refresh: (data: RefreshTokenRequest) =>
     fetchAPI<AuthResponse>('/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateProfile: (data: UpdateProfileRequest) =>
+    fetchAPI<User>('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  changePassword: (data: ChangePasswordRequest) =>
+    fetchAPI<{ message: string }>('/auth/password', {
       method: 'POST',
       body: JSON.stringify(data),
     }),

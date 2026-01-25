@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/rezacr588/currency-converter/internal/model"
+	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/service"
 	"github.com/rezacr588/currency-converter/pkg/httputil"
 )
@@ -161,6 +162,75 @@ func (h *AuthHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.Success(w, user.ToProfile())
+}
+
+// UpdateProfile handles PUT /api/v1/auth/profile
+func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	if !requireService(w, h.authService != nil, "authentication service not available - database connection failed") {
+		return
+	}
+
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	var req model.UpdateProfileRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
+		return
+	}
+
+	if req.Email == nil && req.Name == nil && req.AvatarURL == nil {
+		httputil.BadRequestWithContext(r.Context(), w, "no profile fields provided")
+		return
+	}
+
+	user, err := h.authService.UpdateProfile(r.Context(), userID, &req)
+	if err != nil {
+		if errors.Is(err, repository.ErrUserAlreadyExists) {
+			httputil.BadRequestWithContext(r.Context(), w, "email already registered")
+			return
+		}
+		httputil.BadRequestWithContext(r.Context(), w, "profile update failed")
+		return
+	}
+
+	httputil.Success(w, user.ToProfile())
+}
+
+// ChangePassword handles POST /api/v1/auth/password
+func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	if !requireService(w, h.authService != nil, "authentication service not available - database connection failed") {
+		return
+	}
+
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	var req model.ChangePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
+		return
+	}
+
+	if strings.TrimSpace(req.NewPassword) == "" {
+		httputil.BadRequestWithContext(r.Context(), w, "new_password is required")
+		return
+	}
+
+	if err := h.authService.ChangePassword(r.Context(), userID, req.CurrentPassword, req.NewPassword); err != nil {
+		if errors.Is(err, service.ErrInvalidCredentials) {
+			httputil.UnauthorizedWithContext(r.Context(), w, "current password is incorrect")
+			return
+		}
+		httputil.BadRequestWithContext(r.Context(), w, err.Error())
+		return
+	}
+
+	httputil.Success(w, map[string]string{"message": "password updated"})
 }
 
 // RefreshToken handles POST /api/v1/auth/refresh

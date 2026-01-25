@@ -9,6 +9,7 @@ export const ROUTES = {
   dashboard: '/dashboard',
   converter: '/converter',
   appConverter: '/app/converter',
+  profile: '/profile',
   wallet: '/wallet',
   walletAdd: '/wallet/add',
   walletHistory: '/wallet/history',

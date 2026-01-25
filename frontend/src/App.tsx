@@ -24,6 +24,7 @@ const ForgotPassword = lazy(() => import('./pages/ForgotPassword').then(m => ({ 
 const ResetPassword = lazy(() => import('./pages/ResetPassword').then(m => ({ default: m.ResetPassword })));
 const GitHubCallback = lazy(() => import('./pages/GitHubCallback').then(m => ({ default: m.GitHubCallback })));
 const Reports = lazy(() => import('./pages/Reports').then(m => ({ default: m.Reports })));
+const Profile = lazy(() => import('./pages/Profile').then(m => ({ default: m.Profile })));
 const Subscriptions = lazy(() => import('./pages/Subscriptions').then(m => ({ default: m.Subscriptions })));
 const Badges = lazy(() => import('./pages/Badges').then(m => ({ default: m.Badges })));
 const Converter = lazy(() => import('./pages/Converter').then(m => ({ default: m.Converter })));
@@ -79,6 +80,7 @@ function AppContent() {
           <Route element={<AuthenticatedLayout />}>
             <Route path={ROUTES.dashboard} element={<Dashboard />} />
             <Route path={ROUTES.appConverter} element={<Converter />} />
+            <Route path={ROUTES.profile} element={<Profile />} />
             <Route path={ROUTES.wallet} element={<Wallet />} />
             <Route path={ROUTES.walletAdd} element={<TransactionForm />} />
             <Route path={ROUTES.walletHistory} element={<TransactionHistoryPage />} />

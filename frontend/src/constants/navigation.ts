@@ -13,6 +13,7 @@ import {
   LogIn,
   UserPlus,
   Plus,
+  User,
 } from 'lucide-react';
 import { ROUTES } from './routes';
 import type { TranslationKey } from '../i18n/translations';
@@ -63,7 +64,9 @@ export const AUTH_NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-export const AUTH_NAV_FOOTER_ITEMS: NavItem[] = [];
+export const AUTH_NAV_FOOTER_ITEMS: NavItem[] = [
+  { id: 'profile', to: ROUTES.profile, labelKey: 'profile', icon: User },
+];
 
 export const AUTH_NAV_ITEMS: NavItem[] = AUTH_NAV_SECTIONS.flatMap((section) => section.items);
 

@@ -33,9 +33,23 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  avatar_url?: string | null;
+  has_github_linked?: boolean;
+  has_password?: boolean;
   onboarding_completed?: boolean;
   created_at: string;
   updated_at?: string;
+}
+
+export interface UpdateProfileRequest {
+  email?: string;
+  name?: string;
+  avatar_url?: string;
+}
+
+export interface ChangePasswordRequest {
+  current_password?: string;
+  new_password: string;
 }
 
 // Wallet types

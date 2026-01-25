@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -196,6 +197,73 @@ func (s *AuthService) ValidateToken(tokenString string) (*JWTClaims, error) {
 // GetUserByID retrieves a user by ID
 func (s *AuthService) GetUserByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	return s.userRepo.GetByID(ctx, id)
+}
+
+// UpdateProfile updates a user's profile information
+func (s *AuthService) UpdateProfile(ctx context.Context, userID uuid.UUID, req *model.UpdateProfileRequest) (*model.User, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("getting user: %w", err)
+	}
+
+	if req.Email != nil {
+		email := strings.TrimSpace(*req.Email)
+		if email == "" {
+			return nil, errors.New("email is required")
+		}
+		user.Email = email
+	}
+
+	if req.Name != nil {
+		user.Name = strings.TrimSpace(*req.Name)
+	}
+
+	if req.AvatarURL != nil {
+		avatar := strings.TrimSpace(*req.AvatarURL)
+		if avatar == "" {
+			user.AvatarURL = nil
+		} else {
+			user.AvatarURL = &avatar
+		}
+	}
+
+	if err := s.userRepo.UpdateProfile(ctx, user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+// ChangePassword updates the user's password
+func (s *AuthService) ChangePassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) error {
+	if len(newPassword) < 6 {
+		return errors.New("password must be at least 6 characters")
+	}
+
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("getting user: %w", err)
+	}
+
+	if user.PasswordHash != "" {
+		if strings.TrimSpace(currentPassword) == "" {
+			return errors.New("current password is required")
+		}
+		if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(currentPassword)); err != nil {
+			return ErrInvalidCredentials
+		}
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("hashing password: %w", err)
+	}
+
+	if err := s.userRepo.UpdatePassword(ctx, user.ID, string(hashedPassword)); err != nil {
+		return fmt.Errorf("updating password: %w", err)
+	}
+
+	return nil
 }
 
 // generateToken creates a new JWT token for a user

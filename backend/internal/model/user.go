@@ -72,6 +72,7 @@ type UserProfile struct {
 	Name            string    `json:"name,omitempty"`
 	AvatarURL       *string   `json:"avatar_url,omitempty"`
 	HasGitHubLinked bool      `json:"has_github_linked"`
+	HasPassword     bool      `json:"has_password"`
 	CreatedAt       time.Time `json:"created_at"`
 }
 
@@ -83,6 +84,20 @@ func (u *User) ToProfile() *UserProfile {
 		Name:            u.Name,
 		AvatarURL:       u.AvatarURL,
 		HasGitHubLinked: u.GithubID != nil,
+		HasPassword:     u.PasswordHash != "",
 		CreatedAt:       u.CreatedAt,
 	}
+}
+
+// UpdateProfileRequest represents a profile update request
+type UpdateProfileRequest struct {
+	Email     *string `json:"email,omitempty"`
+	Name      *string `json:"name,omitempty"`
+	AvatarURL *string `json:"avatar_url,omitempty"`
+}
+
+// ChangePasswordRequest represents a password change request
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password,omitempty"`
+	NewPassword     string `json:"new_password"`
 }

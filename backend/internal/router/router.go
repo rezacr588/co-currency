@@ -71,6 +71,8 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 			r.Group(func(r chi.Router) {
 				r.Use(authMiddleware.Middleware)
 				r.Get("/profile", h.Auth.GetProfile)
+				r.Put("/profile", h.Auth.UpdateProfile)
+				r.Post("/password", h.Auth.ChangePassword)
 
 				// GitHub account linking (protected)
 				if h.GitHubOAuth != nil {

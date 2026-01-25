@@ -226,23 +226,44 @@ export function Reports() {
             </div>
 
             <div className="flex flex-wrap gap-2 items-center">
-              <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+              <div
+                className="relative flex items-center gap-2 rounded-full border border-slate-200/80 dark:border-slate-700/80 bg-white/80 dark:bg-slate-900/70 px-2 py-1.5 shadow-sm"
+                role="tablist"
+                aria-label={t('reportsAndStats')}
+              >
+                <span className="pointer-events-none absolute inset-x-3 top-1/2 h-px -translate-y-1/2 bg-slate-200/70 dark:bg-slate-700/70" />
                 <button
                   onClick={() => setView('monthly')}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${view === 'monthly'
-                    ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                    }`}
+                  role="tab"
+                  aria-selected={view === 'monthly'}
+                  className={`relative z-10 flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-semibold tracking-wide rounded-full transition-all ${
+                    view === 'monthly'
+                      ? 'bg-white dark:bg-slate-950 text-slate-900 dark:text-white shadow-sm ring-1 ring-primary-500/30'
+                      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`}
                 >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                      view === 'monthly' ? 'bg-primary-500' : 'bg-slate-300 dark:bg-slate-600'
+                    }`}
+                  />
                   {t('monthly')}
                 </button>
                 <button
                   onClick={() => setView('yearly')}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${view === 'yearly'
-                    ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                    }`}
+                  role="tab"
+                  aria-selected={view === 'yearly'}
+                  className={`relative z-10 flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-semibold tracking-wide rounded-full transition-all ${
+                    view === 'yearly'
+                      ? 'bg-white dark:bg-slate-950 text-slate-900 dark:text-white shadow-sm ring-1 ring-primary-500/30'
+                      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`}
                 >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                      view === 'yearly' ? 'bg-primary-500' : 'bg-slate-300 dark:bg-slate-600'
+                    }`}
+                  />
                   {t('yearly')}
                 </button>
               </div>
