@@ -13,7 +13,7 @@ export function Header() {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
   const authNavLookup = new Map(AUTH_NAV_WITH_FOOTER.map((item) => [item.id, item]));
-  const authHeaderNav = ['dashboard', 'converter', 'about']
+  const authHeaderNav = ['dashboard', 'converter']
     .map((id) => authNavLookup.get(id))
     .filter(Boolean);
 

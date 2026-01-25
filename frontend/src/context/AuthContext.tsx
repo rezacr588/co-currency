@@ -29,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Only redirect if we're on a protected route (not already on login/register)
       const publicPaths = [
         ROUTES.home,
+        ROUTES.converter,
         ROUTES.login,
         ROUTES.register,
         ROUTES.forgotPassword,

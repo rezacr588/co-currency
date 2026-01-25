@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,
+  Home,
   Wallet,
   ArrowLeftRight,
   Target,
@@ -40,7 +41,7 @@ export const AUTH_NAV_SECTIONS: NavSection[] = [
     items: [
       { id: 'dashboard', to: ROUTES.dashboard, labelKey: 'dashboard', icon: LayoutDashboard },
       { id: 'wallet', to: ROUTES.wallet, labelKey: 'wallet', icon: Wallet },
-      { id: 'converter', to: ROUTES.converter, labelKey: 'converter', icon: ArrowLeftRight },
+      { id: 'converter', to: ROUTES.appConverter, labelKey: 'converter', icon: ArrowLeftRight },
     ],
   },
   {
@@ -62,16 +63,15 @@ export const AUTH_NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-export const AUTH_NAV_FOOTER_ITEMS: NavItem[] = [
-  { id: 'about', to: ROUTES.about, labelKey: 'aboutUs', icon: HelpCircle },
-];
+export const AUTH_NAV_FOOTER_ITEMS: NavItem[] = [];
 
 export const AUTH_NAV_ITEMS: NavItem[] = AUTH_NAV_SECTIONS.flatMap((section) => section.items);
 
 export const AUTH_NAV_WITH_FOOTER: NavItem[] = [...AUTH_NAV_ITEMS, ...AUTH_NAV_FOOTER_ITEMS];
 
 export const PUBLIC_NAV_ITEMS: NavItem[] = [
-  { id: 'home', to: ROUTES.home, labelKey: 'home', icon: ArrowLeftRight },
+  { id: 'home', to: ROUTES.home, labelKey: 'home', icon: Home },
+  { id: 'converter', to: ROUTES.converter, labelKey: 'converter', icon: ArrowLeftRight },
   { id: 'about', to: ROUTES.about, labelKey: 'aboutUs', icon: HelpCircle },
 ];
 

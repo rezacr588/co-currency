@@ -11,6 +11,7 @@ import { OfflineBanner } from './components/ui/OfflineBanner';
 import { SEOHead } from './components/SEOHead';
 import { PublicLayout } from './components/layout/PublicLayout';
 import { AuthenticatedLayout } from './components/layout/AuthenticatedLayout';
+import { HybridLayout } from './components/layout/HybridLayout';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import { queryClient } from './queryClient';
 import { ROUTES } from './constants/routes';
@@ -69,10 +70,15 @@ function AppContent() {
             <Route path="*" element={<NotFound />} />
           </Route>
 
+          {/* Routes available to everyone but with auth-aware layout */}
+          <Route element={<HybridLayout />}>
+            <Route path={ROUTES.converter} element={<Converter />} />
+          </Route>
+
           {/* Authenticated routes with sidebar layout */}
           <Route element={<AuthenticatedLayout />}>
             <Route path={ROUTES.dashboard} element={<Dashboard />} />
-            <Route path={ROUTES.converter} element={<Converter />} />
+            <Route path={ROUTES.appConverter} element={<Converter />} />
             <Route path={ROUTES.wallet} element={<Wallet />} />
             <Route path={ROUTES.walletAdd} element={<TransactionForm />} />
             <Route path={ROUTES.walletHistory} element={<TransactionHistoryPage />} />

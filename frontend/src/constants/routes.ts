@@ -8,6 +8,7 @@ export const ROUTES = {
   githubCallback: '/auth/github/callback',
   dashboard: '/dashboard',
   converter: '/converter',
+  appConverter: '/app/converter',
   wallet: '/wallet',
   walletAdd: '/wallet/add',
   walletHistory: '/wallet/history',
