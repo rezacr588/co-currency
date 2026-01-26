@@ -1,0 +1,72 @@
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useColorScheme } from 'react-native';
+import { readStorage, writeStorage } from '../utils/storage';
+
+type Theme = 'light' | 'dark';
+
+interface ThemeContextType {
+  theme: Theme;
+  toggleTheme: () => void;
+  setTheme: (theme: Theme) => void;
+  isDark: boolean;
+}
+
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+const THEME_STORAGE_KEY = 'currency-converter-theme';
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const systemColorScheme = useColorScheme();
+  const [theme, setThemeState] = useState<Theme>('dark');
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Load theme from storage on mount
+  useEffect(() => {
+    async function loadTheme() {
+      const stored = await readStorage(THEME_STORAGE_KEY);
+      if (stored === 'light' || stored === 'dark') {
+        setThemeState(stored);
+      } else if (systemColorScheme === 'light') {
+        setThemeState('light');
+      }
+      setIsInitialized(true);
+    }
+    loadTheme();
+  }, [systemColorScheme]);
+
+  // Save theme to storage when it changes
+  useEffect(() => {
+    if (isInitialized) {
+      writeStorage(THEME_STORAGE_KEY, theme);
+    }
+  }, [theme, isInitialized]);
+
+  const toggleTheme = () => {
+    setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
+  const setTheme = (newTheme: Theme) => {
+    setThemeState(newTheme);
+  };
+
+  const isDark = theme === 'dark';
+
+  // Don't render until theme is loaded to prevent flash
+  if (!isInitialized) {
+    return null;
+  }
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme, isDark }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+export function useTheme() {
+  const context = useContext(ThemeContext);
+  if (context === undefined) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+}

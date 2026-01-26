@@ -1,0 +1,159 @@
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { Link } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus, ArrowLeftRight, Bot, History } from 'lucide-react-native';
+import { api } from '../../../../src/api';
+import { useLanguage } from '../../../../src/context/LanguageContext';
+import { formatCompactCurrency, getCurrencyDisplay } from '../../../../src/utils/format';
+
+export default function WalletScreen() {
+  const { t } = useLanguage();
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const { data: balancesData, isPending: isLoadingBalances } = useQuery({
+    queryKey: ['wallet', 'balances'],
+    queryFn: () => api.wallet.getBalances(),
+  });
+
+  const { data: transactionsData, isPending: isLoadingTransactions } = useQuery({
+    queryKey: ['wallet', 'transactions'],
+    queryFn: () => api.wallet.getTransactions(10),
+  });
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ['wallet'] });
+    setRefreshing(false);
+  }, [queryClient]);
+
+  const balances = balancesData?.balances || [];
+  const transactions = transactionsData?.transactions || [];
+
+  return (
+    <SafeAreaView className="flex-1 bg-background">
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="p-6"
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <Text className="text-3xl font-bold text-foreground mb-6">{t('wallet')}</Text>
+
+        {/* Quick Actions */}
+        <View className="flex-row gap-3 mb-6">
+          <Link href="/(app)/(tabs)/add" asChild>
+            <Pressable className="flex-1 bg-primary p-4 rounded-xl items-center flex-row justify-center">
+              <Plus size={20} color="white" />
+              <Text className="text-white font-semibold ml-2">{t('addTransaction')}</Text>
+            </Pressable>
+          </Link>
+          <Link href="/(app)/(tabs)/wallet/convert" asChild>
+            <Pressable className="bg-card p-4 rounded-xl items-center">
+              <ArrowLeftRight size={20} color="rgb(212, 175, 55)" />
+            </Pressable>
+          </Link>
+          <Link href="/(app)/(tabs)/wallet/ai" asChild>
+            <Pressable className="bg-card p-4 rounded-xl items-center">
+              <Bot size={20} color="rgb(168, 85, 247)" />
+            </Pressable>
+          </Link>
+        </View>
+
+        {/* Balances */}
+        <View className="mb-6">
+          <Text className="text-lg font-semibold text-foreground mb-4">{t('balances')}</Text>
+          {isLoadingBalances ? (
+            <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
+          ) : balances.length === 0 ? (
+            <View className="bg-card p-6 rounded-xl items-center">
+              <Text className="text-muted-foreground">{t('noBalances')}</Text>
+            </View>
+          ) : (
+            <View className="gap-3">
+              {balances.map((balance) => {
+                const display = getCurrencyDisplay(balance.currency);
+                return (
+                  <View
+                    key={balance.currency}
+                    className="bg-card p-4 rounded-xl flex-row items-center justify-between"
+                  >
+                    <View className="flex-row items-center">
+                      <Text className="text-2xl mr-3">{display.flag || '🌐'}</Text>
+                      <View>
+                        <Text className="text-lg font-semibold text-foreground">
+                          {balance.currency}
+                        </Text>
+                        <Text className="text-muted-foreground text-sm">
+                          {display.symbol}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text
+                      className={`text-xl font-bold ${
+                        balance.balance >= 0 ? 'text-foreground' : 'text-danger'
+                      }`}
+                    >
+                      {formatCompactCurrency(balance.balance, balance.currency)}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
+
+        {/* Recent Transactions */}
+        <View>
+          <View className="flex-row items-center justify-between mb-4">
+            <Text className="text-lg font-semibold text-foreground">
+              {t('recentTransactions')}
+            </Text>
+            <Link href="/(app)/(tabs)/wallet/history" asChild>
+              <Pressable className="flex-row items-center">
+                <History size={16} color="rgb(212, 175, 55)" />
+                <Text className="text-accent ml-1">{t('viewAll')}</Text>
+              </Pressable>
+            </Link>
+          </View>
+          {isLoadingTransactions ? (
+            <ActivityIndicator />
+          ) : transactions.length === 0 ? (
+            <View className="bg-card p-6 rounded-xl items-center">
+              <Text className="text-muted-foreground">{t('noTransactions')}</Text>
+            </View>
+          ) : (
+            <View className="gap-3">
+              {transactions.slice(0, 5).map((tx) => (
+                <View
+                  key={tx.id}
+                  className="bg-card p-4 rounded-xl flex-row items-center justify-between"
+                >
+                  <View className="flex-1">
+                    <Text className="font-semibold text-foreground" numberOfLines={1}>
+                      {tx.description || tx.category || 'Transaction'}
+                    </Text>
+                    <Text className="text-muted-foreground text-sm">
+                      {tx.category || t('uncategorized')}
+                    </Text>
+                  </View>
+                  <Text
+                    className={`text-lg font-semibold ${
+                      tx.type === 'credit' ? 'text-success' : 'text-danger'
+                    }`}
+                  >
+                    {tx.type === 'credit' ? '+' : '-'}
+                    {formatCompactCurrency(tx.amount, tx.currency)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
