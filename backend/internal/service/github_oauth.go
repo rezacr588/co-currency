@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -35,11 +34,10 @@ type GitHubConfig struct {
 
 // GitHubOAuthService handles GitHub OAuth operations
 type GitHubOAuthService struct {
-	authService *AuthService
-	userRepo    *repository.UserRepository
-	config      *GitHubConfig
-	stateStore  map[string]time.Time // simple in-memory state store
-	stateMutex  sync.Mutex
+	authService    *AuthService
+	userRepo       *repository.UserRepository
+	oauthStateRepo *repository.OAuthStateRepository
+	config         *GitHubConfig
 }
 
 // GitHubUser represents the user data returned by GitHub API
@@ -59,12 +57,12 @@ type GitHubAccessToken struct {
 }
 
 // NewGitHubOAuthService creates a new GitHubOAuthService
-func NewGitHubOAuthService(authService *AuthService, userRepo *repository.UserRepository, config *GitHubConfig) *GitHubOAuthService {
+func NewGitHubOAuthService(authService *AuthService, userRepo *repository.UserRepository, oauthStateRepo *repository.OAuthStateRepository, config *GitHubConfig) *GitHubOAuthService {
 	return &GitHubOAuthService{
-		authService: authService,
-		userRepo:    userRepo,
-		config:      config,
-		stateStore:  make(map[string]time.Time),
+		authService:    authService,
+		userRepo:       userRepo,
+		oauthStateRepo: oauthStateRepo,
+		config:         config,
 	}
 }
 
@@ -82,13 +80,24 @@ func (s *GitHubOAuthService) GetAuthURL() (string, string, error) {
 	// Generate a random state token
 	state := uuid.New().String()
 
-	s.stateMutex.Lock()
-	// Store state with expiry (5 minutes)
-	s.stateStore[state] = time.Now().Add(5 * time.Minute)
+	// Store state in database with 5 minute expiry
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	// Clean up expired states
-	s.cleanupExpiredStates()
-	s.stateMutex.Unlock()
+	expiresAt := time.Now().Add(5 * time.Minute)
+	if err := s.oauthStateRepo.Create(ctx, state, expiresAt); err != nil {
+		log.Error().Err(err).Msg("failed to store OAuth state in database")
+		return "", "", fmt.Errorf("storing OAuth state: %w", err)
+	}
+
+	// Clean up expired states in background
+	go func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cleanupCancel()
+		if err := s.oauthStateRepo.CleanupExpired(cleanupCtx); err != nil {
+			log.Warn().Err(err).Msg("failed to cleanup expired OAuth states")
+		}
+	}()
 
 	// Build authorization URL
 	params := url.Values{}
@@ -103,20 +112,8 @@ func (s *GitHubOAuthService) GetAuthURL() (string, string, error) {
 }
 
 // ValidateState validates the OAuth state parameter
-func (s *GitHubOAuthService) ValidateState(state string) bool {
-	s.stateMutex.Lock()
-	defer s.stateMutex.Unlock()
-
-	expiry, exists := s.stateStore[state]
-	if !exists {
-		return false
-	}
-
-	// Remove the state (one-time use)
-	delete(s.stateStore, state)
-
-	// Check if expired
-	return time.Now().Before(expiry)
+func (s *GitHubOAuthService) ValidateState(ctx context.Context, state string) error {
+	return s.oauthStateRepo.Validate(ctx, state)
 }
 
 // HandleCallback handles the GitHub OAuth callback
@@ -125,9 +122,15 @@ func (s *GitHubOAuthService) HandleCallback(ctx context.Context, code, state str
 		return nil, ErrGitHubOAuthNotConfigured
 	}
 
-	// Validate state
-	if !s.ValidateState(state) {
-		return nil, fmt.Errorf("invalid or expired state parameter")
+	// Validate state from database
+	if err := s.ValidateState(ctx, state); err != nil {
+		if errors.Is(err, repository.ErrOAuthStateNotFound) {
+			return nil, fmt.Errorf("invalid or expired state parameter")
+		}
+		if errors.Is(err, repository.ErrOAuthStateExpired) {
+			return nil, fmt.Errorf("OAuth state has expired, please try again")
+		}
+		return nil, fmt.Errorf("validating state: %w", err)
 	}
 
 	// Exchange code for access token
@@ -395,16 +398,6 @@ func (s *GitHubOAuthService) generateAuthResponse(ctx context.Context, user *mod
 	return response, nil
 }
 
-// cleanupExpiredStates removes expired state tokens
-// NOTE: This must be called while holding stateMutex lock
-func (s *GitHubOAuthService) cleanupExpiredStates() {
-	now := time.Now()
-	for state, expiry := range s.stateStore {
-		if now.After(expiry) {
-			delete(s.stateStore, state)
-		}
-	}
-}
 
 // GetFrontendURL returns the frontend URL for redirects
 func (s *GitHubOAuthService) GetFrontendURL() string {

@@ -184,8 +184,9 @@ func main() {
 				RedirectURI:  cfg.GitHubRedirectURI,
 				FrontendURL:  cfg.FrontendURL,
 			}
-			githubOAuthService = service.NewGitHubOAuthService(authService, userRepo, githubConfig)
-			log.Info().Msg("GitHub OAuth service initialized")
+			oauthStateRepo := repository.NewOAuthStateRepository(mainDB)
+			githubOAuthService = service.NewGitHubOAuthService(authService, userRepo, oauthStateRepo, githubConfig)
+			log.Info().Msg("GitHub OAuth service initialized with database-backed state storage")
 		} else {
 			log.Info().Msg("GitHub OAuth not configured (GITHUB_CLIENT_ID/GITHUB_CLIENT_SECRET not set)")
 		}
