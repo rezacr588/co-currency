@@ -1,15 +1,15 @@
-# ============ Stage 1: Build Frontend ============
+# ============ Stage 1: Build Expo Web Frontend ============
 FROM node:20-alpine AS frontend-builder
 
-WORKDIR /app/frontend
+WORKDIR /app
 
 # Install dependencies
-COPY frontend/package*.json ./
+COPY app/package*.json ./
 RUN npm install
 
-# Copy source and build
-COPY frontend/ ./
-RUN npm run build
+# Copy source and build for web
+COPY app/ ./
+RUN npx expo export --platform web
 
 # ============ Stage 2: Build Backend ============
 FROM golang:1.24-alpine AS backend-builder
@@ -23,8 +23,8 @@ RUN go mod download
 # Copy backend source
 COPY backend/ ./
 
-# Copy built frontend into backend static folder
-COPY --from=frontend-builder /app/frontend/dist ./cmd/api/static/
+# Copy built Expo web frontend into backend static folder
+COPY --from=frontend-builder /app/dist ./cmd/api/static/
 
 # Build the binary with embedded static files
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /api ./cmd/api
@@ -33,7 +33,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /api ./cm
 FROM alpine:3.19
 
 LABEL org.opencontainers.image.source="https://github.com/rezacr588/co-currency"
-LABEL org.opencontainers.image.description="Currency Converter API with React frontend"
+LABEL org.opencontainers.image.description="CoFinance - Personal Finance App"
 
 # Add non-root user for security
 RUN addgroup -g 1001 -S appgroup && \

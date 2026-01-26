@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, useWindowDimensions } from 'react-native';
 import { Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
@@ -12,6 +12,10 @@ export default function WalletScreen() {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
+  const { width } = useWindowDimensions();
+
+  const isDesktop = width >= 1024;
+  const isTablet = width >= 768;
 
   const { data: balancesData, isPending: isLoadingBalances } = useQuery({
     queryKey: ['wallet', 'balances'],
@@ -33,10 +37,15 @@ export default function WalletScreen() {
   const transactions = transactionsData?.transactions || [];
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
       <ScrollView
         className="flex-1"
-        contentContainerClassName="p-6"
+        contentContainerStyle={{
+          padding: isDesktop ? 32 : 24,
+          maxWidth: 1400,
+          width: '100%',
+          alignSelf: 'center',
+        }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -44,20 +53,20 @@ export default function WalletScreen() {
         <Text className="text-3xl font-bold text-foreground mb-6">{t('wallet')}</Text>
 
         {/* Quick Actions */}
-        <View className="flex-row gap-3 mb-6">
+        <View className="flex-row gap-3 mb-6" style={{ maxWidth: isDesktop ? 600 : '100%' }}>
           <Link href="/(app)/(tabs)/add" asChild>
-            <Pressable className="flex-1 bg-primary p-4 rounded-xl items-center flex-row justify-center">
+            <Pressable className="flex-1 bg-primary p-4 rounded-xl items-center flex-row justify-center" style={{ cursor: 'pointer' }}>
               <Plus size={20} color="white" />
               <Text className="text-white font-semibold ml-2">{t('addTransaction')}</Text>
             </Pressable>
           </Link>
           <Link href="/(app)/(tabs)/wallet/convert" asChild>
-            <Pressable className="bg-card p-4 rounded-xl items-center">
+            <Pressable className="bg-card p-4 rounded-xl items-center" style={{ cursor: 'pointer' }}>
               <ArrowLeftRight size={20} color="rgb(212, 175, 55)" />
             </Pressable>
           </Link>
           <Link href="/(app)/(tabs)/wallet/ai" asChild>
-            <Pressable className="bg-card p-4 rounded-xl items-center">
+            <Pressable className="bg-card p-4 rounded-xl items-center" style={{ cursor: 'pointer' }}>
               <Bot size={20} color="rgb(168, 85, 247)" />
             </Pressable>
           </Link>
@@ -73,13 +82,21 @@ export default function WalletScreen() {
               <Text className="text-muted-foreground">{t('noBalances')}</Text>
             </View>
           ) : (
-            <View className="gap-3">
+            <View style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 12,
+            }}>
               {balances.map((balance) => {
                 const display = getCurrencyDisplay(balance.currency);
                 return (
                   <View
                     key={balance.currency}
                     className="bg-card p-4 rounded-xl flex-row items-center justify-between"
+                    style={{
+                      width: isDesktop ? '32%' : isTablet ? '48%' : '100%',
+                      minWidth: 250,
+                    } as any}
                   >
                     <View className="flex-row items-center">
                       <Text className="text-2xl mr-3">{display.flag || '🌐'}</Text>
@@ -113,7 +130,7 @@ export default function WalletScreen() {
               {t('recentTransactions')}
             </Text>
             <Link href="/(app)/(tabs)/wallet/history" asChild>
-              <Pressable className="flex-row items-center">
+              <Pressable className="flex-row items-center" style={{ cursor: 'pointer' }}>
                 <History size={16} color="rgb(212, 175, 55)" />
                 <Text className="text-accent ml-1">{t('viewAll')}</Text>
               </Pressable>
@@ -126,11 +143,19 @@ export default function WalletScreen() {
               <Text className="text-muted-foreground">{t('noTransactions')}</Text>
             </View>
           ) : (
-            <View className="gap-3">
+            <View style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 12,
+            }}>
               {transactions.slice(0, 5).map((tx) => (
                 <View
                   key={tx.id}
                   className="bg-card p-4 rounded-xl flex-row items-center justify-between"
+                  style={{
+                    width: isDesktop ? '48%' : '100%',
+                    minWidth: 280,
+                  } as any}
                 >
                   <View className="flex-1">
                     <Text className="font-semibold text-foreground" numberOfLines={1}>

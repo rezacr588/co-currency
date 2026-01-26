@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api';
 import { getCurrencyDisplay } from '../../utils/format';
 import { LoadingSpinner } from './LoadingSpinner';
+import { ICON_SIZES, ICON_COLOR_MUTED } from '../../constants/icons';
 
 interface CurrencyPickerProps {
   visible: boolean;
@@ -55,14 +56,14 @@ export function CurrencyPicker({
         <View className="flex-row items-center justify-between p-4 border-b border-border">
           <Text className="text-xl font-bold text-foreground">{title}</Text>
           <Pressable onPress={onClose} className="p-2">
-            <X size={24} color="rgb(148, 163, 184)" />
+            <X size={ICON_SIZES.default} color={ICON_COLOR_MUTED} />
           </Pressable>
         </View>
 
         {/* Search */}
         <View className="p-4">
           <View className="bg-card rounded-xl flex-row items-center px-4">
-            <Search size={20} color="rgb(148, 163, 184)" />
+            <Search size={ICON_SIZES.md} color={ICON_COLOR_MUTED} />
             <TextInput
               className="flex-1 py-3 px-3 text-foreground"
               placeholder="Search currency..."
@@ -120,7 +121,7 @@ export function CurrencyPicker({
                   >
                     {display.symbol}
                   </Text>
-                  {isSelected && <Check size={20} color="rgb(15, 26, 42)" />}
+                  {isSelected && <Check size={ICON_SIZES.md} color="rgb(15, 26, 42)" />}
                 </Pressable>
               );
             }}

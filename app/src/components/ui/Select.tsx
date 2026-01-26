@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, Pressable, Modal, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronDown, X, Check } from 'lucide-react-native';
+import { ICON_SIZES, ICON_COLOR_MUTED } from '../../constants/icons';
 
 interface SelectOption {
   value: string;
@@ -52,7 +53,7 @@ export function Select({
         <Text className={selectedOption ? 'text-foreground' : 'text-muted-foreground'}>
           {selectedOption?.label || placeholder}
         </Text>
-        <ChevronDown size={20} color="rgb(148, 163, 184)" />
+        <ChevronDown size={ICON_SIZES.md} color={ICON_COLOR_MUTED} />
       </Pressable>
       {error && (
         <Text className="text-danger text-sm mt-1">{error}</Text>
@@ -65,7 +66,7 @@ export function Select({
               {label || 'Select'}
             </Text>
             <Pressable onPress={() => setIsOpen(false)} className="p-2">
-              <X size={24} color="rgb(148, 163, 184)" />
+              <X size={ICON_SIZES.default} color={ICON_COLOR_MUTED} />
             </Pressable>
           </View>
 
@@ -90,7 +91,7 @@ export function Select({
                   >
                     {item.label}
                   </Text>
-                  {isSelected && <Check size={20} color="rgb(15, 26, 42)" />}
+                  {isSelected && <Check size={ICON_SIZES.md} color="rgb(15, 26, 42)" />}
                 </Pressable>
               );
             }}

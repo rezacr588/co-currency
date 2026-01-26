@@ -1,6 +1,7 @@
 import { View, Text } from 'react-native';
 import { Globe } from 'lucide-react-native';
 import { getCurrencyDisplay } from '../../utils/format';
+import { ICON_SIZES, ICON_COLOR_MUTED } from '../../constants/icons';
 
 interface CurrencyBadgeProps {
   code: string;
@@ -15,10 +16,11 @@ const sizeStyles = {
   lg: { flag: 'text-2xl', code: 'text-base', padding: 'px-4 py-3' },
 };
 
-const iconSizes = {
-  sm: 12,
-  md: 16,
-  lg: 20,
+// Map badge sizes to icon sizes
+const badgeIconSizes = {
+  sm: ICON_SIZES.xs,
+  md: ICON_SIZES.sm,
+  lg: ICON_SIZES.md,
 };
 
 export function CurrencyBadge({
@@ -37,7 +39,7 @@ export function CurrencyBadge({
       {display.flag ? (
         <Text className={styles.flag}>{display.flag}</Text>
       ) : (
-        <Globe size={iconSizes[size]} color="rgb(148, 163, 184)" />
+        <Globe size={badgeIconSizes[size]} color={ICON_COLOR_MUTED} />
       )}
       {showCode && (
         <Text className={`text-foreground font-semibold ml-2 ${styles.code}`}>

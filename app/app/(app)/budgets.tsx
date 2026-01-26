@@ -8,6 +8,7 @@ import {
   RefreshControl,
   TextInput,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +28,18 @@ export default function BudgetsScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const { width } = useWindowDimensions();
+
+  const isDesktop = width >= 1024;
+  const isTablet = width >= 768;
+
+  // Grid columns based on screen size
+  const getGridColumns = () => {
+    if (isDesktop) return 3;
+    if (isTablet) return 2;
+    return 1;
+  };
+  const columns = getGridColumns();
 
   const { data, isPending } = useQuery({
     queryKey: ['budgets'],
@@ -42,37 +55,51 @@ export default function BudgetsScreen() {
   const budgets = data?.budgets || [];
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
       {/* Header */}
-      <View className="flex-row items-center justify-between p-4 border-b border-border">
+      <View className="flex-row items-center justify-between p-4 border-b border-border" style={{ maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
         <View className="flex-row items-center">
-          <Pressable onPress={() => router.back()} className="p-2 mr-2">
+          <Pressable onPress={() => router.back()} className="p-2 mr-2" style={{ cursor: 'pointer' }}>
             <ArrowLeft size={24} color="rgb(248, 250, 252)" />
           </Pressable>
           <Text className="text-xl font-bold text-foreground">{t('budgets')}</Text>
         </View>
-        <Pressable onPress={() => setShowForm(true)} className="bg-primary p-2 rounded-full">
+        <Pressable onPress={() => setShowForm(true)} className="bg-primary p-2 rounded-full" style={{ cursor: 'pointer' }}>
           <Plus size={24} color="white" />
         </Pressable>
       </View>
 
       <ScrollView
         className="flex-1"
-        contentContainerClassName="p-4"
+        contentContainerStyle={{
+          padding: isDesktop ? 32 : 16,
+          maxWidth: 1400,
+          width: '100%',
+          alignSelf: 'center',
+        }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {isPending ? (
           <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
         ) : budgets.length === 0 ? (
-          <View className="bg-card p-8 rounded-xl items-center">
+          <View className="bg-card p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
             <PieChart size={48} color="rgb(148, 163, 184)" />
             <Text className="text-lg font-semibold text-foreground mt-4">{t('noBudgets')}</Text>
             <Text className="text-muted-foreground text-center mt-2">{t('noBudgetsDescription')}</Text>
           </View>
         ) : (
-          <View className="gap-4">
+          <View style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 16,
+          }}>
             {budgets.map((budget) => (
-              <BudgetCard key={budget.id} budget={budget} />
+              <View key={budget.id} style={{
+                width: columns === 1 ? '100%' : `${(100 / columns) - (16 * (columns - 1) / columns)}%`,
+                minWidth: columns === 1 ? '100%' : 300,
+              }}>
+                <BudgetCard budget={budget} />
+              </View>
             ))}
           </View>
         )}
@@ -161,6 +188,8 @@ function BudgetCard({ budget }: { budget: any }) {
 function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
   const [category, setCategory] = useState('food');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('USD');
@@ -199,15 +228,23 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView className="flex-1 bg-background">
+      <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
         <View className="flex-row items-center justify-between p-4 border-b border-border">
           <Text className="text-xl font-bold text-foreground">{t('createBudget')}</Text>
-          <Pressable onPress={onClose}>
+          <Pressable onPress={onClose} style={{ cursor: 'pointer' }}>
             <X size={24} color="rgb(148, 163, 184)" />
           </Pressable>
         </View>
 
-        <ScrollView className="flex-1 p-4">
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{
+            padding: isDesktop ? 32 : 16,
+            maxWidth: 600,
+            width: '100%',
+            alignSelf: 'center',
+          }}
+        >
           {error ? (
             <View className="bg-danger-light p-4 rounded-xl mb-4">
               <Text className="text-danger">{error}</Text>
@@ -222,6 +259,7 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
                   key={cat}
                   onPress={() => setCategory(cat)}
                   className={`px-4 py-2 rounded-lg ${category === cat ? 'bg-accent' : 'bg-card'}`}
+                  style={{ cursor: 'pointer' }}
                 >
                   <Text className={category === cat ? 'text-accent-foreground font-semibold' : 'text-foreground'}>
                     {t(cat) || cat}
@@ -235,6 +273,7 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
             <Text className="text-muted-foreground mb-2">{t('amount')}</Text>
             <TextInput
               className="bg-card p-4 rounded-xl text-foreground text-lg"
+              style={{ outlineStyle: 'none' } as any}
               value={amount}
               onChangeText={setAmount}
               keyboardType="decimal-pad"
@@ -251,6 +290,7 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
                   key={p}
                   onPress={() => setPeriod(p)}
                   className={`flex-1 p-4 rounded-xl items-center ${period === p ? 'bg-accent' : 'bg-card'}`}
+                  style={{ cursor: 'pointer' }}
                 >
                   <Text className={period === p ? 'text-accent-foreground font-semibold' : 'text-foreground'}>
                     {t(p)}
@@ -264,6 +304,7 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
             onPress={handleSubmit}
             disabled={mutation.isPending}
             className={`bg-primary p-4 rounded-xl items-center ${mutation.isPending ? 'opacity-50' : ''}`}
+            style={{ cursor: 'pointer' }}
           >
             {mutation.isPending ? (
               <ActivityIndicator color="white" />

@@ -1,3 +1,34 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * CoFinance App Global Styles
+ *
+ * Typography System:
+ * - Font: Inter (400 Regular, 500 Medium, 600 SemiBold, 700 Bold)
+ * - Loaded via expo-font in _layout.tsx
+ *
+ * Color System:
+ * - Dark mode by default (defined in tailwind.config.js)
+ * - Primary: Trust Blue (rgb(30, 58, 95))
+ * - Accent: Gold Premium (rgb(212, 175, 55))
+ * - Success: Green (rgb(16, 185, 129))
+ * - Danger: Red (rgb(220, 38, 38))
+ *
+ * Usage:
+ * - text-foreground: Main text color
+ * - text-muted-foreground: Secondary text color
+ * - bg-background: Page background
+ * - bg-card: Card/container background
+ * - text-accent: Gold accent text
+ * - text-success/text-danger: Semantic colors
+ */
+
+@layer base {
+  /* Ensure smooth font rendering */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}

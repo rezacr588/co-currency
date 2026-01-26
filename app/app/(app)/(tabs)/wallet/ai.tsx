@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -13,6 +13,10 @@ export default function AIReceiptScreen() {
   const { t } = useLanguage();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { width } = useWindowDimensions();
+
+  const isDesktop = width >= 1024;
+  const isTablet = width >= 768;
 
   const [text, setText] = useState('');
   const [parsedResult, setParsedResult] = useState<AIParseResponse | null>(null);
@@ -63,17 +67,25 @@ export default function AIReceiptScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
       {/* Header */}
-      <View className="flex-row items-center p-4 border-b border-border">
-        <Pressable onPress={() => router.back()} className="p-2 mr-2">
+      <View className="flex-row items-center p-4 border-b border-border" style={{ maxWidth: 800, width: '100%', alignSelf: 'center' }}>
+        <Pressable onPress={() => router.back()} className="p-2 mr-2" style={{ cursor: 'pointer' }}>
           <ArrowLeft size={24} color="rgb(248, 250, 252)" />
         </Pressable>
         <Bot size={24} color="rgb(168, 85, 247)" />
         <Text className="text-xl font-bold text-foreground ml-2">{t('aiReceiptParser')}</Text>
       </View>
 
-      <ScrollView className="flex-1" contentContainerClassName="p-6">
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{
+          padding: isDesktop ? 32 : 24,
+          maxWidth: 600,
+          width: '100%',
+          alignSelf: 'center',
+        }}
+      >
         <Text className="text-muted-foreground mb-4">{t('aiParserDescription')}</Text>
 
         {error ? (
@@ -87,6 +99,7 @@ export default function AIReceiptScreen() {
           <Text className="text-sm text-muted-foreground mb-2">{t('receiptText')}</Text>
           <TextInput
             className="bg-card p-4 rounded-xl text-foreground min-h-[150px]"
+            style={{ outlineStyle: 'none' } as any}
             value={text}
             onChangeText={setText}
             placeholder={t('pasteReceiptText')}
@@ -103,6 +116,7 @@ export default function AIReceiptScreen() {
           className={`bg-purple-600 p-4 rounded-xl flex-row items-center justify-center mb-6 ${
             parseMutation.isPending ? 'opacity-50' : ''
           }`}
+          style={{ cursor: 'pointer' }}
         >
           {parseMutation.isPending ? (
             <ActivityIndicator color="white" />
@@ -159,6 +173,7 @@ export default function AIReceiptScreen() {
               className={`bg-success p-4 rounded-xl flex-row items-center justify-center mt-6 ${
                 applyMutation.isPending ? 'opacity-50' : ''
               }`}
+              style={{ cursor: 'pointer' }}
             >
               {applyMutation.isPending ? (
                 <ActivityIndicator color="white" />

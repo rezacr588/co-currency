@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { TrendingUp, TrendingDown, PieChart, BarChart3 } from 'lucide-react-native';
@@ -11,6 +11,10 @@ export default function ReportsScreen() {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
+  const { width } = useWindowDimensions();
+
+  const isDesktop = width >= 1024;
+  const isTablet = width >= 768;
 
   const { data: monthlyReport, isPending: isLoadingMonthly } = useQuery({
     queryKey: ['reports', 'monthly'],
@@ -36,10 +40,15 @@ export default function ReportsScreen() {
   const isPending = isLoadingMonthly || isLoadingCategory || isLoadingNetworth;
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
       <ScrollView
         className="flex-1"
-        contentContainerClassName="p-6"
+        contentContainerStyle={{
+          padding: isDesktop ? 32 : 24,
+          maxWidth: 1400,
+          width: '100%',
+          alignSelf: 'center',
+        }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -52,7 +61,7 @@ export default function ReportsScreen() {
           <>
             {/* Net Worth Card */}
             {networth && (
-              <View className="bg-card p-6 rounded-xl mb-6">
+              <View className="bg-card p-6 rounded-xl mb-6" style={{ maxWidth: isDesktop ? 600 : '100%' }}>
                 <View className="flex-row items-center mb-2">
                   <PieChart size={20} color="rgb(212, 175, 55)" />
                   <Text className="text-muted-foreground ml-2">{t('netWorth')}</Text>
@@ -69,8 +78,11 @@ export default function ReportsScreen() {
                 <Text className="text-lg font-semibold text-foreground mb-4">
                   {t('monthlySummary')}
                 </Text>
-                <View className="flex-row gap-4">
-                  <View className="flex-1 bg-success/10 p-4 rounded-xl">
+                <View style={{
+                  flexDirection: isTablet ? 'row' : 'column',
+                  gap: 16,
+                }}>
+                  <View style={{ flex: 1 }} className="bg-success/10 p-4 rounded-xl">
                     <View className="flex-row items-center mb-2">
                       <TrendingUp size={16} color="rgb(16, 185, 129)" />
                       <Text className="text-success ml-2 text-sm">{t('income')}</Text>
@@ -79,7 +91,7 @@ export default function ReportsScreen() {
                       {formatCompactCurrency(monthlyReport.income, monthlyReport.currency)}
                     </Text>
                   </View>
-                  <View className="flex-1 bg-danger/10 p-4 rounded-xl">
+                  <View style={{ flex: 1 }} className="bg-danger/10 p-4 rounded-xl">
                     <View className="flex-row items-center mb-2">
                       <TrendingDown size={16} color="rgb(220, 38, 38)" />
                       <Text className="text-danger ml-2 text-sm">{t('expenses')}</Text>
@@ -91,8 +103,12 @@ export default function ReportsScreen() {
                 </View>
 
                 {/* Net & Savings Rate */}
-                <View className="flex-row gap-4 mt-4">
-                  <View className="flex-1 bg-card p-4 rounded-xl">
+                <View style={{
+                  flexDirection: isTablet ? 'row' : 'column',
+                  gap: 16,
+                  marginTop: 16,
+                }}>
+                  <View style={{ flex: 1 }} className="bg-card p-4 rounded-xl">
                     <Text className="text-muted-foreground text-sm mb-1">{t('net')}</Text>
                     <Text
                       className={`text-xl font-bold ${
@@ -103,7 +119,7 @@ export default function ReportsScreen() {
                       {formatCompactCurrency(monthlyReport.net, monthlyReport.currency)}
                     </Text>
                   </View>
-                  <View className="flex-1 bg-card p-4 rounded-xl">
+                  <View style={{ flex: 1 }} className="bg-card p-4 rounded-xl">
                     <Text className="text-muted-foreground text-sm mb-1">{t('savingsRate')}</Text>
                     <Text
                       className={`text-xl font-bold ${
@@ -126,9 +142,20 @@ export default function ReportsScreen() {
                     {t('categoryBreakdown')}
                   </Text>
                 </View>
-                <View className="gap-3">
+                <View style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                }}>
                   {categoryReport.categories.slice(0, 5).map((cat) => (
-                    <View key={cat.category} className="bg-card p-4 rounded-xl">
+                    <View
+                      key={cat.category}
+                      className="bg-card p-4 rounded-xl"
+                      style={{
+                        width: isDesktop ? '48%' : '100%',
+                        minWidth: isDesktop ? 300 : undefined,
+                      } as any}
+                    >
                       <View className="flex-row items-center justify-between mb-2">
                         <Text className="font-semibold text-foreground capitalize">
                           {cat.category}

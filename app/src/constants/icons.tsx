@@ -44,6 +44,31 @@ import {
 import React from 'react';
 import Svg, { Path } from 'react-native-svg';
 
+// ============================================
+// Icon Size Constants for Consistency
+// ============================================
+export const ICON_SIZES = {
+  /** Extra small icons - 12px (badges, inline indicators) */
+  xs: 12,
+  /** Small icons - 16px (secondary actions, labels) */
+  sm: 16,
+  /** Medium icons - 20px (list items, cards) */
+  md: 20,
+  /** Default icons - 24px (standard UI elements) */
+  default: 24,
+  /** Large icons - 32px (feature highlights, empty states) */
+  lg: 32,
+  /** Extra large icons - 48px (hero sections, large empty states) */
+  xl: 48,
+} as const;
+
+// Default icon color (muted foreground)
+export const ICON_COLOR_MUTED = 'rgb(148, 163, 184)';
+export const ICON_COLOR_ACCENT = 'rgb(212, 175, 55)';
+export const ICON_COLOR_SUCCESS = 'rgb(16, 185, 129)';
+export const ICON_COLOR_DANGER = 'rgb(220, 38, 38)';
+export const ICON_COLOR_FOREGROUND = 'rgb(248, 250, 252)';
+
 interface IconProps {
   size?: number;
   color?: string;
@@ -154,9 +179,20 @@ interface CategoryIconProps extends IconProps {
   category: string;
 }
 
-// Helper component to render icons consistently
-export function CategoryIcon({ category, size = 24, color }: CategoryIconProps) {
-  const IconComponent = CATEGORY_ICONS[category] || Package;
+/**
+ * Renders a category icon based on the category name.
+ * Falls back to Package icon if category is not found.
+ *
+ * @param category - Category name (food, transportation, etc.)
+ * @param size - Icon size (default: 24)
+ * @param color - Icon color (default: muted foreground)
+ */
+export function CategoryIcon({
+  category,
+  size = ICON_SIZES.default,
+  color = ICON_COLOR_MUTED
+}: CategoryIconProps) {
+  const IconComponent = CATEGORY_ICONS[category.toLowerCase()] || Package;
   return <IconComponent size={size} color={color} />;
 }
 
@@ -164,8 +200,20 @@ interface GoalIconProps extends IconProps {
   category: string;
 }
 
-export function GoalIcon({ category, size = 24, color }: GoalIconProps) {
-  const IconComponent = GOAL_ICONS[category] || Target;
+/**
+ * Renders a goal category icon based on the goal type.
+ * Falls back to Target icon if category is not found.
+ *
+ * @param category - Goal category (savings, vacation, etc.)
+ * @param size - Icon size (default: 24)
+ * @param color - Icon color (default: muted foreground)
+ */
+export function GoalIcon({
+  category,
+  size = ICON_SIZES.default,
+  color = ICON_COLOR_MUTED
+}: GoalIconProps) {
+  const IconComponent = GOAL_ICONS[category.toLowerCase()] || Target;
   return <IconComponent size={size} color={color} />;
 }
 
@@ -173,8 +221,37 @@ interface FrequencyIconProps extends IconProps {
   frequency: string;
 }
 
-export function FrequencyIcon({ frequency, size = 16, color }: FrequencyIconProps) {
-  const IconComponent = FREQUENCY_ICONS[frequency] || Calendar;
+/**
+ * Renders a frequency icon for recurring transactions.
+ * Falls back to Calendar icon if frequency is not found.
+ *
+ * @param frequency - Frequency type (daily, weekly, monthly, yearly)
+ * @param size - Icon size (default: 16 for inline use)
+ * @param color - Icon color (default: muted foreground)
+ */
+export function FrequencyIcon({
+  frequency,
+  size = ICON_SIZES.sm,
+  color = ICON_COLOR_MUTED
+}: FrequencyIconProps) {
+  const IconComponent = FREQUENCY_ICONS[frequency.toLowerCase()] || Calendar;
+  return <IconComponent size={size} color={color} />;
+}
+
+/**
+ * Renders a feature icon for the app features list.
+ * Falls back to Zap icon if feature is not found.
+ *
+ * @param feature - Feature name (converter, wallet, etc.)
+ * @param size - Icon size (default: 24)
+ * @param color - Icon color (default: accent gold)
+ */
+export function FeatureIcon({
+  feature,
+  size = ICON_SIZES.default,
+  color = ICON_COLOR_ACCENT
+}: { feature: string; size?: number; color?: string }) {
+  const IconComponent = FEATURE_ICONS[feature.toLowerCase()] || Zap;
   return <IconComponent size={size} color={color} />;
 }
 

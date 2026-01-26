@@ -1,0 +1,79 @@
+name: Mobile Build & Update
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/mobile-build.yml'
+  workflow_dispatch:  # Allow manual trigger
+    inputs:
+      build_apk:
+        description: 'Build new APK (only needed for native changes)'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  # OTA Update - Runs on every push (fast, ~1-2 min)
+  # Users with the app installed get updates automatically
+  ota-update:
+    name: Push OTA Update
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        working-directory: ./app
+        run: npm ci
+
+      - name: Push OTA Update
+        working-directory: ./app
+        run: eas update --branch production --message "Auto update from commit ${{ github.sha }}"
+
+  # APK Build - Only runs manually or when native code changes
+  # New users download this APK to install the app
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    if: github.event.inputs.build_apk == 'true' || contains(github.event.head_commit.message, '[build-apk]')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        working-directory: ./app
+        run: npm ci
+
+      - name: Build Android APK
+        working-directory: ./app
+        run: eas build --platform android --profile production --non-interactive

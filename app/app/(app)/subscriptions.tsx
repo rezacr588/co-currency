@@ -8,6 +8,7 @@ import {
   RefreshControl,
   TextInput,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -44,6 +45,18 @@ export default function SubscriptionsScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const { width } = useWindowDimensions();
+
+  const isDesktop = width >= 1024;
+  const isTablet = width >= 768;
+
+  // Grid columns based on screen size
+  const getGridColumns = () => {
+    if (isDesktop) return 3;
+    if (isTablet) return 2;
+    return 1;
+  };
+  const columns = getGridColumns();
 
   const { data, isPending } = useQuery({
     queryKey: ['subscriptions'],
@@ -66,28 +79,33 @@ export default function SubscriptionsScreen() {
   const pausedSubscriptions = subscriptions.filter((s) => s.status === 'paused');
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
       {/* Header */}
-      <View className="flex-row items-center justify-between p-4 border-b border-border">
+      <View className="flex-row items-center justify-between p-4 border-b border-border" style={{ maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
         <View className="flex-row items-center">
-          <Pressable onPress={() => router.back()} className="p-2 mr-2">
+          <Pressable onPress={() => router.back()} className="p-2 mr-2" style={{ cursor: 'pointer' }}>
             <ArrowLeft size={24} color="rgb(248, 250, 252)" />
           </Pressable>
           <Text className="text-xl font-bold text-foreground">{t('subscriptions')}</Text>
         </View>
-        <Pressable onPress={() => setShowForm(true)} className="bg-primary p-2 rounded-full">
+        <Pressable onPress={() => setShowForm(true)} className="bg-primary p-2 rounded-full" style={{ cursor: 'pointer' }}>
           <Plus size={24} color="white" />
         </Pressable>
       </View>
 
       <ScrollView
         className="flex-1"
-        contentContainerClassName="p-4"
+        contentContainerStyle={{
+          padding: isDesktop ? 32 : 16,
+          maxWidth: 1400,
+          width: '100%',
+          alignSelf: 'center',
+        }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {/* Summary Card */}
         {summary && (
-          <View className="bg-card p-4 rounded-xl mb-6">
+          <View className="bg-card p-4 rounded-xl mb-6" style={{ maxWidth: isDesktop ? 500 : '100%' }}>
             <Text className="text-muted-foreground mb-2">{t('monthlyCost')}</Text>
             <Text className="text-3xl font-bold text-accent">
               {formatCompactCurrency(summary.total_monthly, summary.currency)}
@@ -114,7 +132,7 @@ export default function SubscriptionsScreen() {
         {isPending ? (
           <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
         ) : subscriptions.length === 0 ? (
-          <View className="bg-card p-8 rounded-xl items-center">
+          <View className="bg-card p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
             <CreditCard size={48} color="rgb(148, 163, 184)" />
             <Text className="text-lg font-semibold text-foreground mt-4">
               {t('noSubscriptions')}
@@ -130,9 +148,18 @@ export default function SubscriptionsScreen() {
                 <Text className="text-lg font-semibold text-foreground mb-4">
                   {t('active')} ({activeSubscriptions.length})
                 </Text>
-                <View className="gap-3">
+                <View style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                }}>
                   {activeSubscriptions.map((sub) => (
-                    <SubscriptionCard key={sub.id} subscription={sub} />
+                    <View key={sub.id} style={{
+                      width: columns === 1 ? '100%' : `${(100 / columns) - (12 * (columns - 1) / columns)}%`,
+                      minWidth: columns === 1 ? '100%' : 300,
+                    }}>
+                      <SubscriptionCard subscription={sub} />
+                    </View>
                   ))}
                 </View>
               </View>
@@ -143,9 +170,18 @@ export default function SubscriptionsScreen() {
                 <Text className="text-lg font-semibold text-muted-foreground mb-4">
                   {t('paused')} ({pausedSubscriptions.length})
                 </Text>
-                <View className="gap-3">
+                <View style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                }}>
                   {pausedSubscriptions.map((sub) => (
-                    <SubscriptionCard key={sub.id} subscription={sub} />
+                    <View key={sub.id} style={{
+                      width: columns === 1 ? '100%' : `${(100 / columns) - (12 * (columns - 1) / columns)}%`,
+                      minWidth: columns === 1 ? '100%' : 300,
+                    }}>
+                      <SubscriptionCard subscription={sub} />
+                    </View>
                   ))}
                 </View>
               </View>
@@ -207,6 +243,7 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
             onPress={() => updateMutation.mutate(isPaused ? 'active' : 'paused')}
             disabled={updateMutation.isPending}
             className={`p-2 rounded-lg ${isPaused ? 'bg-success/20' : 'bg-warning/20'}`}
+            style={{ cursor: 'pointer' }}
           >
             {updateMutation.isPending ? (
               <ActivityIndicator size="small" />
@@ -225,6 +262,8 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
 function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('USD');
@@ -282,15 +321,23 @@ function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView className="flex-1 bg-background">
+      <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
         <View className="flex-row items-center justify-between p-4 border-b border-border">
           <Text className="text-xl font-bold text-foreground">{t('addSubscription')}</Text>
-          <Pressable onPress={onClose}>
+          <Pressable onPress={onClose} style={{ cursor: 'pointer' }}>
             <X size={24} color="rgb(148, 163, 184)" />
           </Pressable>
         </View>
 
-        <ScrollView className="flex-1 p-4">
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{
+            padding: isDesktop ? 32 : 16,
+            maxWidth: 600,
+            width: '100%',
+            alignSelf: 'center',
+          }}
+        >
           {error ? (
             <View className="bg-danger-light p-4 rounded-xl mb-4">
               <Text className="text-danger">{error}</Text>
@@ -301,6 +348,7 @@ function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose
             <Text className="text-muted-foreground mb-2">{t('name')}</Text>
             <TextInput
               className="bg-card p-4 rounded-xl text-foreground"
+              style={{ outlineStyle: 'none' } as any}
               value={name}
               onChangeText={setName}
               placeholder="Netflix, Spotify, etc."
@@ -312,6 +360,7 @@ function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose
             <Text className="text-muted-foreground mb-2">{t('amount')}</Text>
             <TextInput
               className="bg-card p-4 rounded-xl text-foreground text-lg"
+              style={{ outlineStyle: 'none' } as any}
               value={amount}
               onChangeText={setAmount}
               keyboardType="decimal-pad"
@@ -330,6 +379,7 @@ function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose
                   className={`px-4 py-2 rounded-lg ${
                     billingCycle === cycle ? 'bg-accent' : 'bg-card'
                   }`}
+                  style={{ cursor: 'pointer' }}
                 >
                   <Text
                     className={
@@ -353,6 +403,7 @@ function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose
                   key={cat}
                   onPress={() => setCategory(cat)}
                   className={`px-4 py-2 rounded-lg ${category === cat ? 'bg-accent' : 'bg-card'}`}
+                  style={{ cursor: 'pointer' }}
                 >
                   <Text
                     className={
@@ -370,6 +421,7 @@ function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose
             onPress={handleSubmit}
             disabled={mutation.isPending}
             className={`bg-primary p-4 rounded-xl items-center ${mutation.isPending ? 'opacity-50' : ''}`}
+            style={{ cursor: 'pointer' }}
           >
             {mutation.isPending ? (
               <ActivityIndicator color="white" />

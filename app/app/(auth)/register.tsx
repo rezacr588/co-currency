@@ -36,8 +36,9 @@ export default function RegisterScreen() {
   const [error, setError] = useState('');
 
   // Responsive: max width for form on larger screens
-  const isLargeScreen = width > 768;
-  const formMaxWidth = isLargeScreen ? 400 : '100%';
+  const isDesktop = width >= 1024;
+  const isTablet = width >= 768;
+  const formMaxWidth = isTablet ? 400 : '100%';
 
   useEffect(() => {
     if (params.error) {
@@ -145,14 +146,14 @@ export default function RegisterScreen() {
   const isSubmitting = isLoading || isOAuthLoading;
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{
           flexGrow: 1,
           justifyContent: 'center',
           alignItems: 'center',
-          padding: 24,
+          padding: isDesktop ? 32 : 24,
         }}
       >
         {/* Form Container - Centered with max width */}

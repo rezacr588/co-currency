@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { View, Text, Pressable, Animated } from 'react-native';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react-native';
+import { ICON_SIZES } from '../../constants/icons';
 
 type ToastVariant = 'success' | 'error' | 'warning' | 'info';
 
@@ -57,7 +58,7 @@ export function Toast({
   return (
     <View className="absolute bottom-20 left-4 right-4 z-50">
       <View className={`${styles.bg} p-4 rounded-xl flex-row items-center shadow-lg`}>
-        <Icon size={24} color={styles.color} />
+        <Icon size={ICON_SIZES.default} color={styles.color} />
         <Text
           className="flex-1 mx-3 font-medium"
           style={{ color: styles.color }}
@@ -66,7 +67,7 @@ export function Toast({
           {message}
         </Text>
         <Pressable onPress={onDismiss} className="p-1">
-          <X size={20} color={styles.color} />
+          <X size={ICON_SIZES.md} color={styles.color} />
         </Pressable>
       </View>
     </View>

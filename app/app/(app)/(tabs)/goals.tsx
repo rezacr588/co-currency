@@ -8,6 +8,7 @@ import {
   RefreshControl,
   TextInput,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -36,6 +37,10 @@ export default function GoalsScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const { width } = useWindowDimensions();
+
+  const isDesktop = width >= 1024;
+  const isTablet = width >= 768;
 
   const { data, isPending } = useQuery({
     queryKey: ['goals'],
@@ -52,16 +57,33 @@ export default function GoalsScreen() {
   const activeGoals = goals.filter((g) => !g.is_completed);
   const completedGoals = goals.filter((g) => g.is_completed);
 
+  // Grid columns based on screen size
+  const getGridColumns = () => {
+    if (isDesktop) return 3;
+    if (isTablet) return 2;
+    return 1;
+  };
+  const columns = getGridColumns();
+
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
       <ScrollView
         className="flex-1"
-        contentContainerClassName="p-6"
+        contentContainerStyle={{
+          padding: isDesktop ? 32 : 16,
+          maxWidth: 1400,
+          width: '100%',
+          alignSelf: 'center',
+        }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <View className="flex-row items-center justify-between mb-6">
           <Text className="text-3xl font-bold text-foreground">{t('financialGoals')}</Text>
-          <Pressable onPress={() => setShowForm(true)} className="bg-primary p-3 rounded-full">
+          <Pressable
+            onPress={() => setShowForm(true)}
+            className="bg-primary p-3 rounded-full"
+            style={{ cursor: 'pointer' }}
+          >
             <Plus size={24} color="white" />
           </Pressable>
         </View>
@@ -69,7 +91,7 @@ export default function GoalsScreen() {
         {isPending ? (
           <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
         ) : goals.length === 0 ? (
-          <View className="bg-card p-8 rounded-xl items-center">
+          <View className="bg-card p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
             <Target size={48} color="rgb(148, 163, 184)" />
             <Text className="text-lg font-semibold text-foreground mt-4">{t('noGoals')}</Text>
             <Text className="text-muted-foreground text-center mt-2">
@@ -78,6 +100,7 @@ export default function GoalsScreen() {
             <Pressable
               onPress={() => setShowForm(true)}
               className="bg-primary px-6 py-3 rounded-xl mt-4"
+              style={{ cursor: 'pointer' }}
             >
               <Text className="text-white font-semibold">{t('createGoal')}</Text>
             </Pressable>
@@ -90,9 +113,18 @@ export default function GoalsScreen() {
                 <Text className="text-lg font-semibold text-foreground mb-4">
                   {t('activeGoals')} ({activeGoals.length})
                 </Text>
-                <View className="gap-4">
+                <View style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: 16,
+                }}>
                   {activeGoals.map((goal) => (
-                    <GoalCard key={goal.id} goal={goal} />
+                    <View key={goal.id} style={{
+                      width: columns === 1 ? '100%' : `${(100 / columns) - (16 * (columns - 1) / columns)}%`,
+                      minWidth: columns === 1 ? '100%' : 280,
+                    }}>
+                      <GoalCard goal={goal} />
+                    </View>
                   ))}
                 </View>
               </View>
@@ -104,9 +136,18 @@ export default function GoalsScreen() {
                 <Text className="text-lg font-semibold text-foreground mb-4">
                   {t('completedGoals')} ({completedGoals.length})
                 </Text>
-                <View className="gap-4">
+                <View style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: 16,
+                }}>
                   {completedGoals.map((goal) => (
-                    <GoalCard key={goal.id} goal={goal} />
+                    <View key={goal.id} style={{
+                      width: columns === 1 ? '100%' : `${(100 / columns) - (16 * (columns - 1) / columns)}%`,
+                      minWidth: columns === 1 ? '100%' : 280,
+                    }}>
+                      <GoalCard goal={goal} />
+                    </View>
                   ))}
                 </View>
               </View>
@@ -126,6 +167,8 @@ function GoalCard({ goal }: { goal: any }) {
   const [showContribute, setShowContribute] = useState(false);
   const [amount, setAmount] = useState('');
   const progressPercent = Math.min(goal.progress, 100);
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
 
   const contributeMutation = useMutation({
     mutationFn: (contributionAmount: number) =>
@@ -145,7 +188,7 @@ function GoalCard({ goal }: { goal: any }) {
   };
 
   return (
-    <Pressable className="bg-card p-4 rounded-xl">
+    <Pressable className="bg-card p-4 rounded-xl" style={{ cursor: 'pointer' }}>
       <View className="flex-row items-center mb-3">
         <View
           className={`p-2 rounded-lg mr-3 ${goal.is_completed ? 'bg-success/20' : 'bg-accent/20'}`}
@@ -199,6 +242,7 @@ function GoalCard({ goal }: { goal: any }) {
             <View className="flex-row items-center gap-2">
               <TextInput
                 className="flex-1 bg-background p-3 rounded-lg text-foreground"
+                style={{ outlineStyle: 'none' } as any}
                 value={amount}
                 onChangeText={setAmount}
                 keyboardType="decimal-pad"
@@ -209,6 +253,7 @@ function GoalCard({ goal }: { goal: any }) {
                 onPress={handleContribute}
                 disabled={contributeMutation.isPending}
                 className="bg-success p-3 rounded-lg"
+                style={{ cursor: 'pointer' }}
               >
                 {contributeMutation.isPending ? (
                   <ActivityIndicator size="small" color="white" />
@@ -216,7 +261,7 @@ function GoalCard({ goal }: { goal: any }) {
                   <Plus size={20} color="white" />
                 )}
               </Pressable>
-              <Pressable onPress={() => setShowContribute(false)} className="bg-secondary p-3 rounded-lg">
+              <Pressable onPress={() => setShowContribute(false)} className="bg-secondary p-3 rounded-lg" style={{ cursor: 'pointer' }}>
                 <X size={20} color="rgb(148, 163, 184)" />
               </Pressable>
             </View>
@@ -224,6 +269,7 @@ function GoalCard({ goal }: { goal: any }) {
             <Pressable
               onPress={() => setShowContribute(true)}
               className="bg-accent/20 p-3 rounded-lg items-center"
+              style={{ cursor: 'pointer' }}
             >
               <Text className="text-accent font-semibold">{t('contribute')}</Text>
             </Pressable>
@@ -237,6 +283,8 @@ function GoalCard({ goal }: { goal: any }) {
 function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
   const [name, setName] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
   const [currency, setCurrency] = useState('USD');
@@ -294,15 +342,23 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView className="flex-1 bg-background">
+      <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
         <View className="flex-row items-center justify-between p-4 border-b border-border">
           <Text className="text-xl font-bold text-foreground">{t('createGoal')}</Text>
-          <Pressable onPress={onClose}>
+          <Pressable onPress={onClose} style={{ cursor: 'pointer' }}>
             <X size={24} color="rgb(148, 163, 184)" />
           </Pressable>
         </View>
 
-        <ScrollView className="flex-1 p-4">
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{
+            padding: isDesktop ? 32 : 16,
+            maxWidth: 600,
+            width: '100%',
+            alignSelf: 'center',
+          }}
+        >
           {error ? (
             <View className="bg-danger-light p-4 rounded-xl mb-4">
               <Text className="text-danger">{error}</Text>
@@ -313,6 +369,7 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
             <Text className="text-muted-foreground mb-2">{t('goalName')}</Text>
             <TextInput
               className="bg-card p-4 rounded-xl text-foreground"
+              style={{ outlineStyle: 'none' } as any}
               value={name}
               onChangeText={setName}
               placeholder="Emergency Fund, Vacation, etc."
@@ -325,6 +382,7 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
             <View className="flex-row gap-2">
               <TextInput
                 className="flex-1 bg-card p-4 rounded-xl text-foreground text-lg"
+                style={{ outlineStyle: 'none' } as any}
                 value={targetAmount}
                 onChangeText={setTargetAmount}
                 keyboardType="decimal-pad"
@@ -334,6 +392,7 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
               <Pressable
                 onPress={() => setShowCurrencyPicker(true)}
                 className="bg-card px-4 rounded-xl items-center justify-center"
+                style={{ cursor: 'pointer' }}
               >
                 <Text className="text-foreground font-semibold">{currency}</Text>
               </Pressable>
@@ -350,6 +409,7 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
                   className={`px-4 py-2 rounded-lg flex-row items-center ${
                     category === cat ? 'bg-accent' : 'bg-card'
                   }`}
+                  style={{ cursor: 'pointer' }}
                 >
                   <GoalIcon
                     category={cat}
@@ -372,6 +432,7 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
             <Text className="text-muted-foreground mb-2">{t('deadline')} ({t('optional')})</Text>
             <TextInput
               className="bg-card p-4 rounded-xl text-foreground"
+              style={{ outlineStyle: 'none' } as any}
               value={deadline}
               onChangeText={setDeadline}
               placeholder="YYYY-MM-DD"
@@ -383,6 +444,7 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
             onPress={handleSubmit}
             disabled={mutation.isPending}
             className={`bg-primary p-4 rounded-xl items-center ${mutation.isPending ? 'opacity-50' : ''}`}
+            style={{ cursor: 'pointer' }}
           >
             {mutation.isPending ? (
               <ActivityIndicator color="white" />

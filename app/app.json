@@ -34,13 +34,36 @@
     "plugins": [
       "expo-router",
       "expo-localization",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf",
+            "node_modules/@expo-google-fonts/inter/500Medium/Inter_500Medium.ttf",
+            "node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf",
+            "node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf"
+          ]
+        }
+      ],
+      "expo-updates"
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
-      "apiUrl": "https://terrible-moselle-airez-1828dc33.koyeb.app/api/v1"
-    }
+      "apiUrl": "https://terrible-moselle-airez-1828dc33.koyeb.app/api/v1",
+      "router": {},
+      "eas": {
+        "projectId": "517f2a2a-cc2a-4009-8878-c66dc9d7942a"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/517f2a2a-cc2a-4009-8878-c66dc9d7942a"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "owner": "rez.zet.int"
   }
 }

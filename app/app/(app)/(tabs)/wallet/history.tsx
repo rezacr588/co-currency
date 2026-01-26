@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -14,6 +14,10 @@ export default function TransactionHistoryScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
+  const { width } = useWindowDimensions();
+
+  const isDesktop = width >= 1024;
+  const isTablet = width >= 768;
 
   const { data, isPending } = useQuery({
     queryKey: ['wallet', 'transactions', 'all'],
@@ -29,21 +33,26 @@ export default function TransactionHistoryScreen() {
   const transactions = data?.transactions || [];
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
       {/* Header */}
-      <View className="flex-row items-center justify-between p-4 border-b border-border">
-        <Pressable onPress={() => router.back()} className="p-2">
+      <View className="flex-row items-center justify-between p-4 border-b border-border" style={{ maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
+        <Pressable onPress={() => router.back()} className="p-2" style={{ cursor: 'pointer' }}>
           <ArrowLeft size={24} color="rgb(248, 250, 252)" />
         </Pressable>
         <Text className="text-xl font-bold text-foreground">{t('transactionHistory')}</Text>
-        <Pressable className="p-2">
+        <Pressable className="p-2" style={{ cursor: 'pointer' }}>
           <Filter size={24} color="rgb(148, 163, 184)" />
         </Pressable>
       </View>
 
       <ScrollView
         className="flex-1"
-        contentContainerClassName="p-4"
+        contentContainerStyle={{
+          padding: isDesktop ? 32 : 16,
+          maxWidth: 1400,
+          width: '100%',
+          alignSelf: 'center',
+        }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -51,15 +60,23 @@ export default function TransactionHistoryScreen() {
         {isPending ? (
           <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
         ) : transactions.length === 0 ? (
-          <View className="bg-card p-8 rounded-xl items-center">
+          <View className="bg-card p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
             <Text className="text-muted-foreground">{t('noTransactions')}</Text>
           </View>
         ) : (
-          <View className="gap-3">
+          <View style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 12,
+          }}>
             {transactions.map((tx) => (
               <View
                 key={tx.id}
                 className="bg-card p-4 rounded-xl flex-row items-center"
+                style={{
+                  width: isDesktop ? '48%' : '100%',
+                  minWidth: 300,
+                } as any}
               >
                 <View
                   className={`p-2 rounded-lg mr-3 ${
