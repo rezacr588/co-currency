@@ -90,7 +90,7 @@ export default function DashboardScreen() {
             <ActivityIndicator />
           ) : (
             <View className="gap-3">
-              {summary?.balances.slice(0, 3).map((balance) => (
+              {(summary?.balances || []).slice(0, 3).map((balance) => (
                 <View
                   key={balance.currency}
                   className="bg-card p-4 rounded-xl flex-row items-center justify-between"
@@ -127,7 +127,7 @@ export default function DashboardScreen() {
             <ActivityIndicator />
           ) : (
             <View className="gap-3">
-              {summary?.recent_transactions.slice(0, 5).map((tx) => (
+              {(summary?.recent_transactions || []).slice(0, 5).map((tx) => (
                 <View
                   key={tx.id}
                   className="bg-card p-4 rounded-xl flex-row items-center justify-between"

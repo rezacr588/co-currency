@@ -53,6 +53,10 @@ export const auth = {
       method: 'POST',
       body: JSON.stringify({ refresh_token: refreshToken }),
     }),
+  completeOnboarding: () =>
+    fetchAPI<User>('/auth/onboarding/complete', {
+      method: 'POST',
+    }),
   // LinkedIn OAuth
   getLinkedInAuthUrl: () => `${OAUTH_BASE}/auth/linkedin`,
   // Google OAuth

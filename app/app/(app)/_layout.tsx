@@ -24,6 +24,9 @@ export default function AppLayout() {
       <Stack.Screen name="budgets" />
       <Stack.Screen name="recurring" />
       <Stack.Screen name="subscriptions" />
+      <Stack.Screen name="badges" />
+      <Stack.Screen name="historical" />
+      <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal' }} />
     </Stack>
   );
 }

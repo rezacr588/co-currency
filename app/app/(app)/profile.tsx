@@ -16,6 +16,9 @@ import {
   CreditCard,
   Repeat,
   CalendarClock,
+  Trophy,
+  History,
+  Info,
 } from 'lucide-react-native';
 import { useAuth } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -147,19 +150,65 @@ export default function ProfileScreen() {
             </Pressable>
           </View>
 
+          {/* Tools & Features */}
+          <View className="bg-card rounded-xl overflow-hidden">
+            <Text className="text-sm text-muted-foreground p-4 pb-2">
+              {t('toolsAndFeatures') || 'Tools & Features'}
+            </Text>
+            <Pressable
+              onPress={() => router.push('/badges')}
+              style={{ cursor: 'pointer' }}
+              className="flex-row items-center justify-between p-4 active:bg-secondary/50"
+            >
+              <View className="flex-row items-center">
+                <Trophy size={20} color="rgb(212, 175, 55)" />
+                <Text className="text-foreground ml-3">{t('badges') || 'Badges'}</Text>
+              </View>
+              <ChevronRight size={20} color="rgb(148, 163, 184)" />
+            </Pressable>
+            <Pressable
+              onPress={() => router.push('/historical')}
+              style={{ cursor: 'pointer' }}
+              className="flex-row items-center justify-between p-4 active:bg-secondary/50"
+            >
+              <View className="flex-row items-center">
+                <History size={20} color="rgb(212, 175, 55)" />
+                <Text className="text-foreground ml-3">{t('historicalRates') || 'Historical Rates'}</Text>
+              </View>
+              <ChevronRight size={20} color="rgb(148, 163, 184)" />
+            </Pressable>
+            <Pressable
+              onPress={() => router.push('/(public)/about')}
+              style={{ cursor: 'pointer' }}
+              className="flex-row items-center justify-between p-4 active:bg-secondary/50"
+            >
+              <View className="flex-row items-center">
+                <Info size={20} color="rgb(148, 163, 184)" />
+                <Text className="text-foreground ml-3">{t('aboutUs') || 'About Us'}</Text>
+              </View>
+              <ChevronRight size={20} color="rgb(148, 163, 184)" />
+            </Pressable>
+          </View>
+
           {/* Account */}
           <View className="bg-card rounded-xl overflow-hidden">
             <Text className="text-sm text-muted-foreground p-4 pb-2">
               {t('account')}
             </Text>
-            <Pressable className="flex-row items-center justify-between p-4 active:bg-secondary/50">
+            <Pressable
+              style={{ cursor: 'pointer' }}
+              className="flex-row items-center justify-between p-4 active:bg-secondary/50"
+            >
               <View className="flex-row items-center">
                 <Shield size={20} color="rgb(148, 163, 184)" />
                 <Text className="text-foreground ml-3">{t('security')}</Text>
               </View>
               <ChevronRight size={20} color="rgb(148, 163, 184)" />
             </Pressable>
-            <Pressable className="flex-row items-center justify-between p-4 active:bg-secondary/50">
+            <Pressable
+              style={{ cursor: 'pointer' }}
+              className="flex-row items-center justify-between p-4 active:bg-secondary/50"
+            >
               <View className="flex-row items-center">
                 <Bell size={20} color="rgb(148, 163, 184)" />
                 <Text className="text-foreground ml-3">{t('notifications')}</Text>
