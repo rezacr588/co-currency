@@ -168,7 +168,8 @@ func main() {
 	// Initialize auth service (requires database)
 	var authService *service.AuthService
 	var authMiddleware *middleware.Auth
-	var githubOAuthService *service.GitHubOAuthService
+	var linkedInOAuthService *service.LinkedInOAuthService
+	var googleOAuthService *service.GoogleOAuthService
 	if userRepo != nil {
 		// Create refresh token repository for better token management
 		refreshTokenRepo := repository.NewRefreshTokenRepository(mainDB)
@@ -176,19 +177,35 @@ func main() {
 		authMiddleware = middleware.NewAuth(authService)
 		log.Info().Msg("Authentication service initialized")
 
-		// Initialize GitHub OAuth service if configured
-		if cfg.GitHubClientID != "" && cfg.GitHubClientSecret != "" {
-			githubConfig := &service.GitHubConfig{
-				ClientID:     cfg.GitHubClientID,
-				ClientSecret: cfg.GitHubClientSecret,
-				RedirectURI:  cfg.GitHubRedirectURI,
+		// Create OAuth state repository (shared by all OAuth providers)
+		oauthStateRepo := repository.NewOAuthStateRepository(mainDB)
+
+		// Initialize LinkedIn OAuth service if configured
+		if cfg.LinkedInClientID != "" && cfg.LinkedInClientSecret != "" {
+			linkedInConfig := &service.LinkedInConfig{
+				ClientID:     cfg.LinkedInClientID,
+				ClientSecret: cfg.LinkedInClientSecret,
+				RedirectURI:  cfg.LinkedInRedirectURI,
 				FrontendURL:  cfg.FrontendURL,
 			}
-			oauthStateRepo := repository.NewOAuthStateRepository(mainDB)
-			githubOAuthService = service.NewGitHubOAuthService(authService, userRepo, oauthStateRepo, githubConfig)
-			log.Info().Msg("GitHub OAuth service initialized with database-backed state storage")
+			linkedInOAuthService = service.NewLinkedInOAuthService(authService, userRepo, oauthStateRepo, linkedInConfig)
+			log.Info().Msg("LinkedIn OAuth service initialized with database-backed state storage")
 		} else {
-			log.Info().Msg("GitHub OAuth not configured (GITHUB_CLIENT_ID/GITHUB_CLIENT_SECRET not set)")
+			log.Info().Msg("LinkedIn OAuth not configured (LINKEDIN_CLIENT_ID/LINKEDIN_CLIENT_SECRET not set)")
+		}
+
+		// Initialize Google OAuth service if configured
+		if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" {
+			googleConfig := &service.GoogleConfig{
+				ClientID:     cfg.GoogleClientID,
+				ClientSecret: cfg.GoogleClientSecret,
+				RedirectURI:  cfg.GoogleRedirectURI,
+				FrontendURL:  cfg.FrontendURL,
+			}
+			googleOAuthService = service.NewGoogleOAuthService(authService, userRepo, oauthStateRepo, googleConfig)
+			log.Info().Msg("Google OAuth service initialized with database-backed state storage")
+		} else {
+			log.Info().Msg("Google OAuth not configured (GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET not set)")
 		}
 	} else {
 		log.Warn().Msg("Authentication service not available - no database connection")
@@ -324,24 +341,26 @@ func main() {
 		aiChatHandler = handler.NewAIChatHandler(aiChatService, authService)
 	}
 
-	// Initialize GitHub OAuth handler
-	// Always initialize handler so routes are registered and return proper error if not configured
-	githubOAuthHandler := handler.NewGitHubOAuthHandler(githubOAuthService, cfg.FrontendURL)
+	// Initialize OAuth handlers
+	// Always initialize handlers so routes are registered and return proper error if not configured
+	linkedInOAuthHandler := handler.NewLinkedInOAuthHandler(linkedInOAuthService, cfg.FrontendURL)
+	googleOAuthHandler := handler.NewGoogleOAuthHandler(googleOAuthService, cfg.FrontendURL)
 
 	handlers := &router.Handlers{
-		Exchange:     exchangeHandler,
-		Auth:         authHandler,
-		GitHubOAuth:  githubOAuthHandler,
-		Wallet:       walletHandler,
-		AI:           aiHandler,
-		AIChat:       aiChatHandler,
-		Goal:         goalHandler,
-		Tag:          tagHandler,
-		Budget:       budgetHandler,
-		Recurring:    recurringHandler,
-		Reports:      reportsHandler,
-		Subscription: subscriptionHandler,
-		Badge:        badgeHandler,
+		Exchange:      exchangeHandler,
+		Auth:          authHandler,
+		LinkedInOAuth: linkedInOAuthHandler,
+		GoogleOAuth:   googleOAuthHandler,
+		Wallet:        walletHandler,
+		AI:            aiHandler,
+		AIChat:        aiChatHandler,
+		Goal:          goalHandler,
+		Tag:           tagHandler,
+		Budget:        budgetHandler,
+		Recurring:     recurringHandler,
+		Reports:       reportsHandler,
+		Subscription:  subscriptionHandler,
+		Badge:         badgeHandler,
 	}
 
 	rateLimiter := middleware.NewRateLimiter(cfg.RateLimitPerMin)

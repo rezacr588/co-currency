@@ -8,7 +8,7 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
 import { api } from '../api';
-import { GitHubIcon } from '../constants/icons';
+import { LinkedInIcon, GoogleIcon } from '../constants/icons';
 import { ROUTES } from '../constants/routes';
 
 export function Login() {
@@ -48,9 +48,12 @@ export function Login() {
     }
   };
 
-  const handleGitHubLogin = () => {
-    // Redirect to GitHub OAuth
-    window.location.href = api.auth.getGitHubAuthUrl();
+  const handleGoogleLogin = () => {
+    window.location.href = api.auth.getGoogleAuthUrl();
+  };
+
+  const handleLinkedInLogin = () => {
+    window.location.href = api.auth.getLinkedInAuthUrl();
   };
 
   return (
@@ -65,17 +68,30 @@ export function Login() {
               <div className="space-y-4">
                 {error && <ErrorMessage>{error}</ErrorMessage>}
 
-                {/* GitHub OAuth Button */}
+                {/* Google OAuth Button */}
                 <Button
                   type="button"
                   variant="secondary"
                   size="lg"
-                  className="w-full flex items-center justify-center gap-2 !bg-slate-900 hover:!bg-slate-800 !text-white !border-slate-700"
-                  onClick={handleGitHubLogin}
+                  className="w-full flex items-center justify-center gap-2 !bg-white hover:!bg-gray-50 !text-gray-700 !border-gray-300"
+                  onClick={handleGoogleLogin}
                   disabled={isSubmitting}
                 >
-                  <GitHubIcon className="w-5 h-5" />
-                  Continue with GitHub
+                  <GoogleIcon className="w-5 h-5" />
+                  Continue with Google
+                </Button>
+
+                {/* LinkedIn OAuth Button */}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="lg"
+                  className="w-full flex items-center justify-center gap-2 !bg-[#0077b5] hover:!bg-[#006699] !text-white !border-[#0077b5]"
+                  onClick={handleLinkedInLogin}
+                  disabled={isSubmitting}
+                >
+                  <LinkedInIcon className="w-5 h-5" />
+                  Continue with LinkedIn
                 </Button>
 
                 {/* Divider */}

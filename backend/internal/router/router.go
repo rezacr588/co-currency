@@ -13,19 +13,20 @@ import (
 
 // Handlers holds all HTTP handlers for the application
 type Handlers struct {
-	Exchange     *handler.Handler
-	Auth         *handler.AuthHandler
-	GitHubOAuth  *handler.GitHubOAuthHandler
-	Wallet       *handler.WalletHandler
-	AI           *handler.AIHandler
-	AIChat       *handler.AIChatHandler
-	Goal         *handler.GoalHandler
-	Tag          *handler.TagHandler
-	Budget       *handler.BudgetHandler
-	Recurring    *handler.RecurringHandler
-	Reports      *handler.ReportsHandler
-	Subscription *handler.SubscriptionHandler
-	Badge        *handler.BadgeHandler
+	Exchange      *handler.Handler
+	Auth          *handler.AuthHandler
+	LinkedInOAuth *handler.LinkedInOAuthHandler
+	GoogleOAuth   *handler.GoogleOAuthHandler
+	Wallet        *handler.WalletHandler
+	AI            *handler.AIHandler
+	AIChat        *handler.AIChatHandler
+	Goal          *handler.GoalHandler
+	Tag           *handler.TagHandler
+	Budget        *handler.BudgetHandler
+	Recurring     *handler.RecurringHandler
+	Reports       *handler.ReportsHandler
+	Subscription  *handler.SubscriptionHandler
+	Badge         *handler.BadgeHandler
 }
 
 // New creates a new router with all routes configured
@@ -61,10 +62,16 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 			r.Post("/refresh", h.Auth.RefreshToken)
 			r.Post("/logout", h.Auth.Logout)
 
-			// GitHub OAuth routes (public)
-			if h.GitHubOAuth != nil {
-				r.Get("/github", h.GitHubOAuth.GetAuthURL)
-				r.Get("/github/callback", h.GitHubOAuth.Callback)
+			// LinkedIn OAuth routes (public)
+			if h.LinkedInOAuth != nil {
+				r.Get("/linkedin", h.LinkedInOAuth.GetAuthURL)
+				r.Get("/linkedin/callback", h.LinkedInOAuth.Callback)
+			}
+
+			// Google OAuth routes (public)
+			if h.GoogleOAuth != nil {
+				r.Get("/google", h.GoogleOAuth.GetAuthURL)
+				r.Get("/google/callback", h.GoogleOAuth.Callback)
 			}
 
 			// Protected auth routes
@@ -73,13 +80,6 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 				r.Get("/profile", h.Auth.GetProfile)
 				r.Put("/profile", h.Auth.UpdateProfile)
 				r.Post("/password", h.Auth.ChangePassword)
-
-				// GitHub account linking (protected)
-				if h.GitHubOAuth != nil {
-					r.Get("/github/link", h.GitHubOAuth.GetLinkURL)
-					r.Post("/github/link", h.GitHubOAuth.LinkAccount)
-					r.Delete("/github/link", h.GitHubOAuth.UnlinkAccount)
-				}
 			})
 		})
 

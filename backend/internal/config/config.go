@@ -24,11 +24,17 @@ type Config struct {
 	// Error handling
 	ExposeErrorDetails bool `env:"EXPOSE_ERROR_DETAILS" envDefault:"true"`
 
-	// GitHub OAuth
-	GitHubClientID     string `env:"GITHUB_CLIENT_ID" envDefault:""`
-	GitHubClientSecret string `env:"GITHUB_CLIENT_SECRET" envDefault:""`
-	GitHubRedirectURI  string `env:"GITHUB_REDIRECT_URI" envDefault:"http://localhost:8080/api/v1/auth/github/callback"`
-	FrontendURL        string `env:"FRONTEND_URL" envDefault:"http://localhost:5173"`
+	// LinkedIn OAuth
+	LinkedInClientID     string `env:"LINKEDIN_CLIENT_ID" envDefault:""`
+	LinkedInClientSecret string `env:"LINKEDIN_CLIENT_SECRET" envDefault:""`
+	LinkedInRedirectURI  string `env:"LINKEDIN_REDIRECT_URI" envDefault:"http://localhost:8080/api/v1/auth/linkedin/callback"`
+
+	// Google OAuth
+	GoogleClientID     string `env:"GOOGLE_CLIENT_ID" envDefault:""`
+	GoogleClientSecret string `env:"GOOGLE_CLIENT_SECRET" envDefault:""`
+	GoogleRedirectURI  string `env:"GOOGLE_REDIRECT_URI" envDefault:"http://localhost:8080/api/v1/auth/google/callback"`
+
+	FrontendURL string `env:"FRONTEND_URL" envDefault:"http://localhost:5173"`
 
 	// AI Service settings
 	AIProvider     string `env:"AI_PROVIDER" envDefault:"googleai"` // googleai, openai

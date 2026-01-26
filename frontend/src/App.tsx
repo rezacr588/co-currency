@@ -22,7 +22,7 @@ const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login }
 const Register = lazy(() => import('./pages/Register').then(m => ({ default: m.Register })));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
 const ResetPassword = lazy(() => import('./pages/ResetPassword').then(m => ({ default: m.ResetPassword })));
-const GitHubCallback = lazy(() => import('./pages/GitHubCallback').then(m => ({ default: m.GitHubCallback })));
+const OAuthCallback = lazy(() => import('./pages/OAuthCallback').then(m => ({ default: m.OAuthCallback })));
 const Reports = lazy(() => import('./pages/Reports').then(m => ({ default: m.Reports })));
 const Profile = lazy(() => import('./pages/Profile').then(m => ({ default: m.Profile })));
 const Subscriptions = lazy(() => import('./pages/Subscriptions').then(m => ({ default: m.Subscriptions })));
@@ -67,7 +67,8 @@ function AppContent() {
             <Route path={ROUTES.register} element={<Register />} />
             <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
             <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
-            <Route path={ROUTES.githubCallback} element={<GitHubCallback />} />
+            <Route path={ROUTES.linkedinCallback} element={<OAuthCallback provider="linkedin" />} />
+            <Route path={ROUTES.googleCallback} element={<OAuthCallback provider="google" />} />
             <Route path="*" element={<NotFound />} />
           </Route>
 

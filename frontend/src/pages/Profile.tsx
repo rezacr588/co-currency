@@ -205,9 +205,14 @@ export function Profile() {
                       value={profileForm.avatar_url}
                       onChange={(e) => setProfileForm(prev => ({ ...prev, avatar_url: e.target.value }))}
                     />
-                    {user?.has_github_linked && (
+                    {user?.has_google_linked && (
                       <p className="text-xs text-slate-400">
-                        {t('githubLinked')}
+                        {t('googleLinked')}
+                      </p>
+                    )}
+                    {user?.has_linkedin_linked && (
+                      <p className="text-xs text-slate-400">
+                        {t('linkedinLinked')}
                       </p>
                     )}
                   </div>

@@ -65,7 +65,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.User
 	query := `
 		SELECT id, email, COALESCE(password_hash, '') AS password_hash, name, failed_login_attempts, locked_until,
 		       password_reset_token, password_reset_expires, onboarding_completed,
-		       github_id, avatar_url, created_at, updated_at
+		       linkedin_id, google_id, avatar_url, created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`
@@ -81,7 +81,8 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.User
 		&user.PasswordResetToken,
 		&user.PasswordResetExpires,
 		&user.OnboardingCompleted,
-		&user.GithubID,
+		&user.LinkedInID,
+		&user.GoogleID,
 		&user.AvatarURL,
 		&user.CreatedAt,
 		&user.UpdatedAt,
@@ -102,7 +103,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.U
 	query := `
 		SELECT id, email, COALESCE(password_hash, '') AS password_hash, name, failed_login_attempts, locked_until,
 		       password_reset_token, password_reset_expires, onboarding_completed,
-		       github_id, avatar_url, created_at, updated_at
+		       linkedin_id, google_id, avatar_url, created_at, updated_at
 		FROM users
 		WHERE email = $1
 	`
@@ -118,7 +119,8 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.U
 		&user.PasswordResetToken,
 		&user.PasswordResetExpires,
 		&user.OnboardingCompleted,
-		&user.GithubID,
+		&user.LinkedInID,
+		&user.GoogleID,
 		&user.AvatarURL,
 		&user.CreatedAt,
 		&user.UpdatedAt,
@@ -297,7 +299,7 @@ func (r *UserRepository) GetByResetToken(ctx context.Context, token string) (*mo
 	query := `
 		SELECT id, email, COALESCE(password_hash, '') AS password_hash, name, failed_login_attempts, locked_until,
 		       password_reset_token, password_reset_expires, onboarding_completed,
-		       github_id, avatar_url, created_at, updated_at
+		       linkedin_id, google_id, avatar_url, created_at, updated_at
 		FROM users
 		WHERE password_reset_token = $1 AND password_reset_expires > NOW()
 	`
@@ -313,7 +315,8 @@ func (r *UserRepository) GetByResetToken(ctx context.Context, token string) (*mo
 		&user.PasswordResetToken,
 		&user.PasswordResetExpires,
 		&user.OnboardingCompleted,
-		&user.GithubID,
+		&user.LinkedInID,
+		&user.GoogleID,
 		&user.AvatarURL,
 		&user.CreatedAt,
 		&user.UpdatedAt,
@@ -362,18 +365,18 @@ func (r *UserRepository) SetOnboardingCompleted(ctx context.Context, userID uuid
 	return nil
 }
 
-// GetByGitHubID retrieves a user by GitHub ID
-func (r *UserRepository) GetByGitHubID(ctx context.Context, githubID string) (*model.User, error) {
+// GetByLinkedInID retrieves a user by LinkedIn ID
+func (r *UserRepository) GetByLinkedInID(ctx context.Context, linkedinID string) (*model.User, error) {
 	query := `
 		SELECT id, email, COALESCE(password_hash, '') AS password_hash, name, failed_login_attempts, locked_until,
 		       password_reset_token, password_reset_expires, onboarding_completed,
-		       github_id, avatar_url, created_at, updated_at
+		       linkedin_id, google_id, avatar_url, created_at, updated_at
 		FROM users
-		WHERE github_id = $1
+		WHERE linkedin_id = $1
 	`
 
 	user := &model.User{}
-	err := r.pool.QueryRow(ctx, query, githubID).Scan(
+	err := r.pool.QueryRow(ctx, query, linkedinID).Scan(
 		&user.ID,
 		&user.Email,
 		&user.PasswordHash,
@@ -383,7 +386,8 @@ func (r *UserRepository) GetByGitHubID(ctx context.Context, githubID string) (*m
 		&user.PasswordResetToken,
 		&user.PasswordResetExpires,
 		&user.OnboardingCompleted,
-		&user.GithubID,
+		&user.LinkedInID,
+		&user.GoogleID,
 		&user.AvatarURL,
 		&user.CreatedAt,
 		&user.UpdatedAt,
@@ -393,16 +397,16 @@ func (r *UserRepository) GetByGitHubID(ctx context.Context, githubID string) (*m
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrUserNotFound
 		}
-		return nil, fmt.Errorf("getting user by github id: %w", err)
+		return nil, fmt.Errorf("getting user by linkedin id: %w", err)
 	}
 
 	return user, nil
 }
 
-// CreateFromGitHub creates a new user from GitHub OAuth data
-func (r *UserRepository) CreateFromGitHub(ctx context.Context, user *model.User) error {
+// CreateFromLinkedIn creates a new user from LinkedIn OAuth data
+func (r *UserRepository) CreateFromLinkedIn(ctx context.Context, user *model.User) error {
 	query := `
-		INSERT INTO users (id, email, name, github_id, avatar_url, created_at, updated_at)
+		INSERT INTO users (id, email, name, linkedin_id, avatar_url, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
@@ -415,7 +419,7 @@ func (r *UserRepository) CreateFromGitHub(ctx context.Context, user *model.User)
 		user.ID,
 		user.Email,
 		user.Name,
-		user.GithubID,
+		user.LinkedInID,
 		user.AvatarURL,
 		user.CreatedAt,
 		user.UpdatedAt,
@@ -425,26 +429,26 @@ func (r *UserRepository) CreateFromGitHub(ctx context.Context, user *model.User)
 		if isDuplicateKeyError(err) {
 			return ErrUserAlreadyExists
 		}
-		return fmt.Errorf("creating user from github: %w", err)
+		return fmt.Errorf("creating user from linkedin: %w", err)
 	}
 
 	return nil
 }
 
-// LinkGitHubAccount links a GitHub account to an existing user
-func (r *UserRepository) LinkGitHubAccount(ctx context.Context, userID uuid.UUID, githubID, avatarURL string) error {
+// LinkLinkedInAccount links a LinkedIn account to an existing user
+func (r *UserRepository) LinkLinkedInAccount(ctx context.Context, userID uuid.UUID, linkedinID, avatarURL string) error {
 	query := `
 		UPDATE users
-		SET github_id = $2, avatar_url = $3, updated_at = NOW()
+		SET linkedin_id = $2, avatar_url = $3, updated_at = NOW()
 		WHERE id = $1
 	`
 
-	result, err := r.pool.Exec(ctx, query, userID, githubID, avatarURL)
+	result, err := r.pool.Exec(ctx, query, userID, linkedinID, avatarURL)
 	if err != nil {
 		if isDuplicateKeyError(err) {
-			return fmt.Errorf("github account already linked to another user")
+			return fmt.Errorf("linkedin account already linked to another user")
 		}
-		return fmt.Errorf("linking github account: %w", err)
+		return fmt.Errorf("linking linkedin account: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
@@ -454,8 +458,8 @@ func (r *UserRepository) LinkGitHubAccount(ctx context.Context, userID uuid.UUID
 	return nil
 }
 
-// UnlinkGitHubAccount removes GitHub link from a user
-func (r *UserRepository) UnlinkGitHubAccount(ctx context.Context, userID uuid.UUID) error {
+// UnlinkLinkedInAccount removes LinkedIn link from a user
+func (r *UserRepository) UnlinkLinkedInAccount(ctx context.Context, userID uuid.UUID) error {
 	// First check if user has a password (can't unlink if OAuth-only)
 	var passwordHash *string
 	err := r.pool.QueryRow(ctx, `SELECT password_hash FROM users WHERE id = $1`, userID).Scan(&passwordHash)
@@ -467,18 +471,145 @@ func (r *UserRepository) UnlinkGitHubAccount(ctx context.Context, userID uuid.UU
 	}
 
 	if passwordHash == nil || *passwordHash == "" {
-		return fmt.Errorf("cannot unlink GitHub: no password set. Please set a password first")
+		return fmt.Errorf("cannot unlink LinkedIn: no password set. Please set a password first")
 	}
 
 	query := `
 		UPDATE users
-		SET github_id = NULL, updated_at = NOW()
+		SET linkedin_id = NULL, updated_at = NOW()
 		WHERE id = $1
 	`
 
 	result, err := r.pool.Exec(ctx, query, userID)
 	if err != nil {
-		return fmt.Errorf("unlinking github account: %w", err)
+		return fmt.Errorf("unlinking linkedin account: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return ErrUserNotFound
+	}
+
+	return nil
+}
+
+// GetByGoogleID retrieves a user by Google ID
+func (r *UserRepository) GetByGoogleID(ctx context.Context, googleID string) (*model.User, error) {
+	query := `
+		SELECT id, email, COALESCE(password_hash, '') AS password_hash, name, failed_login_attempts, locked_until,
+		       password_reset_token, password_reset_expires, onboarding_completed,
+		       linkedin_id, google_id, avatar_url, created_at, updated_at
+		FROM users
+		WHERE google_id = $1
+	`
+
+	user := &model.User{}
+	err := r.pool.QueryRow(ctx, query, googleID).Scan(
+		&user.ID,
+		&user.Email,
+		&user.PasswordHash,
+		&user.Name,
+		&user.FailedLoginAttempts,
+		&user.LockedUntil,
+		&user.PasswordResetToken,
+		&user.PasswordResetExpires,
+		&user.OnboardingCompleted,
+		&user.LinkedInID,
+		&user.GoogleID,
+		&user.AvatarURL,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
+		return nil, fmt.Errorf("getting user by google id: %w", err)
+	}
+
+	return user, nil
+}
+
+// CreateFromGoogle creates a new user from Google OAuth data
+func (r *UserRepository) CreateFromGoogle(ctx context.Context, user *model.User) error {
+	query := `
+		INSERT INTO users (id, email, name, google_id, avatar_url, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`
+
+	now := time.Now()
+	user.ID = uuid.New()
+	user.CreatedAt = now
+	user.UpdatedAt = now
+
+	_, err := r.pool.Exec(ctx, query,
+		user.ID,
+		user.Email,
+		user.Name,
+		user.GoogleID,
+		user.AvatarURL,
+		user.CreatedAt,
+		user.UpdatedAt,
+	)
+
+	if err != nil {
+		if isDuplicateKeyError(err) {
+			return ErrUserAlreadyExists
+		}
+		return fmt.Errorf("creating user from google: %w", err)
+	}
+
+	return nil
+}
+
+// LinkGoogleAccount links a Google account to an existing user
+func (r *UserRepository) LinkGoogleAccount(ctx context.Context, userID uuid.UUID, googleID, avatarURL string) error {
+	query := `
+		UPDATE users
+		SET google_id = $2, avatar_url = $3, updated_at = NOW()
+		WHERE id = $1
+	`
+
+	result, err := r.pool.Exec(ctx, query, userID, googleID, avatarURL)
+	if err != nil {
+		if isDuplicateKeyError(err) {
+			return fmt.Errorf("google account already linked to another user")
+		}
+		return fmt.Errorf("linking google account: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return ErrUserNotFound
+	}
+
+	return nil
+}
+
+// UnlinkGoogleAccount removes Google link from a user
+func (r *UserRepository) UnlinkGoogleAccount(ctx context.Context, userID uuid.UUID) error {
+	// First check if user has a password (can't unlink if OAuth-only)
+	var passwordHash *string
+	err := r.pool.QueryRow(ctx, `SELECT password_hash FROM users WHERE id = $1`, userID).Scan(&passwordHash)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrUserNotFound
+		}
+		return fmt.Errorf("checking password: %w", err)
+	}
+
+	if passwordHash == nil || *passwordHash == "" {
+		return fmt.Errorf("cannot unlink Google: no password set. Please set a password first")
+	}
+
+	query := `
+		UPDATE users
+		SET google_id = NULL, updated_at = NOW()
+		WHERE id = $1
+	`
+
+	result, err := r.pool.Exec(ctx, query, userID)
+	if err != nil {
+		return fmt.Errorf("unlinking google account: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {

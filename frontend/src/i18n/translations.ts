@@ -138,7 +138,8 @@ export const translations = {
     passwordUpdated: 'Password updated',
     passwordSet: 'Password set',
     noChanges: 'No changes to save',
-    githubLinked: 'GitHub account linked',
+    googleLinked: 'Google account linked',
+    linkedinLinked: 'LinkedIn account linked',
     uploadPhoto: 'Upload Photo',
     uploadPhotoHint: 'Max 1MB. JPG, PNG, or GIF.',
 
@@ -581,16 +582,18 @@ export const translations = {
     daysLeft: 'days left',
     other: 'Other',
 
-    // GitHub OAuth
-    continueWithGitHub: 'Continue with GitHub',
-    signUpWithGitHub: 'Sign up with GitHub',
+    // OAuth
+    continueWithGoogle: 'Continue with Google',
+    signUpWithGoogle: 'Sign up with Google',
+    continueWithLinkedIn: 'Continue with LinkedIn',
+    signUpWithLinkedIn: 'Sign up with LinkedIn',
     or: 'or',
     authError: 'Authentication Error',
     redirectingToLogin: 'Redirecting to login...',
     completingLogin: 'Completing login...',
-    githubLinkSuccess: 'GitHub account linked successfully',
-    githubUnlinkSuccess: 'GitHub account unlinked',
-    githubAuthError: 'GitHub authentication failed',
+    googleLinkSuccess: 'Google account linked successfully',
+    linkedinLinkSuccess: 'LinkedIn account linked successfully',
+    oauthAuthError: 'OAuth authentication failed',
   },
   fa: {
     // Header
@@ -731,7 +734,8 @@ export const translations = {
     passwordUpdated: 'رمز عبور به‌روزرسانی شد',
     passwordSet: 'رمز عبور تنظیم شد',
     noChanges: 'تغییری برای ذخیره وجود ندارد',
-    githubLinked: 'حساب گیت‌هاب متصل است',
+    googleLinked: 'حساب گوگل متصل است',
+    linkedinLinked: 'حساب لینکدین متصل است',
     uploadPhoto: 'بارگذاری تصویر',
     uploadPhotoHint: 'حداکثر ۱ مگابایت. JPG، PNG یا GIF.',
 
@@ -1174,16 +1178,18 @@ export const translations = {
     daysLeft: 'days left',
     other: 'Other',
 
-    // GitHub OAuth
-    continueWithGitHub: 'ادامه با گیت‌هاب',
-    signUpWithGitHub: 'ثبت نام با گیت‌هاب',
+    // OAuth
+    continueWithGoogle: 'ادامه با گوگل',
+    signUpWithGoogle: 'ثبت نام با گوگل',
+    continueWithLinkedIn: 'ادامه با لینکدین',
+    signUpWithLinkedIn: 'ثبت نام با لینکدین',
     or: 'یا',
     authError: 'خطای احراز هویت',
     redirectingToLogin: 'در حال انتقال به صفحه ورود...',
     completingLogin: 'در حال تکمیل ورود...',
-    githubLinkSuccess: 'حساب گیت‌هاب با موفقیت متصل شد',
-    githubUnlinkSuccess: 'حساب گیت‌هاب قطع شد',
-    githubAuthError: 'احراز هویت گیت‌هاب ناموفق بود',
+    googleLinkSuccess: 'حساب گوگل با موفقیت متصل شد',
+    linkedinLinkSuccess: 'حساب لینکدین با موفقیت متصل شد',
+    oauthAuthError: 'احراز هویت ناموفق بود',
   },
   ar: {
     // Header
@@ -1324,7 +1330,8 @@ export const translations = {
     passwordUpdated: 'تم تحديث كلمة المرور',
     passwordSet: 'تم تعيين كلمة المرور',
     noChanges: 'لا توجد تغييرات للحفظ',
-    githubLinked: 'تم ربط حساب GitHub',
+    googleLinked: 'تم ربط حساب Google',
+    linkedinLinked: 'تم ربط حساب LinkedIn',
     uploadPhoto: 'رفع صورة',
     uploadPhotoHint: 'الحد الأقصى 1 ميجابايت. JPG أو PNG أو GIF.',
 
@@ -1767,16 +1774,18 @@ export const translations = {
     daysLeft: 'days left',
     other: 'Other',
 
-    // GitHub OAuth
-    continueWithGitHub: 'المتابعة مع غيت‌هاب',
-    signUpWithGitHub: 'التسجيل مع غيت‌هاب',
+    // OAuth
+    continueWithGoogle: 'المتابعة مع Google',
+    signUpWithGoogle: 'التسجيل مع Google',
+    continueWithLinkedIn: 'المتابعة مع LinkedIn',
+    signUpWithLinkedIn: 'التسجيل مع LinkedIn',
     or: 'أو',
     authError: 'خطأ في المصادقة',
     redirectingToLogin: 'جاري التحويل لصفحة الدخول...',
     completingLogin: 'جاري إكمال الدخول...',
-    githubLinkSuccess: 'تم ربط حساب غيت‌هاب بنجاح',
-    githubUnlinkSuccess: 'تم إلغاء ربط حساب غيت‌هاب',
-    githubAuthError: 'فشلت مصادقة غيت‌هاب',
+    googleLinkSuccess: 'تم ربط حساب Google بنجاح',
+    linkedinLinkSuccess: 'تم ربط حساب LinkedIn بنجاح',
+    oauthAuthError: 'فشلت المصادقة',
   },
   tr: {
     // Header
@@ -1917,7 +1926,8 @@ export const translations = {
     passwordUpdated: 'Şifre güncellendi',
     passwordSet: 'Şifre ayarlandı',
     noChanges: 'Kaydedilecek değişiklik yok',
-    githubLinked: 'GitHub hesabı bağlı',
+    googleLinked: 'Google hesabı bağlı',
+    linkedinLinked: 'LinkedIn hesabı bağlı',
     uploadPhoto: 'Fotoğraf Yükle',
     uploadPhotoHint: 'Maks 1MB. JPG, PNG veya GIF.',
 
@@ -2360,16 +2370,18 @@ export const translations = {
     daysLeft: 'days left',
     other: 'Other',
 
-    // GitHub OAuth
-    continueWithGitHub: 'GitHub ile devam et',
-    signUpWithGitHub: 'GitHub ile kaydol',
+    // OAuth
+    continueWithGoogle: 'Google ile devam et',
+    signUpWithGoogle: 'Google ile kaydol',
+    continueWithLinkedIn: 'LinkedIn ile devam et',
+    signUpWithLinkedIn: 'LinkedIn ile kaydol',
     or: 'veya',
     authError: 'Kimlik doğrulama hatası',
     redirectingToLogin: 'Giriş sayfasına yönlendiriliyor...',
     completingLogin: 'Giriş tamamlanıyor...',
-    githubLinkSuccess: 'GitHub hesabı başarıyla bağlandı',
-    githubUnlinkSuccess: 'GitHub hesabı bağlantısı kaldırıldı',
-    githubAuthError: 'GitHub kimlik doğrulaması başarısız',
+    googleLinkSuccess: 'Google hesabı başarıyla bağlandı',
+    linkedinLinkSuccess: 'LinkedIn hesabı başarıyla bağlandı',
+    oauthAuthError: 'Kimlik doğrulaması başarısız',
   },
 } as const;
 

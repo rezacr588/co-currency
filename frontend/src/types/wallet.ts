@@ -34,7 +34,8 @@ export interface User {
   email: string;
   name: string;
   avatar_url?: string | null;
-  has_github_linked?: boolean;
+  has_linkedin_linked?: boolean;
+  has_google_linked?: boolean;
   has_password?: boolean;
   onboarding_completed?: boolean;
   created_at: string;
