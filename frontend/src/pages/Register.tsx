@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
+import { api } from '../api';
+import { GitHubIcon } from '../constants/icons';
 import { ROUTES } from '../constants/routes';
 
 export function Register() {
@@ -56,9 +58,38 @@ export function Register() {
               <CardTitle>{t('register')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-4">
                 {error && <ErrorMessage>{error}</ErrorMessage>}
 
+                {/* GitHub OAuth Button */}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="lg"
+                  className="w-full flex items-center justify-center gap-2 !bg-slate-900 hover:!bg-slate-800 !text-white !border-slate-700"
+                  onClick={() => {
+                    window.location.href = api.auth.getGitHubAuthUrl();
+                  }}
+                  disabled={isSubmitting}
+                >
+                  <GitHubIcon className="w-5 h-5" />
+                  Sign up with GitHub
+                </Button>
+
+                {/* Divider */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-300 dark:border-slate-600"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                      {t('or') || 'or'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Email/Password Form */}
+                <form onSubmit={handleSubmit} className="space-y-4">
                 <Input
                   type="text"
                   label={t('name')}
@@ -113,6 +144,8 @@ export function Register() {
                   {isSubmitting ? t('registering') : t('register')}
                 </Button>
 
+                </form>
+
                 <p className="text-center text-sm text-slate-600 dark:text-slate-400">
                   {t('alreadyHaveAccount')}{' '}
                   <Link
@@ -122,7 +155,7 @@ export function Register() {
                     {t('login')}
                   </Link>
                 </p>
-              </form>
+              </div>
             </CardContent>
           </Card>
         </div>
