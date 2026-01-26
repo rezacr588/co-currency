@@ -1,21 +1,19 @@
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   User,
   Mail,
-  Globe,
   Moon,
   Sun,
   LogOut,
   ChevronRight,
+  ChevronLeft,
   Shield,
   Bell,
   Wallet,
-  Target,
   CreditCard,
   Repeat,
-  CalendarClock,
   Trophy,
   History,
   Info,
@@ -33,9 +31,13 @@ const LANGUAGES = [
 
 export default function ProfileScreen() {
   const { user, logout, isLoading } = useAuth();
-  const { theme, toggleTheme, isDark } = useTheme();
+  const { toggleTheme, isDark } = useTheme();
   const { t, language, setLanguage } = useLanguage();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+
+  const isDesktop = width >= 1024;
+  const isTablet = width >= 768;
 
   const handleLogout = async () => {
     await logout();
@@ -49,182 +51,207 @@ export default function ProfileScreen() {
     );
   }
 
-  return (
-    <SafeAreaView className="flex-1 bg-background">
-      <ScrollView className="flex-1" contentContainerClassName="p-6">
-        <Text className="text-3xl font-bold text-foreground mb-6">{t('profile')}</Text>
+  const SettingsSection = ({
+    title,
+    children,
+  }: {
+    title: string;
+    children: React.ReactNode;
+  }) => (
+    <View className="bg-card rounded-xl overflow-hidden">
+      <Text className="text-sm text-muted-foreground p-4 pb-2">{title}</Text>
+      {children}
+    </View>
+  );
 
-        {/* User Info Card */}
-        <View className="bg-card p-6 rounded-xl mb-6 items-center">
-          <View className="bg-primary/20 p-4 rounded-full mb-4">
-            <User size={48} color="rgb(212, 175, 55)" />
-          </View>
-          <Text className="text-xl font-bold text-foreground">{user?.name}</Text>
-          <View className="flex-row items-center mt-2">
-            <Mail size={16} color="rgb(148, 163, 184)" />
-            <Text className="text-muted-foreground ml-2">{user?.email}</Text>
-          </View>
+  const SettingsItem = ({
+    icon,
+    label,
+    value,
+    onPress,
+    iconColor = 'rgb(148, 163, 184)',
+    showChevron = true,
+  }: {
+    icon: React.ReactNode;
+    label: string;
+    value?: string;
+    onPress?: () => void;
+    iconColor?: string;
+    showChevron?: boolean;
+  }) => (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={{ cursor: onPress ? 'pointer' : undefined } as any}
+      className="flex-row items-center justify-between p-4 active:bg-secondary/50"
+    >
+      <View className="flex-row items-center">
+        {icon}
+        <Text className="text-foreground ml-3">{label}</Text>
+      </View>
+      <View className="flex-row items-center">
+        {value && <Text className="text-muted-foreground mr-2">{value}</Text>}
+        {showChevron && onPress && <ChevronRight size={20} color="rgb(148, 163, 184)" />}
+      </View>
+    </Pressable>
+  );
+
+  return (
+    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{
+          padding: isDesktop ? 32 : 16,
+          maxWidth: isDesktop ? 1200 : undefined,
+          alignSelf: isDesktop ? 'center' : undefined,
+          width: '100%',
+        }}
+      >
+        {/* Header */}
+        <View className="flex-row items-center mb-6">
+          {!isDesktop && (
+            <Pressable
+              onPress={() => router.back()}
+              style={{ cursor: 'pointer' }}
+              className="p-2 mr-2"
+            >
+              <ChevronLeft size={24} color="rgb(148, 163, 184)" />
+            </Pressable>
+          )}
+          <Text className="text-3xl font-bold text-foreground">{t('profile')}</Text>
         </View>
 
-        {/* Settings Sections */}
-        <View className="gap-4">
-          {/* Appearance */}
-          <View className="bg-card rounded-xl overflow-hidden">
-            <Text className="text-sm text-muted-foreground p-4 pb-2">
-              {t('appearance')}
-            </Text>
-            <Pressable
-              onPress={toggleTheme}
-              className="flex-row items-center justify-between p-4 active:bg-secondary/50"
-            >
-              <View className="flex-row items-center">
-                {isDark ? (
-                  <Moon size={20} color="rgb(148, 163, 184)" />
-                ) : (
-                  <Sun size={20} color="rgb(212, 175, 55)" />
-                )}
-                <Text className="text-foreground ml-3">{t('theme')}</Text>
-              </View>
-              <Text className="text-muted-foreground">
-                {isDark ? t('dark') : t('light')}
-              </Text>
-            </Pressable>
-          </View>
-
-          {/* Language */}
-          <View className="bg-card rounded-xl overflow-hidden">
-            <Text className="text-sm text-muted-foreground p-4 pb-2">
-              {t('language')}
-            </Text>
-            {LANGUAGES.map((lang) => (
-              <Pressable
-                key={lang.code}
-                onPress={() => setLanguage(lang.code)}
-                className="flex-row items-center justify-between p-4 active:bg-secondary/50"
-              >
-                <View className="flex-row items-center">
-                  <Text className="text-xl mr-3">{lang.flag}</Text>
-                  <Text className="text-foreground">{lang.name}</Text>
+        {/* Desktop: Two column layout, Mobile: Single column */}
+        <View
+          style={{
+            flexDirection: isDesktop ? 'row' : 'column',
+            gap: 24,
+          }}
+        >
+          {/* Left Column - User Info & Appearance */}
+          <View style={{ flex: isDesktop ? 1 : undefined }}>
+            {/* User Info Card */}
+            <View className="bg-card p-6 rounded-xl mb-6">
+              <View className={`${isDesktop ? 'flex-row items-center' : 'items-center'}`}>
+                <View className="bg-primary/20 p-4 rounded-full">
+                  <User size={48} color="rgb(212, 175, 55)" />
                 </View>
-                {language === lang.code && (
-                  <View className="w-2 h-2 bg-accent rounded-full" />
-                )}
-              </Pressable>
-            ))}
+                <View className={`${isDesktop ? 'ml-4' : 'mt-4 items-center'}`}>
+                  <Text className="text-xl font-bold text-foreground">{user?.name}</Text>
+                  <View className="flex-row items-center mt-2">
+                    <Mail size={16} color="rgb(148, 163, 184)" />
+                    <Text className="text-muted-foreground ml-2">{user?.email}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {/* Appearance Settings */}
+            <SettingsSection title={t('appearance')}>
+              <SettingsItem
+                icon={
+                  isDark ? (
+                    <Moon size={20} color="rgb(148, 163, 184)" />
+                  ) : (
+                    <Sun size={20} color="rgb(212, 175, 55)" />
+                  )
+                }
+                label={t('theme')}
+                value={isDark ? t('dark') : t('light')}
+                onPress={toggleTheme}
+                showChevron={false}
+              />
+            </SettingsSection>
+
+            {/* Language Settings */}
+            <View className="mt-4">
+              <SettingsSection title={t('language')}>
+                {LANGUAGES.map((lang) => (
+                  <Pressable
+                    key={lang.code}
+                    onPress={() => setLanguage(lang.code)}
+                    style={{ cursor: 'pointer' }}
+                    className="flex-row items-center justify-between p-4 active:bg-secondary/50"
+                  >
+                    <View className="flex-row items-center">
+                      <Text className="text-xl mr-3">{lang.flag}</Text>
+                      <Text className="text-foreground">{lang.name}</Text>
+                    </View>
+                    {language === lang.code && (
+                      <View className="w-2 h-2 bg-accent rounded-full" />
+                    )}
+                  </Pressable>
+                ))}
+              </SettingsSection>
+            </View>
           </View>
 
-          {/* Finance Management */}
-          <View className="bg-card rounded-xl overflow-hidden">
-            <Text className="text-sm text-muted-foreground p-4 pb-2">
-              {t('financeManagement')}
-            </Text>
+          {/* Right Column - Finance & Account */}
+          <View style={{ flex: isDesktop ? 1 : undefined }}>
+            {/* Finance Management */}
+            <SettingsSection title={t('financeManagement')}>
+              <SettingsItem
+                icon={<Wallet size={20} color="rgb(212, 175, 55)" />}
+                label={t('budgets')}
+                onPress={() => router.push('/budgets')}
+              />
+              <SettingsItem
+                icon={<Repeat size={20} color="rgb(212, 175, 55)" />}
+                label={t('recurringTransactions')}
+                onPress={() => router.push('/recurring')}
+              />
+              <SettingsItem
+                icon={<CreditCard size={20} color="rgb(212, 175, 55)" />}
+                label={t('subscriptions')}
+                onPress={() => router.push('/subscriptions')}
+              />
+            </SettingsSection>
+
+            {/* Tools & Features */}
+            <View className="mt-4">
+              <SettingsSection title={t('toolsAndFeatures') || 'Tools & Features'}>
+                <SettingsItem
+                  icon={<Trophy size={20} color="rgb(212, 175, 55)" />}
+                  label={t('badges') || 'Badges'}
+                  onPress={() => router.push('/badges')}
+                />
+                <SettingsItem
+                  icon={<History size={20} color="rgb(212, 175, 55)" />}
+                  label={t('historicalRates') || 'Historical Rates'}
+                  onPress={() => router.push('/historical')}
+                />
+                <SettingsItem
+                  icon={<Info size={20} color="rgb(148, 163, 184)" />}
+                  label={t('aboutUs') || 'About Us'}
+                  onPress={() => router.push('/(public)/about')}
+                />
+              </SettingsSection>
+            </View>
+
+            {/* Account Settings */}
+            <View className="mt-4">
+              <SettingsSection title={t('account')}>
+                <SettingsItem
+                  icon={<Shield size={20} color="rgb(148, 163, 184)" />}
+                  label={t('security')}
+                />
+                <SettingsItem
+                  icon={<Bell size={20} color="rgb(148, 163, 184)" />}
+                  label={t('notifications')}
+                />
+              </SettingsSection>
+            </View>
+
+            {/* Logout */}
             <Pressable
-              onPress={() => router.push('/budgets')}
-              className="flex-row items-center justify-between p-4 active:bg-secondary/50"
+              onPress={handleLogout}
+              style={{ cursor: 'pointer' }}
+              className="bg-danger/10 p-4 rounded-xl flex-row items-center justify-center mt-4"
             >
-              <View className="flex-row items-center">
-                <Wallet size={20} color="rgb(212, 175, 55)" />
-                <Text className="text-foreground ml-3">{t('budgets')}</Text>
-              </View>
-              <ChevronRight size={20} color="rgb(148, 163, 184)" />
-            </Pressable>
-            <Pressable
-              onPress={() => router.push('/recurring')}
-              className="flex-row items-center justify-between p-4 active:bg-secondary/50"
-            >
-              <View className="flex-row items-center">
-                <Repeat size={20} color="rgb(212, 175, 55)" />
-                <Text className="text-foreground ml-3">{t('recurringTransactions')}</Text>
-              </View>
-              <ChevronRight size={20} color="rgb(148, 163, 184)" />
-            </Pressable>
-            <Pressable
-              onPress={() => router.push('/subscriptions')}
-              className="flex-row items-center justify-between p-4 active:bg-secondary/50"
-            >
-              <View className="flex-row items-center">
-                <CreditCard size={20} color="rgb(212, 175, 55)" />
-                <Text className="text-foreground ml-3">{t('subscriptions')}</Text>
-              </View>
-              <ChevronRight size={20} color="rgb(148, 163, 184)" />
+              <LogOut size={20} color="rgb(220, 38, 38)" />
+              <Text className="text-danger font-semibold ml-2">{t('logout')}</Text>
             </Pressable>
           </View>
-
-          {/* Tools & Features */}
-          <View className="bg-card rounded-xl overflow-hidden">
-            <Text className="text-sm text-muted-foreground p-4 pb-2">
-              {t('toolsAndFeatures') || 'Tools & Features'}
-            </Text>
-            <Pressable
-              onPress={() => router.push('/badges')}
-              style={{ cursor: 'pointer' }}
-              className="flex-row items-center justify-between p-4 active:bg-secondary/50"
-            >
-              <View className="flex-row items-center">
-                <Trophy size={20} color="rgb(212, 175, 55)" />
-                <Text className="text-foreground ml-3">{t('badges') || 'Badges'}</Text>
-              </View>
-              <ChevronRight size={20} color="rgb(148, 163, 184)" />
-            </Pressable>
-            <Pressable
-              onPress={() => router.push('/historical')}
-              style={{ cursor: 'pointer' }}
-              className="flex-row items-center justify-between p-4 active:bg-secondary/50"
-            >
-              <View className="flex-row items-center">
-                <History size={20} color="rgb(212, 175, 55)" />
-                <Text className="text-foreground ml-3">{t('historicalRates') || 'Historical Rates'}</Text>
-              </View>
-              <ChevronRight size={20} color="rgb(148, 163, 184)" />
-            </Pressable>
-            <Pressable
-              onPress={() => router.push('/(public)/about')}
-              style={{ cursor: 'pointer' }}
-              className="flex-row items-center justify-between p-4 active:bg-secondary/50"
-            >
-              <View className="flex-row items-center">
-                <Info size={20} color="rgb(148, 163, 184)" />
-                <Text className="text-foreground ml-3">{t('aboutUs') || 'About Us'}</Text>
-              </View>
-              <ChevronRight size={20} color="rgb(148, 163, 184)" />
-            </Pressable>
-          </View>
-
-          {/* Account */}
-          <View className="bg-card rounded-xl overflow-hidden">
-            <Text className="text-sm text-muted-foreground p-4 pb-2">
-              {t('account')}
-            </Text>
-            <Pressable
-              style={{ cursor: 'pointer' }}
-              className="flex-row items-center justify-between p-4 active:bg-secondary/50"
-            >
-              <View className="flex-row items-center">
-                <Shield size={20} color="rgb(148, 163, 184)" />
-                <Text className="text-foreground ml-3">{t('security')}</Text>
-              </View>
-              <ChevronRight size={20} color="rgb(148, 163, 184)" />
-            </Pressable>
-            <Pressable
-              style={{ cursor: 'pointer' }}
-              className="flex-row items-center justify-between p-4 active:bg-secondary/50"
-            >
-              <View className="flex-row items-center">
-                <Bell size={20} color="rgb(148, 163, 184)" />
-                <Text className="text-foreground ml-3">{t('notifications')}</Text>
-              </View>
-              <ChevronRight size={20} color="rgb(148, 163, 184)" />
-            </Pressable>
-          </View>
-
-          {/* Logout */}
-          <Pressable
-            onPress={handleLogout}
-            className="bg-danger/10 p-4 rounded-xl flex-row items-center justify-center"
-          >
-            <LogOut size={20} color="rgb(220, 38, 38)" />
-            <Text className="text-danger font-semibold ml-2">{t('logout')}</Text>
-          </Pressable>
         </View>
 
         {/* App Info */}
