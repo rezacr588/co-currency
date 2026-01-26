@@ -324,10 +324,8 @@ func main() {
 	}
 
 	// Initialize GitHub OAuth handler
-	var githubOAuthHandler *handler.GitHubOAuthHandler
-	if githubOAuthService != nil {
-		githubOAuthHandler = handler.NewGitHubOAuthHandler(githubOAuthService)
-	}
+	// Always initialize handler so routes are registered and return proper error if not configured
+	githubOAuthHandler := handler.NewGitHubOAuthHandler(githubOAuthService, cfg.FrontendURL)
 
 	handlers := &router.Handlers{
 		Exchange:     exchangeHandler,

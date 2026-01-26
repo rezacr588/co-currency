@@ -13,27 +13,30 @@ import (
 // GitHubOAuthHandler handles GitHub OAuth endpoints
 type GitHubOAuthHandler struct {
 	githubService *service.GitHubOAuthService
+	frontendURL   string
 }
 
 // NewGitHubOAuthHandler creates a new GitHubOAuthHandler
-func NewGitHubOAuthHandler(githubService *service.GitHubOAuthService) *GitHubOAuthHandler {
-	return &GitHubOAuthHandler{githubService: githubService}
+func NewGitHubOAuthHandler(githubService *service.GitHubOAuthService, frontendURL string) *GitHubOAuthHandler {
+	return &GitHubOAuthHandler{
+		githubService: githubService,
+		frontendURL:   frontendURL,
+	}
 }
 
 // GetAuthURL handles GET /api/v1/auth/github
 // Redirects to GitHub OAuth authorization page
 func (h *GitHubOAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
-	if !requireService(w, h.githubService != nil && h.githubService.IsConfigured(), "GitHub OAuth not configured") {
+	if h.githubService == nil || !h.githubService.IsConfigured() {
+		redirectURL := fmt.Sprintf("%s/login?error=%s", h.frontendURL, url.QueryEscape("GitHub OAuth not configured"))
+		http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 		return
 	}
 
 	authURL, _, err := h.githubService.GetAuthURL()
 	if err != nil {
-		if errors.Is(err, service.ErrGitHubOAuthNotConfigured) {
-			httputil.ServiceUnavailableWithContext(r.Context(), w, "GitHub OAuth not configured", err)
-			return
-		}
-		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate auth URL", err)
+		redirectURL := fmt.Sprintf("%s/login?error=%s", h.frontendURL, url.QueryEscape(err.Error()))
+		http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 		return
 	}
 
@@ -44,7 +47,9 @@ func (h *GitHubOAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 // Callback handles GET /api/v1/auth/github/callback
 // Handles the OAuth callback from GitHub
 func (h *GitHubOAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
-	if !requireService(w, h.githubService != nil && h.githubService.IsConfigured(), "GitHub OAuth not configured") {
+	if h.githubService == nil || !h.githubService.IsConfigured() {
+		redirectURL := fmt.Sprintf("%s/login?error=%s", h.frontendURL, url.QueryEscape("GitHub OAuth not configured"))
+		http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 		return
 	}
 
@@ -52,18 +57,16 @@ func (h *GitHubOAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	state := r.URL.Query().Get("state")
 	errorParam := r.URL.Query().Get("error")
 
-	frontendURL := h.githubService.GetFrontendURL()
-
 	// Handle OAuth errors from GitHub
 	if errorParam != "" {
 		errorDesc := r.URL.Query().Get("error_description")
-		redirectURL := fmt.Sprintf("%s/login?error=%s", frontendURL, url.QueryEscape(errorDesc))
+		redirectURL := fmt.Sprintf("%s/login?error=%s", h.frontendURL, url.QueryEscape(errorDesc))
 		http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 		return
 	}
 
 	if code == "" {
-		redirectURL := fmt.Sprintf("%s/login?error=%s", frontendURL, url.QueryEscape("missing authorization code"))
+		redirectURL := fmt.Sprintf("%s/login?error=%s", h.frontendURL, url.QueryEscape("missing authorization code"))
 		http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 		return
 	}
@@ -71,13 +74,13 @@ func (h *GitHubOAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	// Handle the callback
 	response, err := h.githubService.HandleCallback(r.Context(), code, state)
 	if err != nil {
-		redirectURL := fmt.Sprintf("%s/login?error=%s", frontendURL, url.QueryEscape(err.Error()))
+		redirectURL := fmt.Sprintf("%s/login?error=%s", h.frontendURL, url.QueryEscape(err.Error()))
 		http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 		return
 	}
 
 	// Redirect to frontend with token
-	redirectURL := fmt.Sprintf("%s/auth/github/callback?token=%s", frontendURL, url.QueryEscape(response.Token))
+	redirectURL := fmt.Sprintf("%s/auth/github/callback?token=%s", h.frontendURL, url.QueryEscape(response.Token))
 	if response.RefreshToken != "" {
 		redirectURL += fmt.Sprintf("&refresh_token=%s", url.QueryEscape(response.RefreshToken))
 	}
