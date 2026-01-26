@@ -36,7 +36,8 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	response, err := h.authService.Register(r.Context(), &req)
 	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "registration failed")
+		// Return the specific error message from the service
+		httputil.BadRequestWithContext(r.Context(), w, err.Error())
 		return
 	}
 
