@@ -1,6 +1,7 @@
 import { auth } from './auth';
 import { wallet } from './wallet';
 import { ai } from './ai';
+import { chat } from './chat';
 import { goals } from './goals';
 import { tags } from './tags';
 import { budgets } from './budgets';
@@ -17,6 +18,7 @@ export const api = {
   auth,
   wallet,
   ai,
+  chat,
   goals,
   tags,
   budgets,

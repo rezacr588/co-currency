@@ -7,6 +7,7 @@ export default function WalletLayout() {
       <Stack.Screen name="history" />
       <Stack.Screen name="convert" />
       <Stack.Screen name="ai" />
+      <Stack.Screen name="chat" />
     </Stack>
   );
 }

@@ -10,6 +10,7 @@ import { useLanguage } from '../../../src/context/LanguageContext';
 import { formatCompactCurrency, formatDate, formatNumber, getCurrencyDisplay } from '../../../src/utils/format';
 import { StyledCategoryIcon } from '../../../src/constants/icons';
 import { useConvert, useCurrencies } from '../../../src/hooks';
+import { Skeleton } from '../../../src/components/ui/Skeleton';
 
 const POPULAR_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'IRR', 'TRY', 'CAD', 'AUD'];
 
@@ -118,7 +119,7 @@ export default function DashboardScreen() {
                 <DollarSign size={18} color="#71717a" />
               </View>
               {isPending ? (
-                <ActivityIndicator size="small" color="#71717a" />
+                <Skeleton width={120} height={28} />
               ) : (
                 <Text className="text-2xl font-bold text-foreground">
                   {formatCompactCurrency(summary?.total_balance_usd || 0, 'USD')}

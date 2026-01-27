@@ -1,12 +1,13 @@
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, Pressable, RefreshControl, useWindowDimensions } from 'react-native';
 import { Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, ArrowLeftRight, Bot, History } from 'lucide-react-native';
+import { Plus, ArrowLeftRight, Bot, History, MessageCircle } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
 import { formatCompactCurrency, getCurrencyDisplay } from '../../../../src/utils/format';
+import { SkeletonBalance, SkeletonTransaction, SkeletonList } from '../../../../src/components/ui/Skeleton';
 
 export default function WalletScreen() {
   const { t } = useLanguage();
@@ -70,13 +71,18 @@ export default function WalletScreen() {
               <Bot size={20} color="rgb(168, 85, 247)" />
             </Pressable>
           </Link>
+          <Link href="/(app)/(tabs)/wallet/chat" asChild>
+            <Pressable className="bg-card p-4 rounded-xl items-center" style={{ cursor: 'pointer' }}>
+              <MessageCircle size={20} color="rgb(59, 130, 246)" />
+            </Pressable>
+          </Link>
         </View>
 
         {/* Balances */}
         <View className="mb-6">
           <Text className="text-lg font-semibold text-foreground mb-4">{t('balances')}</Text>
           {isLoadingBalances ? (
-            <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
+            <SkeletonList count={3} ItemComponent={SkeletonBalance} />
           ) : balances.length === 0 ? (
             <View className="bg-card p-6 rounded-xl items-center">
               <Text className="text-muted-foreground">{t('noBalances')}</Text>
@@ -137,7 +143,7 @@ export default function WalletScreen() {
             </Link>
           </View>
           {isLoadingTransactions ? (
-            <ActivityIndicator />
+            <SkeletonList count={3} ItemComponent={SkeletonTransaction} />
           ) : transactions.length === 0 ? (
             <View className="bg-card p-6 rounded-xl items-center">
               <Text className="text-muted-foreground">{t('noTransactions')}</Text>

@@ -142,6 +142,22 @@ export const translations = {
     linkedinLinked: 'LinkedIn account linked',
     uploadPhoto: 'Upload Photo',
     uploadPhotoHint: 'Max 1MB. JPG, PNG, or GIF.',
+    editProfile: 'Edit Profile',
+    emailCannotBeChanged: 'Email cannot be changed',
+    appearance: 'Appearance',
+    theme: 'Theme',
+    dark: 'Dark',
+    light: 'Light',
+    financeManagement: 'Finance Management',
+    toolsAndFeatures: 'Tools & Features',
+    badges: 'Badges',
+    security: 'Security',
+    notifications: 'Notifications',
+    aiFeatures: 'AI Features',
+    uncategorized: 'Uncategorized',
+    transactions: 'transactions',
+    netWorth: 'Net Worth',
+    net: 'Net',
 
     // Wallet
     wallet: 'Wallet',
@@ -268,6 +284,9 @@ export const translations = {
     searchTransactions: 'Search transactions...',
     filters: 'Filters',
     export: 'Export',
+    exportStarted: 'Export started. Check your browser downloads.',
+    exportNotAvailable: 'Export is only available on web',
+    exportSuccess: 'File saved',
     allCategories: 'All Categories',
     type: 'Type',
     allTypes: 'All Types',
@@ -580,6 +599,26 @@ export const translations = {
     aiWelcomeDesc: 'Ask me anything about your finances. I have access to your transactions, budgets, and goals.',
     typeMessage: 'Ask about your finances...',
 
+    // Offline Banner
+    youAreOffline: 'You are offline',
+    backOnline: 'Back online',
+
+    // Change Password
+    changePasswordDescription: 'Enter your current password and choose a new secure password.',
+    setPasswordDescription: 'Set a password for your account to enable email login.',
+    currentPasswordRequired: 'Current password is required',
+    newPasswordRequired: 'New password is required',
+    confirmPasswordRequired: 'Please confirm your new password',
+    currentPasswordIncorrect: 'Current password is incorrect',
+    enterCurrentPassword: 'Enter your current password',
+    enterNewPassword: 'Enter your new password',
+    passwordUpdateFailed: 'Failed to update password',
+    passwordRequirements: 'Password Requirements',
+    passwordMinLength: 'At least 6 characters',
+
+    // Skeleton
+    loadingSkeleton: 'Loading...',
+
     // Misc
     total: 'total',
     dueToday: 'Due today',
@@ -742,6 +781,22 @@ export const translations = {
     linkedinLinked: 'حساب لینکدین متصل است',
     uploadPhoto: 'بارگذاری تصویر',
     uploadPhotoHint: 'حداکثر ۱ مگابایت. JPG، PNG یا GIF.',
+    editProfile: 'ویرایش پروفایل',
+    emailCannotBeChanged: 'ایمیل قابل تغییر نیست',
+    appearance: 'ظاهر',
+    theme: 'تم',
+    dark: 'تاریک',
+    light: 'روشن',
+    financeManagement: 'مدیریت مالی',
+    toolsAndFeatures: 'ابزارها و امکانات',
+    badges: 'نشان‌ها',
+    security: 'امنیت',
+    notifications: 'اعلان‌ها',
+    aiFeatures: 'ویژگی‌های هوش مصنوعی',
+    uncategorized: 'بدون دسته‌بندی',
+    transactions: 'تراکنش',
+    netWorth: 'ارزش خالص',
+    net: 'خالص',
 
     // Wallet
     wallet: 'کیف پول',
@@ -866,6 +921,9 @@ export const translations = {
     searchTransactions: 'جستجوی تراکنش‌ها...',
     filters: 'فیلترها',
     export: 'خروجی',
+    exportStarted: 'خروجی گرفتن شروع شد. دانلودهای مرورگر را بررسی کنید.',
+    exportNotAvailable: 'خروجی فقط در وب در دسترس است',
+    exportSuccess: 'فایل ذخیره شد',
     allCategories: 'همه دسته‌بندی‌ها',
     type: 'نوع',
     allTypes: 'همه انواع',
@@ -1178,6 +1236,26 @@ export const translations = {
     aiWelcomeDesc: 'هر سوالی درباره امور مالی خود دارید بپرسید. من به تراکنش‌ها، بودجه‌ها و اهداف شما دسترسی دارم.',
     typeMessage: 'درباره امور مالی خود بپرسید...',
 
+    // Offline Banner
+    youAreOffline: 'شما آفلاین هستید',
+    backOnline: 'دوباره آنلاین شدید',
+
+    // Change Password
+    changePasswordDescription: 'رمز عبور فعلی خود را وارد کنید و رمز عبور جدید انتخاب کنید.',
+    setPasswordDescription: 'برای فعال‌سازی ورود با ایمیل، رمز عبور تنظیم کنید.',
+    currentPasswordRequired: 'رمز عبور فعلی الزامی است',
+    newPasswordRequired: 'رمز عبور جدید الزامی است',
+    confirmPasswordRequired: 'لطفاً رمز عبور جدید را تایید کنید',
+    currentPasswordIncorrect: 'رمز عبور فعلی نادرست است',
+    enterCurrentPassword: 'رمز عبور فعلی را وارد کنید',
+    enterNewPassword: 'رمز عبور جدید را وارد کنید',
+    passwordUpdateFailed: 'به‌روزرسانی رمز عبور ناموفق بود',
+    passwordRequirements: 'الزامات رمز عبور',
+    passwordMinLength: 'حداقل ۶ کاراکتر',
+
+    // Skeleton
+    loadingSkeleton: 'در حال بارگذاری...',
+
     // Misc
     total: 'total',
     dueToday: 'Due today',
@@ -1340,6 +1418,22 @@ export const translations = {
     linkedinLinked: 'تم ربط حساب LinkedIn',
     uploadPhoto: 'رفع صورة',
     uploadPhotoHint: 'الحد الأقصى 1 ميجابايت. JPG أو PNG أو GIF.',
+    editProfile: 'تعديل الملف الشخصي',
+    emailCannotBeChanged: 'لا يمكن تغيير البريد الإلكتروني',
+    appearance: 'المظهر',
+    theme: 'السمة',
+    dark: 'داكن',
+    light: 'فاتح',
+    financeManagement: 'إدارة المالية',
+    toolsAndFeatures: 'الأدوات والميزات',
+    badges: 'الشارات',
+    security: 'الأمان',
+    notifications: 'الإشعارات',
+    aiFeatures: 'ميزات الذكاء الاصطناعي',
+    uncategorized: 'غير مصنف',
+    transactions: 'معاملات',
+    netWorth: 'صافي القيمة',
+    net: 'صافي',
 
     // Wallet
     wallet: 'المحفظة',
@@ -1464,6 +1558,9 @@ export const translations = {
     searchTransactions: 'البحث في المعاملات...',
     filters: 'الفلاتر',
     export: 'تصدير',
+    exportStarted: 'بدأ التصدير. تحقق من تنزيلات المتصفح.',
+    exportNotAvailable: 'التصدير متاح فقط على الويب',
+    exportSuccess: 'تم حفظ الملف',
     allCategories: 'جميع الفئات',
     type: 'النوع',
     allTypes: 'جميع الأنواع',
@@ -1776,6 +1873,26 @@ export const translations = {
     aiWelcomeDesc: 'اسألني أي شيء عن أموالك. لدي إمكانية الوصول إلى معاملاتك وميزانياتك وأهدافك.',
     typeMessage: 'اسأل عن أموالك...',
 
+    // Offline Banner
+    youAreOffline: 'أنت غير متصل',
+    backOnline: 'عدت للاتصال',
+
+    // Change Password
+    changePasswordDescription: 'أدخل كلمة المرور الحالية واختر كلمة مرور جديدة آمنة.',
+    setPasswordDescription: 'عيّن كلمة مرور لحسابك لتفعيل تسجيل الدخول بالبريد الإلكتروني.',
+    currentPasswordRequired: 'كلمة المرور الحالية مطلوبة',
+    newPasswordRequired: 'كلمة المرور الجديدة مطلوبة',
+    confirmPasswordRequired: 'يرجى تأكيد كلمة المرور الجديدة',
+    currentPasswordIncorrect: 'كلمة المرور الحالية غير صحيحة',
+    enterCurrentPassword: 'أدخل كلمة المرور الحالية',
+    enterNewPassword: 'أدخل كلمة المرور الجديدة',
+    passwordUpdateFailed: 'فشل تحديث كلمة المرور',
+    passwordRequirements: 'متطلبات كلمة المرور',
+    passwordMinLength: '6 أحرف على الأقل',
+
+    // Skeleton
+    loadingSkeleton: 'جاري التحميل...',
+
     // Misc
     total: 'total',
     dueToday: 'Due today',
@@ -1938,6 +2055,22 @@ export const translations = {
     linkedinLinked: 'LinkedIn hesabı bağlı',
     uploadPhoto: 'Fotoğraf Yükle',
     uploadPhotoHint: 'Maks 1MB. JPG, PNG veya GIF.',
+    editProfile: 'Profili Düzenle',
+    emailCannotBeChanged: 'E-posta değiştirilemez',
+    appearance: 'Görünüm',
+    theme: 'Tema',
+    dark: 'Karanlık',
+    light: 'Aydınlık',
+    financeManagement: 'Finans Yönetimi',
+    toolsAndFeatures: 'Araçlar ve Özellikler',
+    badges: 'Rozetler',
+    security: 'Güvenlik',
+    notifications: 'Bildirimler',
+    aiFeatures: 'AI Özellikleri',
+    uncategorized: 'Kategorisiz',
+    transactions: 'işlemler',
+    netWorth: 'Net Değer',
+    net: 'Net',
 
     // Wallet
     wallet: 'Cüzdan',
@@ -2062,6 +2195,9 @@ export const translations = {
     searchTransactions: 'İşlemleri ara...',
     filters: 'Filtreler',
     export: 'Dışa Aktar',
+    exportStarted: 'Dışa aktarma başladı. Tarayıcı indirmelerini kontrol edin.',
+    exportNotAvailable: 'Dışa aktarma yalnızca web\'de kullanılabilir',
+    exportSuccess: 'Dosya kaydedildi',
     allCategories: 'Tüm Kategoriler',
     type: 'Tür',
     allTypes: 'Tüm Türler',
@@ -2373,6 +2509,26 @@ export const translations = {
     aiWelcome: 'Merhaba! Ben finans danışmanınızım',
     aiWelcomeDesc: 'Finanslarınız hakkında her şeyi sorabilirsiniz. İşlemlerinize, bütçelerinize ve hedeflerinize erişimim var.',
     typeMessage: 'Finanslarınız hakkında sorun...',
+
+    // Offline Banner
+    youAreOffline: 'Cevrimdisi durumdasiniz',
+    backOnline: 'Tekrar cevrimici',
+
+    // Change Password
+    changePasswordDescription: 'Mevcut sifrenizi girin ve yeni guvenli bir sifre secin.',
+    setPasswordDescription: 'E-posta ile giris icin hesabiniza bir sifre belirleyin.',
+    currentPasswordRequired: 'Mevcut sifre gerekli',
+    newPasswordRequired: 'Yeni sifre gerekli',
+    confirmPasswordRequired: 'Lutfen yeni sifrenizi onaylayin',
+    currentPasswordIncorrect: 'Mevcut sifre yanlis',
+    enterCurrentPassword: 'Mevcut sifrenizi girin',
+    enterNewPassword: 'Yeni sifrenizi girin',
+    passwordUpdateFailed: 'Sifre guncellenemedi',
+    passwordRequirements: 'Sifre Gereksinimleri',
+    passwordMinLength: 'En az 6 karakter',
+
+    // Skeleton
+    loadingSkeleton: 'Yukleniyor...',
 
     // Misc
     total: 'total',

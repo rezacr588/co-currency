@@ -16,6 +16,7 @@ import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
 import { LanguageProvider } from '../src/context/LanguageContext';
 import { AuthProvider } from '../src/context/AuthContext';
 import { ToastProvider } from '../src/components/ui/Toast';
+import { OfflineBanner } from '../src/components/ui/OfflineBanner';
 import { useAppUpdates } from '../src/hooks/useAppUpdates';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -57,6 +58,7 @@ function RootLayoutNav() {
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} />
+      <OfflineBanner />
       <Stack
         screenOptions={{
           headerShown: false,

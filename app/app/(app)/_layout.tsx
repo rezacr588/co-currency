@@ -21,6 +21,7 @@ export default function AppLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="profile" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="change-password" />
       <Stack.Screen name="budgets" />
       <Stack.Screen name="recurring" />
       <Stack.Screen name="subscriptions" />

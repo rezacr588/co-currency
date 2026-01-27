@@ -18,6 +18,7 @@ import { useLanguage } from '../../../src/context/LanguageContext';
 import { formatCompactCurrency, formatDate } from '../../../src/utils/format';
 import { GoalIcon } from '../../../src/constants/icons';
 import { CurrencyPicker } from '../../../src/components/ui/CurrencyPicker';
+import { SkeletonGoalCard, SkeletonList } from '../../../src/components/ui/Skeleton';
 import type { CreateGoalRequest } from '../../../src/types/goal';
 
 const GOAL_CATEGORIES = [
@@ -89,7 +90,7 @@ export default function GoalsScreen() {
         </View>
 
         {isPending ? (
-          <ActivityIndicator size="large" color="#71717a" />
+          <SkeletonList count={3} ItemComponent={SkeletonGoalCard} />
         ) : goals.length === 0 ? (
           <View className="bg-card border border-border p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 500 : '100%', alignSelf: 'center', width: '100%' }}>
             <Target size={40} color="#52525b" />
