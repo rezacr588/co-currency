@@ -41,18 +41,18 @@ export default function ForgotPasswordScreen() {
       <SafeAreaView className="flex-1 bg-background">
         <View className="flex-1 p-6 justify-center items-center">
           <View style={{ width: '100%', maxWidth: 400 }}>
-            <View className="bg-success-light p-6 rounded-xl mb-6">
-              <Text className="text-success text-center text-lg">
+            <View className="bg-success-muted border border-success/20 p-5 rounded-lg mb-6">
+              <Text className="text-success text-center">
                 {t('resetEmailSent')}
               </Text>
             </View>
-            <Text className="text-muted-foreground text-center mb-8">
+            <Text className="text-muted-foreground text-center mb-8 text-sm">
               {t('checkEmail')}
             </Text>
             <View className="items-center">
               <Link href="/login" asChild>
-                <Pressable style={{ cursor: 'pointer' }} className="bg-primary px-6 py-3 rounded-xl">
-                  <Text className="text-white font-semibold">{t('backToLogin')}</Text>
+                <Pressable style={{ cursor: 'pointer' }} className="bg-foreground px-5 py-3 rounded-lg">
+                  <Text className="text-background font-medium text-sm">{t('backToLogin')}</Text>
                 </Pressable>
               </Link>
             </View>
@@ -76,35 +76,35 @@ export default function ForgotPasswordScreen() {
         <View style={{ width: '100%', maxWidth: 400 }}>
           <Link href="/login" asChild>
             <Pressable style={{ cursor: 'pointer' }} className="flex-row items-center mb-8">
-              <ArrowLeft size={20} color="rgb(148, 163, 184)" />
-              <Text className="text-muted-foreground ml-2">{t('backToLogin')}</Text>
+              <ArrowLeft size={18} color="#71717a" />
+              <Text className="text-muted-foreground ml-2 text-sm">{t('backToLogin')}</Text>
             </Pressable>
           </Link>
 
           <View className="items-center mb-8">
-            <Text className="text-3xl font-bold text-foreground mb-2">
+            <Text className="text-2xl font-semibold text-foreground mb-2">
               {t('forgotPassword')}
             </Text>
-            <Text className="text-muted-foreground text-center">
+            <Text className="text-muted-foreground text-center text-sm">
               {t('forgotPasswordSubtitle')}
             </Text>
           </View>
 
           {error ? (
-            <View className="bg-danger-light p-4 rounded-xl mb-4">
-              <Text className="text-danger">{error}</Text>
+            <View className="bg-danger-muted border border-danger/20 p-3 rounded-lg mb-4">
+              <Text className="text-danger text-sm">{error}</Text>
             </View>
           ) : null}
 
-          <View className="gap-4">
+          <View className="gap-3">
             {/* Email Input */}
-            <View className="bg-card rounded-xl flex-row items-center px-4">
-              <Mail size={20} color="rgb(148, 163, 184)" />
+            <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
+              <Mail size={18} color="#71717a" />
               <TextInput
-                className="flex-1 p-4 text-foreground"
-                style={{ outlineStyle: 'none' } as any}
+                className="flex-1 p-3.5 text-foreground"
+                style={{ outlineStyle: 'none', fontSize: 15 } as any}
                 placeholder={t('email')}
-                placeholderTextColor="rgb(148, 163, 184)"
+                placeholderTextColor="#52525b"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -118,12 +118,12 @@ export default function ForgotPasswordScreen() {
               onPress={handleSubmit}
               disabled={isLoading}
               style={{ cursor: 'pointer' }}
-              className={`bg-primary p-4 rounded-xl items-center ${isLoading ? 'opacity-50' : ''}`}
+              className={`bg-accent p-3.5 rounded-lg items-center ${isLoading ? 'opacity-50' : ''}`}
             >
               {isLoading ? (
-                <ActivityIndicator color="white" />
+                <ActivityIndicator color="#09090b" />
               ) : (
-                <Text className="text-white font-semibold text-lg">{t('sendResetLink')}</Text>
+                <Text className="text-accent-foreground font-semibold">{t('sendResetLink')}</Text>
               )}
             </Pressable>
           </View>

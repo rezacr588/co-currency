@@ -17,7 +17,7 @@ import { TrendingUp, TrendingDown, Check } from 'lucide-react-native';
 import { api } from '../../../src/api';
 import { useLanguage } from '../../../src/context/LanguageContext';
 import { getCurrencyDisplay } from '../../../src/utils/format';
-import { CATEGORY_ICONS } from '../../../src/constants/icons';
+import { CATEGORY_ICONS, CategoryIcon } from '../../../src/constants/icons';
 import type { TransactionRequest } from '../../../src/types/wallet';
 
 const CATEGORIES = Object.keys(CATEGORY_ICONS);
@@ -92,15 +92,15 @@ export default function AddTransactionScreen() {
           }}
         >
           <Text
-            className="font-bold text-foreground mb-6"
-            style={{ fontSize: isDesktop ? 32 : 28 }}
+            className="font-semibold text-foreground mb-6"
+            style={{ fontSize: isDesktop ? 24 : 22 }}
           >
             {t('addTransaction')}
           </Text>
 
           {error ? (
-            <View className="bg-danger-light p-4 rounded-xl mb-4">
-              <Text className="text-danger">{error}</Text>
+            <View className="bg-danger-muted border border-danger/20 p-3 rounded-lg mb-4">
+              <Text className="text-danger text-sm">{error}</Text>
             </View>
           ) : null}
 
@@ -112,23 +112,23 @@ export default function AddTransactionScreen() {
             }}
           >
             {/* Transaction Type */}
-            <View className="mb-6" style={{ flex: isDesktop ? 1 : undefined }}>
-              <Text className="text-muted-foreground mb-2">{t('transactionType')}</Text>
-              <View className="flex-row gap-3">
+            <View className="mb-5" style={{ flex: isDesktop ? 1 : undefined }}>
+              <Text className="text-muted-foreground text-sm mb-2">{t('transactionType')}</Text>
+              <View className="flex-row gap-2">
                 <Pressable
                   onPress={() => setType('debit')}
                   style={{ cursor: 'pointer' }}
-                  className={`flex-1 p-4 rounded-xl flex-row items-center justify-center ${
-                    type === 'debit' ? 'bg-danger' : 'bg-card'
+                  className={`flex-1 p-3.5 rounded-lg flex-row items-center justify-center border ${
+                    type === 'debit' ? 'bg-foreground border-foreground' : 'bg-card border-border'
                   }`}
                 >
                   <TrendingDown
-                    size={20}
-                    color={type === 'debit' ? 'white' : 'rgb(220, 38, 38)'}
+                    size={18}
+                    color={type === 'debit' ? '#09090b' : '#ef4444'}
                   />
                   <Text
-                    className={`font-semibold ml-2 ${
-                      type === 'debit' ? 'text-white' : 'text-foreground'
+                    className={`font-medium ml-2 text-sm ${
+                      type === 'debit' ? 'text-background' : 'text-foreground'
                     }`}
                   >
                     {t('expense')}
@@ -137,17 +137,17 @@ export default function AddTransactionScreen() {
                 <Pressable
                   onPress={() => setType('credit')}
                   style={{ cursor: 'pointer' }}
-                  className={`flex-1 p-4 rounded-xl flex-row items-center justify-center ${
-                    type === 'credit' ? 'bg-success' : 'bg-card'
+                  className={`flex-1 p-3.5 rounded-lg flex-row items-center justify-center border ${
+                    type === 'credit' ? 'bg-foreground border-foreground' : 'bg-card border-border'
                   }`}
                 >
                   <TrendingUp
-                    size={20}
-                    color={type === 'credit' ? 'white' : 'rgb(16, 185, 129)'}
+                    size={18}
+                    color={type === 'credit' ? '#09090b' : '#22c55e'}
                   />
                   <Text
-                    className={`font-semibold ml-2 ${
-                      type === 'credit' ? 'text-white' : 'text-foreground'
+                    className={`font-medium ml-2 text-sm ${
+                      type === 'credit' ? 'text-background' : 'text-foreground'
                     }`}
                   >
                     {t('income')}
@@ -157,28 +157,28 @@ export default function AddTransactionScreen() {
             </View>
 
             {/* Amount */}
-            <View className="mb-6" style={{ flex: isDesktop ? 1 : undefined }}>
-              <Text className="text-muted-foreground mb-2">{t('amount')}</Text>
-              <View className="bg-card rounded-xl flex-row items-center px-4">
-                <Text className="text-2xl text-muted-foreground mr-2">
+            <View className="mb-5" style={{ flex: isDesktop ? 1 : undefined }}>
+              <Text className="text-muted-foreground text-sm mb-2">{t('amount')}</Text>
+              <View className="bg-muted border border-border rounded-lg flex-row items-center px-4">
+                <Text className="text-xl text-muted-foreground mr-2">
                   {currencyDisplay.symbol}
                 </Text>
                 <TextInput
-                  className="flex-1 p-4 text-2xl font-bold text-foreground"
+                  className="flex-1 p-3.5 text-xl font-semibold text-foreground"
                   style={{ outlineStyle: 'none' } as any}
                   value={amount}
                   onChangeText={setAmount}
                   keyboardType="decimal-pad"
                   placeholder="0.00"
-                  placeholderTextColor="rgb(148, 163, 184)"
+                  placeholderTextColor="#52525b"
                 />
               </View>
             </View>
           </View>
 
           {/* Currency */}
-          <View className="mb-6">
-            <Text className="text-muted-foreground mb-2">{t('currency')}</Text>
+          <View className="mb-5">
+            <Text className="text-muted-foreground text-sm mb-2">{t('currency')}</Text>
             {isDesktop ? (
               <View className="flex-row flex-wrap gap-2">
                 {CURRENCIES.map((code) => {
@@ -188,17 +188,17 @@ export default function AddTransactionScreen() {
                       key={code}
                       onPress={() => setCurrency(code)}
                       style={{ cursor: 'pointer' }}
-                      className={`px-4 py-2 rounded-lg flex-row items-center ${
-                        currency === code ? 'bg-accent' : 'bg-card'
+                      className={`px-3 py-2 rounded-md flex-row items-center border ${
+                        currency === code ? 'bg-foreground border-foreground' : 'bg-secondary border-border'
                       }`}
                     >
-                      <Text className="mr-1">{display.flag || '🌐'}</Text>
+                      <Text className="mr-1 text-sm">{display.flag || '🌐'}</Text>
                       <Text
-                        className={
+                        className={`text-sm ${
                           currency === code
-                            ? 'text-accent-foreground font-semibold'
+                            ? 'text-background font-medium'
                             : 'text-foreground'
-                        }
+                        }`}
                       >
                         {code}
                       </Text>
@@ -216,17 +216,17 @@ export default function AddTransactionScreen() {
                         key={code}
                         onPress={() => setCurrency(code)}
                         style={{ cursor: 'pointer' }}
-                        className={`px-4 py-2 rounded-lg flex-row items-center ${
-                          currency === code ? 'bg-accent' : 'bg-card'
+                        className={`px-3 py-2 rounded-md flex-row items-center border ${
+                          currency === code ? 'bg-foreground border-foreground' : 'bg-secondary border-border'
                         }`}
                       >
-                        <Text className="mr-1">{display.flag || '🌐'}</Text>
+                        <Text className="mr-1 text-sm">{display.flag || '🌐'}</Text>
                         <Text
-                          className={
+                          className={`text-sm ${
                             currency === code
-                              ? 'text-accent-foreground font-semibold'
+                              ? 'text-background font-medium'
                               : 'text-foreground'
-                          }
+                          }`}
                         >
                           {code}
                         </Text>
@@ -238,9 +238,9 @@ export default function AddTransactionScreen() {
             )}
           </View>
 
-          {/* Category - Responsive Grid */}
-          <View className="mb-6">
-            <Text className="text-muted-foreground mb-2">{t('category')}</Text>
+          {/* Category - Responsive Grid with Icons */}
+          <View className="mb-5">
+            <Text className="text-muted-foreground text-sm mb-2">{t('category')}</Text>
             <View
               style={{
                 flexDirection: 'row',
@@ -248,47 +248,53 @@ export default function AddTransactionScreen() {
                 gap: 8,
               }}
             >
-              {CATEGORIES.map((cat) => (
-                <Pressable
-                  key={cat}
-                  onPress={() => setCategory(cat)}
-                  style={{
-                    cursor: 'pointer',
-                    width: isDesktop
-                      ? `${100 / getCategoryColumns() - 2}%`
-                      : isTablet
-                      ? `${100 / 4 - 2}%`
-                      : undefined,
-                    minWidth: isDesktop || isTablet ? undefined : 100,
-                  }}
-                  className={`px-4 py-3 rounded-lg ${
-                    category === cat ? 'bg-accent' : 'bg-card'
-                  }`}
-                >
-                  <Text
-                    className={`text-center ${
-                      category === cat
-                        ? 'text-accent-foreground font-semibold'
-                        : 'text-foreground'
+              {CATEGORIES.map((cat) => {
+                const isSelected = category === cat;
+
+                return (
+                  <Pressable
+                    key={cat}
+                    onPress={() => setCategory(cat)}
+                    style={{
+                      cursor: 'pointer',
+                      width: isDesktop
+                        ? `${100 / getCategoryColumns() - 2}%`
+                        : isTablet
+                        ? `${100 / 4 - 2}%`
+                        : undefined,
+                      minWidth: isDesktop || isTablet ? undefined : 100,
+                    }}
+                    className={`px-3 py-2.5 rounded-md flex-row items-center justify-center gap-2 border ${
+                      isSelected ? 'bg-foreground border-foreground' : 'bg-secondary border-border'
                     }`}
                   >
-                    {t(cat as any) || cat}
-                  </Text>
-                </Pressable>
-              ))}
+                    <CategoryIcon
+                      category={cat}
+                      size={16}
+                      color={isSelected ? '#09090b' : '#a1a1aa'}
+                    />
+                    <Text
+                      className={`text-sm ${isSelected ? 'text-background font-medium' : 'text-foreground'}`}
+                      numberOfLines={1}
+                    >
+                      {t(cat as any) || cat}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
 
           {/* Description */}
           <View className="mb-6">
-            <Text className="text-muted-foreground mb-2">{t('description')}</Text>
+            <Text className="text-muted-foreground text-sm mb-2">{t('description')}</Text>
             <TextInput
-              className="bg-card p-4 rounded-xl text-foreground"
-              style={{ outlineStyle: 'none', minHeight: isDesktop ? 100 : undefined } as any}
+              className="bg-muted border border-border p-3.5 rounded-lg text-foreground"
+              style={{ outlineStyle: 'none', minHeight: isDesktop ? 80 : undefined } as any}
               value={description}
               onChangeText={setDescription}
               placeholder={t('descriptionPlaceholder')}
-              placeholderTextColor="rgb(148, 163, 184)"
+              placeholderTextColor="#52525b"
               multiline
             />
           </View>
@@ -298,16 +304,16 @@ export default function AddTransactionScreen() {
             onPress={handleSubmit}
             disabled={mutation.isPending}
             style={{ cursor: 'pointer' }}
-            className={`bg-primary p-4 rounded-xl flex-row items-center justify-center ${
+            className={`bg-accent p-3.5 rounded-lg flex-row items-center justify-center ${
               mutation.isPending ? 'opacity-50' : ''
             }`}
           >
             {mutation.isPending ? (
-              <ActivityIndicator color="white" />
+              <ActivityIndicator color="#09090b" />
             ) : (
               <>
-                <Check size={20} color="white" />
-                <Text className="text-white font-semibold text-lg ml-2">
+                <Check size={18} color="#09090b" />
+                <Text className="text-accent-foreground font-semibold ml-2">
                   {t('saveTransaction')}
                 </Text>
               </>

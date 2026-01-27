@@ -159,28 +159,28 @@ export default function RegisterScreen() {
         {/* Form Container - Centered with max width */}
         <View style={{ width: '100%', maxWidth: formMaxWidth }}>
           <View className="items-center mb-8">
-            <Text className="text-3xl font-bold text-foreground mb-2">{t('createAccount')}</Text>
-            <Text className="text-muted-foreground text-center">{t('registerSubtitle')}</Text>
+            <Text className="text-2xl font-semibold text-foreground mb-2">{t('createAccount')}</Text>
+            <Text className="text-muted-foreground text-center text-sm">{t('registerSubtitle')}</Text>
           </View>
 
           {error ? (
-            <View className="bg-danger/10 p-4 rounded-xl mb-4">
-              <Text className="text-danger">{error}</Text>
+            <View className="bg-danger-muted border border-danger/20 p-3 rounded-lg mb-4">
+              <Text className="text-danger text-sm">{error}</Text>
             </View>
           ) : null}
 
-          <View className="gap-4">
+          <View className="gap-3">
             {/* Google OAuth Button */}
             <Pressable
               onPress={handleGoogleLogin}
               disabled={isSubmitting}
               style={{ cursor: 'pointer' }}
-              className={`bg-white p-4 rounded-xl flex-row items-center justify-center border border-gray-300 ${
+              className={`bg-foreground p-3.5 rounded-lg flex-row items-center justify-center ${
                 isSubmitting ? 'opacity-50' : ''
               }`}
             >
-              <GoogleIcon size={20} />
-              <Text className="text-gray-700 font-semibold ml-3">Sign up with Google</Text>
+              <GoogleIcon size={18} />
+              <Text className="text-background font-medium ml-3 text-sm">Sign up with Google</Text>
             </Pressable>
 
             {/* LinkedIn OAuth Button */}
@@ -188,29 +188,29 @@ export default function RegisterScreen() {
               onPress={handleLinkedInLogin}
               disabled={isSubmitting}
               style={{ cursor: 'pointer' }}
-              className={`bg-[#0077b5] p-4 rounded-xl flex-row items-center justify-center ${
+              className={`bg-secondary border border-border p-3.5 rounded-lg flex-row items-center justify-center ${
                 isSubmitting ? 'opacity-50' : ''
               }`}
             >
-              <LinkedInIcon size={20} color="white" />
-              <Text className="text-white font-semibold ml-3">Sign up with LinkedIn</Text>
+              <LinkedInIcon size={18} color="#a1a1aa" />
+              <Text className="text-foreground font-medium ml-3 text-sm">Sign up with LinkedIn</Text>
             </Pressable>
 
             {/* Divider */}
-            <View className="flex-row items-center my-2">
+            <View className="flex-row items-center my-3">
               <View className="flex-1 h-px bg-border" />
-              <Text className="text-muted-foreground mx-4">{t('or') || 'or'}</Text>
+              <Text className="text-muted-foreground mx-4 text-xs uppercase tracking-wider">{t('or') || 'or'}</Text>
               <View className="flex-1 h-px bg-border" />
             </View>
 
             {/* Name Input */}
-            <View className="bg-card rounded-xl flex-row items-center px-4 border border-border">
-              <User size={20} color="rgb(148, 163, 184)" />
+            <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
+              <User size={18} color="#71717a" />
               <TextInput
-                className="flex-1 p-4 text-foreground"
-                style={{ outlineStyle: 'none', fontSize: 16 } as any}
+                className="flex-1 p-3.5 text-foreground"
+                style={{ outlineStyle: 'none', fontSize: 15 } as any}
                 placeholder={t('name')}
-                placeholderTextColor="rgb(148, 163, 184)"
+                placeholderTextColor="#52525b"
                 value={name}
                 onChangeText={setName}
                 autoCapitalize="words"
@@ -219,13 +219,13 @@ export default function RegisterScreen() {
             </View>
 
             {/* Email Input */}
-            <View className="bg-card rounded-xl flex-row items-center px-4 border border-border">
-              <Mail size={20} color="rgb(148, 163, 184)" />
+            <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
+              <Mail size={18} color="#71717a" />
               <TextInput
-                className="flex-1 p-4 text-foreground"
-                style={{ outlineStyle: 'none', fontSize: 16 } as any}
+                className="flex-1 p-3.5 text-foreground"
+                style={{ outlineStyle: 'none', fontSize: 15 } as any}
                 placeholder={t('email')}
-                placeholderTextColor="rgb(148, 163, 184)"
+                placeholderTextColor="#52525b"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -236,13 +236,13 @@ export default function RegisterScreen() {
             </View>
 
             {/* Password Input */}
-            <View className="bg-card rounded-xl flex-row items-center px-4 border border-border">
-              <Lock size={20} color="rgb(148, 163, 184)" />
+            <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
+              <Lock size={18} color="#71717a" />
               <TextInput
-                className="flex-1 p-4 text-foreground"
-                style={{ outlineStyle: 'none', fontSize: 16 } as any}
+                className="flex-1 p-3.5 text-foreground"
+                style={{ outlineStyle: 'none', fontSize: 15 } as any}
                 placeholder={t('password')}
-                placeholderTextColor="rgb(148, 163, 184)"
+                placeholderTextColor="#52525b"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -254,21 +254,21 @@ export default function RegisterScreen() {
                 style={{ cursor: 'pointer', padding: 4 }}
               >
                 {showPassword ? (
-                  <EyeOff size={20} color="rgb(148, 163, 184)" />
+                  <EyeOff size={18} color="#71717a" />
                 ) : (
-                  <Eye size={20} color="rgb(148, 163, 184)" />
+                  <Eye size={18} color="#71717a" />
                 )}
               </Pressable>
             </View>
 
             {/* Confirm Password Input */}
-            <View className="bg-card rounded-xl flex-row items-center px-4 border border-border">
-              <Lock size={20} color="rgb(148, 163, 184)" />
+            <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
+              <Lock size={18} color="#71717a" />
               <TextInput
-                className="flex-1 p-4 text-foreground"
-                style={{ outlineStyle: 'none', fontSize: 16 } as any}
+                className="flex-1 p-3.5 text-foreground"
+                style={{ outlineStyle: 'none', fontSize: 15 } as any}
                 placeholder={t('confirmPassword')}
-                placeholderTextColor="rgb(148, 163, 184)"
+                placeholderTextColor="#52525b"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry={!showPassword}
@@ -282,22 +282,22 @@ export default function RegisterScreen() {
               onPress={handleRegister}
               disabled={isSubmitting}
               style={{ cursor: 'pointer' }}
-              className={`bg-primary p-4 rounded-xl items-center ${isSubmitting ? 'opacity-50' : ''}`}
+              className={`bg-accent p-3.5 rounded-lg items-center mt-2 ${isSubmitting ? 'opacity-50' : ''}`}
             >
               {isLoading ? (
-                <ActivityIndicator color="white" />
+                <ActivityIndicator color="#09090b" />
               ) : (
-                <Text className="text-white font-semibold text-lg">{t('register')}</Text>
+                <Text className="text-accent-foreground font-semibold">{t('register')}</Text>
               )}
             </Pressable>
           </View>
 
           {/* Login Link */}
           <View className="flex-row justify-center mt-8">
-            <Text className="text-muted-foreground">{t('haveAccount')} </Text>
+            <Text className="text-muted-foreground text-sm">{t('haveAccount')} </Text>
             <Link href="/login" asChild>
               <Pressable style={{ cursor: 'pointer' }}>
-                <Text className="text-accent font-semibold">{t('login')}</Text>
+                <Text className="text-foreground font-medium text-sm">{t('login')}</Text>
               </Pressable>
             </Link>
           </View>

@@ -9,58 +9,95 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Core Colors (Dark Mode - Default)
-        background: "rgb(15, 26, 42)",
-        foreground: "rgb(248, 250, 252)",
-        card: "rgb(30, 58, 95)",
-        "card-foreground": "rgb(248, 250, 252)",
+        // Minimal Dark Mode Color System
+        // 90% grayscale with minimal accent colors
+        // Modern, sophisticated, and clean
 
-        // Primary - Trust Blue
+        // Background Layers (true blacks and dark grays)
+        background: "#09090b",
+        "background-secondary": "#0f0f10",
+        card: "#141416",
+        "card-hover": "#1a1a1d",
+        "card-elevated": "#1e1e21",
+        "card-foreground": "#fafafa",
+
+        // Foreground / Text (crisp whites and grays)
+        foreground: "#fafafa",
+
+        // Primary - White for minimal look (use for main actions)
         primary: {
-          DEFAULT: "rgb(30, 58, 95)",
-          hover: "rgb(45, 90, 138)",
-          foreground: "rgb(255, 255, 255)",
+          DEFAULT: "#fafafa",
+          hover: "#e4e4e7",
+          muted: "#a1a1aa",
+          foreground: "#09090b",
         },
 
-        // Secondary - Slate Neutral
+        // Secondary - Subtle dark gray (for secondary actions)
         secondary: {
-          DEFAULT: "rgb(51, 65, 85)",
-          foreground: "rgb(248, 250, 252)",
+          DEFAULT: "#27272a",
+          hover: "#3f3f46",
+          foreground: "#a1a1aa",
         },
 
-        // Accent - Gold Premium
+        // Accent - Gold (use VERY sparingly - only primary CTAs)
         accent: {
-          DEFAULT: "rgb(212, 175, 55)",
-          foreground: "rgb(15, 26, 42)",
+          DEFAULT: "#d4af37",
+          hover: "#e5c158",
+          muted: "#a68b2c",
+          foreground: "#09090b",
         },
 
-        // Muted
+        // Muted - For secondary text and subtle backgrounds
         muted: {
-          DEFAULT: "rgb(51, 65, 85)",
-          foreground: "rgb(148, 163, 184)",
+          DEFAULT: "#18181b",
+          hover: "#27272a",
+          foreground: "#71717a",
         },
 
-        // Finance Semantic Colors
+        // Subtle - Lightest gray for disabled/hints
+        subtle: {
+          DEFAULT: "#131315",
+          foreground: "#52525b",
+        },
+
+        // Semantic Colors (use ONLY when meaning is critical)
         success: {
-          DEFAULT: "rgb(16, 185, 129)",
-          light: "rgb(209, 250, 229)",
-          foreground: "rgb(255, 255, 255)",
+          DEFAULT: "#22c55e",
+          muted: "rgba(34, 197, 94, 0.15)",
+          foreground: "#22c55e",
         },
         danger: {
-          DEFAULT: "rgb(220, 38, 38)",
-          light: "rgb(254, 226, 226)",
-          foreground: "rgb(255, 255, 255)",
+          DEFAULT: "#ef4444",
+          muted: "rgba(239, 68, 68, 0.15)",
+          foreground: "#ef4444",
         },
         warning: {
-          DEFAULT: "rgb(212, 175, 55)",
-          light: "rgb(253, 248, 227)",
-          foreground: "rgb(15, 26, 42)",
+          DEFAULT: "#f59e0b",
+          muted: "rgba(245, 158, 11, 0.15)",
+          foreground: "#f59e0b",
         },
 
-        // Border & Input
-        border: "rgba(255, 255, 255, 0.1)",
-        input: "rgba(255, 255, 255, 0.05)",
-        ring: "rgb(212, 175, 55)",
+        // Border Colors (subtle, barely visible)
+        border: "#27272a",
+        "border-subtle": "#1f1f22",
+        "border-strong": "#3f3f46",
+        input: "#18181b",
+        ring: "#52525b",
+
+        // Gray Scale (for explicit use)
+        gray: {
+          50: "#fafafa",
+          100: "#f4f4f5",
+          200: "#e4e4e7",
+          300: "#d4d4d8",
+          400: "#a1a1aa",
+          500: "#71717a",
+          600: "#52525b",
+          700: "#3f3f46",
+          800: "#27272a",
+          900: "#18181b",
+          950: "#09090b",
+        },
       },
       fontFamily: {
         // Base font family - Inter Regular (400)

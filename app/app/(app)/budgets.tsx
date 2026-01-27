@@ -17,6 +17,7 @@ import { Plus, ArrowLeft, X, PieChart, AlertTriangle } from 'lucide-react-native
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { formatCompactCurrency, formatNumber } from '../../src/utils/format';
+import { StyledCategoryIcon, CATEGORY_COLORS, getCategoryBackground, CategoryIcon } from '../../src/constants/icons';
 import type { CreateBudgetRequest } from '../../src/types/goal';
 
 const CATEGORIES = ['food', 'transportation', 'entertainment', 'shopping', 'bills', 'other'];
@@ -113,25 +114,35 @@ export default function BudgetsScreen() {
 function BudgetCard({ budget }: { budget: any }) {
   const { t } = useLanguage();
   const progressPercent = Math.min(budget.progress, 100);
+  const categoryColor = CATEGORY_COLORS[budget.category.toLowerCase()] || 'rgb(212, 175, 55)';
 
   return (
-    <View className="bg-card p-4 rounded-xl">
+    <View className="bg-card border border-border p-4 rounded-xl">
       <View className="flex-row items-center justify-between mb-3">
         <View className="flex-row items-center">
-          <View
-            className={`p-2 rounded-lg mr-3 ${
-              budget.is_over_budget ? 'bg-danger/20' : budget.is_near_limit ? 'bg-warning/20' : 'bg-accent/20'
-            }`}
-          >
-            {budget.is_over_budget || budget.is_near_limit ? (
+          {budget.is_over_budget || budget.is_near_limit ? (
+            <View
+              className="p-2 rounded-lg mr-3"
+              style={{
+                backgroundColor: budget.is_over_budget ? 'rgba(220, 38, 38, 0.15)' : 'rgba(212, 175, 55, 0.15)',
+              }}
+            >
               <AlertTriangle
-                size={24}
+                size={22}
                 color={budget.is_over_budget ? 'rgb(220, 38, 38)' : 'rgb(212, 175, 55)'}
               />
-            ) : (
-              <PieChart size={24} color="rgb(212, 175, 55)" />
-            )}
-          </View>
+            </View>
+          ) : (
+            <View className="mr-3">
+              <StyledCategoryIcon
+                category={budget.category}
+                size={22}
+                backgroundOpacity={0.15}
+                borderRadius={10}
+                padding={8}
+              />
+            </View>
+          )}
           <View>
             <Text className="text-lg font-semibold text-foreground capitalize">{budget.category}</Text>
             <Text className="text-muted-foreground text-sm">{t(budget.period)}</Text>
@@ -145,12 +156,17 @@ function BudgetCard({ budget }: { budget: any }) {
       </View>
 
       {/* Progress Bar */}
-      <View className="h-3 bg-secondary rounded-full mb-2">
+      <View className="h-3 bg-secondary rounded-full mb-2 overflow-hidden">
         <View
-          className={`h-full rounded-full ${
-            budget.is_over_budget ? 'bg-danger' : budget.is_near_limit ? 'bg-warning' : 'bg-success'
-          }`}
-          style={{ width: `${Math.min(progressPercent, 100)}%` }}
+          className="h-full rounded-full"
+          style={{
+            width: `${Math.min(progressPercent, 100)}%`,
+            backgroundColor: budget.is_over_budget
+              ? 'rgb(220, 38, 38)'
+              : budget.is_near_limit
+              ? 'rgb(212, 175, 55)'
+              : categoryColor,
+          }}
         />
       </View>
 
@@ -254,18 +270,39 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
           <View className="mb-6">
             <Text className="text-muted-foreground mb-2">{t('category')}</Text>
             <View className="flex-row flex-wrap gap-2">
-              {CATEGORIES.map((cat) => (
-                <Pressable
-                  key={cat}
-                  onPress={() => setCategory(cat)}
-                  className={`px-4 py-2 rounded-lg ${category === cat ? 'bg-accent' : 'bg-card'}`}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <Text className={category === cat ? 'text-accent-foreground font-semibold' : 'text-foreground'}>
-                    {t(cat) || cat}
-                  </Text>
-                </Pressable>
-              ))}
+              {CATEGORIES.map((cat) => {
+                const isSelected = category === cat;
+                const catColor = CATEGORY_COLORS[cat.toLowerCase()] || 'rgb(148, 163, 184)';
+                const bgColor = isSelected ? catColor : getCategoryBackground(cat, 0.12);
+
+                return (
+                  <Pressable
+                    key={cat}
+                    onPress={() => setCategory(cat)}
+                    style={{
+                      cursor: 'pointer',
+                      backgroundColor: bgColor,
+                      borderWidth: isSelected ? 0 : 1,
+                      borderColor: isSelected ? 'transparent' : getCategoryBackground(cat, 0.25),
+                    }}
+                    className="px-4 py-2 rounded-xl flex-row items-center gap-2"
+                  >
+                    <CategoryIcon
+                      category={cat}
+                      size={16}
+                      color={isSelected ? 'white' : catColor}
+                    />
+                    <Text
+                      style={{
+                        color: isSelected ? 'white' : catColor,
+                        fontWeight: isSelected ? '600' : '500',
+                      }}
+                    >
+                      {t(cat) || cat}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
 

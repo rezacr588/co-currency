@@ -39,9 +39,19 @@ import {
   Coffee,
   Pizza,
   Bus,
+  Receipt,
+  MoreHorizontal,
+  Heart,
+  Dumbbell,
+  Music,
+  Wrench,
+  Baby,
+  Dog,
+  Wifi,
   type LucideIcon,
 } from 'lucide-react-native';
 import React from 'react';
+import { View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 // ============================================
@@ -62,12 +72,14 @@ export const ICON_SIZES = {
   xl: 48,
 } as const;
 
-// Default icon color (muted foreground)
-export const ICON_COLOR_MUTED = 'rgb(148, 163, 184)';
-export const ICON_COLOR_ACCENT = 'rgb(212, 175, 55)';
-export const ICON_COLOR_SUCCESS = 'rgb(16, 185, 129)';
-export const ICON_COLOR_DANGER = 'rgb(220, 38, 38)';
-export const ICON_COLOR_FOREGROUND = 'rgb(248, 250, 252)';
+// Default icon colors - Minimal Dark Mode Palette
+export const ICON_COLOR_MUTED = '#71717a';       // zinc-500 - secondary icons
+export const ICON_COLOR_SUBTLE = '#52525b';      // zinc-600 - tertiary icons
+export const ICON_COLOR_ACCENT = '#d4af37';      // gold - use sparingly!
+export const ICON_COLOR_SUCCESS = '#22c55e';     // green - only for positive values
+export const ICON_COLOR_DANGER = '#ef4444';      // red - only for negative values
+export const ICON_COLOR_FOREGROUND = '#fafafa';  // zinc-50 - primary icons
+export const ICON_COLOR_SECONDARY = '#a1a1aa';   // zinc-400 - standard icons
 
 interface IconProps {
   size?: number;
@@ -106,15 +118,86 @@ export function GoogleIcon({ size = 24, color }: IconProps) {
 }
 
 export const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  // Primary categories
   food: Utensils,
   transportation: Car,
   entertainment: Film,
   shopping: ShoppingCart,
-  bills: FileText,
+  bills: Receipt,
   income: Banknote,
   transfer: ArrowLeftRight,
-  other: Package,
+  other: MoreHorizontal,
+  // Extended categories
+  health: Heart,
+  fitness: Dumbbell,
+  education: GraduationCap,
+  utilities: Lightbulb,
+  home: Home,
+  travel: Plane,
+  gifts: Gift,
+  coffee: Coffee,
+  music: Music,
+  gaming: Gamepad2,
+  phone: Smartphone,
+  clothing: Shirt,
+  maintenance: Wrench,
+  childcare: Baby,
+  pets: Dog,
+  internet: Wifi,
+  bank: Landmark,
+  healthcare: Pill,
 };
+
+// ============================================
+// Category Colors - Minimal Grayscale
+// Use grayscale by default, only use color when absolutely needed
+// ============================================
+export const CATEGORY_COLORS: Record<string, string> = {
+  // All categories use the same neutral gray for minimal look
+  // Color is applied only through semantic meaning (income=green, expense=red)
+  food: '#a1a1aa',           // zinc-400
+  transportation: '#a1a1aa', // zinc-400
+  entertainment: '#a1a1aa',  // zinc-400
+  shopping: '#a1a1aa',       // zinc-400
+  bills: '#a1a1aa',          // zinc-400
+  income: '#22c55e',         // green - semantic: positive
+  transfer: '#a1a1aa',       // zinc-400
+  other: '#71717a',          // zinc-500
+  // Extended categories
+  health: '#a1a1aa',         // zinc-400
+  fitness: '#a1a1aa',        // zinc-400
+  education: '#a1a1aa',      // zinc-400
+  utilities: '#a1a1aa',      // zinc-400
+  home: '#a1a1aa',           // zinc-400
+  travel: '#a1a1aa',         // zinc-400
+  gifts: '#a1a1aa',          // zinc-400
+  coffee: '#a1a1aa',         // zinc-400
+  music: '#a1a1aa',          // zinc-400
+  gaming: '#a1a1aa',         // zinc-400
+  phone: '#a1a1aa',          // zinc-400
+  clothing: '#a1a1aa',       // zinc-400
+  maintenance: '#71717a',    // zinc-500
+  childcare: '#a1a1aa',      // zinc-400
+  pets: '#a1a1aa',           // zinc-400
+  internet: '#a1a1aa',       // zinc-400
+  bank: '#a1a1aa',           // zinc-400
+  healthcare: '#a1a1aa',     // zinc-400
+};
+
+/**
+ * Get a subtle background color for a category with configurable opacity.
+ * Useful for creating colored backgrounds on cards or icons.
+ *
+ * @param category - Category name
+ * @param opacity - Background opacity (default: 0.1)
+ * @returns RGBA color string or 'transparent' if category not found
+ */
+export function getCategoryBackground(category: string, opacity = 0.1): string {
+  const color = CATEGORY_COLORS[category.toLowerCase()];
+  if (!color) return 'transparent';
+  // Convert rgb to rgba with opacity
+  return color.replace('rgb', 'rgba').replace(')', `, ${opacity})`);
+}
 
 export const GOAL_ICONS: Record<string, LucideIcon> = {
   savings: Banknote,
@@ -177,6 +260,8 @@ export const TRANSACTION_ICONS: { icon: LucideIcon; label: string }[] = [
 
 interface CategoryIconProps extends IconProps {
   category: string;
+  /** When true, uses the category's color instead of the provided color */
+  useColor?: boolean;
 }
 
 /**
@@ -186,14 +271,65 @@ interface CategoryIconProps extends IconProps {
  * @param category - Category name (food, transportation, etc.)
  * @param size - Icon size (default: 24)
  * @param color - Icon color (default: muted foreground)
+ * @param useColor - When true, uses the category's assigned color
  */
 export function CategoryIcon({
   category,
   size = ICON_SIZES.default,
-  color = ICON_COLOR_MUTED
+  color,
+  useColor = false,
 }: CategoryIconProps) {
   const IconComponent = CATEGORY_ICONS[category.toLowerCase()] || Package;
-  return <IconComponent size={size} color={color} />;
+  const iconColor = useColor
+    ? CATEGORY_COLORS[category.toLowerCase()] || color || ICON_COLOR_MUTED
+    : color || ICON_COLOR_MUTED;
+  return <IconComponent size={size} color={iconColor} />;
+}
+
+interface StyledCategoryIconProps extends CategoryIconProps {
+  /** Background opacity (default: 0.15) */
+  backgroundOpacity?: number;
+  /** Border radius (default: 12) */
+  borderRadius?: number;
+  /** Padding around the icon (default: 10) */
+  padding?: number;
+}
+
+/**
+ * Renders a category icon with a minimal dark background.
+ * Uses subtle gray backgrounds for a clean, minimal look.
+ *
+ * @param category - Category name (food, transportation, etc.)
+ * @param size - Icon size (default: 18)
+ * @param backgroundOpacity - Background opacity (not used in minimal design)
+ * @param borderRadius - Border radius in pixels (default: 8)
+ * @param padding - Padding around the icon (default: 8)
+ */
+export function StyledCategoryIcon({
+  category,
+  size = 18,
+  borderRadius = 8,
+  padding = 8,
+}: StyledCategoryIconProps) {
+  const IconComponent = CATEGORY_ICONS[category.toLowerCase()] || Package;
+  // Use muted gray for all icons - minimal design
+  const iconColor = ICON_COLOR_SECONDARY;
+  // Subtle dark background - zinc-800
+  const backgroundColor = '#27272a';
+
+  return (
+    <View
+      style={{
+        backgroundColor,
+        borderRadius,
+        padding,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <IconComponent size={size} color={iconColor} />
+    </View>
+  );
 }
 
 interface GoalIconProps extends IconProps {

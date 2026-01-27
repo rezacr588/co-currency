@@ -37,14 +37,14 @@ function NavItem({ icon, label, isActive, onPress, isCollapsed }: NavItemProps) 
     <Pressable
       onPress={onPress}
       style={{ cursor: 'pointer' }}
-      className={`flex-row items-center px-4 py-3 rounded-xl mb-1 ${
-        isActive ? 'bg-primary/20' : 'hover:bg-card'
+      className={`flex-row items-center px-3 py-2.5 rounded-lg mb-0.5 ${
+        isActive ? 'bg-secondary' : 'hover:bg-secondary/50'
       }`}
     >
-      <View className={isActive ? 'text-primary' : 'text-muted-foreground'}>{icon}</View>
+      <View style={{ opacity: isActive ? 1 : 0.6 }}>{icon}</View>
       {!isCollapsed && (
         <Text
-          className={`ml-3 font-medium ${isActive ? 'text-primary' : 'text-foreground'}`}
+          className={`ml-3 text-sm ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground'}`}
         >
           {label}
         </Text>
@@ -66,16 +66,16 @@ function DesktopSidebar({
   const pathname = usePathname();
 
   const mainNavItems = [
-    { icon: <LayoutDashboard size={22} />, label: t('dashboard'), href: '/(app)/(tabs)' },
-    { icon: <Wallet size={22} />, label: t('wallet'), href: '/(app)/(tabs)/wallet' },
-    { icon: <Plus size={22} />, label: t('addTransaction') || 'Add', href: '/(app)/(tabs)/add' },
-    { icon: <Target size={22} />, label: t('financialGoals'), href: '/(app)/(tabs)/goals' },
-    { icon: <BarChart3 size={22} />, label: t('reports'), href: '/(app)/(tabs)/reports' },
+    { icon: <LayoutDashboard size={20} color="#a1a1aa" />, label: t('dashboard'), href: '/(app)/(tabs)' },
+    { icon: <Wallet size={20} color="#a1a1aa" />, label: t('wallet'), href: '/(app)/(tabs)/wallet' },
+    { icon: <Plus size={20} color="#a1a1aa" />, label: t('addTransaction') || 'Add', href: '/(app)/(tabs)/add' },
+    { icon: <Target size={20} color="#a1a1aa" />, label: t('financialGoals'), href: '/(app)/(tabs)/goals' },
+    { icon: <BarChart3 size={20} color="#a1a1aa" />, label: t('reports'), href: '/(app)/(tabs)/reports' },
   ];
 
   const toolsNavItems = [
-    { icon: <Trophy size={22} />, label: t('badges') || 'Badges', href: '/(app)/badges' },
-    { icon: <History size={22} />, label: t('historicalRates') || 'Historical', href: '/(app)/historical' },
+    { icon: <Trophy size={20} color="#a1a1aa" />, label: t('badges') || 'Badges', href: '/(app)/badges' },
+    { icon: <History size={20} color="#a1a1aa" />, label: t('historicalRates') || 'Historical', href: '/(app)/historical' },
   ];
 
   const isActiveRoute = (href: string) => {
@@ -87,19 +87,19 @@ function DesktopSidebar({
 
   return (
     <View
-      className="bg-card border-r border-border h-full"
+      className="bg-background border-r border-border h-full"
       style={{ width: isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH }}
     >
       {/* Logo/Header */}
       <View className="p-4 border-b border-border flex-row items-center justify-between">
         {!isCollapsed && (
-          <Text className="text-xl font-bold text-primary">CoFinance</Text>
+          <Text className="text-lg font-semibold text-foreground">CoFinance</Text>
         )}
-        <Pressable onPress={onToggle} style={{ cursor: 'pointer' }} className="p-2">
+        <Pressable onPress={onToggle} style={{ cursor: 'pointer' }} className="p-2 hover:bg-secondary rounded-md">
           {isCollapsed ? (
-            <Menu size={20} color="rgb(148, 163, 184)" />
+            <Menu size={18} color="#71717a" />
           ) : (
-            <X size={20} color="rgb(148, 163, 184)" />
+            <X size={18} color="#71717a" />
           )}
         </Pressable>
       </View>
@@ -109,7 +109,7 @@ function DesktopSidebar({
         {/* Main Navigation */}
         <View className="mb-6">
           {!isCollapsed && (
-            <Text className="text-xs text-muted-foreground uppercase tracking-wider px-4 mb-2">
+            <Text className="text-xs text-muted-foreground uppercase tracking-wider px-3 mb-2">
               {t('main') || 'Main'}
             </Text>
           )}
@@ -129,7 +129,7 @@ function DesktopSidebar({
         {/* Tools */}
         <View>
           {!isCollapsed && (
-            <Text className="text-xs text-muted-foreground uppercase tracking-wider px-4 mb-2">
+            <Text className="text-xs text-muted-foreground uppercase tracking-wider px-3 mb-2">
               {t('tools') || 'Tools'}
             </Text>
           )}
@@ -152,14 +152,14 @@ function DesktopSidebar({
         <Pressable
           onPress={() => router.push('/(app)/profile')}
           style={{ cursor: 'pointer' }}
-          className="flex-row items-center p-3 rounded-xl hover:bg-muted"
+          className="flex-row items-center p-2.5 rounded-lg hover:bg-secondary"
         >
-          <View className="bg-primary/20 p-2 rounded-full">
-            <User size={20} color="rgb(212, 175, 55)" />
+          <View className="bg-secondary p-2 rounded-full">
+            <User size={18} color="#a1a1aa" />
           </View>
           {!isCollapsed && (
             <View className="flex-1 ml-3">
-              <Text className="font-medium text-foreground" numberOfLines={1}>
+              <Text className="font-medium text-foreground text-sm" numberOfLines={1}>
                 {user?.name}
               </Text>
               <Text className="text-xs text-muted-foreground" numberOfLines={1}>
@@ -167,17 +167,17 @@ function DesktopSidebar({
               </Text>
             </View>
           )}
-          {!isCollapsed && <ChevronRight size={16} color="rgb(148, 163, 184)" />}
+          {!isCollapsed && <ChevronRight size={14} color="#71717a" />}
         </Pressable>
 
         <Pressable
           onPress={logout}
           style={{ cursor: 'pointer' }}
-          className="flex-row items-center p-3 rounded-xl hover:bg-danger/10 mt-1"
+          className="flex-row items-center p-2.5 rounded-lg hover:bg-secondary mt-1"
         >
-          <LogOut size={20} color="rgb(220, 38, 38)" />
+          <LogOut size={18} color="#71717a" />
           {!isCollapsed && (
-            <Text className="ml-3 text-danger font-medium">{t('logout')}</Text>
+            <Text className="ml-3 text-muted-foreground text-sm">{t('logout')}</Text>
           )}
         </Pressable>
       </View>
@@ -192,33 +192,33 @@ function DesktopNavbar() {
   const router = useRouter();
 
   return (
-    <View className="bg-card border-b border-border px-6 py-4 flex-row items-center justify-between">
+    <View className="bg-background border-b border-border px-6 py-4 flex-row items-center justify-between">
       <View>
-        <Text className="text-muted-foreground text-sm">{t('welcomeBack')}</Text>
-        <Text className="text-xl font-bold text-foreground">{user?.name}</Text>
+        <Text className="text-muted-foreground text-xs">{t('welcomeBack')}</Text>
+        <Text className="text-lg font-semibold text-foreground">{user?.name}</Text>
       </View>
 
-      <View className="flex-row items-center gap-4">
+      <View className="flex-row items-center gap-3">
         <Pressable
           onPress={toggleTheme}
           style={{ cursor: 'pointer' }}
-          className="p-2 rounded-lg hover:bg-muted"
+          className="p-2 rounded-md hover:bg-secondary border border-border"
         >
           {isDark ? (
-            <LayoutDashboard size={20} color="rgb(212, 175, 55)" />
+            <LayoutDashboard size={18} color="#a1a1aa" />
           ) : (
-            <LayoutDashboard size={20} color="rgb(148, 163, 184)" />
+            <LayoutDashboard size={18} color="#71717a" />
           )}
         </Pressable>
         <Pressable
           onPress={() => router.push('/(app)/profile')}
           style={{ cursor: 'pointer' }}
-          className="flex-row items-center gap-2 bg-muted px-4 py-2 rounded-xl"
+          className="flex-row items-center gap-2 bg-secondary border border-border px-3 py-2 rounded-lg"
         >
-          <View className="bg-primary/20 p-1.5 rounded-full">
-            <User size={16} color="rgb(212, 175, 55)" />
+          <View className="bg-muted p-1.5 rounded-full">
+            <User size={14} color="#a1a1aa" />
           </View>
-          <Text className="font-medium text-foreground">{user?.name?.split(' ')[0]}</Text>
+          <Text className="font-medium text-foreground text-sm">{user?.name?.split(' ')[0]}</Text>
         </Pressable>
       </View>
     </View>
@@ -234,9 +234,10 @@ export default function TabsLayout() {
   const isDesktop = width >= 1024;
   const isTablet = width >= 768 && width < 1024;
 
-  const tabBarActiveTintColor = 'rgb(212, 175, 55)';
-  const tabBarInactiveTintColor = 'rgb(148, 163, 184)';
-  const tabBarBackgroundColor = isDark ? 'rgb(30, 58, 95)' : 'rgb(255, 255, 255)';
+  // Minimal color palette for tab bar
+  const tabBarActiveTintColor = '#fafafa';
+  const tabBarInactiveTintColor = '#71717a';
+  const tabBarBackgroundColor = '#09090b';
 
   // Desktop layout with sidebar
   if (isDesktop) {
@@ -300,7 +301,8 @@ export default function TabsLayout() {
         tabBarInactiveTintColor,
         tabBarStyle: {
           backgroundColor: tabBarBackgroundColor,
-          borderTopWidth: 0,
+          borderTopWidth: 1,
+          borderTopColor: '#27272a',
           elevation: 0,
           height: 80,
           paddingBottom: 20,
@@ -331,8 +333,8 @@ export default function TabsLayout() {
         options={{
           title: '',
           tabBarIcon: ({ focused }) => (
-            <View className="bg-accent rounded-full p-4 -mt-8">
-              <Plus size={24} color="rgb(15, 26, 42)" />
+            <View className="bg-foreground rounded-full p-3.5 -mt-6">
+              <Plus size={22} color="#09090b" />
             </View>
           ),
         }}

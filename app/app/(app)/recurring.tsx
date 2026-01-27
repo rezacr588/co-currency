@@ -18,7 +18,7 @@ import { Plus, ArrowLeft, X, RefreshCw, Play, Pause, TrendingUp, TrendingDown } 
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { formatCompactCurrency, formatDate } from '../../src/utils/format';
-import { FrequencyIcon } from '../../src/constants/icons';
+import { FrequencyIcon, StyledCategoryIcon, CATEGORY_COLORS, getCategoryBackground, CategoryIcon } from '../../src/constants/icons';
 import type { CreateRecurringRequest } from '../../src/types/goal';
 
 const CATEGORIES = ['income', 'bills', 'food', 'transportation', 'entertainment', 'other'];
@@ -165,19 +165,17 @@ function RecurringCard({ transaction }: { transaction: any }) {
   });
 
   return (
-    <View className={`bg-card p-4 rounded-xl ${!transaction.is_active ? 'opacity-60' : ''}`}>
+    <View className={`bg-card border border-border p-4 rounded-xl ${!transaction.is_active ? 'opacity-60' : ''}`}>
       <View className="flex-row items-center justify-between mb-3">
         <View className="flex-row items-center flex-1">
-          <View
-            className={`p-2 rounded-lg mr-3 ${
-              transaction.type === 'credit' ? 'bg-success/20' : 'bg-danger/20'
-            }`}
-          >
-            {transaction.type === 'credit' ? (
-              <TrendingUp size={24} color="rgb(16, 185, 129)" />
-            ) : (
-              <TrendingDown size={24} color="rgb(220, 38, 38)" />
-            )}
+          <View className="mr-3">
+            <StyledCategoryIcon
+              category={transaction.category || 'other'}
+              size={22}
+              backgroundOpacity={0.15}
+              borderRadius={10}
+              padding={10}
+            />
           </View>
           <View className="flex-1">
             <Text className="font-semibold text-foreground" numberOfLines={1}>
@@ -379,18 +377,39 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
           <View className="mb-6">
             <Text className="text-muted-foreground mb-2">{t('category')}</Text>
             <View className="flex-row flex-wrap gap-2">
-              {CATEGORIES.map((cat) => (
-                <Pressable
-                  key={cat}
-                  onPress={() => setCategory(cat)}
-                  className={`px-4 py-2 rounded-lg ${category === cat ? 'bg-accent' : 'bg-card'}`}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <Text className={category === cat ? 'text-accent-foreground font-semibold' : 'text-foreground'}>
-                    {t(cat) || cat}
-                  </Text>
-                </Pressable>
-              ))}
+              {CATEGORIES.map((cat) => {
+                const isSelected = category === cat;
+                const catColor = CATEGORY_COLORS[cat.toLowerCase()] || 'rgb(148, 163, 184)';
+                const bgColor = isSelected ? catColor : getCategoryBackground(cat, 0.12);
+
+                return (
+                  <Pressable
+                    key={cat}
+                    onPress={() => setCategory(cat)}
+                    style={{
+                      cursor: 'pointer',
+                      backgroundColor: bgColor,
+                      borderWidth: isSelected ? 0 : 1,
+                      borderColor: isSelected ? 'transparent' : getCategoryBackground(cat, 0.25),
+                    }}
+                    className="px-4 py-2 rounded-xl flex-row items-center gap-2"
+                  >
+                    <CategoryIcon
+                      category={cat}
+                      size={16}
+                      color={isSelected ? 'white' : catColor}
+                    />
+                    <Text
+                      style={{
+                        color: isSelected ? 'white' : catColor,
+                        fontWeight: isSelected ? '600' : '500',
+                      }}
+                    >
+                      {t(cat) || cat}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
 

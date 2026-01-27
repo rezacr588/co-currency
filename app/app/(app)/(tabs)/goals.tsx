@@ -78,31 +78,31 @@ export default function GoalsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <View className="flex-row items-center justify-between mb-6">
-          <Text className="text-3xl font-bold text-foreground">{t('financialGoals')}</Text>
+          <Text className="text-2xl font-semibold text-foreground">{t('financialGoals')}</Text>
           <Pressable
             onPress={() => setShowForm(true)}
-            className="bg-primary p-3 rounded-full"
+            className="bg-foreground p-2.5 rounded-lg"
             style={{ cursor: 'pointer' }}
           >
-            <Plus size={24} color="white" />
+            <Plus size={20} color="#09090b" />
           </Pressable>
         </View>
 
         {isPending ? (
-          <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
+          <ActivityIndicator size="large" color="#71717a" />
         ) : goals.length === 0 ? (
-          <View className="bg-card p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
-            <Target size={48} color="rgb(148, 163, 184)" />
-            <Text className="text-lg font-semibold text-foreground mt-4">{t('noGoals')}</Text>
-            <Text className="text-muted-foreground text-center mt-2">
+          <View className="bg-card border border-border p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 500 : '100%', alignSelf: 'center', width: '100%' }}>
+            <Target size={40} color="#52525b" />
+            <Text className="text-base font-medium text-foreground mt-4">{t('noGoals')}</Text>
+            <Text className="text-muted-foreground text-center mt-2 text-sm">
               {t('noGoalsDescription')}
             </Text>
             <Pressable
               onPress={() => setShowForm(true)}
-              className="bg-primary px-6 py-3 rounded-xl mt-4"
+              className="bg-accent px-5 py-3 rounded-lg mt-4"
               style={{ cursor: 'pointer' }}
             >
-              <Text className="text-white font-semibold">{t('createGoal')}</Text>
+              <Text className="text-accent-foreground font-semibold text-sm">{t('createGoal')}</Text>
             </Pressable>
           </View>
         ) : (
@@ -110,7 +110,7 @@ export default function GoalsScreen() {
             {/* Active Goals */}
             {activeGoals.length > 0 && (
               <View className="mb-6">
-                <Text className="text-lg font-semibold text-foreground mb-4">
+                <Text className="text-base font-medium text-foreground mb-4">
                   {t('activeGoals')} ({activeGoals.length})
                 </Text>
                 <View style={{
@@ -133,7 +133,7 @@ export default function GoalsScreen() {
             {/* Completed Goals */}
             {completedGoals.length > 0 && (
               <View>
-                <Text className="text-lg font-semibold text-foreground mb-4">
+                <Text className="text-base font-medium text-foreground mb-4">
                   {t('completedGoals')} ({completedGoals.length})
                 </Text>
                 <View style={{
@@ -188,21 +188,19 @@ function GoalCard({ goal }: { goal: any }) {
   };
 
   return (
-    <Pressable className="bg-card p-4 rounded-xl" style={{ cursor: 'pointer' }}>
+    <Pressable className="bg-card border border-border p-4 rounded-lg" style={{ cursor: 'pointer' }}>
       <View className="flex-row items-center mb-3">
-        <View
-          className={`p-2 rounded-lg mr-3 ${goal.is_completed ? 'bg-success/20' : 'bg-accent/20'}`}
-        >
+        <View className="bg-secondary p-2 rounded-md mr-3">
           {goal.is_completed ? (
-            <CheckCircle size={24} color="rgb(16, 185, 129)" />
+            <CheckCircle size={20} color="#22c55e" />
           ) : (
-            <GoalIcon category={goal.category || 'other'} size={24} color="rgb(212, 175, 55)" />
+            <GoalIcon category={goal.category || 'other'} size={20} color="#a1a1aa" />
           )}
         </View>
         <View className="flex-1">
-          <Text className="text-lg font-semibold text-foreground">{goal.name}</Text>
+          <Text className="text-base font-medium text-foreground">{goal.name}</Text>
           {goal.category && (
-            <Text className="text-muted-foreground text-sm">
+            <Text className="text-muted-foreground text-xs">
               {t(goal.category as any) || goal.category}
             </Text>
           )}
@@ -210,27 +208,27 @@ function GoalCard({ goal }: { goal: any }) {
       </View>
 
       {/* Progress Bar */}
-      <View className="h-2 bg-secondary rounded-full mb-2">
+      <View className="h-1.5 bg-secondary rounded-full mb-2">
         <View
-          className={`h-full rounded-full ${goal.is_completed ? 'bg-success' : 'bg-accent'}`}
+          className={`h-full rounded-full ${goal.is_completed ? 'bg-success' : 'bg-foreground'}`}
           style={{ width: `${progressPercent}%` }}
         />
       </View>
 
       <View className="flex-row items-center justify-between">
-        <Text className="text-muted-foreground">
+        <Text className="text-muted-foreground text-sm">
           {formatCompactCurrency(goal.current_amount, goal.currency)} /{' '}
           {formatCompactCurrency(goal.target_amount, goal.currency)}
         </Text>
         <Text
-          className={goal.is_completed ? 'text-success font-semibold' : 'text-accent font-semibold'}
+          className={`text-sm font-medium ${goal.is_completed ? 'text-success' : 'text-foreground'}`}
         >
           {progressPercent.toFixed(0)}%
         </Text>
       </View>
 
       {goal.deadline && (
-        <Text className="text-muted-foreground text-sm mt-2">
+        <Text className="text-muted-foreground text-xs mt-2">
           {t('deadline')}: {formatDate(goal.deadline)}
         </Text>
       )}
@@ -241,37 +239,37 @@ function GoalCard({ goal }: { goal: any }) {
           {showContribute ? (
             <View className="flex-row items-center gap-2">
               <TextInput
-                className="flex-1 bg-background p-3 rounded-lg text-foreground"
+                className="flex-1 bg-muted border border-border p-2.5 rounded-md text-foreground text-sm"
                 style={{ outlineStyle: 'none' } as any}
                 value={amount}
                 onChangeText={setAmount}
                 keyboardType="decimal-pad"
                 placeholder="0.00"
-                placeholderTextColor="rgb(148, 163, 184)"
+                placeholderTextColor="#52525b"
               />
               <Pressable
                 onPress={handleContribute}
                 disabled={contributeMutation.isPending}
-                className="bg-success p-3 rounded-lg"
+                className="bg-foreground p-2.5 rounded-md"
                 style={{ cursor: 'pointer' }}
               >
                 {contributeMutation.isPending ? (
-                  <ActivityIndicator size="small" color="white" />
+                  <ActivityIndicator size="small" color="#09090b" />
                 ) : (
-                  <Plus size={20} color="white" />
+                  <Plus size={18} color="#09090b" />
                 )}
               </Pressable>
-              <Pressable onPress={() => setShowContribute(false)} className="bg-secondary p-3 rounded-lg" style={{ cursor: 'pointer' }}>
-                <X size={20} color="rgb(148, 163, 184)" />
+              <Pressable onPress={() => setShowContribute(false)} className="bg-secondary p-2.5 rounded-md" style={{ cursor: 'pointer' }}>
+                <X size={18} color="#71717a" />
               </Pressable>
             </View>
           ) : (
             <Pressable
               onPress={() => setShowContribute(true)}
-              className="bg-accent/20 p-3 rounded-lg items-center"
+              className="bg-secondary border border-border p-2.5 rounded-md items-center"
               style={{ cursor: 'pointer' }}
             >
-              <Text className="text-accent font-semibold">{t('contribute')}</Text>
+              <Text className="text-foreground font-medium text-sm">{t('contribute')}</Text>
             </Pressable>
           )}
         </View>
@@ -344,9 +342,9 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
         <View className="flex-row items-center justify-between p-4 border-b border-border">
-          <Text className="text-xl font-bold text-foreground">{t('createGoal')}</Text>
-          <Pressable onPress={onClose} style={{ cursor: 'pointer' }}>
-            <X size={24} color="rgb(148, 163, 184)" />
+          <Text className="text-lg font-semibold text-foreground">{t('createGoal')}</Text>
+          <Pressable onPress={onClose} style={{ cursor: 'pointer' }} className="p-2 bg-secondary rounded-full">
+            <X size={18} color="#a1a1aa" />
           </Pressable>
         </View>
 
@@ -354,71 +352,71 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
           className="flex-1"
           contentContainerStyle={{
             padding: isDesktop ? 32 : 16,
-            maxWidth: 600,
+            maxWidth: 500,
             width: '100%',
             alignSelf: 'center',
           }}
         >
           {error ? (
-            <View className="bg-danger-light p-4 rounded-xl mb-4">
-              <Text className="text-danger">{error}</Text>
+            <View className="bg-danger-muted border border-danger/20 p-3 rounded-lg mb-4">
+              <Text className="text-danger text-sm">{error}</Text>
             </View>
           ) : null}
 
-          <View className="mb-6">
-            <Text className="text-muted-foreground mb-2">{t('goalName')}</Text>
+          <View className="mb-5">
+            <Text className="text-muted-foreground text-sm mb-2">{t('goalName')}</Text>
             <TextInput
-              className="bg-card p-4 rounded-xl text-foreground"
+              className="bg-muted border border-border p-3.5 rounded-lg text-foreground"
               style={{ outlineStyle: 'none' } as any}
               value={name}
               onChangeText={setName}
               placeholder="Emergency Fund, Vacation, etc."
-              placeholderTextColor="rgb(148, 163, 184)"
+              placeholderTextColor="#52525b"
             />
           </View>
 
-          <View className="mb-6">
-            <Text className="text-muted-foreground mb-2">{t('targetAmount')}</Text>
+          <View className="mb-5">
+            <Text className="text-muted-foreground text-sm mb-2">{t('targetAmount')}</Text>
             <View className="flex-row gap-2">
               <TextInput
-                className="flex-1 bg-card p-4 rounded-xl text-foreground text-lg"
+                className="flex-1 bg-muted border border-border p-3.5 rounded-lg text-foreground text-lg"
                 style={{ outlineStyle: 'none' } as any}
                 value={targetAmount}
                 onChangeText={setTargetAmount}
                 keyboardType="decimal-pad"
                 placeholder="0.00"
-                placeholderTextColor="rgb(148, 163, 184)"
+                placeholderTextColor="#52525b"
               />
               <Pressable
                 onPress={() => setShowCurrencyPicker(true)}
-                className="bg-card px-4 rounded-xl items-center justify-center"
+                className="bg-secondary border border-border px-4 rounded-lg items-center justify-center"
                 style={{ cursor: 'pointer' }}
               >
-                <Text className="text-foreground font-semibold">{currency}</Text>
+                <Text className="text-foreground font-medium">{currency}</Text>
               </Pressable>
             </View>
           </View>
 
-          <View className="mb-6">
-            <Text className="text-muted-foreground mb-2">{t('category')}</Text>
+          <View className="mb-5">
+            <Text className="text-muted-foreground text-sm mb-2">{t('category')}</Text>
             <View className="flex-row flex-wrap gap-2">
               {GOAL_CATEGORIES.map((cat) => (
                 <Pressable
                   key={cat}
                   onPress={() => setCategory(cat)}
-                  className={`px-4 py-2 rounded-lg flex-row items-center ${
-                    category === cat ? 'bg-accent' : 'bg-card'
+                  className={`px-3 py-2 rounded-md flex-row items-center border ${
+                    category === cat ? 'bg-foreground border-foreground' : 'bg-secondary border-border'
                   }`}
                   style={{ cursor: 'pointer' }}
                 >
                   <GoalIcon
                     category={cat}
-                    size={16}
-                    color={category === cat ? 'rgb(15, 26, 42)' : 'rgb(148, 163, 184)'}
+                    size={14}
+                    color={category === cat ? '#09090b' : '#a1a1aa'}
                   />
                   <Text
-                    className={`ml-2 ${
-                      category === cat ? 'text-accent-foreground font-semibold' : 'text-foreground'
+                    className={`ml-2 text-sm ${
+                      category === cat ? 'text-background font-medium' : 'text-foreground'
                     }`}
                   >
                     {t(cat) || cat}
@@ -429,27 +427,27 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
           </View>
 
           <View className="mb-6">
-            <Text className="text-muted-foreground mb-2">{t('deadline')} ({t('optional')})</Text>
+            <Text className="text-muted-foreground text-sm mb-2">{t('deadline')} ({t('optional')})</Text>
             <TextInput
-              className="bg-card p-4 rounded-xl text-foreground"
+              className="bg-muted border border-border p-3.5 rounded-lg text-foreground"
               style={{ outlineStyle: 'none' } as any}
               value={deadline}
               onChangeText={setDeadline}
               placeholder="YYYY-MM-DD"
-              placeholderTextColor="rgb(148, 163, 184)"
+              placeholderTextColor="#52525b"
             />
           </View>
 
           <Pressable
             onPress={handleSubmit}
             disabled={mutation.isPending}
-            className={`bg-primary p-4 rounded-xl items-center ${mutation.isPending ? 'opacity-50' : ''}`}
+            className={`bg-accent p-3.5 rounded-lg items-center ${mutation.isPending ? 'opacity-50' : ''}`}
             style={{ cursor: 'pointer' }}
           >
             {mutation.isPending ? (
-              <ActivityIndicator color="white" />
+              <ActivityIndicator color="#09090b" />
             ) : (
-              <Text className="text-white font-semibold text-lg">{t('createGoal')}</Text>
+              <Text className="text-accent-foreground font-semibold">{t('createGoal')}</Text>
             )}
           </Pressable>
         </ScrollView>

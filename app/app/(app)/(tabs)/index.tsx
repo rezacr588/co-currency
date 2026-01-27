@@ -8,7 +8,7 @@ import { api } from '../../../src/api';
 import { useAuth } from '../../../src/context/AuthContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
 import { formatCompactCurrency, formatDate, formatNumber, getCurrencyDisplay } from '../../../src/utils/format';
-import { CategoryIcon } from '../../../src/constants/icons';
+import { StyledCategoryIcon } from '../../../src/constants/icons';
 import { useConvert, useCurrencies } from '../../../src/hooks';
 
 const POPULAR_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'IRR', 'TRY', 'CAD', 'AUD'];
@@ -90,12 +90,12 @@ export default function DashboardScreen() {
         {!isDesktop && (
           <View className="flex-row items-center justify-between mb-6">
             <View>
-              <Text className="text-muted-foreground">{t('welcomeBack')}</Text>
-              <Text className="text-2xl font-bold text-foreground">{user?.name}</Text>
+              <Text className="text-muted-foreground text-sm">{t('welcomeBack')}</Text>
+              <Text className="text-xl font-bold text-foreground">{user?.name}</Text>
             </View>
             <Link href="/(app)/profile" asChild>
-              <Pressable style={{ cursor: 'pointer' }} className="bg-card p-3 rounded-full">
-                <User size={24} color="rgb(148, 163, 184)" />
+              <Pressable style={{ cursor: 'pointer' }} className="bg-secondary border border-border p-2.5 rounded-full">
+                <User size={20} color="#a1a1aa" />
               </Pressable>
             </Link>
           </View>
@@ -106,23 +106,21 @@ export default function DashboardScreen() {
           style={{
             flexDirection: isTablet ? 'row' : 'column',
             flexWrap: 'wrap',
-            gap: 16,
+            gap: 12,
             marginBottom: 24,
           }}
         >
           {/* Total Balance */}
           <View style={{ flex: isDesktop ? 1 : isTablet ? '48%' as any : 1, minWidth: isDesktop ? 200 : undefined }}>
-            <View className="bg-card p-6 rounded-2xl h-full">
+            <View className="bg-card border border-border p-5 rounded-xl h-full">
               <View className="flex-row items-center justify-between mb-3">
-                <Text className="text-muted-foreground">{t('totalBalance')}</Text>
-                <View className="bg-primary/20 p-2 rounded-lg">
-                  <DollarSign size={20} color="rgb(212, 175, 55)" />
-                </View>
+                <Text className="text-muted-foreground text-sm">{t('totalBalance')}</Text>
+                <DollarSign size={18} color="#71717a" />
               </View>
               {isPending ? (
-                <ActivityIndicator size="small" color="rgb(212, 175, 55)" />
+                <ActivityIndicator size="small" color="#71717a" />
               ) : (
-                <Text className="text-3xl font-bold text-accent">
+                <Text className="text-2xl font-bold text-foreground">
                   {formatCompactCurrency(summary?.total_balance_usd || 0, 'USD')}
                 </Text>
               )}
@@ -132,14 +130,12 @@ export default function DashboardScreen() {
           {/* Income */}
           {monthlyReport && (
             <View style={{ flex: isDesktop ? 1 : isTablet ? '48%' as any : 1, minWidth: isDesktop ? 200 : undefined }}>
-              <View className="bg-success/10 p-6 rounded-2xl h-full border border-success/20">
+              <View className="bg-card border border-border p-5 rounded-xl h-full">
                 <View className="flex-row items-center justify-between mb-3">
-                  <Text className="text-success">{t('income')}</Text>
-                  <View className="bg-success/20 p-2 rounded-lg">
-                    <TrendingUp size={20} color="rgb(16, 185, 129)" />
-                  </View>
+                  <Text className="text-muted-foreground text-sm">{t('income')}</Text>
+                  <TrendingUp size={18} color="#22c55e" />
                 </View>
-                <Text className="text-2xl font-bold text-foreground">
+                <Text className="text-2xl font-bold text-success">
                   {formatCompactCurrency(monthlyReport.income, monthlyReport.currency)}
                 </Text>
                 <Text className="text-xs text-muted-foreground mt-1">This month</Text>
@@ -150,14 +146,12 @@ export default function DashboardScreen() {
           {/* Expenses */}
           {monthlyReport && (
             <View style={{ flex: isDesktop ? 1 : isTablet ? '48%' as any : 1, minWidth: isDesktop ? 200 : undefined }}>
-              <View className="bg-danger/10 p-6 rounded-2xl h-full border border-danger/20">
+              <View className="bg-card border border-border p-5 rounded-xl h-full">
                 <View className="flex-row items-center justify-between mb-3">
-                  <Text className="text-danger">{t('expenses')}</Text>
-                  <View className="bg-danger/20 p-2 rounded-lg">
-                    <TrendingDown size={20} color="rgb(220, 38, 38)" />
-                  </View>
+                  <Text className="text-muted-foreground text-sm">{t('expenses')}</Text>
+                  <TrendingDown size={18} color="#ef4444" />
                 </View>
-                <Text className="text-2xl font-bold text-foreground">
+                <Text className="text-2xl font-bold text-danger">
                   {formatCompactCurrency(monthlyReport.expenses, monthlyReport.currency)}
                 </Text>
                 <Text className="text-xs text-muted-foreground mt-1">This month</Text>
@@ -167,12 +161,10 @@ export default function DashboardScreen() {
 
           {/* Goals Progress */}
           <View style={{ flex: isDesktop ? 1 : isTablet ? '48%' as any : 1, minWidth: isDesktop ? 200 : undefined }}>
-            <View className="bg-card p-6 rounded-2xl h-full">
+            <View className="bg-card border border-border p-5 rounded-xl h-full">
               <View className="flex-row items-center justify-between mb-3">
-                <Text className="text-muted-foreground">{t('financialGoals')}</Text>
-                <View className="bg-primary/20 p-2 rounded-lg">
-                  <PiggyBank size={20} color="rgb(212, 175, 55)" />
-                </View>
+                <Text className="text-muted-foreground text-sm">{t('financialGoals')}</Text>
+                <PiggyBank size={18} color="#71717a" />
               </View>
               <Text className="text-2xl font-bold text-foreground">
                 {activeGoals} / {totalGoals}
@@ -183,13 +175,13 @@ export default function DashboardScreen() {
         </View>
 
         {/* Currency Converter Widget */}
-        <View className="bg-card p-4 rounded-2xl mb-6">
+        <View className="bg-card border border-border p-4 rounded-xl mb-6">
           <View className="flex-row items-center justify-between mb-4">
-            <Text className="text-lg font-semibold text-foreground">{t('currencyConverter') || 'Currency Converter'}</Text>
+            <Text className="text-base font-semibold text-foreground">{t('currencyConverter') || 'Currency Converter'}</Text>
             <Link href="/(app)/(tabs)/wallet/convert" asChild>
               <Pressable style={{ cursor: 'pointer' }} className="flex-row items-center">
-                <Text className="text-accent mr-1">{t('fullConverter') || 'Full converter'}</Text>
-                <ArrowRight size={16} color="rgb(212, 175, 55)" />
+                <Text className="text-muted-foreground text-sm mr-1">{t('fullConverter') || 'Full converter'}</Text>
+                <ArrowRight size={14} color="#71717a" />
               </Pressable>
             </Link>
           </View>
@@ -197,7 +189,7 @@ export default function DashboardScreen() {
           <View style={{ flexDirection: isTablet ? 'row' : 'column', gap: 12, alignItems: 'center' }}>
             {/* Amount & From Currency */}
             <View style={{ flex: isTablet ? 1 : undefined, width: isTablet ? undefined : '100%' }}>
-              <View className="bg-muted rounded-xl flex-row items-center">
+              <View className="bg-muted border border-border rounded-lg flex-row items-center">
                 <TextInput
                   className="flex-1 p-3 text-lg font-semibold text-foreground"
                   style={{ outlineStyle: 'none' } as any}
@@ -205,16 +197,16 @@ export default function DashboardScreen() {
                   onChangeText={setAmount}
                   keyboardType="decimal-pad"
                   placeholder="1"
-                  placeholderTextColor="rgb(148, 163, 184)"
+                  placeholderTextColor="#52525b"
                 />
                 <Pressable
                   onPress={() => setShowCurrencyPicker('from')}
                   style={{ cursor: 'pointer' }}
-                  className="flex-row items-center bg-primary/20 px-3 py-2 rounded-lg mr-2"
+                  className="flex-row items-center bg-secondary px-3 py-2 rounded-md mr-2"
                 >
-                  <Text className="text-lg mr-1">{fromDisplay.flag || '🌐'}</Text>
-                  <Text className="font-semibold text-foreground">{fromCurrency}</Text>
-                  <ChevronDown size={16} color="rgb(148, 163, 184)" />
+                  <Text className="text-base mr-1">{fromDisplay.flag || '🌐'}</Text>
+                  <Text className="font-medium text-foreground text-sm">{fromCurrency}</Text>
+                  <ChevronDown size={14} color="#71717a" />
                 </Pressable>
               </View>
             </View>
@@ -223,9 +215,9 @@ export default function DashboardScreen() {
             <Pressable
               onPress={swapCurrencies}
               style={{ cursor: 'pointer' }}
-              className="bg-primary p-2 rounded-full"
+              className="bg-secondary border border-border p-2 rounded-full"
             >
-              <ArrowDownUp size={20} color="white" />
+              <ArrowDownUp size={18} color="#a1a1aa" />
             </Pressable>
 
             {/* To Currency & Result */}
@@ -233,19 +225,19 @@ export default function DashboardScreen() {
               <Pressable
                 onPress={() => setShowCurrencyPicker('to')}
                 style={{ cursor: 'pointer' }}
-                className="bg-muted rounded-xl flex-row items-center p-3"
+                className="bg-muted border border-border rounded-lg flex-row items-center p-3"
               >
                 {isConverting ? (
-                  <ActivityIndicator size="small" color="rgb(212, 175, 55)" className="flex-1" />
+                  <ActivityIndicator size="small" color="#71717a" className="flex-1" />
                 ) : (
-                  <Text className="flex-1 text-lg font-semibold text-accent">
+                  <Text className="flex-1 text-lg font-semibold text-foreground">
                     {conversion ? formatNumber(conversion.result, 2) : '0.00'}
                   </Text>
                 )}
-                <View className="flex-row items-center bg-accent/20 px-3 py-2 rounded-lg">
-                  <Text className="text-lg mr-1">{toDisplay.flag || '🌐'}</Text>
-                  <Text className="font-semibold text-foreground">{toCurrency}</Text>
-                  <ChevronDown size={16} color="rgb(148, 163, 184)" />
+                <View className="flex-row items-center bg-secondary px-3 py-2 rounded-md">
+                  <Text className="text-base mr-1">{toDisplay.flag || '🌐'}</Text>
+                  <Text className="font-medium text-foreground text-sm">{toCurrency}</Text>
+                  <ChevronDown size={14} color="#71717a" />
                 </View>
               </Pressable>
             </View>
@@ -253,7 +245,7 @@ export default function DashboardScreen() {
 
           {/* Rate info */}
           {conversion && (
-            <Text className="text-muted-foreground text-sm mt-3 text-center">
+            <Text className="text-muted-foreground text-xs mt-3 text-center">
               1 {fromCurrency} = {formatNumber(conversion.rate, 4)} {toCurrency}
             </Text>
           )}
@@ -270,40 +262,40 @@ export default function DashboardScreen() {
           <View style={{ flex: isDesktop ? 1 : undefined }}>
             <View className="mb-6">
               <View className="flex-row items-center justify-between mb-4">
-                <Text className="text-lg font-semibold text-foreground">{t('walletBalances') || 'Wallet Balances'}</Text>
+                <Text className="text-base font-semibold text-foreground">{t('walletBalances') || 'Wallet Balances'}</Text>
                 <Link href="/(app)/(tabs)/wallet" asChild>
                   <Pressable style={{ cursor: 'pointer' }} className="flex-row items-center">
-                    <Text className="text-accent mr-1">{t('viewAll')}</Text>
-                    <ArrowRight size={16} color="rgb(212, 175, 55)" />
+                    <Text className="text-muted-foreground text-sm mr-1">{t('viewAll')}</Text>
+                    <ArrowRight size={14} color="#71717a" />
                   </Pressable>
                 </Link>
               </View>
               {isPending ? (
-                <ActivityIndicator />
+                <ActivityIndicator color="#71717a" />
               ) : (
-                <View className="gap-3">
+                <View className="gap-2">
                   {(summary?.balances || []).slice(0, isDesktop ? 5 : 3).map((balance) => (
                     <View
                       key={balance.currency}
-                      className="bg-card p-4 rounded-xl flex-row items-center justify-between"
+                      className="bg-card border border-border p-4 rounded-lg flex-row items-center justify-between"
                     >
                       <View className="flex-row items-center">
-                        <View className="bg-primary/20 p-2 rounded-lg mr-3">
-                          <Wallet size={20} color="rgb(212, 175, 55)" />
+                        <View className="bg-secondary p-2 rounded-md mr-3">
+                          <Wallet size={18} color="#a1a1aa" />
                         </View>
-                        <Text className="text-lg font-semibold text-foreground">
+                        <Text className="text-base font-medium text-foreground">
                           {balance.currency}
                         </Text>
                       </View>
-                      <Text className="text-lg text-foreground">
+                      <Text className="text-base font-semibold text-foreground">
                         {formatCompactCurrency(balance.balance, balance.currency)}
                       </Text>
                     </View>
                   ))}
                   {(summary?.balances || []).length === 0 && (
-                    <View className="bg-card p-6 rounded-xl items-center">
-                      <Wallet size={32} color="rgb(148, 163, 184)" />
-                      <Text className="text-muted-foreground mt-2">No balances yet</Text>
+                    <View className="bg-card border border-border p-6 rounded-lg items-center">
+                      <Wallet size={28} color="#52525b" />
+                      <Text className="text-muted-foreground mt-2 text-sm">No balances yet</Text>
                     </View>
                   )}
                 </View>
@@ -314,46 +306,40 @@ export default function DashboardScreen() {
           {/* Right Column - Recent Transactions */}
           <View style={{ flex: isDesktop ? 1 : undefined }}>
             <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-lg font-semibold text-foreground">{t('recentTransactions')}</Text>
+              <Text className="text-base font-semibold text-foreground">{t('recentTransactions')}</Text>
               <Link href="/(app)/(tabs)/wallet/history" asChild>
                 <Pressable style={{ cursor: 'pointer' }} className="flex-row items-center">
-                  <Text className="text-accent mr-1">{t('viewAll')}</Text>
-                  <ArrowRight size={16} color="rgb(212, 175, 55)" />
+                  <Text className="text-muted-foreground text-sm mr-1">{t('viewAll')}</Text>
+                  <ArrowRight size={14} color="#71717a" />
                 </Pressable>
               </Link>
             </View>
             {isPending ? (
-              <ActivityIndicator />
+              <ActivityIndicator color="#71717a" />
             ) : (
-              <View className="gap-3">
+              <View className="gap-2">
                 {(summary?.recent_transactions || []).slice(0, isDesktop ? 6 : 5).map((tx) => (
                   <View
                     key={tx.id}
-                    className="bg-card p-4 rounded-xl flex-row items-center justify-between"
+                    className="bg-card border border-border p-4 rounded-lg flex-row items-center justify-between"
                   >
                     <View className="flex-row items-center flex-1">
-                      <View
-                        className={`p-2 rounded-lg mr-3 ${
-                          tx.type === 'credit' ? 'bg-success/20' : 'bg-danger/20'
-                        }`}
-                      >
-                        <CategoryIcon
+                      <View className="mr-3">
+                        <StyledCategoryIcon
                           category={tx.category || 'other'}
-                          size={20}
-                          color={tx.type === 'credit' ? 'rgb(16, 185, 129)' : 'rgb(220, 38, 38)'}
                         />
                       </View>
                       <View className="flex-1">
-                        <Text className="font-semibold text-foreground" numberOfLines={1}>
+                        <Text className="font-medium text-foreground text-sm" numberOfLines={1}>
                           {tx.description || tx.category || 'Transaction'}
                         </Text>
-                        <Text className="text-muted-foreground text-sm">
+                        <Text className="text-muted-foreground text-xs">
                           {formatDate(tx.created_at)}
                         </Text>
                       </View>
                     </View>
                     <Text
-                      className={`text-lg font-semibold ml-2 ${
+                      className={`text-base font-semibold ml-2 ${
                         tx.type === 'credit' ? 'text-success' : 'text-danger'
                       }`}
                     >
@@ -363,12 +349,12 @@ export default function DashboardScreen() {
                   </View>
                 ))}
                 {(summary?.recent_transactions || []).length === 0 && (
-                  <View className="bg-card p-6 rounded-xl items-center">
-                    <CreditCard size={32} color="rgb(148, 163, 184)" />
-                    <Text className="text-muted-foreground mt-2">No transactions yet</Text>
+                  <View className="bg-card border border-border p-6 rounded-lg items-center">
+                    <CreditCard size={28} color="#52525b" />
+                    <Text className="text-muted-foreground mt-2 text-sm">No transactions yet</Text>
                     <Link href="/(app)/(tabs)/add" asChild>
-                      <Pressable style={{ cursor: 'pointer' }} className="bg-primary px-4 py-2 rounded-lg mt-3">
-                        <Text className="text-white font-medium">Add Transaction</Text>
+                      <Pressable style={{ cursor: 'pointer' }} className="bg-accent px-4 py-2 rounded-lg mt-3">
+                        <Text className="text-accent-foreground font-medium text-sm">Add Transaction</Text>
                       </Pressable>
                     </Link>
                   </View>
@@ -394,11 +380,11 @@ export default function DashboardScreen() {
             setShowCurrencyPicker(null);
             setSearchQuery('');
           }}
-          className="flex-1 bg-black/50 justify-end"
+          className="flex-1 bg-black/70 justify-end"
         >
           <Pressable
             onPress={(e) => e.stopPropagation()}
-            className="bg-background rounded-t-3xl"
+            className="bg-background border-t border-border rounded-t-2xl"
             style={{
               maxHeight: '80%',
               minHeight: '50%',
@@ -406,7 +392,7 @@ export default function DashboardScreen() {
           >
             {/* Modal Header */}
             <View className="flex-row items-center justify-between p-4 border-b border-border">
-              <Text className="text-xl font-bold text-foreground">
+              <Text className="text-lg font-semibold text-foreground">
                 {showCurrencyPicker === 'from' ? 'Select from currency' : 'Select to currency'}
               </Text>
               <Pressable
@@ -415,21 +401,21 @@ export default function DashboardScreen() {
                   setSearchQuery('');
                 }}
                 style={{ cursor: 'pointer' }}
-                className="p-2"
+                className="p-2 bg-secondary rounded-full"
               >
-                <X size={24} color="rgb(148, 163, 184)" />
+                <X size={18} color="#a1a1aa" />
               </Pressable>
             </View>
 
             {/* Search Input */}
             <View className="p-4">
-              <View className="bg-muted rounded-xl flex-row items-center px-4">
-                <Search size={20} color="rgb(148, 163, 184)" />
+              <View className="bg-muted border border-border rounded-lg flex-row items-center px-4">
+                <Search size={18} color="#71717a" />
                 <TextInput
                   className="flex-1 p-3 text-foreground"
                   style={{ outlineStyle: 'none' } as any}
                   placeholder="Search currency..."
-                  placeholderTextColor="rgb(148, 163, 184)"
+                  placeholderTextColor="#52525b"
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   autoFocus
@@ -440,7 +426,7 @@ export default function DashboardScreen() {
             {/* Popular Currencies */}
             {!searchQuery && (
               <View className="px-4 pb-2">
-                <Text className="text-sm text-muted-foreground mb-2">Popular</Text>
+                <Text className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">Popular</Text>
                 <View className="flex-row flex-wrap gap-2">
                   {POPULAR_CURRENCIES.map((code) => {
                     const display = getCurrencyDisplay(code);
@@ -450,9 +436,9 @@ export default function DashboardScreen() {
                         key={code}
                         onPress={() => handleSelectCurrency(code)}
                         style={{ cursor: 'pointer' }}
-                        className={`px-3 py-2 rounded-lg ${isSelected ? 'bg-accent' : 'bg-card'}`}
+                        className={`px-3 py-2 rounded-md border ${isSelected ? 'bg-foreground border-foreground' : 'bg-secondary border-border'}`}
                       >
-                        <Text className={isSelected ? 'text-accent-foreground font-semibold' : 'text-foreground'}>
+                        <Text className={`text-sm ${isSelected ? 'text-background font-semibold' : 'text-foreground'}`}>
                           {display.flag || '🌐'} {code}
                         </Text>
                       </Pressable>
@@ -464,7 +450,7 @@ export default function DashboardScreen() {
 
             {/* Currency List */}
             <ScrollView className="flex-1 px-4">
-              <Text className="text-sm text-muted-foreground mb-2 mt-2">
+              <Text className="text-xs text-muted-foreground mb-2 mt-2 uppercase tracking-wider">
                 {searchQuery ? 'Search results' : 'All currencies'}
               </Text>
               {filteredCurrencies.map((currency: { code: string; name: string }) => {
@@ -475,18 +461,18 @@ export default function DashboardScreen() {
                     key={currency.code}
                     onPress={() => handleSelectCurrency(currency.code)}
                     style={{ cursor: 'pointer' }}
-                    className={`flex-row items-center p-3 rounded-xl mb-1 ${isSelected ? 'bg-accent' : 'active:bg-muted'}`}
+                    className={`flex-row items-center p-3 rounded-lg mb-1 border ${isSelected ? 'bg-foreground border-foreground' : 'border-transparent active:bg-secondary'}`}
                   >
-                    <Text className="text-2xl mr-3">{display.flag || '🌐'}</Text>
+                    <Text className="text-xl mr-3">{display.flag || '🌐'}</Text>
                     <View className="flex-1">
-                      <Text className={`font-semibold ${isSelected ? 'text-accent-foreground' : 'text-foreground'}`}>
+                      <Text className={`font-medium text-sm ${isSelected ? 'text-background' : 'text-foreground'}`}>
                         {currency.code}
                       </Text>
-                      <Text className={`text-sm ${isSelected ? 'text-accent-foreground/70' : 'text-muted-foreground'}`}>
+                      <Text className={`text-xs ${isSelected ? 'text-background/70' : 'text-muted-foreground'}`}>
                         {currency.name}
                       </Text>
                     </View>
-                    <Text className={isSelected ? 'text-accent-foreground' : 'text-muted-foreground'}>
+                    <Text className={`text-sm ${isSelected ? 'text-background' : 'text-muted-foreground'}`}>
                       {display.symbol}
                     </Text>
                   </Pressable>

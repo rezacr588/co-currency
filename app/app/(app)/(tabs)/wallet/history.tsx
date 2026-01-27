@@ -1,13 +1,13 @@
 import { useState, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, useWindowDimensions, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Filter } from 'lucide-react-native';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { ArrowLeft, Filter, Trash2, X } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
 import { formatCompactCurrency, formatDate } from '../../../../src/utils/format';
-import { CategoryIcon } from '../../../../src/constants/icons';
+import { StyledCategoryIcon } from '../../../../src/constants/icons';
 
 export default function TransactionHistoryScreen() {
   const { t } = useLanguage();
@@ -29,6 +29,28 @@ export default function TransactionHistoryScreen() {
     await queryClient.invalidateQueries({ queryKey: ['wallet', 'transactions'] });
     setRefreshing(false);
   }, [queryClient]);
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.wallet.deleteTransaction(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['wallet'] });
+    },
+  });
+
+  const handleDelete = useCallback((tx: { id: string; description?: string; category?: string }) => {
+    Alert.alert(
+      t('deleteTransaction'),
+      t('deleteTransactionConfirm'),
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('delete'),
+          style: 'destructive',
+          onPress: () => deleteMutation.mutate(tx.id),
+        },
+      ]
+    );
+  }, [deleteMutation, t]);
 
   const transactions = data?.transactions || [];
 
@@ -72,21 +94,19 @@ export default function TransactionHistoryScreen() {
             {transactions.map((tx) => (
               <View
                 key={tx.id}
-                className="bg-card p-4 rounded-xl flex-row items-center"
+                className="bg-card border border-border p-4 rounded-xl flex-row items-center"
                 style={{
                   width: isDesktop ? '48%' : '100%',
                   minWidth: 300,
                 } as any}
               >
-                <View
-                  className={`p-2 rounded-lg mr-3 ${
-                    tx.type === 'credit' ? 'bg-success/20' : 'bg-danger/20'
-                  }`}
-                >
-                  <CategoryIcon
+                <View className="mr-3">
+                  <StyledCategoryIcon
                     category={tx.category || 'other'}
                     size={20}
-                    color={tx.type === 'credit' ? 'rgb(16, 185, 129)' : 'rgb(220, 38, 38)'}
+                    backgroundOpacity={0.15}
+                    borderRadius={10}
+                    padding={10}
                   />
                 </View>
                 <View className="flex-1">
@@ -105,6 +125,14 @@ export default function TransactionHistoryScreen() {
                   {tx.type === 'credit' ? '+' : '-'}
                   {formatCompactCurrency(tx.amount, tx.currency)}
                 </Text>
+                <Pressable
+                  onPress={() => handleDelete(tx)}
+                  className="ml-3 p-2"
+                  style={{ cursor: 'pointer' }}
+                  disabled={deleteMutation.isPending}
+                >
+                  <Trash2 size={18} color="#71717a" />
+                </Pressable>
               </View>
             ))}
           </View>

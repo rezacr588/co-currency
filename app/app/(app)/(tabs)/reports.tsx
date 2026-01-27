@@ -6,6 +6,7 @@ import { TrendingUp, TrendingDown, PieChart, BarChart3 } from 'lucide-react-nati
 import { api } from '../../../src/api';
 import { useLanguage } from '../../../src/context/LanguageContext';
 import { formatCompactCurrency, formatNumber } from '../../../src/utils/format';
+import { StyledCategoryIcon, CATEGORY_COLORS, getCategoryBackground } from '../../../src/constants/icons';
 
 export default function ReportsScreen() {
   const { t } = useLanguage();
@@ -147,39 +148,54 @@ export default function ReportsScreen() {
                   flexWrap: 'wrap',
                   gap: 12,
                 }}>
-                  {categoryReport.categories.slice(0, 5).map((cat) => (
-                    <View
-                      key={cat.category}
-                      className="bg-card p-4 rounded-xl"
-                      style={{
-                        width: isDesktop ? '48%' : '100%',
-                        minWidth: isDesktop ? 300 : undefined,
-                      } as any}
-                    >
-                      <View className="flex-row items-center justify-between mb-2">
-                        <Text className="font-semibold text-foreground capitalize">
-                          {cat.category}
-                        </Text>
-                        <Text className="text-foreground">
-                          {formatCompactCurrency(cat.amount, categoryReport.currency)}
-                        </Text>
+                  {categoryReport.categories.slice(0, 5).map((cat) => {
+                    const categoryColor = CATEGORY_COLORS[cat.category.toLowerCase()] || 'rgb(212, 175, 55)';
+                    return (
+                      <View
+                        key={cat.category}
+                        className="bg-card border border-border p-4 rounded-xl"
+                        style={{
+                          width: isDesktop ? '48%' : '100%',
+                          minWidth: isDesktop ? 300 : undefined,
+                        } as any}
+                      >
+                        <View className="flex-row items-center justify-between mb-3">
+                          <View className="flex-row items-center">
+                            <StyledCategoryIcon
+                              category={cat.category}
+                              size={18}
+                              backgroundOpacity={0.15}
+                              borderRadius={8}
+                              padding={8}
+                            />
+                            <Text className="font-semibold text-foreground capitalize ml-3">
+                              {cat.category}
+                            </Text>
+                          </View>
+                          <Text className="text-foreground font-medium">
+                            {formatCompactCurrency(cat.amount, categoryReport.currency)}
+                          </Text>
+                        </View>
+                        <View className="h-2 bg-secondary rounded-full overflow-hidden">
+                          <View
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${cat.percentage}%`,
+                              backgroundColor: categoryColor,
+                            }}
+                          />
+                        </View>
+                        <View className="flex-row justify-between mt-2">
+                          <Text className="text-muted-foreground text-sm">
+                            {cat.count} {t('transactions')}
+                          </Text>
+                          <Text className="text-muted-foreground text-sm">
+                            {formatNumber(cat.percentage, 1)}%
+                          </Text>
+                        </View>
                       </View>
-                      <View className="h-2 bg-secondary rounded-full">
-                        <View
-                          className="h-full bg-accent rounded-full"
-                          style={{ width: `${cat.percentage}%` }}
-                        />
-                      </View>
-                      <View className="flex-row justify-between mt-1">
-                        <Text className="text-muted-foreground text-sm">
-                          {cat.count} {t('transactions')}
-                        </Text>
-                        <Text className="text-muted-foreground text-sm">
-                          {formatNumber(cat.percentage, 1)}%
-                        </Text>
-                      </View>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </View>
               </View>
             )}
