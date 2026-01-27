@@ -18,11 +18,13 @@ import {
 } from 'lucide-react-native';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { LinkedInIcon } from '../../src/constants/icons';
+import { getVersionInfo } from '../../src/utils/version';
 
 export default function AboutScreen() {
   const { t } = useLanguage();
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const versionInfo = getVersionInfo();
 
   const isLargeScreen = width > 768;
   const featureColumns = width > 900 ? 3 : width > 600 ? 2 : 1;
@@ -185,6 +187,21 @@ export default function AboutScreen() {
                 </View>
               ))}
             </View>
+          </View>
+
+          {/* Version Info */}
+          <View className="items-center mt-8 pt-6 border-t border-border">
+            <Text className="text-lg font-semibold text-foreground mb-2">
+              CoFinance
+            </Text>
+            <Text className="text-sm text-muted-foreground">
+              {versionInfo.displayVersion}
+            </Text>
+            {versionInfo.updateId && (
+              <Text className="text-xs text-muted-foreground/60 mt-1">
+                Update: {versionInfo.updateId.substring(0, 8)}
+              </Text>
+            )}
           </View>
         </View>
       </ScrollView>

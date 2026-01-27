@@ -121,6 +121,20 @@ jobs:
         working-directory: ./app
         run: npm ci
 
+      - name: Bump version
+        working-directory: ./app
+        run: |
+          node scripts/bump-version.js build
+          echo "Version bumped for build"
+
+      - name: Commit version bump
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add app/app.json
+          git diff --staged --quiet || git commit -m "chore: bump version for build [skip ci]"
+          git push || echo "Nothing to push"
+
       - name: Build Android APK
         working-directory: ./app
         run: eas build --platform android --profile production --non-interactive
