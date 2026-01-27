@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
@@ -22,10 +22,18 @@ import {
   Trash2,
   Sparkles,
   MessageCircle,
+  Paperclip,
+  Image as ImageIcon,
+  FileText,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
-import type { ChatMessage, Conversation } from '../../../../src/api/chat';
+import type { ChatMessage, Conversation, ConversationWithMessages } from '../../../../src/api/chat';
+import type { AIParseResponse } from '../../../../src/types/wallet';
+import type { ConversionResult } from '../../../../src/types/currency';
+import { formatNumber } from '../../../../src/utils/format';
 
 const suggestedQuestions = [
   'How am I doing financially?',
@@ -35,22 +43,69 @@ const suggestedQuestions = [
   'How much did I spend this month?',
 ];
 
+const suggestedActions = [
+  'Add $12 coffee',
+  'Convert 100 USD to EUR',
+  'Rate USD to EUR',
+];
+
+type PendingAction =
+  | {
+      kind: 'transaction';
+      status: 'loading' | 'ready' | 'error' | 'done';
+      original: string;
+      parsed?: AIParseResponse;
+      error?: string;
+    }
+  | {
+      kind: 'convert';
+      status: 'loading' | 'ready' | 'error' | 'done';
+      original: string;
+      from: string;
+      to: string;
+      amount: number;
+      result?: ConversionResult;
+      error?: string;
+    }
+  | {
+      kind: 'rate';
+      status: 'loading' | 'ready' | 'error' | 'done';
+      original: string;
+      from: string;
+      to: string;
+      result?: ConversionResult;
+      error?: string;
+    };
+
 export default function AIChatScreen() {
   const { t } = useLanguage();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { conversationId } = useLocalSearchParams<{ conversationId?: string }>();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
+  const contentMaxWidth = isDesktop ? 960 : isTablet ? 720 : undefined;
+  const messageMaxWidth = isDesktop ? 560 : Math.min(width * 0.85, 560);
+  const contentWidthStyle = {
+    maxWidth: contentMaxWidth,
+    alignSelf: 'center',
+    width: '100%',
+  } as const;
 
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [showAttachmentHint, setShowAttachmentHint] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(
     conversationId || null
   );
   const scrollViewRef = useRef<ScrollView>(null);
+  const streamingStateRef = useRef<{ conversationId: string; messageId: string } | null>(null);
+  const optimisticConversationIdRef = useRef<string | null>(null);
+  const isNearBottomRef = useRef(true);
 
   // Fetch conversations list
   const { data: conversationsData } = useQuery({
@@ -66,24 +121,151 @@ export default function AIChatScreen() {
     enabled: !!activeConversationId,
   });
 
+  // Create conversation mutation
+  const createConversationMutation = useMutation({
+    mutationFn: (title?: string) => api.chat.createConversation(title),
+    onSuccess: (data) => {
+      setActiveConversationId(data.conversation_id);
+      queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
+    },
+  });
+
   // Send message mutation
   const sendMessageMutation = useMutation({
-    mutationFn: (msg: string) =>
-      api.chat.sendMessage({
-        conversation_id: activeConversationId || undefined,
-        message: msg,
-      }),
-    onSuccess: (data) => {
-      if (!activeConversationId) {
-        setActiveConversationId(data.conversation_id);
+    mutationFn: async (msg: string) => {
+      const conversationId = activeConversationId || undefined;
+      const optimisticConversationId =
+        optimisticConversationIdRef.current || activeConversationId || '';
+
+      try {
+        return await api.chat.streamMessage(
+          {
+            conversation_id: conversationId,
+            message: msg,
+          },
+          {
+            onDelta: (chunk) => {
+              if (!optimisticConversationId) return;
+              appendStreamingChunk(optimisticConversationId, chunk);
+            },
+          }
+        );
+      } catch {
+        return api.chat.sendMessage({
+          conversation_id: conversationId,
+          message: msg,
+        });
       }
-      queryClient.invalidateQueries({
-        queryKey: ['ai-conversation', data.conversation_id],
-      });
-      queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
+    },
+    onMutate: async (msg) => {
+      setIsTyping(true);
+      const now = new Date().toISOString();
+      const optimisticMessage: ChatMessage = {
+        id: `temp-${Date.now()}`,
+        conversation_id: activeConversationId ?? 'temp',
+        role: 'user',
+        content: msg,
+        created_at: now,
+      };
+
+      if (activeConversationId) {
+        queryClient.setQueryData<ConversationWithMessages | null>(
+          ['ai-conversation', activeConversationId],
+          (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              messages: [...(old.messages ?? []), optimisticMessage],
+            };
+          }
+        );
+        optimisticConversationIdRef.current = activeConversationId;
+        return { optimisticConversationId: activeConversationId };
+      }
+
+      const optimisticConversationId = `temp-${Date.now()}`;
+      const title =
+        msg.trim().slice(0, 36) || t('newConversation') || 'New conversation';
+
+      const optimisticConversation: Conversation = {
+        id: optimisticConversationId,
+        user_id: '',
+        title,
+        created_at: now,
+        updated_at: now,
+      };
+
+      queryClient.setQueryData<ConversationWithMessages>(
+        ['ai-conversation', optimisticConversationId],
+        {
+          conversation: optimisticConversation,
+          messages: [optimisticMessage],
+        }
+      );
+
+      queryClient.setQueryData<{ conversations: Conversation[] } | undefined>(
+        ['ai-conversations'],
+        (old) => {
+          const current = old?.conversations ?? [];
+          if (current.find((c) => c.id === optimisticConversationId)) {
+            return old;
+          }
+          return {
+            conversations: [optimisticConversation, ...current],
+          };
+        }
+      );
+
+      setActiveConversationId(optimisticConversationId);
+      optimisticConversationIdRef.current = optimisticConversationId;
+      return { optimisticConversationId };
+    },
+    onSuccess: (data, _msg, context) => {
+      const serverConversationId = data.conversation_id;
+      if (context?.optimisticConversationId && context.optimisticConversationId !== serverConversationId) {
+        const tempData = queryClient.getQueryData<ConversationWithMessages>([
+          'ai-conversation',
+          context.optimisticConversationId,
+        ]);
+        if (tempData) {
+          queryClient.setQueryData<ConversationWithMessages>(
+            ['ai-conversation', serverConversationId],
+            tempData
+          );
+          queryClient.removeQueries({ queryKey: ['ai-conversation', context.optimisticConversationId] });
+        }
+
+        queryClient.setQueryData<{ conversations: Conversation[] } | undefined>(
+          ['ai-conversations'],
+          (old) => {
+            if (!old) return old;
+            const updated = old.conversations.map((conv) =>
+              conv.id === context.optimisticConversationId
+                ? { ...conv, id: serverConversationId }
+                : conv
+            );
+            return { conversations: updated };
+          }
+        );
+        setActiveConversationId(serverConversationId);
+        if (streamingStateRef.current?.conversationId === context.optimisticConversationId) {
+          streamingStateRef.current = {
+            conversationId: serverConversationId,
+            messageId: streamingStateRef.current.messageId,
+          };
+        }
+      }
+
+      finalizeStreamingAssistant(serverConversationId, data.message);
       setIsTyping(false);
     },
-    onError: () => {
+    onError: (_error, _msg, context) => {
+      if (context?.optimisticConversationId?.startsWith('temp-')) {
+        queryClient.removeQueries({
+          queryKey: ['ai-conversation', context.optimisticConversationId],
+        });
+      }
+      streamingStateRef.current = null;
       setIsTyping(false);
     },
   });
@@ -99,29 +281,306 @@ export default function AIChatScreen() {
     },
   });
 
+  const applyParsedMutation = useMutation({
+    mutationFn: (data: AIParseResponse) =>
+      api.ai.applyParsed({
+        amount: data.amount,
+        currency: data.currency,
+        type: data.type,
+        description: data.description,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      setPendingAction((current) =>
+        current && current.kind === 'transaction'
+          ? { ...current, status: 'done' }
+          : current
+      );
+    },
+    onError: (err) => {
+      setPendingAction((current) =>
+        current && current.kind === 'transaction'
+          ? {
+              ...current,
+              status: 'error',
+              error: err instanceof Error ? err.message : 'Could not add transaction',
+            }
+          : current
+      );
+    },
+  });
+
+  const walletConvertMutation = useMutation({
+    mutationFn: (data: { from: string; to: string; amount: number }) =>
+      api.wallet.convert({
+        from_currency: data.from,
+        to_currency: data.to,
+        amount: data.amount,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      setPendingAction((current) =>
+        current && current.kind === 'convert'
+          ? { ...current, status: 'done' }
+          : current
+      );
+    },
+    onError: (err) => {
+      setPendingAction((current) =>
+        current && current.kind === 'convert'
+          ? {
+              ...current,
+              status: 'error',
+              error: err instanceof Error ? err.message : 'Conversion failed',
+            }
+          : current
+      );
+    },
+  });
+
   const messages: ChatMessage[] = currentConversation?.messages || [];
   const conversations: Conversation[] = conversationsData?.conversations || [];
 
+  const ensureStreamingAssistant = (conversationId: string) => {
+    const existing = streamingStateRef.current;
+    if (existing && existing.conversationId === conversationId) {
+      return existing;
+    }
+    const messageId = `stream-${Date.now()}`;
+    const now = new Date().toISOString();
+    streamingStateRef.current = { conversationId, messageId };
+
+    queryClient.setQueryData<ConversationWithMessages | null>(
+      ['ai-conversation', conversationId],
+      (old) => {
+        const base = old ?? {
+          conversation: {
+            id: conversationId,
+            user_id: '',
+            title: t('newConversation') || 'Conversation',
+            created_at: now,
+            updated_at: now,
+          },
+          messages: [],
+        };
+        return {
+          ...base,
+          messages: [
+            ...base.messages,
+            {
+              id: messageId,
+              conversation_id: conversationId,
+              role: 'assistant',
+              content: '',
+              created_at: now,
+            },
+          ],
+        };
+      }
+    );
+
+    return streamingStateRef.current;
+  };
+
+  const appendStreamingChunk = (conversationId: string, chunk: string) => {
+    const streamingState = ensureStreamingAssistant(conversationId);
+    queryClient.setQueryData<ConversationWithMessages | null>(
+      ['ai-conversation', conversationId],
+      (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          messages: old.messages.map((msg) =>
+            msg.id === streamingState.messageId
+              ? { ...msg, content: `${msg.content}${chunk}` }
+              : msg
+          ),
+        };
+      }
+    );
+  };
+
+  const finalizeStreamingAssistant = (conversationId: string, message: ChatMessage) => {
+    const streamingState = streamingStateRef.current;
+    queryClient.setQueryData<ConversationWithMessages | null>(
+      ['ai-conversation', conversationId],
+      (old) => {
+        if (!old) return old;
+        let messages = old.messages;
+        if (streamingState && streamingState.conversationId === conversationId) {
+          messages = messages.filter((msg) => msg.id !== streamingState.messageId);
+        }
+        if (!messages.find((msg) => msg.id === message.id)) {
+          messages = [...messages, message];
+        }
+        return { ...old, messages };
+      }
+    );
+    if (streamingState && streamingState.conversationId === conversationId) {
+      streamingStateRef.current = null;
+    }
+  };
+
   // Scroll to bottom on new messages
+  const scrollToBottom = useCallback(() => {
+    scrollViewRef.current?.scrollToEnd({ animated: true });
+  }, []);
+
+  const maybeAutoScroll = useCallback(() => {
+    if (isNearBottomRef.current) {
+      scrollToBottom();
+    }
+  }, [scrollToBottom]);
+
+  const handleScroll = useCallback((event: any) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const paddingToBottom = 40;
+    isNearBottomRef.current =
+      layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+  }, []);
+
   useEffect(() => {
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  }, [messages, isTyping]);
+    const timeout = setTimeout(maybeAutoScroll, 80);
+    return () => clearTimeout(timeout);
+  }, [messages, isTyping, activeConversationId, maybeAutoScroll]);
+
 
   const handleSend = () => {
     if (!message.trim() || sendMessageMutation.isPending) return;
-    setIsTyping(true);
-    sendMessageMutation.mutate(message.trim());
+    const trimmed = message.trim();
+    sendMessageMutation.mutate(trimmed);
     setMessage('');
+    void maybeStartAction(trimmed);
+    setShowAttachmentHint(false);
+    isNearBottomRef.current = true;
+    setTimeout(scrollToBottom, 50);
   };
 
   const handleNewConversation = () => {
-    setActiveConversationId(null);
+    if (createConversationMutation.isPending) return;
+    createConversationMutation.mutate(t('newConversation') || 'New conversation');
+    setPendingAction(null);
+    streamingStateRef.current = null;
+    isNearBottomRef.current = true;
   };
 
   const handleSelectConversation = (id: string) => {
+    setIsTyping(false);
     setActiveConversationId(id);
+    setPendingAction(null);
+    streamingStateRef.current = null;
+    isNearBottomRef.current = true;
+  };
+
+  const parseConvertIntent = (text: string) => {
+    const match = text.match(
+      /(?:convert|exchange)\s+([\d.,]+)\s*([A-Za-z]{3})\s*(?:to|into|in)\s*([A-Za-z]{3})/i
+    );
+    if (!match) return null;
+    const amount = parseFloat(match[1].replace(/,/g, ''));
+    const from = match[2].toUpperCase();
+    const to = match[3].toUpperCase();
+    if (!amount || !from || !to) return null;
+    return { amount, from, to };
+  };
+
+  const parseRateIntent = (text: string) => {
+    const match = text.match(
+      /(?:rate|fx|price)\s+([A-Za-z]{3})\s*(?:to|\/|in)\s*([A-Za-z]{3})/i
+    );
+    if (!match) return null;
+    return { from: match[1].toUpperCase(), to: match[2].toUpperCase() };
+  };
+
+  const looksLikeTransaction = (text: string) =>
+    /(spent|paid|bought|buy|purchase|income|received|earned|add)/i.test(text);
+
+  const maybeStartAction = async (text: string) => {
+    const convert = parseConvertIntent(text);
+    if (convert) {
+      setPendingAction({
+        kind: 'convert',
+        status: 'loading',
+        original: text,
+        ...convert,
+      });
+      try {
+        const result = await api.convert({
+          from: convert.from,
+          to: convert.to,
+          amount: convert.amount,
+        });
+        setPendingAction({
+          kind: 'convert',
+          status: 'ready',
+          original: text,
+          ...convert,
+          result,
+        });
+      } catch (error) {
+        setPendingAction({
+          kind: 'convert',
+          status: 'error',
+          original: text,
+          ...convert,
+          error: error instanceof Error ? error.message : 'Could not fetch conversion',
+        });
+      }
+      return;
+    }
+
+    const rate = parseRateIntent(text);
+    if (rate) {
+      setPendingAction({
+        kind: 'rate',
+        status: 'loading',
+        original: text,
+        ...rate,
+      });
+      try {
+        const result = await api.convert({ from: rate.from, to: rate.to, amount: 1 });
+        setPendingAction({
+          kind: 'rate',
+          status: 'ready',
+          original: text,
+          ...rate,
+          result,
+        });
+      } catch (error) {
+        setPendingAction({
+          kind: 'rate',
+          status: 'error',
+          original: text,
+          ...rate,
+          error: error instanceof Error ? error.message : 'Could not fetch rate',
+        });
+      }
+      return;
+    }
+
+    if (looksLikeTransaction(text)) {
+      setPendingAction({
+        kind: 'transaction',
+        status: 'loading',
+        original: text,
+      });
+      try {
+        const parsed = await api.ai.parseReceipt({ text });
+        setPendingAction({
+          kind: 'transaction',
+          status: 'ready',
+          original: text,
+          parsed,
+        });
+      } catch (error) {
+        setPendingAction({
+          kind: 'transaction',
+          status: 'error',
+          original: text,
+          error: error instanceof Error ? error.message : 'Could not parse transaction',
+        });
+      }
+    }
   };
 
   const renderSidebar = () => (
@@ -198,9 +657,21 @@ export default function AIChatScreen() {
       <Text className="text-muted-foreground text-center mb-6 max-w-md">
         {t('aiWelcomeDesc')}
       </Text>
+      <View className="flex-row flex-wrap justify-center gap-2 mb-5">
+        {suggestedActions.map((action, i) => (
+          <Pressable
+            key={i}
+            onPress={() => setMessage(action)}
+            className="bg-secondary border border-border px-4 py-2 rounded-full"
+            style={{ cursor: 'pointer' }}
+          >
+            <Text className="text-foreground text-sm">{action}</Text>
+          </Pressable>
+        ))}
+      </View>
       <View
         className="flex-row flex-wrap justify-center gap-2"
-        style={{ maxWidth: 500 }}
+        style={{ maxWidth: contentMaxWidth ?? 500 }}
       >
         {suggestedQuestions.map((q, i) => (
           <Pressable
@@ -219,8 +690,20 @@ export default function AIChatScreen() {
   const renderMessages = () => (
     <ScrollView
       ref={scrollViewRef}
-      className="flex-1 p-4"
-      contentContainerStyle={{ gap: 16 }}
+      className="flex-1"
+      style={contentWidthStyle}
+      keyboardShouldPersistTaps="handled"
+      onContentSizeChange={maybeAutoScroll}
+      onScroll={handleScroll}
+      scrollEventThrottle={16}
+      contentContainerStyle={{
+        gap: 16,
+        paddingHorizontal: 16,
+        paddingTop: 16,
+        paddingBottom: Math.max(insets.bottom, 16) + 72,
+        flexGrow: messages.length === 0 ? 1 : undefined,
+        justifyContent: messages.length === 0 ? 'center' : 'flex-start',
+      }}
     >
       {loadingMessages && activeConversationId ? (
         <View className="items-center py-8">
@@ -236,12 +719,11 @@ export default function AIChatScreen() {
               className={`flex-row ${
                 msg.role === 'user' ? 'justify-end' : 'justify-start'
               }`}
+              style={{ width: '100%' }}
             >
               <View
-                className={`flex-row max-w-[85%] ${
-                  msg.role === 'user' ? 'flex-row-reverse' : ''
-                }`}
-                style={{ gap: 12 }}
+                className={`flex-row ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+                style={{ gap: 12, maxWidth: messageMaxWidth }}
               >
                 <View
                   className={`w-8 h-8 rounded-full items-center justify-center ${
@@ -274,8 +756,8 @@ export default function AIChatScreen() {
           ))}
 
           {isTyping && (
-            <View className="flex-row justify-start">
-              <View className="flex-row" style={{ gap: 12 }}>
+            <View className="flex-row justify-start" style={{ width: '100%' }}>
+              <View className="flex-row" style={{ gap: 12, maxWidth: messageMaxWidth }}>
                 <View className="w-8 h-8 rounded-full bg-primary items-center justify-center">
                   <Bot size={16} color="#09090b" />
                 </View>
@@ -289,96 +771,258 @@ export default function AIChatScreen() {
               </View>
             </View>
           )}
+
+          {pendingAction && (
+            <View className="flex-row justify-start" style={{ width: '100%' }}>
+              <View className="flex-row" style={{ gap: 12, maxWidth: messageMaxWidth }}>
+                <View className="w-8 h-8 rounded-full bg-primary items-center justify-center">
+                  <Sparkles size={16} color="#09090b" />
+                </View>
+                <View className="bg-card border border-border rounded-2xl px-4 py-3 flex-1">
+                  <View className="flex-row items-center justify-between mb-2">
+                    <Text className="text-sm font-semibold text-foreground">
+                      {pendingAction.kind === 'transaction'
+                        ? 'Transaction assistant'
+                        : pendingAction.kind === 'convert'
+                          ? 'Conversion assistant'
+                          : 'Live FX rate'}
+                    </Text>
+                    {pendingAction.status === 'done' && (
+                      <CheckCircle2 size={16} color="#22c55e" />
+                    )}
+                    {pendingAction.status === 'error' && (
+                      <AlertTriangle size={16} color="#ef4444" />
+                    )}
+                  </View>
+
+                  {pendingAction.status === 'loading' && (
+                    <View className="flex-row items-center">
+                      <ActivityIndicator size="small" color="rgb(212, 175, 55)" />
+                      <Text className="text-sm text-muted-foreground ml-2">
+                        {pendingAction.kind === 'transaction'
+                          ? 'Analyzing…'
+                          : 'Fetching rate…'}
+                      </Text>
+                    </View>
+                  )}
+
+                  {pendingAction.status === 'error' && (
+                    <Text className="text-sm text-danger">
+                      {pendingAction.error || 'Something went wrong.'}
+                    </Text>
+                  )}
+
+                  {pendingAction.kind === 'transaction' && pendingAction.status === 'ready' && pendingAction.parsed && (
+                    <>
+                      <View className="bg-muted border border-border rounded-xl p-3 mb-3">
+                        <Text className="text-sm font-semibold text-foreground">
+                          {pendingAction.parsed.type === 'credit' ? 'Income' : 'Expense'} ·{' '}
+                          {pendingAction.parsed.currency} {pendingAction.parsed.amount}
+                        </Text>
+                        <Text className="text-xs text-muted-foreground mt-1">
+                          {pendingAction.parsed.description}
+                        </Text>
+                      </View>
+                      <View className="flex-row" style={{ gap: 8 }}>
+                        <Pressable
+                          onPress={() => applyParsedMutation.mutate(pendingAction.parsed!)}
+                          className="bg-primary px-4 py-2 rounded-lg"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <Text className="text-primary-foreground text-sm font-semibold">
+                            Add transaction
+                          </Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => setPendingAction(null)}
+                          className="bg-secondary px-4 py-2 rounded-lg border border-border"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <Text className="text-foreground text-sm font-semibold">Dismiss</Text>
+                        </Pressable>
+                      </View>
+                    </>
+                  )}
+
+                  {pendingAction.kind === 'convert' && pendingAction.status === 'ready' && pendingAction.result && (
+                    <>
+                      <View className="bg-muted border border-border rounded-xl p-3 mb-3">
+                        <Text className="text-sm font-semibold text-foreground">
+                          {pendingAction.amount} {pendingAction.from} →{' '}
+                          {formatNumber(pendingAction.result.result, 2)} {pendingAction.to}
+                        </Text>
+                        <Text className="text-xs text-muted-foreground mt-1">
+                          Rate: {formatNumber(pendingAction.result.rate, 4)} {pendingAction.to}/{pendingAction.from}
+                        </Text>
+                      </View>
+                      <View className="flex-row" style={{ gap: 8 }}>
+                        <Pressable
+                          onPress={() =>
+                            walletConvertMutation.mutate({
+                              from: pendingAction.from,
+                              to: pendingAction.to,
+                              amount: pendingAction.amount,
+                            })
+                          }
+                          className="bg-primary px-4 py-2 rounded-lg"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <Text className="text-primary-foreground text-sm font-semibold">
+                            Convert in wallet
+                          </Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => setPendingAction(null)}
+                          className="bg-secondary px-4 py-2 rounded-lg border border-border"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <Text className="text-foreground text-sm font-semibold">Dismiss</Text>
+                        </Pressable>
+                      </View>
+                    </>
+                  )}
+
+                  {pendingAction.kind === 'rate' && pendingAction.status === 'ready' && pendingAction.result && (
+                    <>
+                      <Text className="text-sm font-semibold text-foreground">
+                        1 {pendingAction.from} = {formatNumber(pendingAction.result.rate, 4)} {pendingAction.to}
+                      </Text>
+                      <Pressable
+                        onPress={() => setPendingAction(null)}
+                        className="bg-secondary px-3 py-2 rounded-lg border border-border mt-3 self-start"
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <Text className="text-foreground text-sm font-semibold">Dismiss</Text>
+                      </Pressable>
+                    </>
+                  )}
+
+                  {pendingAction.status === 'done' && (
+                    <Text className="text-sm text-success">
+                      {pendingAction.kind === 'transaction'
+                        ? 'Transaction added.'
+                        : pendingAction.kind === 'convert'
+                          ? 'Conversion completed.'
+                          : 'Rate updated.'}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            </View>
+          )}
         </>
       )}
     </ScrollView>
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
+    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top', 'bottom']}>
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? Math.max(insets.top, 12) : 0}
       >
-        {/* Header */}
-        <View
-          className="flex-row items-center p-4 border-b border-border bg-card"
-          style={{ maxWidth: isDesktop ? undefined : '100%' }}
-        >
-          <Pressable
-            onPress={() => router.back()}
-            className="p-2 mr-2"
-            style={{ cursor: 'pointer' }}
-          >
-            <ArrowLeft size={24} color="rgb(248, 250, 252)" />
-          </Pressable>
-          <View className="w-8 h-8 rounded-full bg-primary items-center justify-center">
-            <Bot size={16} color="#09090b" />
-          </View>
-          <View className="ml-3">
-            <Text className="font-semibold text-foreground">{t('aiAdvisor')}</Text>
-            <Text className="text-xs text-muted-foreground">{t('aiAdvisorDesc')}</Text>
-          </View>
-        </View>
-
         <View className="flex-1 flex-row">
           {/* Sidebar for Desktop */}
           {isDesktop && renderSidebar()}
 
           {/* Main Chat Area */}
           <View className="flex-1 flex-col">
+            {/* Header */}
+            <View
+              className="flex-row items-center p-4 border-b border-border bg-card"
+              style={contentWidthStyle}
+            >
+              <Pressable
+                onPress={() => router.back()}
+                className="p-2 mr-2"
+                style={{ cursor: 'pointer' }}
+              >
+                <ArrowLeft size={24} color="rgb(248, 250, 252)" />
+              </Pressable>
+              <View className="w-8 h-8 rounded-full bg-primary items-center justify-center">
+                <Bot size={16} color="#09090b" />
+              </View>
+              <View className="ml-3">
+                <Text className="font-semibold text-foreground">{t('aiAdvisor')}</Text>
+                <Text className="text-xs text-muted-foreground">{t('aiAdvisorDesc')}</Text>
+              </View>
+            </View>
+
             {/* Mobile Conversations Carousel */}
             {!isDesktop && conversations.length > 0 && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                className="border-b border-border"
-                contentContainerStyle={{ padding: 12, gap: 8 }}
-              >
-                <Pressable
-                  onPress={handleNewConversation}
-                  className="bg-primary px-4 py-2 rounded-full flex-row items-center"
-                  style={{ cursor: 'pointer' }}
+              <View style={contentWidthStyle}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  className="border-b border-border"
+                  contentContainerStyle={{ padding: 12, gap: 8 }}
                 >
-                  <Plus size={16} color="#09090b" />
-                  <Text className="text-primary-foreground text-sm ml-1">{t('newConversation')}</Text>
-                </Pressable>
-                {conversations.map((conv) => (
                   <Pressable
-                    key={conv.id}
-                    onPress={() => handleSelectConversation(conv.id)}
-                    className={`px-4 py-2 rounded-full ${
-                      conv.id === activeConversationId
-                        ? 'bg-primary/20 border border-accent'
-                        : 'bg-card'
-                    }`}
+                    onPress={handleNewConversation}
+                    className="bg-primary px-4 py-2 rounded-full flex-row items-center"
                     style={{ cursor: 'pointer' }}
                   >
-                    <Text
-                      className={`text-sm ${
-                        conv.id === activeConversationId
-                          ? 'text-accent'
-                          : 'text-foreground'
-                      }`}
-                      numberOfLines={1}
-                    >
-                      {conv.title.length > 20 ? conv.title.slice(0, 20) + '...' : conv.title}
-                    </Text>
+                    <Plus size={16} color="#09090b" />
+                    <Text className="text-primary-foreground text-sm ml-1">{t('newConversation')}</Text>
                   </Pressable>
-                ))}
-              </ScrollView>
+                  {conversations.map((conv) => (
+                    <Pressable
+                      key={conv.id}
+                      onPress={() => handleSelectConversation(conv.id)}
+                      className={`px-4 py-2 rounded-full ${
+                        conv.id === activeConversationId
+                          ? 'bg-primary/20 border border-accent'
+                          : 'bg-card'
+                      }`}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <Text
+                        className={`text-sm ${
+                          conv.id === activeConversationId
+                            ? 'text-accent'
+                            : 'text-foreground'
+                        }`}
+                        numberOfLines={1}
+                      >
+                        {conv.title.length > 20 ? conv.title.slice(0, 20) + '...' : conv.title}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
             )}
 
             {/* Messages */}
             {renderMessages()}
 
             {/* Input */}
-            <View className="p-4 border-t border-border bg-card">
-              <View
-                className="flex-row items-center"
-                style={{ gap: 12, maxWidth: isDesktop ? 800 : '100%', alignSelf: 'center', width: '100%' }}
-              >
+            <View
+              className="p-4 border-t border-border bg-card"
+              style={[contentWidthStyle, { paddingBottom: Math.max(insets.bottom, 12) }]}
+            >
+              <View className="flex-row items-center justify-between mb-2">
+                <View className="flex-row items-center" style={{ gap: 8 }}>
+                  <View className="flex-row items-center bg-muted px-3 py-1.5 rounded-full border border-border">
+                    <ImageIcon size={14} color="rgb(161, 161, 170)" />
+                    <Text className="text-xs text-muted-foreground ml-2">Images</Text>
+                  </View>
+                  <View className="flex-row items-center bg-muted px-3 py-1.5 rounded-full border border-border">
+                    <FileText size={14} color="rgb(161, 161, 170)" />
+                    <Text className="text-xs text-muted-foreground ml-2">Files</Text>
+                  </View>
+                </View>
+                <Text className="text-xs text-muted-foreground">Coming soon</Text>
+              </View>
+
+              <View className="flex-row items-center" style={{ gap: 12 }}>
+                <Pressable
+                  onPress={() => setShowAttachmentHint(true)}
+                  className="bg-muted border border-border rounded-xl p-3"
+                  style={{ cursor: 'pointer' }}
+                >
+                  <Paperclip size={18} color="rgb(161, 161, 170)" />
+                </Pressable>
                 <TextInput
                   value={message}
                   onChangeText={setMessage}
@@ -386,8 +1030,12 @@ export default function AIChatScreen() {
                   placeholderTextColor="rgb(148, 163, 184)"
                   onSubmitEditing={handleSend}
                   editable={!sendMessageMutation.isPending}
+                  returnKeyType="send"
+                  blurOnSubmit={false}
                   className="flex-1 bg-background border border-border rounded-xl px-4 py-3 text-foreground"
-                  style={{ outlineStyle: 'none' } as any}
+                  multiline
+                  textAlignVertical="top"
+                  style={{ outlineStyle: 'none', minHeight: 44, maxHeight: 140 } as any}
                 />
                 <Pressable
                   onPress={handleSend}
@@ -404,6 +1052,11 @@ export default function AIChatScreen() {
                   )}
                 </Pressable>
               </View>
+              {showAttachmentHint && (
+                <Text className="text-xs text-muted-foreground mt-2">
+                  File and image uploads are coming soon.
+                </Text>
+              )}
             </View>
           </View>
         </View>

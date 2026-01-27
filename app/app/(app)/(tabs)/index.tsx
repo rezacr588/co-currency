@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator, useWindowDimensio
 import { Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, Wallet, ArrowRight, User, DollarSign, PiggyBank, CreditCard, ArrowDownUp, ChevronDown, X, Search } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Wallet, ArrowRight, User, DollarSign, PiggyBank, CreditCard, ArrowDownUp, ChevronDown, X, Search, Lightbulb } from 'lucide-react-native';
 import { api } from '../../../src/api';
 import { useAuth } from '../../../src/context/AuthContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
@@ -52,6 +52,58 @@ export default function DashboardScreen() {
   // Calculate stats
   const totalGoals = goals?.length || 0;
   const activeGoals = goals?.filter((g: any) => g.current_amount < g.target_amount).length || 0;
+
+  type Insight = { title: string; detail: string; tone: 'warning' | 'success' | 'info' };
+  const insights: Insight[] = [];
+
+  if (monthlyReport?.income && monthlyReport?.expenses) {
+    const income = monthlyReport.income;
+    const expenses = monthlyReport.expenses;
+    if (expenses > income) {
+      insights.push({
+        title: 'Spending exceeds income',
+        detail: `You spent ${formatCompactCurrency(expenses - income, monthlyReport.currency)} more than you earned this month.`,
+        tone: 'warning',
+      });
+    } else if (income > 0) {
+      const savingsRate = (income - expenses) / income;
+      insights.push({
+        title: `Savings rate: ${Math.round(savingsRate * 100)}%`,
+        detail: savingsRate < 0.2
+          ? 'Try nudging this toward 20% by trimming one category.'
+          : 'Nice work — keep this pace to grow your savings.',
+        tone: savingsRate < 0.2 ? 'info' : 'success',
+      });
+    }
+  }
+
+  if (summary?.recent_transactions?.length) {
+    const categoryCounts = summary.recent_transactions
+      .filter((tx: any) => tx.type === 'debit' && tx.category)
+      .reduce((acc: Record<string, number>, tx: any) => {
+        acc[tx.category] = (acc[tx.category] || 0) + 1;
+        return acc;
+      }, {});
+    const topCategory = Object.keys(categoryCounts).sort(
+      (a, b) => categoryCounts[b] - categoryCounts[a]
+    )[0];
+    if (topCategory) {
+      const readable = topCategory.replace(/_/g, ' ');
+      insights.push({
+        title: `Top spending: ${readable}`,
+        detail: 'Consider setting a small weekly limit to stay on track.',
+        tone: 'info',
+      });
+    }
+  }
+
+  if (totalGoals === 0) {
+    insights.push({
+      title: 'Set your first goal',
+      detail: 'A simple target helps you see progress faster.',
+      tone: 'info',
+    });
+  }
 
   const swapCurrencies = () => {
     setFromCurrency(toCurrency);
@@ -172,6 +224,48 @@ export default function DashboardScreen() {
               </Text>
               <Text className="text-xs text-muted-foreground mt-1">Active goals</Text>
             </View>
+          </View>
+        </View>
+
+        {/* Insights */}
+        <View className="bg-card border border-border p-5 rounded-xl mb-6">
+          <View className="flex-row items-center justify-between mb-4">
+            <View className="flex-row items-center">
+              <View className="w-8 h-8 rounded-full bg-secondary items-center justify-center mr-3">
+                <Lightbulb size={18} color="#a1a1aa" />
+              </View>
+              <Text className="text-base font-semibold text-foreground">Insights</Text>
+            </View>
+            <Text className="text-xs text-muted-foreground">This month</Text>
+          </View>
+          <View className="gap-3">
+            {insights.length === 0 ? (
+              <View className="bg-muted border border-border p-4 rounded-lg">
+                <Text className="text-muted-foreground text-sm">
+                  Add a few transactions to unlock personalized insights.
+                </Text>
+              </View>
+            ) : (
+              insights.slice(0, 3).map((insight, idx) => (
+                <View key={idx} className="bg-muted border border-border p-4 rounded-lg">
+                  <View className="flex-row items-start">
+                    <View
+                      className={`w-2 h-2 rounded-full mt-1.5 mr-3 ${
+                        insight.tone === 'warning'
+                          ? 'bg-warning'
+                          : insight.tone === 'success'
+                            ? 'bg-success'
+                            : 'bg-accent'
+                      }`}
+                    />
+                    <View className="flex-1">
+                      <Text className="text-sm font-semibold text-foreground">{insight.title}</Text>
+                      <Text className="text-xs text-muted-foreground mt-1">{insight.detail}</Text>
+                    </View>
+                  </View>
+                </View>
+              ))
+            )}
           </View>
         </View>
 

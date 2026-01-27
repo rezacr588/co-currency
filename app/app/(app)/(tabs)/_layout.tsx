@@ -4,7 +4,7 @@ import { View, Text, Pressable, useWindowDimensions, ScrollView } from 'react-na
 import {
   LayoutDashboard,
   Wallet,
-  Target,
+  MessageCircle,
   BarChart3,
   Plus,
   User,
@@ -69,7 +69,7 @@ function DesktopSidebar({
     { icon: <LayoutDashboard size={20} color="#a1a1aa" />, label: t('dashboard'), href: '/(app)/(tabs)' },
     { icon: <Wallet size={20} color="#a1a1aa" />, label: t('wallet'), href: '/(app)/(tabs)/wallet' },
     { icon: <Plus size={20} color="#a1a1aa" />, label: t('addTransaction') || 'Add', href: '/(app)/(tabs)/add' },
-    { icon: <Target size={20} color="#a1a1aa" />, label: t('financialGoals'), href: '/(app)/(tabs)/goals' },
+    { icon: <MessageCircle size={20} color="#a1a1aa" />, label: t('aiAdvisor') || 'Chatbot', href: '/(app)/(tabs)/chat' },
     { icon: <BarChart3 size={20} color="#a1a1aa" />, label: t('reports'), href: '/(app)/(tabs)/reports' },
   ];
 
@@ -258,7 +258,7 @@ export default function TabsLayout() {
             <Tabs.Screen name="index" />
             <Tabs.Screen name="wallet" />
             <Tabs.Screen name="add" />
-            <Tabs.Screen name="goals" />
+            <Tabs.Screen name="chat" />
             <Tabs.Screen name="reports" />
           </Tabs>
         </View>
@@ -284,7 +284,7 @@ export default function TabsLayout() {
             <Tabs.Screen name="index" />
             <Tabs.Screen name="wallet" />
             <Tabs.Screen name="add" />
-            <Tabs.Screen name="goals" />
+            <Tabs.Screen name="chat" />
             <Tabs.Screen name="reports" />
           </Tabs>
         </View>
@@ -340,10 +340,10 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="goals"
+        name="chat"
         options={{
-          title: t('financialGoals'),
-          tabBarIcon: ({ color, size }) => <Target size={size} color={color} />,
+          title: t('aiAdvisor') || 'Chatbot',
+          tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={color} />,
         }}
       />
       <Tabs.Screen
