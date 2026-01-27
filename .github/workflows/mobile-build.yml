@@ -15,6 +15,47 @@ on:
         type: boolean
 
 jobs:
+  # Detect if native files changed (requires new APK build)
+  detect-native-changes:
+    name: Detect Native Changes
+    runs-on: ubuntu-latest
+    outputs:
+      native_changed: ${{ steps.check.outputs.native_changed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check for native file changes
+        id: check
+        run: |
+          # Files that require a new native build when changed
+          NATIVE_FILES="app/package.json app/app.json app/eas.json"
+
+          # Check if any native files changed in this commit
+          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+
+          NATIVE_CHANGED="false"
+          for file in $NATIVE_FILES; do
+            if echo "$CHANGED" | grep -q "^$file$"; then
+              echo "Native file changed: $file"
+              NATIVE_CHANGED="true"
+            fi
+          done
+
+          # Also check for new native dependencies in package.json
+          if echo "$CHANGED" | grep -q "^app/package.json$"; then
+            # Check if expo or react-native related packages changed
+            if git diff HEAD~1 HEAD -- app/package.json | grep -E '"(expo-|react-native|@expo)' > /dev/null 2>&1; then
+              echo "Native dependency changed in package.json"
+              NATIVE_CHANGED="true"
+            fi
+          fi
+
+          echo "native_changed=$NATIVE_CHANGED" >> $GITHUB_OUTPUT
+          echo "Native changed: $NATIVE_CHANGED"
+
   # OTA Update - Runs on every push (fast, ~1-2 min)
   # Users with the app installed get updates automatically
   ota-update:
@@ -46,12 +87,18 @@ jobs:
         working-directory: ./app
         run: eas update --branch production --message "Auto update from commit ${{ github.sha }}"
 
-  # APK Build - Only runs manually or when native code changes
-  # New users download this APK to install the app
+  # APK Build - Runs when:
+  # 1. Manual trigger with build_apk=true
+  # 2. Commit message contains [build-apk]
+  # 3. Native files changed (package.json, app.json, eas.json, or native dependencies)
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
-    if: github.event.inputs.build_apk == 'true' || contains(github.event.head_commit.message, '[build-apk]')
+    needs: detect-native-changes
+    if: |
+      github.event.inputs.build_apk == 'true' ||
+      contains(github.event.head_commit.message, '[build-apk]') ||
+      needs.detect-native-changes.outputs.native_changed == 'true'
 
     steps:
       - name: Checkout code
@@ -77,3 +124,20 @@ jobs:
       - name: Build Android APK
         working-directory: ./app
         run: eas build --platform android --profile production --non-interactive
+
+      - name: Get build URL
+        if: success()
+        working-directory: ./app
+        run: |
+          echo "## Android APK Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Build triggered by:" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event.inputs.build_apk }}" == "true" ]; then
+            echo "- Manual trigger" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ github.event.head_commit.message }}" == *"[build-apk]"* ]]; then
+            echo "- Commit message [build-apk]" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Native file changes detected" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View builds at: https://expo.dev/accounts/rez.zet.int/projects/cofinance/builds" >> $GITHUB_STEP_SUMMARY
