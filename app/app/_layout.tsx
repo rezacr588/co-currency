@@ -18,6 +18,7 @@ import { AuthProvider } from '../src/context/AuthContext';
 import { ToastProvider } from '../src/components/ui/Toast';
 import { OfflineBanner } from '../src/components/ui/OfflineBanner';
 import { useAppUpdates } from '../src/hooks/useAppUpdates';
+import { useAndroidNavigationBar } from '../src/hooks/useAndroidNavigationBar';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -43,6 +44,7 @@ function RootLayoutNav() {
 
   // Check for OTA updates on app launch
   useAppUpdates();
+  useAndroidNavigationBar();
 
   useEffect(() => {
     if (fontsLoaded) {

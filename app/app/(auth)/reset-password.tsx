@@ -89,7 +89,7 @@ export default function ResetPasswordScreen() {
                   style={{ cursor: 'pointer' }}
                   className="bg-primary px-6 py-3 rounded-xl"
                 >
-                  <Text className="text-white font-semibold">Request New Link</Text>
+                  <Text className="text-primary-foreground font-semibold">Request New Link</Text>
                 </Pressable>
               </Link>
             </View>
@@ -128,7 +128,7 @@ export default function ResetPasswordScreen() {
                   style={{ cursor: 'pointer' }}
                   className="bg-primary px-6 py-3 rounded-xl"
                 >
-                  <Text className="text-white font-semibold">Go to Login</Text>
+                  <Text className="text-primary-foreground font-semibold">Go to Login</Text>
                 </Pressable>
               </Link>
             </View>
@@ -216,9 +216,9 @@ export default function ResetPasswordScreen() {
               className={`bg-primary p-4 rounded-xl items-center ${isLoading ? 'opacity-50' : ''}`}
             >
               {isLoading ? (
-                <ActivityIndicator color="white" />
+                <ActivityIndicator color="#09090b" />
               ) : (
-                <Text className="text-white font-semibold text-lg">
+                <Text className="text-primary-foreground font-semibold text-lg">
                   {t('resetPassword') || 'Reset Password'}
                 </Text>
               )}

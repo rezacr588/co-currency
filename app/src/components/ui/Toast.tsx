@@ -32,7 +32,7 @@ const variantStyles: Record<ToastVariant, { bg: string; icon: typeof CheckCircle
   info: {
     bg: 'bg-primary/90',
     icon: Info,
-    color: 'rgb(255, 255, 255)',
+    color: '#09090b',
   },
 };
 

@@ -37,6 +37,13 @@ export default function WalletScreen() {
   const balances = balancesData?.balances || [];
   const transactions = transactionsData?.transactions || [];
 
+  const quickActions = [
+    { label: t('addTransaction'), href: '/(app)/(tabs)/add', icon: Plus, primary: true },
+    { label: t('convertCurrency') || t('convert') || 'Convert', href: '/(app)/(tabs)/wallet/convert', icon: ArrowLeftRight },
+    { label: t('aiReceiptParser') || t('aiReceiptParsing') || 'AI Parser', href: '/(app)/(tabs)/wallet/ai', icon: Bot },
+    { label: t('aiAdvisor') || 'AI Advisor', href: '/(app)/(tabs)/wallet/chat', icon: MessageCircle },
+  ];
+
   return (
     <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
       <ScrollView
@@ -54,28 +61,45 @@ export default function WalletScreen() {
         <Text className="text-3xl font-bold text-foreground mb-6">{t('wallet')}</Text>
 
         {/* Quick Actions */}
-        <View className="flex-row gap-3 mb-6" style={{ maxWidth: isDesktop ? 600 : '100%' }}>
-          <Link href="/(app)/(tabs)/add" asChild>
-            <Pressable className="flex-1 bg-primary p-4 rounded-xl items-center flex-row justify-center" style={{ cursor: 'pointer' }}>
-              <Plus size={20} color="white" />
-              <Text className="text-white font-semibold ml-2">{t('addTransaction')}</Text>
-            </Pressable>
-          </Link>
-          <Link href="/(app)/(tabs)/wallet/convert" asChild>
-            <Pressable className="bg-card p-4 rounded-xl items-center" style={{ cursor: 'pointer' }}>
-              <ArrowLeftRight size={20} color="rgb(212, 175, 55)" />
-            </Pressable>
-          </Link>
-          <Link href="/(app)/(tabs)/wallet/ai" asChild>
-            <Pressable className="bg-card p-4 rounded-xl items-center" style={{ cursor: 'pointer' }}>
-              <Bot size={20} color="rgb(168, 85, 247)" />
-            </Pressable>
-          </Link>
-          <Link href="/(app)/(tabs)/wallet/chat" asChild>
-            <Pressable className="bg-card p-4 rounded-xl items-center" style={{ cursor: 'pointer' }}>
-              <MessageCircle size={20} color="rgb(59, 130, 246)" />
-            </Pressable>
-          </Link>
+        <View
+          className="mb-6"
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 12,
+          }}
+        >
+          {quickActions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <View
+                key={action.href}
+                style={{
+                  width: isDesktop ? '23%' : isTablet ? '48%' : '48%',
+                  minWidth: 140,
+                }}
+              >
+                <Link href={action.href as any} asChild>
+                  <Pressable
+                    className={`rounded-xl p-4 items-center justify-center ${
+                      action.primary ? 'bg-primary' : 'bg-card border border-border'
+                    }`}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <Icon size={22} color={action.primary ? '#09090b' : 'rgb(161, 161, 170)'} />
+                    <Text
+                      className={`mt-2 text-xs font-semibold ${
+                        action.primary ? 'text-primary-foreground' : 'text-foreground'
+                      }`}
+                      numberOfLines={1}
+                    >
+                      {action.label}
+                    </Text>
+                  </Pressable>
+                </Link>
+              </View>
+            );
+          })}
         </View>
 
         {/* Balances */}

@@ -70,7 +70,7 @@ export default function ConverterScreen() {
             </Pressable>
             <Link href="/login" asChild>
               <Pressable style={{ cursor: 'pointer' }} className="bg-primary px-4 py-2 rounded-lg">
-                <Text className="text-white font-semibold">{t('login')}</Text>
+                <Text className="text-primary-foreground font-semibold">{t('login')}</Text>
               </Pressable>
             </Link>
           </View>
@@ -143,7 +143,7 @@ export default function ConverterScreen() {
               style={{ cursor: 'pointer' }}
               className="bg-primary p-3 rounded-full"
             >
-              <ArrowDownUp size={24} color="white" />
+              <ArrowDownUp size={24} color="#09090b" />
             </Pressable>
           </View>
 

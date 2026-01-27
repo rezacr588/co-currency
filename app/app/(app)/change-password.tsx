@@ -249,11 +249,11 @@ export default function ChangePasswordScreen() {
             style={{ cursor: 'pointer' }}
           >
             {changePasswordMutation.isPending ? (
-              <ActivityIndicator color="white" />
+              <ActivityIndicator color="#09090b" />
             ) : (
               <>
-                <Check size={20} color="white" />
-                <Text className="text-white font-semibold ml-2">
+                <Check size={20} color="#09090b" />
+                <Text className="text-primary-foreground font-semibold ml-2">
                   {hasPassword ? t('changePassword') : t('setPassword')}
                 </Text>
               </>

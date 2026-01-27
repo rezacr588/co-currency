@@ -137,8 +137,8 @@ export default function AIChatScreen() {
           className="bg-primary p-3 rounded-xl flex-row items-center justify-center"
           style={{ cursor: 'pointer' }}
         >
-          <Plus size={20} color="white" />
-          <Text className="text-white font-semibold ml-2">{t('newConversation')}</Text>
+          <Plus size={20} color="#09090b" />
+          <Text className="text-primary-foreground font-semibold ml-2">{t('newConversation')}</Text>
         </Pressable>
       </View>
       <ScrollView className="flex-1 p-2">
@@ -190,7 +190,7 @@ export default function AIChatScreen() {
   const renderWelcome = () => (
     <View className="flex-1 items-center justify-center p-6">
       <View className="w-16 h-16 rounded-2xl bg-primary items-center justify-center mb-4">
-        <Sparkles size={32} color="white" />
+        <Sparkles size={32} color="#09090b" />
       </View>
       <Text className="text-xl font-bold text-foreground text-center mb-2">
         {t('aiWelcome')}
@@ -251,7 +251,7 @@ export default function AIChatScreen() {
                   {msg.role === 'user' ? (
                     <User size={16} color="rgb(148, 163, 184)" />
                   ) : (
-                    <Bot size={16} color="white" />
+                    <Bot size={16} color="#09090b" />
                   )}
                 </View>
                 <View
@@ -263,7 +263,7 @@ export default function AIChatScreen() {
                 >
                   <Text
                     className={`text-sm ${
-                      msg.role === 'user' ? 'text-white' : 'text-foreground'
+                      msg.role === 'user' ? 'text-primary-foreground' : 'text-foreground'
                     }`}
                   >
                     {msg.content}
@@ -277,7 +277,7 @@ export default function AIChatScreen() {
             <View className="flex-row justify-start">
               <View className="flex-row" style={{ gap: 12 }}>
                 <View className="w-8 h-8 rounded-full bg-primary items-center justify-center">
-                  <Bot size={16} color="white" />
+                  <Bot size={16} color="#09090b" />
                 </View>
                 <View className="bg-card px-4 py-3 rounded-2xl rounded-bl-sm">
                   <View className="flex-row" style={{ gap: 4 }}>
@@ -314,7 +314,7 @@ export default function AIChatScreen() {
             <ArrowLeft size={24} color="rgb(248, 250, 252)" />
           </Pressable>
           <View className="w-8 h-8 rounded-full bg-primary items-center justify-center">
-            <Bot size={16} color="white" />
+            <Bot size={16} color="#09090b" />
           </View>
           <View className="ml-3">
             <Text className="font-semibold text-foreground">{t('aiAdvisor')}</Text>
@@ -341,8 +341,8 @@ export default function AIChatScreen() {
                   className="bg-primary px-4 py-2 rounded-full flex-row items-center"
                   style={{ cursor: 'pointer' }}
                 >
-                  <Plus size={16} color="white" />
-                  <Text className="text-white text-sm ml-1">{t('newConversation')}</Text>
+                  <Plus size={16} color="#09090b" />
+                  <Text className="text-primary-foreground text-sm ml-1">{t('newConversation')}</Text>
                 </Pressable>
                 {conversations.map((conv) => (
                   <Pressable
@@ -398,9 +398,9 @@ export default function AIChatScreen() {
                   style={{ cursor: 'pointer' }}
                 >
                   {sendMessageMutation.isPending ? (
-                    <ActivityIndicator size="small" color="white" />
+                    <ActivityIndicator size="small" color="#09090b" />
                   ) : (
-                    <Send size={20} color="white" />
+                    <Send size={20} color="#09090b" />
                   )}
                 </Pressable>
               </View>

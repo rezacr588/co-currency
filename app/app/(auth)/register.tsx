@@ -169,7 +169,7 @@ export default function RegisterScreen() {
             </View>
           ) : null}
 
-          <View className="gap-3">
+          <View className="gap-4">
             {/* Google OAuth Button */}
             <Pressable
               onPress={handleGoogleLogin}
@@ -204,6 +204,7 @@ export default function RegisterScreen() {
             </View>
 
             {/* Name Input */}
+            <Text className="text-xs text-muted-foreground">{t('name')}</Text>
             <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
               <User size={18} color="#71717a" />
               <TextInput
@@ -213,12 +214,16 @@ export default function RegisterScreen() {
                 placeholderTextColor="#52525b"
                 value={name}
                 onChangeText={setName}
+                autoComplete="name"
+                textContentType="name"
                 autoCapitalize="words"
                 editable={!isSubmitting}
+                returnKeyType="next"
               />
             </View>
 
             {/* Email Input */}
+            <Text className="text-xs text-muted-foreground">{t('email')}</Text>
             <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
               <Mail size={18} color="#71717a" />
               <TextInput
@@ -229,13 +234,17 @@ export default function RegisterScreen() {
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
+                autoComplete="email"
+                textContentType="emailAddress"
                 autoCapitalize="none"
                 autoCorrect={false}
                 editable={!isSubmitting}
+                returnKeyType="next"
               />
             </View>
 
             {/* Password Input */}
+            <Text className="text-xs text-muted-foreground">{t('password')}</Text>
             <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
               <Lock size={18} color="#71717a" />
               <TextInput
@@ -246,8 +255,11 @@ export default function RegisterScreen() {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
+                autoComplete="password"
+                textContentType="password"
                 autoCapitalize="none"
                 editable={!isSubmitting}
+                returnKeyType="next"
               />
               <Pressable
                 onPress={() => setShowPassword(!showPassword)}
@@ -262,6 +274,7 @@ export default function RegisterScreen() {
             </View>
 
             {/* Confirm Password Input */}
+            <Text className="text-xs text-muted-foreground">{t('confirmPassword')}</Text>
             <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
               <Lock size={18} color="#71717a" />
               <TextInput
@@ -272,8 +285,11 @@ export default function RegisterScreen() {
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry={!showPassword}
+                autoComplete="password"
+                textContentType="password"
                 autoCapitalize="none"
                 editable={!isSubmitting}
+                returnKeyType="done"
               />
             </View>
 

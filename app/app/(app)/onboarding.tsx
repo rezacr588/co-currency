@@ -140,7 +140,7 @@ export default function OnboardingScreen() {
                 >
                   <Text
                     className={`text-sm font-medium ${
-                      i <= currentIndex ? 'text-white' : 'text-muted-foreground'
+                      i <= currentIndex ? 'text-primary-foreground' : 'text-muted-foreground'
                     }`}
                   >
                     {i + 1}
@@ -186,10 +186,10 @@ export default function OnboardingScreen() {
                     style={{ cursor: 'pointer' }}
                     className="flex-1 bg-primary p-4 rounded-xl flex-row items-center justify-center"
                   >
-                    <Text className="text-white font-semibold mr-2">
+                    <Text className="text-primary-foreground font-semibold mr-2">
                       {t('getStarted') || 'Get Started'}
                     </Text>
-                    <ArrowRight size={20} color="white" />
+                    <ArrowRight size={20} color="#09090b" />
                   </Pressable>
                 </View>
               </View>
@@ -236,10 +236,10 @@ export default function OnboardingScreen() {
                     style={{ cursor: 'pointer' }}
                     className="flex-1 bg-primary p-4 rounded-xl flex-row items-center justify-center"
                   >
-                    <Text className="text-white font-semibold mr-2">
+                    <Text className="text-primary-foreground font-semibold mr-2">
                       {t('next') || 'Next'}
                     </Text>
-                    <ArrowRight size={20} color="white" />
+                    <ArrowRight size={20} color="#09090b" />
                   </Pressable>
                 </View>
               </View>
@@ -299,13 +299,13 @@ export default function OnboardingScreen() {
                     }`}
                   >
                     {isSubmitting ? (
-                      <ActivityIndicator color="white" />
+                      <ActivityIndicator color="#09090b" />
                     ) : (
                       <>
-                        <Text className="text-white font-semibold mr-2">
+                        <Text className="text-primary-foreground font-semibold mr-2">
                           {initialBalance ? t('addAndContinue') || 'Add & Continue' : t('skip') || 'Skip'}
                         </Text>
-                        <ArrowRight size={20} color="white" />
+                        <ArrowRight size={20} color="#09090b" />
                       </>
                     )}
                   </Pressable>
@@ -333,9 +333,9 @@ export default function OnboardingScreen() {
                   className={`bg-primary px-8 py-4 rounded-xl ${isSubmitting ? 'opacity-50' : ''}`}
                 >
                   {isSubmitting ? (
-                    <ActivityIndicator color="white" />
+                    <ActivityIndicator color="#09090b" />
                   ) : (
-                    <Text className="text-white font-semibold text-lg">
+                    <Text className="text-primary-foreground font-semibold text-lg">
                       {t('goToWallet') || 'Go to Wallet'}
                     </Text>
                   )}

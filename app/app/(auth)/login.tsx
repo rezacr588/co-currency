@@ -159,7 +159,7 @@ export default function LoginScreen() {
             </View>
           ) : null}
 
-          <View className="gap-3">
+          <View className="gap-4">
             {/* Google OAuth Button */}
             <Pressable
               onPress={handleGoogleLogin}
@@ -194,6 +194,7 @@ export default function LoginScreen() {
             </View>
 
             {/* Email Input */}
+            <Text className="text-xs text-muted-foreground">{t('email')}</Text>
             <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
               <Mail size={18} color="#71717a" />
               <TextInput
@@ -207,13 +208,17 @@ export default function LoginScreen() {
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
+                autoComplete="email"
+                textContentType="emailAddress"
                 autoCapitalize="none"
                 autoCorrect={false}
                 editable={!isSubmitting}
+                returnKeyType="next"
               />
             </View>
 
             {/* Password Input */}
+            <Text className="text-xs text-muted-foreground">{t('password')}</Text>
             <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
               <Lock size={18} color="#71717a" />
               <TextInput
@@ -227,8 +232,11 @@ export default function LoginScreen() {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
+                autoComplete="password"
+                textContentType="password"
                 autoCapitalize="none"
                 editable={!isSubmitting}
+                returnKeyType="done"
               />
               <Pressable
                 onPress={() => setShowPassword(!showPassword)}

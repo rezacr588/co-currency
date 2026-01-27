@@ -69,7 +69,7 @@ export default function RecurringScreen() {
           <Text className="text-xl font-bold text-foreground">{t('recurring')}</Text>
         </View>
         <Pressable onPress={() => setShowForm(true)} className="bg-primary p-2 rounded-full" style={{ cursor: 'pointer' }}>
-          <Plus size={24} color="white" />
+          <Plus size={24} color="#09090b" />
         </Pressable>
       </View>
 
@@ -432,9 +432,9 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
             style={{ cursor: 'pointer' }}
           >
             {mutation.isPending ? (
-              <ActivityIndicator color="white" />
+              <ActivityIndicator color="#09090b" />
             ) : (
-              <Text className="text-white font-semibold text-lg">{t('createRecurring')}</Text>
+              <Text className="text-primary-foreground font-semibold text-lg">{t('createRecurring')}</Text>
             )}
           </Pressable>
         </ScrollView>

@@ -23,7 +23,7 @@ const variantStyles: Record<ButtonVariant, string> = {
 };
 
 const variantTextStyles: Record<ButtonVariant, string> = {
-  primary: 'text-white',
+  primary: 'text-primary-foreground',
   secondary: 'text-foreground',
   ghost: 'text-foreground',
   danger: 'text-white',
@@ -76,7 +76,13 @@ export const Button = forwardRef<View, ButtonProps>(
         {isLoading ? (
           <ActivityIndicator
             size="small"
-            color={variant === 'ghost' || variant === 'outline' ? 'rgb(248, 250, 252)' : 'white'}
+            color={
+              variant === 'primary'
+                ? '#09090b'
+                : variant === 'ghost' || variant === 'outline'
+                  ? 'rgb(248, 250, 252)'
+                  : 'white'
+            }
           />
         ) : (
           <>

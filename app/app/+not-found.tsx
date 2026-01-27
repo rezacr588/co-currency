@@ -14,7 +14,7 @@ export default function NotFoundScreen() {
         </Text>
         <Link href="/" asChild>
           <Pressable className="bg-primary px-6 py-3 rounded-xl">
-            <Text className="text-white font-semibold">Go Home</Text>
+            <Text className="text-primary-foreground font-semibold">Go Home</Text>
           </Pressable>
         </Link>
       </View>

@@ -148,7 +148,7 @@ export default function WalletConvertScreen() {
         {/* Swap Button */}
         <View className="items-center my-4">
           <Pressable onPress={swapCurrencies} className="bg-primary p-3 rounded-full" style={{ cursor: 'pointer' }}>
-            <ArrowDownUp size={24} color="white" />
+            <ArrowDownUp size={24} color="#09090b" />
           </Pressable>
         </View>
 
@@ -190,11 +190,11 @@ export default function WalletConvertScreen() {
           style={{ cursor: 'pointer' }}
         >
           {mutation.isPending ? (
-            <ActivityIndicator color="white" />
+            <ActivityIndicator color="#09090b" />
           ) : (
             <>
-              <Check size={20} color="white" />
-              <Text className="text-white font-semibold text-lg ml-2">{t('convert')}</Text>
+              <Check size={20} color="#09090b" />
+              <Text className="text-primary-foreground font-semibold text-lg ml-2">{t('convert')}</Text>
             </>
           )}
         </Pressable>

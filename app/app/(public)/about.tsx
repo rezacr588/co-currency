@@ -78,7 +78,7 @@ export default function AboutScreen() {
 
           {/* Mission Banner */}
           <View className="bg-primary rounded-2xl p-6 mb-6">
-            <Text className="text-white text-center text-lg font-medium">
+            <Text className="text-primary-foreground text-center text-lg font-medium">
               {t('missionDescription') || 'Empowering you to take control of your finances across currencies and borders'}
             </Text>
           </View>

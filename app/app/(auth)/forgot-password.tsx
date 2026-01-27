@@ -96,8 +96,9 @@ export default function ForgotPasswordScreen() {
             </View>
           ) : null}
 
-          <View className="gap-3">
+          <View className="gap-4">
             {/* Email Input */}
+            <Text className="text-xs text-muted-foreground">{t('email')}</Text>
             <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
               <Mail size={18} color="#71717a" />
               <TextInput
@@ -108,8 +109,11 @@ export default function ForgotPasswordScreen() {
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
+                autoComplete="email"
+                textContentType="emailAddress"
                 autoCapitalize="none"
                 autoCorrect={false}
+                returnKeyType="done"
               />
             </View>
 
