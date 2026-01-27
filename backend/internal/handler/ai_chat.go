@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -31,6 +32,7 @@ func (h *AIChatHandler) RegisterRoutes(r chi.Router) {
 	r.Get("/conversations/{id}", h.GetConversation)
 	r.Delete("/conversations/{id}", h.DeleteConversation)
 	r.Post("/chat", h.Chat)
+	r.Post("/chat/stream", h.ChatStream)
 }
 
 // ListConversations returns all conversations for the user
@@ -169,4 +171,88 @@ func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.JSON(w, http.StatusOK, response)
+}
+
+// ChatStream streams the AI response using Server-Sent Events.
+func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	var req model.ChatRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "Invalid request body", err)
+		return
+	}
+
+	if req.Message == "" {
+		httputil.BadRequestWithContext(r.Context(), w, "Message is required", nil)
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "Streaming not supported", nil)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+	w.WriteHeader(http.StatusOK)
+	flusher.Flush()
+
+	sendEvent := func(payload any) error {
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(w, "data: %s\n\n", data); err != nil {
+			return err
+		}
+		flusher.Flush()
+		return nil
+	}
+
+	// Get user name for personalization
+	user, err := h.authService.GetUserByID(r.Context(), userID)
+	userName := "User"
+	if err == nil && user != nil && user.Name != "" {
+		userName = user.Name
+	}
+
+	response, err := h.chatService.ChatStream(
+		r.Context(),
+		userID,
+		userName,
+		req.ConversationID,
+		req.Message,
+		func(conversationID string) {
+			_ = sendEvent(map[string]interface{}{
+				"type":            "start",
+				"conversation_id": conversationID,
+			})
+		},
+		func(chunk string) error {
+			return sendEvent(map[string]interface{}{
+				"type":    "delta",
+				"content": chunk,
+			})
+		},
+	)
+	if err != nil {
+		_ = sendEvent(map[string]interface{}{
+			"type":  "error",
+			"error": err.Error(),
+		})
+		return
+	}
+
+	_ = sendEvent(map[string]interface{}{
+		"type":            "done",
+		"conversation_id": response.ConversationID,
+		"message":         response.Message,
+	})
 }

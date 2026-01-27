@@ -125,6 +125,123 @@ func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName str
 	}, nil
 }
 
+// ChatStream processes a user message and streams the AI response chunks.
+// It returns the final ChatResponse once complete.
+func (s *AIChatService) ChatStream(
+	ctx context.Context,
+	userID uuid.UUID,
+	userName string,
+	conversationID string,
+	message string,
+	onStart func(conversationID string),
+	onChunk func(chunk string) error,
+) (*model.ChatResponse, error) {
+	var convID uuid.UUID
+	var conv *model.ChatConversation
+	var err error
+
+	// Get or create conversation
+	if conversationID != "" {
+		convID, err = uuid.Parse(conversationID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid conversation ID: %w", err)
+		}
+		conv, err = s.chatRepo.GetConversation(ctx, convID)
+		if err != nil {
+			return nil, fmt.Errorf("getting conversation: %w", err)
+		}
+		// Verify ownership
+		if conv.UserID != userID {
+			return nil, fmt.Errorf("conversation not found")
+		}
+	} else {
+		// Create new conversation with first message as title
+		title := message
+		if len(title) > 50 {
+			title = title[:47] + "..."
+		}
+		conv, err = s.chatRepo.CreateConversation(ctx, userID, title)
+		if err != nil {
+			return nil, fmt.Errorf("creating conversation: %w", err)
+		}
+		convID = conv.ID
+	}
+
+	if onStart != nil {
+		onStart(convID.String())
+	}
+
+	// Save user message
+	_, err = s.chatRepo.AddMessage(ctx, convID, "user", message, 0)
+	if err != nil {
+		return nil, fmt.Errorf("saving user message: %w", err)
+	}
+
+	// Get conversation history for context (last 20 messages)
+	history, err := s.chatRepo.GetRecentMessages(ctx, convID, 20)
+	if err != nil {
+		return nil, fmt.Errorf("getting history: %w", err)
+	}
+
+	// Get financial context
+	financialContext, err := s.getFinancialContext(ctx, userID)
+	if err != nil {
+		financialContext = &model.FinancialContext{}
+	}
+
+	// Build the system prompt with rich financial context
+	systemPrompt := s.buildSystemPrompt(userName, financialContext)
+
+	// Build message history for the LLM
+	messages := s.buildLLMMessages(systemPrompt, history, message)
+
+	// Call the AI (streaming)
+	llm, err := s.aiService.getLLM(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting LLM: %w", err)
+	}
+
+	var sb strings.Builder
+	streamingFunc := func(ctx context.Context, chunk []byte) error {
+		if len(chunk) == 0 {
+			return nil
+		}
+		text := string(chunk)
+		sb.WriteString(text)
+		if onChunk != nil {
+			if err := onChunk(text); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	response, err := llm.GenerateContent(ctx, messages, llms.WithStreamingFunc(streamingFunc))
+	if err != nil {
+		return nil, fmt.Errorf("calling AI: %w", err)
+	}
+
+	if len(response.Choices) == 0 {
+		return nil, fmt.Errorf("no response from AI")
+	}
+
+	aiResponse := strings.TrimSpace(sb.String())
+	if aiResponse == "" {
+		aiResponse = response.Choices[0].Content
+	}
+
+	// Save AI response
+	aiMsg, err := s.chatRepo.AddMessage(ctx, convID, "assistant", aiResponse, 0)
+	if err != nil {
+		return nil, fmt.Errorf("saving AI message: %w", err)
+	}
+
+	return &model.ChatResponse{
+		ConversationID: convID.String(),
+		Message:        *aiMsg,
+	}, nil
+}
+
 // buildSystemPrompt creates a rich system prompt with financial context
 func (s *AIChatService) buildSystemPrompt(userName string, ctx *model.FinancialContext) string {
 	var sb strings.Builder
