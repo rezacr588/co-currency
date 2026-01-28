@@ -1,0 +1,13 @@
+.git
+.github
+.DS_Store
+**/.DS_Store
+**/node_modules
+**/dist
+**/build
+**/.expo
+**/.expo-shared
+**/.turbo
+**/*.log
+**/.env
+**/.env.*
