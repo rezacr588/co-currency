@@ -10,12 +10,10 @@ import { Button } from '../../ui/Button';
 import { ErrorMessage } from '../../ui/ErrorMessage';
 import { Skeleton } from '../../ui/Skeleton';
 import type { WalletBalance } from '../../../types/wallet';
-import { formatCurrency, formatNumber, formatRate } from '../../../utils/format';
-import { CurrencySelect } from '../../ui';
-import { SwapButton } from '../Converter/SwapButton';
-import { CurrencyInput } from '../../ui/CurrencyInput';
-import { CURRENCY_SYMBOLS, CURRENCY_FLAGS } from '../../../utils/constants';
+import { formatCurrency, formatRate } from '../../../utils/format';
+import { CURRENCY_FLAGS } from '../../../utils/constants';
 import { ROUTES } from '../../../constants/routes';
+import { ConverterBox } from '../Converter/ConverterBox';
 
 export function WalletConvert() {
   const { t } = useLanguage();
@@ -26,6 +24,7 @@ export function WalletConvert() {
   const [toCurrency, setToCurrency] = useState('EUR');
   const [amount, setAmount] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const [isSwapping, setIsSwapping] = useState(false);
 
   // Get wallet balances to show available amounts
   const { data: balances, isLoading: balancesLoading } = useQuery({
@@ -34,7 +33,7 @@ export function WalletConvert() {
   });
 
   // Get conversion rate preview
-  const { data: ratePreview, isLoading: rateLoading } = useQuery({
+  const { data: ratePreview, isLoading: rateLoading, error: rateError } = useQuery({
     queryKey: ['convert-preview', fromCurrency, toCurrency, amount],
     queryFn: () =>
       api.convert({
@@ -51,6 +50,8 @@ export function WalletConvert() {
     invalidateQueries: [['wallet-summary'], ['wallet-transactions'], ['wallet-balances']],
     onSuccess: () => navigate(ROUTES.wallet),
   });
+
+  const previewError = rateError instanceof Error ? rateError : null;
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -80,11 +81,16 @@ export function WalletConvert() {
   };
 
   const handleSwap = () => {
-    setFromCurrency(toCurrency);
-    setToCurrency(fromCurrency);
+    setIsSwapping(true);
+    setTimeout(() => {
+      setFromCurrency(toCurrency);
+      setToCurrency(fromCurrency);
+      setIsSwapping(false);
+    }, 150);
   };
 
   const fromBalance = balances?.balances.find((b: WalletBalance) => b.currency === fromCurrency);
+  const amountExceedsBalance = Boolean(fromBalance && amount > fromBalance.balance);
 
   // Determine if we can submit
   const canSubmit = useMemo(() => {
@@ -108,80 +114,40 @@ export function WalletConvert() {
                 {error && <ErrorMessage>{error}</ErrorMessage>}
 
                 {/* Converter Box - Minimal Coin Design */}
-                <div className="relative">
-                  {/* FROM Section - Top Half */}
-                  <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-t-3xl p-4 pb-6">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
-                        {t('from')}
+                <ConverterBox
+                  amount={amount}
+                  onAmountChange={setAmount}
+                  fromCurrency={fromCurrency}
+                  toCurrency={toCurrency}
+                  onFromCurrencyChange={setFromCurrency}
+                  onToCurrencyChange={setToCurrency}
+                  currencies={currencies}
+                  isLoading={rateLoading && amount > 0}
+                  error={previewError}
+                  resultAmount={amount > 0 ? ratePreview?.result : undefined}
+                  onSwap={handleSwap}
+                  isSwapping={isSwapping}
+                  amountPlaceholder="0.00"
+                  amountClassName={amountExceedsBalance ? 'text-rose-500' : ''}
+                  fromMeta={
+                    balancesLoading ? (
+                      <Skeleton className="h-3 w-16" />
+                    ) : (
+                      <span
+                        className={`text-[10px] font-medium ${
+                          amountExceedsBalance ? 'text-rose-500' : 'text-slate-500 dark:text-slate-400'
+                        }`}
+                      >
+                        {t('available')}: {formatCurrency(fromBalance?.balance || 0, fromCurrency)}
                       </span>
-                      {balancesLoading ? (
-                        <Skeleton className="h-3 w-16" />
-                      ) : (
-                        <span className={`text-[10px] font-medium ${
-                          fromBalance && amount > fromBalance.balance 
-                            ? 'text-rose-500' 
-                            : 'text-slate-500 dark:text-slate-400'
-                        }`}>
-                          {t('available')}: {formatCurrency(fromBalance?.balance || 0, fromCurrency)}
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <CurrencyInput
-                        value={amount}
-                        onChange={setAmount}
-                        currencyCode={fromCurrency}
-                        currencySymbol={CURRENCY_SYMBOLS[fromCurrency]}
-                        placeholder="0.00"
-                        className={fromBalance && amount > fromBalance.balance ? 'text-rose-500' : ''}
-                      />
-                      <CurrencySelect
-                        variant="inline"
-                        value={fromCurrency}
-                        onChange={setFromCurrency}
-                        currencies={currencies}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Swap Button - Coin Divider */}
-                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-                    <SwapButton onClick={handleSwap} />
-                  </div>
-
-                  {/* TO Section - Bottom Half */}
-                  <div className="relative bg-slate-50 dark:bg-slate-800/50 border border-t-0 border-slate-200 dark:border-slate-700 rounded-b-3xl p-4 pt-6">
-                    <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+                    )
+                  }
+                  toLabel={
+                    <>
                       {t('to')} ({t('estimated')})
-                    </span>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="flex-1 min-w-0 py-2 overflow-hidden">
-                        {rateLoading && amount > 0 ? (
-                          <div className="h-7 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
-                        ) : ratePreview && amount > 0 ? (
-                          <div className="flex items-baseline gap-1 overflow-hidden">
-                            <span className="text-base text-slate-400 flex-shrink-0">
-                              {CURRENCY_SYMBOLS[toCurrency] || ''}
-                            </span>
-                            <span className="text-2xl sm:text-3xl font-semibold text-slate-800 dark:text-white tabular-nums truncate">
-                              {formatNumber(ratePreview.result)}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-2xl text-slate-300 dark:text-slate-600">—</span>
-                        )}
-                      </div>
-                      <CurrencySelect
-                        variant="inline"
-                        value={toCurrency}
-                        onChange={setToCurrency}
-                        currencies={currencies}
-                      />
-                    </div>
-                  </div>
-                </div>
+                    </>
+                  }
+                />
 
                 {/* Exchange Rate Info */}
                 {ratePreview && amount > 0 && (

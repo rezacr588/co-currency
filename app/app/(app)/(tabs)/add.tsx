@@ -11,7 +11,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { TrendingUp, TrendingDown, Check } from 'lucide-react-native';
 import { api } from '../../../src/api';
@@ -28,9 +28,11 @@ export default function AddTransactionScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
+  const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
   const [type, setType] = useState<'credit' | 'debit'>('debit');
   const [amount, setAmount] = useState('');
@@ -81,14 +83,17 @@ export default function AddTransactionScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? Math.max(insets.top, 12) : 0}
       >
         <ScrollView
           className="flex-1"
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={{
             padding: isDesktop ? 32 : 24,
             maxWidth: isDesktop ? 800 : undefined,
             alignSelf: isDesktop ? 'center' : undefined,
             width: '100%',
+            paddingBottom: bottomPadding,
           }}
         >
           <Text

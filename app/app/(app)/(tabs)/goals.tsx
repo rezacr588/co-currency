@@ -10,7 +10,7 @@ import {
   Modal,
   useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Target, CheckCircle, X, DollarSign, Calendar } from 'lucide-react-native';
 import { api } from '../../../src/api';
@@ -39,9 +39,11 @@ export default function GoalsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
+  const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
   const { data, isPending } = useQuery({
     queryKey: ['goals'],
@@ -75,6 +77,7 @@ export default function GoalsScreen() {
           maxWidth: 1400,
           width: '100%',
           alignSelf: 'center',
+          paddingBottom: bottomPadding,
         }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >

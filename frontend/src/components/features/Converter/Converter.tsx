@@ -1,14 +1,10 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useConvert, useCurrencies } from '../../../hooks';
-import { SwapButton } from './SwapButton';
-import { CurrencySelect } from '../../ui';
-import { CurrencyInput } from '../../ui/CurrencyInput';
+import { ConverterBox } from './ConverterBox';
 import { useLanguage } from '../../../context/LanguageContext';
-import { formatRate, formatNumber, formatTime } from '../../../utils/format';
-import { CURRENCY_SYMBOLS, CURRENCY_FLAGS } from '../../../utils/constants';
+import { formatRate, formatTime } from '../../../utils/format';
+import { CURRENCY_FLAGS } from '../../../utils/constants';
 import {
-  TrendingUp,
-  TrendingDown,
   Clock,
   Zap,
   RefreshCw,
@@ -50,34 +46,6 @@ function loadState(): ConverterState {
 
 function saveState(state: ConverterState): void {
   writeJSON(STORAGE_KEY, state);
-}
-
-// Animated number component
-function AnimatedNumber({ value, className }: { value: number; className?: string }) {
-  const [displayValue, setDisplayValue] = useState(value);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const prevValue = useRef(value);
-
-  useEffect(() => {
-    if (prevValue.current !== value) {
-      setIsAnimating(true);
-      const timer = setTimeout(() => {
-        setDisplayValue(value);
-        setIsAnimating(false);
-      }, 150);
-      prevValue.current = value;
-      return () => clearTimeout(timer);
-    }
-  }, [value]);
-
-  return (
-    <span
-      className={`transition-all duration-300 ${isAnimating ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
-        } ${className}`}
-    >
-      {formatNumber(displayValue)}
-    </span>
-  );
 }
 
 export function Converter() {
@@ -187,85 +155,22 @@ export function Converter() {
           {/* Main Converter Section */}
           <div className="px-3 sm:px-6 pb-4 sm:pb-6 space-y-3 sm:space-y-4">
             {/* Converter Box - Minimal Coin Design */}
-            <div
-              className={`relative transition-all duration-300 ${isSwapping ? 'scale-[0.98]' : 'scale-100'
-                }`}
-            >
-              {/* FROM Section - Top Half */}
-              <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-t-3xl p-4 pb-6">
-                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
-                  {t('from') || 'From'}
-                </span>
-                <div className="flex items-center gap-2 mt-1">
-                  <CurrencyInput
-                    value={amount}
-                    onChange={setAmount}
-                    currencyCode={fromCurrency}
-                    currencySymbol={CURRENCY_SYMBOLS[fromCurrency]}
-                    placeholder="0"
-                  />
-                  <CurrencySelect
-                    variant="inline"
-                    value={fromCurrency}
-                    onChange={setFromCurrency}
-                    currencies={currencies}
-                  />
-                </div>
-              </div>
-
-              {/* Swap Button - Coin Divider */}
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-                <SwapButton onClick={handleSwap} />
-              </div>
-
-              {/* TO Section - Bottom Half */}
-              <div className="relative bg-slate-50 dark:bg-slate-800/50 border border-t-0 border-slate-200 dark:border-slate-700 rounded-b-3xl p-4 pt-6">
-                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
-                  {t('to') || 'To'}
-                </span>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="flex-1 min-w-0 py-2 overflow-hidden">
-                    {isLoading ? (
-                      <div className="h-7 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
-                    ) : error ? (
-                      <span className="text-sm text-red-500">Error</span>
-                    ) : result ? (
-                      <div className="flex items-baseline gap-1 overflow-hidden">
-                        <span className="text-base text-slate-400 flex-shrink-0">
-                          {CURRENCY_SYMBOLS[toCurrency] || ''}
-                        </span>
-                        <AnimatedNumber
-                          value={result.result}
-                          className="text-2xl sm:text-3xl font-semibold text-slate-800 dark:text-white tabular-nums truncate"
-                        />
-                        {rateIndicator && (
-                          <div
-                            className={`flex-shrink-0 ml-1 ${rateIndicator === 'up'
-                              ? 'text-emerald-500'
-                              : 'text-amber-500'
-                              }`}
-                          >
-                            {rateIndicator === 'up' ? (
-                              <TrendingUp className="w-3 h-3" />
-                            ) : (
-                              <TrendingDown className="w-3 h-3" />
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-2xl text-slate-300 dark:text-slate-600">—</span>
-                    )}
-                  </div>
-                      <CurrencySelect
-                        variant="inline"
-                        value={toCurrency}
-                        onChange={setToCurrency}
-                        currencies={currencies}
-                      />
-                </div>
-              </div>
-            </div>
+            <ConverterBox
+              amount={amount}
+              onAmountChange={setAmount}
+              fromCurrency={fromCurrency}
+              toCurrency={toCurrency}
+              onFromCurrencyChange={setFromCurrency}
+              onToCurrencyChange={setToCurrency}
+              currencies={currencies}
+              isLoading={isLoading}
+              error={error}
+              resultAmount={result?.result}
+              onSwap={handleSwap}
+              isSwapping={isSwapping}
+              amountPlaceholder="0"
+              resultIndicator={rateIndicator}
+            />
 
             {/* Validation Error */}
             {validationError && (

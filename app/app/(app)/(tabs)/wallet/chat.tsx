@@ -4,6 +4,7 @@ import {
   Text,
   TextInput,
   ScrollView,
+  FlatList,
   Pressable,
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -104,7 +105,7 @@ export default function AIChatScreen() {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(
     conversationId || null
   );
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<FlatList<ChatMessage>>(null);
   const streamingStateRef = useRef<{ conversationId: string; messageId: string } | null>(null);
   const optimisticConversationIdRef = useRef<string | null>(null);
   const isNearBottomRef = useRef(true);
@@ -656,7 +657,8 @@ export default function AIChatScreen() {
                 e.stopPropagation();
                 deleteConversationMutation.mutate(conv.id);
               }}
-              className="p-1"
+              className="p-2"
+              hitSlop={10}
               style={{ cursor: 'pointer' }}
             >
               <Trash2 size={16} color="rgb(220, 38, 38)" />
@@ -708,241 +710,252 @@ export default function AIChatScreen() {
     </View>
   );
 
-  const renderMessages = () => (
-    <ScrollView
-      ref={scrollViewRef}
-      className="flex-1"
-      style={contentWidthStyle}
-      keyboardShouldPersistTaps="handled"
-      onContentSizeChange={maybeAutoScroll}
-      onScroll={handleScroll}
-      scrollEventThrottle={16}
-      contentContainerStyle={{
-        gap: 16,
-        paddingHorizontal: 16,
-        paddingTop: 16,
-        paddingBottom: Math.max(insets.bottom, 16) + 72,
-        flexGrow: messages.length === 0 ? 1 : undefined,
-        justifyContent: messages.length === 0 ? 'center' : 'flex-start',
-      }}
-    >
-      {loadingMessages && activeConversationId ? (
-        <View className="items-center py-8">
-          <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
-        </View>
-      ) : !aiConfigured ? (
-        <View className="bg-card border border-border rounded-2xl p-6 items-center">
-          <Sparkles size={24} color="rgb(212, 175, 55)" />
-          <Text className="text-foreground font-semibold mt-3">AI assistant is offline</Text>
-          <Text className="text-muted-foreground text-sm text-center mt-2">
-            The server is missing an AI configuration. Please add an AI_API_KEY and redeploy.
-          </Text>
-        </View>
-      ) : messages.length === 0 ? (
-        renderWelcome()
-      ) : (
-        <>
-          {messages.map((msg) => (
-            <View
-              key={msg.id}
-              className={`flex-row ${
-                msg.role === 'user' ? 'justify-end' : 'justify-start'
-              }`}
-              style={{ width: '100%' }}
-            >
-              <View
-                className={`flex-row ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
-                style={{ gap: 12, maxWidth: messageMaxWidth }}
-              >
-                <View
-                  className={`w-8 h-8 rounded-full items-center justify-center ${
-                    msg.role === 'user' ? 'bg-secondary' : 'bg-primary'
-                  }`}
-                >
-                  {msg.role === 'user' ? (
-                    <User size={16} color="rgb(148, 163, 184)" />
-                  ) : (
-                    <Bot size={16} color="#09090b" />
+  const renderMessages = () => {
+    const listEmptyContent = () => {
+      if (loadingMessages && activeConversationId) {
+        return (
+          <View className="items-center py-8">
+            <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
+          </View>
+        );
+      }
+      if (!aiConfigured) {
+        return (
+          <View className="bg-card border border-border rounded-2xl p-6 items-center">
+            <Sparkles size={24} color="rgb(212, 175, 55)" />
+            <Text className="text-foreground font-semibold mt-3">AI assistant is offline</Text>
+            <Text className="text-muted-foreground text-sm text-center mt-2">
+              The server is missing an AI configuration. Please add an AI_API_KEY and redeploy.
+            </Text>
+          </View>
+        );
+      }
+      return renderWelcome();
+    };
+
+    const footerContent = isTyping || pendingAction ? (
+      <View style={{ gap: 16 }}>
+        {isTyping && (
+          <View className="flex-row justify-start" style={{ width: '100%' }}>
+            <View className="flex-row" style={{ gap: 12, maxWidth: messageMaxWidth }}>
+              <View className="w-8 h-8 rounded-full bg-primary items-center justify-center">
+                <Bot size={16} color="#09090b" />
+              </View>
+              <View className="bg-card px-4 py-3 rounded-2xl rounded-bl-sm">
+                <View className="flex-row" style={{ gap: 4 }}>
+                  <View className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
+                  <View className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
+                  <View className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {pendingAction && (
+          <View className="flex-row justify-start" style={{ width: '100%' }}>
+            <View className="flex-row" style={{ gap: 12, maxWidth: messageMaxWidth }}>
+              <View className="w-8 h-8 rounded-full bg-primary items-center justify-center">
+                <Sparkles size={16} color="#09090b" />
+              </View>
+              <View className="bg-card border border-border rounded-2xl px-4 py-3 flex-1">
+                <View className="flex-row items-center justify-between mb-2">
+                  <Text className="text-sm font-semibold text-foreground">
+                    {pendingAction.kind === 'transaction'
+                      ? 'Transaction assistant'
+                      : pendingAction.kind === 'convert'
+                        ? 'Conversion assistant'
+                        : 'Live FX rate'}
+                  </Text>
+                  {pendingAction.status === 'done' && (
+                    <CheckCircle2 size={16} color="#22c55e" />
+                  )}
+                  {pendingAction.status === 'error' && (
+                    <AlertTriangle size={16} color="#ef4444" />
                   )}
                 </View>
-                <View
-                  className={`px-4 py-3 rounded-2xl ${
-                    msg.role === 'user'
-                      ? 'bg-primary rounded-br-sm'
-                      : 'bg-card rounded-bl-sm'
-                  }`}
-                >
-                  <Text
-                    className={`text-sm ${
-                      msg.role === 'user' ? 'text-primary-foreground' : 'text-foreground'
-                    }`}
-                  >
-                    {msg.content}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          ))}
 
-          {isTyping && (
-            <View className="flex-row justify-start" style={{ width: '100%' }}>
-              <View className="flex-row" style={{ gap: 12, maxWidth: messageMaxWidth }}>
-                <View className="w-8 h-8 rounded-full bg-primary items-center justify-center">
-                  <Bot size={16} color="#09090b" />
-                </View>
-                <View className="bg-card px-4 py-3 rounded-2xl rounded-bl-sm">
-                  <View className="flex-row" style={{ gap: 4 }}>
-                    <View className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
-                    <View className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
-                    <View className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
-                  </View>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {pendingAction && (
-            <View className="flex-row justify-start" style={{ width: '100%' }}>
-              <View className="flex-row" style={{ gap: 12, maxWidth: messageMaxWidth }}>
-                <View className="w-8 h-8 rounded-full bg-primary items-center justify-center">
-                  <Sparkles size={16} color="#09090b" />
-                </View>
-                <View className="bg-card border border-border rounded-2xl px-4 py-3 flex-1">
-                  <View className="flex-row items-center justify-between mb-2">
-                    <Text className="text-sm font-semibold text-foreground">
+                {pendingAction.status === 'loading' && (
+                  <View className="flex-row items-center">
+                    <ActivityIndicator size="small" color="rgb(212, 175, 55)" />
+                    <Text className="text-sm text-muted-foreground ml-2">
                       {pendingAction.kind === 'transaction'
-                        ? 'Transaction assistant'
-                        : pendingAction.kind === 'convert'
-                          ? 'Conversion assistant'
-                          : 'Live FX rate'}
+                        ? 'Analyzing…'
+                        : 'Fetching rate…'}
                     </Text>
-                    {pendingAction.status === 'done' && (
-                      <CheckCircle2 size={16} color="#22c55e" />
-                    )}
-                    {pendingAction.status === 'error' && (
-                      <AlertTriangle size={16} color="#ef4444" />
-                    )}
                   </View>
+                )}
 
-                  {pendingAction.status === 'loading' && (
-                    <View className="flex-row items-center">
-                      <ActivityIndicator size="small" color="rgb(212, 175, 55)" />
-                      <Text className="text-sm text-muted-foreground ml-2">
-                        {pendingAction.kind === 'transaction'
-                          ? 'Analyzing…'
-                          : 'Fetching rate…'}
+                {pendingAction.status === 'error' && (
+                  <Text className="text-sm text-danger">
+                    {pendingAction.error || 'Something went wrong.'}
+                  </Text>
+                )}
+
+                {pendingAction.kind === 'transaction' && pendingAction.status === 'ready' && pendingAction.parsed && (
+                  <>
+                    <View className="bg-muted border border-border rounded-xl p-3 mb-3">
+                      <Text className="text-sm font-semibold text-foreground">
+                        {pendingAction.parsed.type === 'credit' ? 'Income' : 'Expense'} ·{' '}
+                        {pendingAction.parsed.currency} {pendingAction.parsed.amount}
+                      </Text>
+                      <Text className="text-xs text-muted-foreground mt-1">
+                        {pendingAction.parsed.description}
                       </Text>
                     </View>
-                  )}
-
-                  {pendingAction.status === 'error' && (
-                    <Text className="text-sm text-danger">
-                      {pendingAction.error || 'Something went wrong.'}
-                    </Text>
-                  )}
-
-                  {pendingAction.kind === 'transaction' && pendingAction.status === 'ready' && pendingAction.parsed && (
-                    <>
-                      <View className="bg-muted border border-border rounded-xl p-3 mb-3">
-                        <Text className="text-sm font-semibold text-foreground">
-                          {pendingAction.parsed.type === 'credit' ? 'Income' : 'Expense'} ·{' '}
-                          {pendingAction.parsed.currency} {pendingAction.parsed.amount}
+                    <View className="flex-row" style={{ gap: 8 }}>
+                      <Pressable
+                        onPress={() => applyParsedMutation.mutate(pendingAction.parsed!)}
+                        className="bg-primary px-4 py-2 rounded-lg"
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <Text className="text-primary-foreground text-sm font-semibold">
+                          Add transaction
                         </Text>
-                        <Text className="text-xs text-muted-foreground mt-1">
-                          {pendingAction.parsed.description}
-                        </Text>
-                      </View>
-                      <View className="flex-row" style={{ gap: 8 }}>
-                        <Pressable
-                          onPress={() => applyParsedMutation.mutate(pendingAction.parsed!)}
-                          className="bg-primary px-4 py-2 rounded-lg"
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <Text className="text-primary-foreground text-sm font-semibold">
-                            Add transaction
-                          </Text>
-                        </Pressable>
-                        <Pressable
-                          onPress={() => setPendingAction(null)}
-                          className="bg-secondary px-4 py-2 rounded-lg border border-border"
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <Text className="text-foreground text-sm font-semibold">Dismiss</Text>
-                        </Pressable>
-                      </View>
-                    </>
-                  )}
-
-                  {pendingAction.kind === 'convert' && pendingAction.status === 'ready' && pendingAction.result && (
-                    <>
-                      <View className="bg-muted border border-border rounded-xl p-3 mb-3">
-                        <Text className="text-sm font-semibold text-foreground">
-                          {pendingAction.amount} {pendingAction.from} →{' '}
-                          {formatNumber(pendingAction.result.result, 2)} {pendingAction.to}
-                        </Text>
-                        <Text className="text-xs text-muted-foreground mt-1">
-                          Rate: {formatNumber(pendingAction.result.rate, 4)} {pendingAction.to}/{pendingAction.from}
-                        </Text>
-                      </View>
-                      <View className="flex-row" style={{ gap: 8 }}>
-                        <Pressable
-                          onPress={() =>
-                            walletConvertMutation.mutate({
-                              from: pendingAction.from,
-                              to: pendingAction.to,
-                              amount: pendingAction.amount,
-                            })
-                          }
-                          className="bg-primary px-4 py-2 rounded-lg"
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <Text className="text-primary-foreground text-sm font-semibold">
-                            Convert in wallet
-                          </Text>
-                        </Pressable>
-                        <Pressable
-                          onPress={() => setPendingAction(null)}
-                          className="bg-secondary px-4 py-2 rounded-lg border border-border"
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <Text className="text-foreground text-sm font-semibold">Dismiss</Text>
-                        </Pressable>
-                      </View>
-                    </>
-                  )}
-
-                  {pendingAction.kind === 'rate' && pendingAction.status === 'ready' && pendingAction.result && (
-                    <>
-                      <Text className="text-sm font-semibold text-foreground">
-                        1 {pendingAction.from} = {formatNumber(pendingAction.result.rate, 4)} {pendingAction.to}
-                      </Text>
+                      </Pressable>
                       <Pressable
                         onPress={() => setPendingAction(null)}
-                        className="bg-secondary px-3 py-2 rounded-lg border border-border mt-3 self-start"
+                        className="bg-secondary px-4 py-2 rounded-lg border border-border"
                         style={{ cursor: 'pointer' }}
                       >
                         <Text className="text-foreground text-sm font-semibold">Dismiss</Text>
                       </Pressable>
-                    </>
-                  )}
+                    </View>
+                  </>
+                )}
 
-                  {pendingAction.status === 'done' && (
-                    <Text className="text-sm text-success">
-                      {pendingAction.kind === 'transaction'
-                        ? 'Transaction added.'
-                        : pendingAction.kind === 'convert'
-                          ? 'Conversion completed.'
-                          : 'Rate updated.'}
+                {pendingAction.kind === 'convert' && pendingAction.status === 'ready' && pendingAction.result && (
+                  <>
+                    <View className="bg-muted border border-border rounded-xl p-3 mb-3">
+                      <Text className="text-sm font-semibold text-foreground">
+                        {pendingAction.amount} {pendingAction.from} →{' '}
+                        {formatNumber(pendingAction.result.result, 2)} {pendingAction.to}
+                      </Text>
+                      <Text className="text-xs text-muted-foreground mt-1">
+                        Rate: {formatNumber(pendingAction.result.rate, 4)} {pendingAction.to}/{pendingAction.from}
+                      </Text>
+                    </View>
+                    <View className="flex-row" style={{ gap: 8 }}>
+                      <Pressable
+                        onPress={() =>
+                          walletConvertMutation.mutate({
+                            from: pendingAction.from,
+                            to: pendingAction.to,
+                            amount: pendingAction.amount,
+                          })
+                        }
+                        className="bg-primary px-4 py-2 rounded-lg"
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <Text className="text-primary-foreground text-sm font-semibold">
+                          Convert in wallet
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => setPendingAction(null)}
+                        className="bg-secondary px-4 py-2 rounded-lg border border-border"
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <Text className="text-foreground text-sm font-semibold">Dismiss</Text>
+                      </Pressable>
+                    </View>
+                  </>
+                )}
+
+                {pendingAction.kind === 'rate' && pendingAction.status === 'ready' && pendingAction.result && (
+                  <>
+                    <Text className="text-sm font-semibold text-foreground">
+                      1 {pendingAction.from} = {formatNumber(pendingAction.result.rate, 4)} {pendingAction.to}
                     </Text>
-                  )}
-                </View>
+                    <Pressable
+                      onPress={() => setPendingAction(null)}
+                      className="bg-secondary px-3 py-2 rounded-lg border border-border mt-3 self-start"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <Text className="text-foreground text-sm font-semibold">Dismiss</Text>
+                    </Pressable>
+                  </>
+                )}
+
+                {pendingAction.status === 'done' && (
+                  <Text className="text-sm text-success">
+                    {pendingAction.kind === 'transaction'
+                      ? 'Transaction added.'
+                      : pendingAction.kind === 'convert'
+                        ? 'Conversion completed.'
+                        : 'Rate updated.'}
+                  </Text>
+                )}
               </View>
             </View>
-          )}
-        </>
-      )}
-    </ScrollView>
-  );
+          </View>
+        )}
+      </View>
+    ) : null;
+
+    return (
+      <FlatList
+        ref={scrollViewRef}
+        data={messages}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item: msg }) => (
+          <View
+            className={`flex-row ${
+              msg.role === 'user' ? 'justify-end' : 'justify-start'
+            }`}
+            style={{ width: '100%' }}
+          >
+            <View
+              className={`flex-row ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+              style={{ gap: 12, maxWidth: messageMaxWidth }}
+            >
+              <View
+                className={`w-8 h-8 rounded-full items-center justify-center ${
+                  msg.role === 'user' ? 'bg-secondary' : 'bg-primary'
+                }`}
+              >
+                {msg.role === 'user' ? (
+                  <User size={16} color="rgb(148, 163, 184)" />
+                ) : (
+                  <Bot size={16} color="#09090b" />
+                )}
+              </View>
+              <View
+                className={`px-4 py-3 rounded-2xl ${
+                  msg.role === 'user'
+                    ? 'bg-primary rounded-br-sm'
+                    : 'bg-card rounded-bl-sm'
+                }`}
+              >
+                <Text
+                  className={`text-sm ${
+                    msg.role === 'user' ? 'text-primary-foreground' : 'text-foreground'
+                  }`}
+                >
+                  {msg.content}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+        style={contentWidthStyle}
+        keyboardShouldPersistTaps="handled"
+        onContentSizeChange={maybeAutoScroll}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={{
+          gap: 16,
+          paddingHorizontal: 16,
+          paddingTop: 16,
+          paddingBottom: Math.max(insets.bottom, 16) + 96,
+          flexGrow: messages.length === 0 ? 1 : undefined,
+          justifyContent: messages.length === 0 ? 'center' : 'flex-start',
+        }}
+        ListEmptyComponent={listEmptyContent}
+        ListFooterComponent={footerContent}
+      />
+    );
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top', 'bottom']}>

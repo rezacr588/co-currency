@@ -1,37 +1,25 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, useWindowDimensions, TextInput, Modal } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { Link } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, Wallet, ArrowRight, User, DollarSign, PiggyBank, CreditCard, ArrowDownUp, ChevronDown, X, Search, Lightbulb } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Wallet, ArrowRight, User, DollarSign, PiggyBank, CreditCard, Lightbulb } from 'lucide-react-native';
 import { api } from '../../../src/api';
 import { useAuth } from '../../../src/context/AuthContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
-import { formatCompactCurrency, formatDate, formatNumber, getCurrencyDisplay } from '../../../src/utils/format';
+import { formatCompactCurrency, formatDate } from '../../../src/utils/format';
 import { StyledCategoryIcon } from '../../../src/constants/icons';
-import { useConvert, useCurrencies } from '../../../src/hooks';
 import { Skeleton } from '../../../src/components/ui/Skeleton';
-
-const POPULAR_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'IRR', 'TRY', 'CAD', 'AUD'];
+import { CurrencyConverter } from '../../../src/components/features/CurrencyConverter';
 
 export default function DashboardScreen() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
-
-  // Converter state
-  const [fromCurrency, setFromCurrency] = useState('USD');
-  const [toCurrency, setToCurrency] = useState('EUR');
-  const [amount, setAmount] = useState('1');
-  const [showCurrencyPicker, setShowCurrencyPicker] = useState<'from' | 'to' | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const parsedAmount = parseFloat(amount) || 0;
-  const { data: conversion, isPending: isConverting } = useConvert(fromCurrency, toCurrency, parsedAmount);
-  const { data: currencies } = useCurrencies();
+  const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
   const { data: summary, isPending } = useQuery({
     queryKey: ['wallet', 'summary'],
@@ -105,28 +93,6 @@ export default function DashboardScreen() {
     });
   }
 
-  const swapCurrencies = () => {
-    setFromCurrency(toCurrency);
-    setToCurrency(fromCurrency);
-  };
-
-  const handleSelectCurrency = (code: string) => {
-    if (showCurrencyPicker === 'from') {
-      setFromCurrency(code);
-    } else if (showCurrencyPicker === 'to') {
-      setToCurrency(code);
-    }
-    setShowCurrencyPicker(null);
-    setSearchQuery('');
-  };
-
-  const filteredCurrencies = currencies?.filter((c: { code: string; name: string }) =>
-    c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.name.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
-
-  const fromDisplay = getCurrencyDisplay(fromCurrency);
-  const toDisplay = getCurrencyDisplay(toCurrency);
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
@@ -137,6 +103,7 @@ export default function DashboardScreen() {
           maxWidth: isDesktop ? 1400 : undefined,
           alignSelf: isDesktop ? 'center' : undefined,
           width: '100%',
+          paddingBottom: bottomPadding,
         }}
       >
         {/* Mobile Header - Only show on mobile */}
@@ -270,7 +237,7 @@ export default function DashboardScreen() {
         </View>
 
         {/* Currency Converter Widget */}
-        <View className="bg-card border border-border p-4 rounded-xl mb-6">
+        <View className="mb-6">
           <View className="flex-row items-center justify-between mb-4">
             <Text className="text-base font-semibold text-foreground">{t('currencyConverter') || 'Currency Converter'}</Text>
             <Link href="/(app)/(tabs)/wallet/convert" asChild>
@@ -281,69 +248,7 @@ export default function DashboardScreen() {
             </Link>
           </View>
 
-          <View style={{ flexDirection: isTablet ? 'row' : 'column', gap: 12, alignItems: 'center' }}>
-            {/* Amount & From Currency */}
-            <View style={{ flex: isTablet ? 1 : undefined, width: isTablet ? undefined : '100%' }}>
-              <View className="bg-muted border border-border rounded-lg flex-row items-center">
-                <TextInput
-                  className="flex-1 p-3 text-lg font-semibold text-foreground"
-                  style={{ outlineStyle: 'none' } as any}
-                  value={amount}
-                  onChangeText={setAmount}
-                  keyboardType="decimal-pad"
-                  placeholder="1"
-                  placeholderTextColor="#52525b"
-                />
-                <Pressable
-                  onPress={() => setShowCurrencyPicker('from')}
-                  style={{ cursor: 'pointer' }}
-                  className="flex-row items-center bg-secondary px-3 py-2 rounded-md mr-2"
-                >
-                  <Text className="text-base mr-1">{fromDisplay.flag || '🌐'}</Text>
-                  <Text className="font-medium text-foreground text-sm">{fromCurrency}</Text>
-                  <ChevronDown size={14} color="#71717a" />
-                </Pressable>
-              </View>
-            </View>
-
-            {/* Swap Button */}
-            <Pressable
-              onPress={swapCurrencies}
-              style={{ cursor: 'pointer' }}
-              className="bg-secondary border border-border p-2 rounded-full"
-            >
-              <ArrowDownUp size={18} color="#a1a1aa" />
-            </Pressable>
-
-            {/* To Currency & Result */}
-            <View style={{ flex: isTablet ? 1 : undefined, width: isTablet ? undefined : '100%' }}>
-              <Pressable
-                onPress={() => setShowCurrencyPicker('to')}
-                style={{ cursor: 'pointer' }}
-                className="bg-muted border border-border rounded-lg flex-row items-center p-3"
-              >
-                {isConverting ? (
-                  <ActivityIndicator size="small" color="#71717a" className="flex-1" />
-                ) : (
-                  <Text className="flex-1 text-lg font-semibold text-foreground">
-                    {conversion ? formatNumber(conversion.result, 2) : '0.00'}
-                  </Text>
-                )}
-                <View className="flex-row items-center bg-secondary px-3 py-2 rounded-md">
-                  <Text className="text-base mr-1">{toDisplay.flag || '🌐'}</Text>
-                  <Text className="font-medium text-foreground text-sm">{toCurrency}</Text>
-                  <ChevronDown size={14} color="#71717a" />
-                </View>
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Rate info */}
-          {conversion && (
-            <Text className="text-muted-foreground text-xs mt-3 text-center">
-              1 {fromCurrency} = {formatNumber(conversion.rate, 4)} {toCurrency}
-            </Text>
-          )}
+          <CurrencyConverter variant="full" showQuickSelect={false} />
         </View>
 
         {/* Two Column Layout for Desktop */}
@@ -460,124 +365,6 @@ export default function DashboardScreen() {
         </View>
       </ScrollView>
 
-      {/* Currency Picker Modal */}
-      <Modal
-        visible={showCurrencyPicker !== null}
-        animationType="slide"
-        transparent
-        onRequestClose={() => {
-          setShowCurrencyPicker(null);
-          setSearchQuery('');
-        }}
-      >
-        <Pressable
-          onPress={() => {
-            setShowCurrencyPicker(null);
-            setSearchQuery('');
-          }}
-          className="flex-1 bg-black/70 justify-end"
-        >
-          <Pressable
-            onPress={(e) => e.stopPropagation()}
-            className="bg-background border-t border-border rounded-t-2xl"
-            style={{
-              maxHeight: '80%',
-              minHeight: '50%',
-            }}
-          >
-            {/* Modal Header */}
-            <View className="flex-row items-center justify-between p-4 border-b border-border">
-              <Text className="text-lg font-semibold text-foreground">
-                {showCurrencyPicker === 'from' ? 'Select from currency' : 'Select to currency'}
-              </Text>
-              <Pressable
-                onPress={() => {
-                  setShowCurrencyPicker(null);
-                  setSearchQuery('');
-                }}
-                style={{ cursor: 'pointer' }}
-                className="p-2 bg-secondary rounded-full"
-              >
-                <X size={18} color="#a1a1aa" />
-              </Pressable>
-            </View>
-
-            {/* Search Input */}
-            <View className="p-4">
-              <View className="bg-muted border border-border rounded-lg flex-row items-center px-4">
-                <Search size={18} color="#71717a" />
-                <TextInput
-                  className="flex-1 p-3 text-foreground"
-                  style={{ outlineStyle: 'none' } as any}
-                  placeholder="Search currency..."
-                  placeholderTextColor="#52525b"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  autoFocus
-                />
-              </View>
-            </View>
-
-            {/* Popular Currencies */}
-            {!searchQuery && (
-              <View className="px-4 pb-2">
-                <Text className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">Popular</Text>
-                <View className="flex-row flex-wrap gap-2">
-                  {POPULAR_CURRENCIES.map((code) => {
-                    const display = getCurrencyDisplay(code);
-                    const isSelected = showCurrencyPicker === 'from' ? code === fromCurrency : code === toCurrency;
-                    return (
-                      <Pressable
-                        key={code}
-                        onPress={() => handleSelectCurrency(code)}
-                        style={{ cursor: 'pointer' }}
-                        className={`px-3 py-2 rounded-md border ${isSelected ? 'bg-foreground border-foreground' : 'bg-secondary border-border'}`}
-                      >
-                        <Text className={`text-sm ${isSelected ? 'text-background font-semibold' : 'text-foreground'}`}>
-                          {display.flag || '🌐'} {code}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-            )}
-
-            {/* Currency List */}
-            <ScrollView className="flex-1 px-4">
-              <Text className="text-xs text-muted-foreground mb-2 mt-2 uppercase tracking-wider">
-                {searchQuery ? 'Search results' : 'All currencies'}
-              </Text>
-              {filteredCurrencies.map((currency: { code: string; name: string }) => {
-                const display = getCurrencyDisplay(currency.code);
-                const isSelected = showCurrencyPicker === 'from' ? currency.code === fromCurrency : currency.code === toCurrency;
-                return (
-                  <Pressable
-                    key={currency.code}
-                    onPress={() => handleSelectCurrency(currency.code)}
-                    style={{ cursor: 'pointer' }}
-                    className={`flex-row items-center p-3 rounded-lg mb-1 border ${isSelected ? 'bg-foreground border-foreground' : 'border-transparent active:bg-secondary'}`}
-                  >
-                    <Text className="text-xl mr-3">{display.flag || '🌐'}</Text>
-                    <View className="flex-1">
-                      <Text className={`font-medium text-sm ${isSelected ? 'text-background' : 'text-foreground'}`}>
-                        {currency.code}
-                      </Text>
-                      <Text className={`text-xs ${isSelected ? 'text-background/70' : 'text-muted-foreground'}`}>
-                        {currency.name}
-                      </Text>
-                    </View>
-                    <Text className={`text-sm ${isSelected ? 'text-background' : 'text-muted-foreground'}`}>
-                      {display.symbol}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-              <View className="h-8" />
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </SafeAreaView>
   );
 }

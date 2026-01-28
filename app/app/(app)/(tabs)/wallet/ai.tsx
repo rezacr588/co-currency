@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Bot, Sparkles, Check } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
+import { useTheme } from '../../../../src/context/ThemeContext';
 import { formatCurrency } from '../../../../src/utils/format';
 import type { AIParseResponse } from '../../../../src/types/wallet';
 
@@ -14,9 +15,13 @@ export default function AIReceiptScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
+  const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
+  const iconColor = isDark ? 'rgb(248, 250, 252)' : 'rgb(51, 65, 85)';
 
   const [text, setText] = useState('');
   const [parsedResult, setParsedResult] = useState<AIParseResponse | null>(null);
@@ -70,8 +75,13 @@ export default function AIReceiptScreen() {
     <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
       {/* Header */}
       <View className="flex-row items-center p-4 border-b border-border" style={{ maxWidth: 800, width: '100%', alignSelf: 'center' }}>
-        <Pressable onPress={() => router.back()} className="p-2 mr-2" style={{ cursor: 'pointer' }}>
-          <ArrowLeft size={24} color="rgb(248, 250, 252)" />
+        <Pressable
+          onPress={() => router.back()}
+          className="p-2 mr-2"
+          hitSlop={12}
+          style={{ cursor: 'pointer' }}
+        >
+          <ArrowLeft size={24} color={iconColor} />
         </Pressable>
         <Bot size={24} color="rgb(168, 85, 247)" />
         <Text className="text-xl font-bold text-foreground ml-2">{t('aiReceiptParser')}</Text>
@@ -84,6 +94,7 @@ export default function AIReceiptScreen() {
           maxWidth: 600,
           width: '100%',
           alignSelf: 'center',
+          paddingBottom: bottomPadding,
         }}
       >
         <Text className="text-muted-foreground mb-4">{t('aiParserDescription')}</Text>

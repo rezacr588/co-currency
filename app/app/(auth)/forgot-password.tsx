@@ -1,7 +1,17 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, useWindowDimensions } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  KeyboardAvoidingView,
+  ScrollView,
+  ActivityIndicator,
+  Platform,
+  useWindowDimensions,
+} from 'react-native';
 import { Link } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Mail, ArrowLeft } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
@@ -9,6 +19,7 @@ import { useLanguage } from '../../src/context/LanguageContext';
 export default function ForgotPasswordScreen() {
   const { t } = useLanguage();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const isDesktop = width >= 1024;
 
@@ -64,16 +75,22 @@ export default function ForgotPasswordScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
-      <ScrollView
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: 'center',
-          padding: isDesktop ? 32 : 24,
-          alignItems: 'center',
-        }}
       >
-        <View style={{ width: '100%', maxWidth: 400 }}>
+        <ScrollView
+          className="flex-1"
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: 'center',
+            padding: isDesktop ? 32 : 24,
+            paddingBottom: (isDesktop ? 32 : 24) + insets.bottom,
+            alignItems: 'center',
+          }}
+        >
+          <View style={{ width: '100%', maxWidth: 400 }}>
           <Link href="/login" asChild>
             <Pressable style={{ cursor: 'pointer' }} className="flex-row items-center mb-8">
               <ArrowLeft size={18} color="#71717a" />
@@ -131,8 +148,9 @@ export default function ForgotPasswordScreen() {
               )}
             </Pressable>
           </View>
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

@@ -3,6 +3,7 @@ import {
   View,
   Text,
   ScrollView,
+  FlatList,
   Pressable,
   ActivityIndicator,
   RefreshControl,
@@ -13,7 +14,7 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
   ArrowLeft,
@@ -29,6 +30,7 @@ import {
 } from 'lucide-react-native';
 import { api, getAuthToken, API_BASE } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
+import { useTheme } from '../../../../src/context/ThemeContext';
 import { formatCompactCurrency, formatDate, getCurrencyDisplay } from '../../../../src/utils/format';
 import { StyledCategoryIcon, CATEGORY_ICONS, CategoryIcon } from '../../../../src/constants/icons';
 import { SkeletonTransaction, SkeletonList } from '../../../../src/components/ui/Skeleton';
@@ -43,9 +45,13 @@ export default function TransactionHistoryScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
+  const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
+  const iconColor = isDark ? 'rgb(248, 250, 252)' : 'rgb(51, 65, 85)';
 
   // Filter state
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -227,6 +233,11 @@ export default function TransactionHistoryScreen() {
 
   const transactions = data?.transactions || [];
 
+  type TransactionListItem = Transaction | { id: string; __skeleton: true };
+  const listData: TransactionListItem[] = isPending
+    ? Array.from({ length: 5 }, (_, index) => ({ id: `s-${index}`, __skeleton: true }))
+    : transactions;
+
   return (
     <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
       {/* Header */}
@@ -234,8 +245,13 @@ export default function TransactionHistoryScreen() {
         className="flex-row items-center justify-between p-4 border-b border-border"
         style={{ maxWidth: 1400, width: '100%', alignSelf: 'center' }}
       >
-        <Pressable onPress={() => router.back()} className="p-2" style={{ cursor: 'pointer' }}>
-          <ArrowLeft size={24} color="rgb(248, 250, 252)" />
+        <Pressable
+          onPress={() => router.back()}
+          className="p-2"
+          hitSlop={12}
+          style={{ cursor: 'pointer' }}
+        >
+          <ArrowLeft size={24} color={iconColor} />
         </Pressable>
         <Text className="text-xl font-bold text-foreground">{t('transactionHistory')}</Text>
         <View className="flex-row items-center gap-2">
@@ -308,94 +324,96 @@ export default function TransactionHistoryScreen() {
         </View>
       )}
 
-      <ScrollView
-        className="flex-1"
+      <FlatList
+        data={listData}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => {
+          if ('__skeleton' in item) {
+            return <SkeletonTransaction />;
+          }
+
+          const tx = item as Transaction;
+          return (
+            <View
+              className="bg-card border border-border p-4 rounded-xl flex-row items-center"
+              style={
+                {
+                  width: isDesktop ? '48%' : '100%',
+                  minWidth: 300,
+                } as any
+              }
+            >
+              <View className="mr-3">
+                <StyledCategoryIcon
+                  category={tx.category || 'other'}
+                  size={20}
+                  backgroundOpacity={0.15}
+                  borderRadius={10}
+                  padding={10}
+                />
+              </View>
+              <View className="flex-1">
+                <Text className="font-semibold text-foreground" numberOfLines={1}>
+                  {tx.description || tx.category || 'Transaction'}
+                </Text>
+                <Text className="text-muted-foreground text-sm">
+                  {formatDate(tx.created_at)} - {tx.category || t('uncategorized')}
+                </Text>
+              </View>
+              <Text
+                className={`text-lg font-semibold ${
+                  tx.type === 'credit' ? 'text-success' : 'text-danger'
+                }`}
+              >
+                {tx.type === 'credit' ? '+' : '-'}
+                {formatCompactCurrency(tx.amount, tx.currency)}
+              </Text>
+              {/* Edit Button */}
+              {tx.type !== 'convert' &&
+                tx.type !== 'convert_from' &&
+                tx.type !== 'convert_to' && (
+                  <Pressable
+                    onPress={() => handleEdit(tx)}
+                    className="ml-2 p-2"
+                    hitSlop={10}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <Pencil size={18} color="#71717a" />
+                  </Pressable>
+                )}
+              <Pressable
+                onPress={() => handleDelete(tx)}
+                className="ml-1 p-2"
+                hitSlop={10}
+                style={{ cursor: 'pointer' }}
+                disabled={deleteMutation.isPending}
+              >
+                <Trash2 size={18} color="#71717a" />
+              </Pressable>
+            </View>
+          );
+        }}
         contentContainerStyle={{
           padding: isDesktop ? 32 : 16,
           maxWidth: 1400,
           width: '100%',
           alignSelf: 'center',
+          paddingBottom: bottomPadding,
+          flexGrow: !isPending && transactions.length === 0 ? 1 : undefined,
+          gap: 12,
         }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        {isPending ? (
-          <SkeletonList count={5} ItemComponent={SkeletonTransaction} />
-        ) : transactions.length === 0 ? (
-          <View
-            className="bg-card p-8 rounded-xl items-center"
-            style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}
-          >
-            <Text className="text-muted-foreground">{t('noTransactions')}</Text>
-          </View>
-        ) : (
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: 12,
-            }}
-          >
-            {transactions.map((tx) => (
-              <View
-                key={tx.id}
-                className="bg-card border border-border p-4 rounded-xl flex-row items-center"
-                style={
-                  {
-                    width: isDesktop ? '48%' : '100%',
-                    minWidth: 300,
-                  } as any
-                }
-              >
-                <View className="mr-3">
-                  <StyledCategoryIcon
-                    category={tx.category || 'other'}
-                    size={20}
-                    backgroundOpacity={0.15}
-                    borderRadius={10}
-                    padding={10}
-                  />
-                </View>
-                <View className="flex-1">
-                  <Text className="font-semibold text-foreground" numberOfLines={1}>
-                    {tx.description || tx.category || 'Transaction'}
-                  </Text>
-                  <Text className="text-muted-foreground text-sm">
-                    {formatDate(tx.created_at)} - {tx.category || t('uncategorized')}
-                  </Text>
-                </View>
-                <Text
-                  className={`text-lg font-semibold ${
-                    tx.type === 'credit' ? 'text-success' : 'text-danger'
-                  }`}
-                >
-                  {tx.type === 'credit' ? '+' : '-'}
-                  {formatCompactCurrency(tx.amount, tx.currency)}
-                </Text>
-                {/* Edit Button */}
-                {tx.type !== 'convert' &&
-                  tx.type !== 'convert_from' &&
-                  tx.type !== 'convert_to' && (
-                    <Pressable
-                      onPress={() => handleEdit(tx)}
-                      className="ml-2 p-2"
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <Pencil size={18} color="#71717a" />
-                    </Pressable>
-                  )}
-                <Pressable
-                  onPress={() => handleDelete(tx)}
-                  className="ml-1 p-2"
-                  style={{ cursor: 'pointer' }}
-                  disabled={deleteMutation.isPending}
-                >
-                  <Trash2 size={18} color="#71717a" />
-                </Pressable>
-              </View>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+        ListEmptyComponent={
+          !isPending ? (
+            <View
+              className="bg-card p-8 rounded-xl items-center"
+              style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}
+            >
+              <Text className="text-muted-foreground">{t('noTransactions')}</Text>
+            </View>
+          ) : null
+        }
+      />
 
       {/* Filter Modal */}
       <Modal

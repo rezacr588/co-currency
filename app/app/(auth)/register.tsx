@@ -4,6 +4,7 @@ import {
   Text,
   TextInput,
   Pressable,
+  KeyboardAvoidingView,
   ScrollView,
   ActivityIndicator,
   Platform,
@@ -11,7 +12,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '../../src/context/AuthContext';
@@ -25,6 +26,7 @@ export default function RegisterScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ error?: string }>();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -147,17 +149,23 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
-      <ScrollView
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: isDesktop ? 32 : 24,
-        }}
       >
-        {/* Form Container - Centered with max width */}
-        <View style={{ width: '100%', maxWidth: formMaxWidth }}>
+        <ScrollView
+          className="flex-1"
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: isDesktop ? 32 : 24,
+            paddingBottom: (isDesktop ? 32 : 24) + insets.bottom,
+          }}
+        >
+          {/* Form Container - Centered with max width */}
+          <View style={{ width: '100%', maxWidth: formMaxWidth }}>
           <View className="items-center mb-8">
             <Text className="text-2xl font-semibold text-foreground mb-2">{t('createAccount')}</Text>
             <Text className="text-muted-foreground text-center text-sm">{t('registerSubtitle')}</Text>
@@ -317,8 +325,9 @@ export default function RegisterScreen() {
               </Pressable>
             </Link>
           </View>
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

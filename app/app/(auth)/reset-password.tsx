@@ -4,12 +4,14 @@ import {
   Text,
   TextInput,
   Pressable,
+  KeyboardAvoidingView,
   ScrollView,
   ActivityIndicator,
+  Platform,
   useWindowDimensions,
 } from 'react-native';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Lock, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react-native';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { api } from '../../src/api';
@@ -19,6 +21,7 @@ export default function ResetPasswordScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ token?: string }>();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -64,16 +67,22 @@ export default function ResetPasswordScreen() {
   if (!token) {
     return (
       <SafeAreaView className="flex-1 bg-background">
-        <ScrollView
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           className="flex-1"
-          contentContainerStyle={{
-            flexGrow: 1,
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: 24,
-          }}
         >
-          <View style={{ width: '100%', maxWidth: formMaxWidth }}>
+          <ScrollView
+            className="flex-1"
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: 24,
+              paddingBottom: 24 + insets.bottom,
+            }}
+          >
+            <View style={{ width: '100%', maxWidth: formMaxWidth }}>
             <View className="bg-card p-8 rounded-2xl items-center">
               <View className="bg-danger/20 p-4 rounded-full mb-4">
                 <XCircle size={40} color="rgb(220, 38, 38)" />
@@ -93,8 +102,9 @@ export default function ResetPasswordScreen() {
                 </Pressable>
               </Link>
             </View>
-          </View>
-        </ScrollView>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     );
   }
@@ -103,16 +113,22 @@ export default function ResetPasswordScreen() {
   if (success) {
     return (
       <SafeAreaView className="flex-1 bg-background">
-        <ScrollView
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           className="flex-1"
-          contentContainerStyle={{
-            flexGrow: 1,
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: 24,
-          }}
         >
-          <View style={{ width: '100%', maxWidth: formMaxWidth }}>
+          <ScrollView
+            className="flex-1"
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: 24,
+              paddingBottom: 24 + insets.bottom,
+            }}
+          >
+            <View style={{ width: '100%', maxWidth: formMaxWidth }}>
             <View className="bg-card p-8 rounded-2xl items-center">
               <View className="bg-success/20 p-4 rounded-full mb-4">
                 <CheckCircle size={40} color="rgb(16, 185, 129)" />
@@ -132,24 +148,31 @@ export default function ResetPasswordScreen() {
                 </Pressable>
               </Link>
             </View>
-          </View>
-        </ScrollView>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView className="flex-1 bg-background">
-      <ScrollView
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: 24,
-        }}
       >
-        <View style={{ width: '100%', maxWidth: formMaxWidth }}>
+        <ScrollView
+          className="flex-1"
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 24,
+            paddingBottom: 24 + insets.bottom,
+          }}
+        >
+          <View style={{ width: '100%', maxWidth: formMaxWidth }}>
           <View className="items-center mb-8">
             <Text className="text-3xl font-bold text-foreground mb-2">
               {t('resetPassword') || 'Reset Password'}
@@ -234,8 +257,9 @@ export default function ResetPasswordScreen() {
               </Pressable>
             </Link>
           </View>
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, useWindowDimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { TrendingUp, TrendingDown, PieChart, BarChart3, Wallet, Calendar, ArrowUp, ArrowDown } from 'lucide-react-native';
 import { api } from '../../../src/api';
@@ -228,9 +228,11 @@ export default function ReportsScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
+  const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
   const { data: monthlyReport, isPending: isLoadingMonthly } = useQuery({
     queryKey: ['reports', 'monthly'],
@@ -269,6 +271,7 @@ export default function ReportsScreen() {
           maxWidth: 1400,
           width: '100%',
           alignSelf: 'center',
+          paddingBottom: bottomPadding,
         }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

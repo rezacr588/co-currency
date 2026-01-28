@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Pressable, RefreshControl, useWindowDimensions } from 'react-native';
 import { Link } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, ArrowLeftRight, Bot, History, MessageCircle } from 'lucide-react-native';
@@ -14,9 +14,11 @@ export default function WalletScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
+  const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
   const { data: balancesData, isPending: isLoadingBalances } = useQuery({
     queryKey: ['wallet', 'balances'],
@@ -53,6 +55,7 @@ export default function WalletScreen() {
           maxWidth: 1400,
           width: '100%',
           alignSelf: 'center',
+          paddingBottom: bottomPadding,
         }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
