@@ -9,6 +9,7 @@ import { reports } from './reports';
 import { subscriptions } from './subscriptions';
 import { badges } from './badges';
 import { currencies, rates, convert } from './exchange';
+import { chat } from './chat';
 
 export const api = {
   currencies,
@@ -24,6 +25,7 @@ export const api = {
   reports,
   subscriptions,
   badges,
+  chat,
 };
 
 export {

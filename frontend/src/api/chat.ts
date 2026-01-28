@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 import { API_BASE, fetchAPI, getAuthToken } from './base';
 
 export interface ChatMessage {
@@ -244,17 +243,13 @@ export const chat = {
     data: ChatRequest,
     handlers: StreamHandlers = {}
   ): Promise<ChatResponse> => {
-    if (Platform.OS === 'web') {
-      try {
-        return await streamViaFetch(data, handlers);
-      } catch (error) {
-        if (typeof XMLHttpRequest === 'undefined') {
-          throw error;
-        }
-        return streamViaXHR(data, handlers);
+    try {
+      return await streamViaFetch(data, handlers);
+    } catch (error) {
+      if (typeof XMLHttpRequest === 'undefined') {
+        throw error;
       }
+      return streamViaXHR(data, handlers);
     }
-
-    return streamViaXHR(data, handlers);
   },
 };
