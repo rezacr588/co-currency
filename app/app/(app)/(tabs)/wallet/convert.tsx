@@ -99,6 +99,7 @@ export default function WalletConvertScreen() {
 
       <ScrollView
         className="flex-1"
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
           padding: isDesktop ? 32 : 24,
           maxWidth: 600,

@@ -46,6 +46,7 @@ export default function ConverterScreen() {
 
       <ScrollView
         className="flex-1"
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
           padding: isDesktop ? 48 : 24,
           alignItems: 'center',
