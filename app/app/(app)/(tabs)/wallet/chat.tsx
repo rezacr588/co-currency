@@ -87,6 +87,7 @@ export default function AIChatScreen() {
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
+  const showSidebar = isDesktop || isTablet;
   const contentMaxWidth = isDesktop ? 960 : isTablet ? 720 : undefined;
   const messageMaxWidth = isDesktop ? 560 : Math.min(width * 0.85, 560);
   const contentWidthStyle = {
@@ -99,6 +100,7 @@ export default function AIChatScreen() {
   const [isTyping, setIsTyping] = useState(false);
   const [showAttachmentHint, setShowAttachmentHint] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(
     conversationId || null
   );
@@ -107,10 +109,18 @@ export default function AIChatScreen() {
   const optimisticConversationIdRef = useRef<string | null>(null);
   const isNearBottomRef = useRef(true);
 
+  const { data: aiStatus } = useQuery({
+    queryKey: ['ai-status'],
+    queryFn: () => api.ai.getStatus(),
+  });
+
+  const aiConfigured = aiStatus?.configured !== false;
+
   // Fetch conversations list
   const { data: conversationsData } = useQuery({
     queryKey: ['ai-conversations'],
     queryFn: () => api.chat.listConversations(),
+    enabled: aiConfigured,
   });
 
   // Fetch current conversation messages
@@ -118,7 +128,7 @@ export default function AIChatScreen() {
     queryKey: ['ai-conversation', activeConversationId],
     queryFn: () =>
       activeConversationId ? api.chat.getConversation(activeConversationId) : null,
-    enabled: !!activeConversationId,
+    enabled: !!activeConversationId && aiConfigured,
   });
 
   // Create conversation mutation
@@ -159,6 +169,7 @@ export default function AIChatScreen() {
     },
     onMutate: async (msg) => {
       setIsTyping(true);
+      setSendError(null);
       const now = new Date().toISOString();
       const optimisticMessage: ChatMessage = {
         id: `temp-${Date.now()}`,
@@ -259,13 +270,14 @@ export default function AIChatScreen() {
       finalizeStreamingAssistant(serverConversationId, data.message);
       setIsTyping(false);
     },
-    onError: (_error, _msg, context) => {
+    onError: (error, _msg, context) => {
       if (context?.optimisticConversationId?.startsWith('temp-')) {
         queryClient.removeQueries({
           queryKey: ['ai-conversation', context.optimisticConversationId],
         });
       }
       streamingStateRef.current = null;
+      setSendError(error instanceof Error ? error.message : 'Unable to reach the assistant. Please try again.');
       setIsTyping(false);
     },
   });
@@ -447,6 +459,10 @@ export default function AIChatScreen() {
 
   const handleSend = () => {
     if (!message.trim() || sendMessageMutation.isPending) return;
+    if (!aiConfigured) {
+      setSendError('AI is not configured on the server.');
+      return;
+    }
     const trimmed = message.trim();
     sendMessageMutation.mutate(trimmed);
     setMessage('');
@@ -458,6 +474,10 @@ export default function AIChatScreen() {
 
   const handleNewConversation = () => {
     if (createConversationMutation.isPending) return;
+    if (!aiConfigured) {
+      setSendError('AI is not configured on the server.');
+      return;
+    }
     createConversationMutation.mutate(t('newConversation') || 'New conversation');
     setPendingAction(null);
     streamingStateRef.current = null;
@@ -585,10 +605,11 @@ export default function AIChatScreen() {
 
   const renderSidebar = () => (
     <View
-      className={`${
-        isDesktop ? 'w-72' : 'w-full'
-      } bg-card border-r border-border flex-col`}
-      style={isDesktop ? { height: '100%' } : { maxHeight: 200 }}
+      className="bg-card border-r border-border flex-col"
+      style={{
+        width: isDesktop ? 288 : 240,
+        height: '100%',
+      }}
     >
       <View className="p-4 border-b border-border">
         <Pressable
@@ -708,6 +729,14 @@ export default function AIChatScreen() {
       {loadingMessages && activeConversationId ? (
         <View className="items-center py-8">
           <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
+        </View>
+      ) : !aiConfigured ? (
+        <View className="bg-card border border-border rounded-2xl p-6 items-center">
+          <Sparkles size={24} color="rgb(212, 175, 55)" />
+          <Text className="text-foreground font-semibold mt-3">AI assistant is offline</Text>
+          <Text className="text-muted-foreground text-sm text-center mt-2">
+            The server is missing an AI configuration. Please add an AI_API_KEY and redeploy.
+          </Text>
         </View>
       ) : messages.length === 0 ? (
         renderWelcome()
@@ -924,7 +953,7 @@ export default function AIChatScreen() {
       >
         <View className="flex-1 flex-row">
           {/* Sidebar for Desktop */}
-          {isDesktop && renderSidebar()}
+          {showSidebar && renderSidebar()}
 
           {/* Main Chat Area */}
           <View className="flex-1 flex-col">
@@ -933,13 +962,6 @@ export default function AIChatScreen() {
               className="flex-row items-center p-4 border-b border-border bg-card"
               style={contentWidthStyle}
             >
-              <Pressable
-                onPress={() => router.back()}
-                className="p-2 mr-2"
-                style={{ cursor: 'pointer' }}
-              >
-                <ArrowLeft size={24} color="rgb(248, 250, 252)" />
-              </Pressable>
               <View className="w-8 h-8 rounded-full bg-primary items-center justify-center">
                 <Bot size={16} color="#09090b" />
               </View>
@@ -950,7 +972,7 @@ export default function AIChatScreen() {
             </View>
 
             {/* Mobile Conversations Carousel */}
-            {!isDesktop && conversations.length > 0 && (
+            {!showSidebar && conversations.length > 0 && (
               <View style={contentWidthStyle}>
                 <ScrollView
                   horizontal
@@ -1001,6 +1023,11 @@ export default function AIChatScreen() {
               className="p-4 border-t border-border bg-card"
               style={[contentWidthStyle, { paddingBottom: Math.max(insets.bottom, 12) }]}
             >
+              {sendError && (
+                <View className="bg-danger-muted border border-danger/20 p-3 rounded-lg mb-3">
+                  <Text className="text-danger text-xs">{sendError}</Text>
+                </View>
+              )}
               <View className="flex-row items-center justify-between mb-2">
                 <View className="flex-row items-center" style={{ gap: 8 }}>
                   <View className="flex-row items-center bg-muted px-3 py-1.5 rounded-full border border-border">

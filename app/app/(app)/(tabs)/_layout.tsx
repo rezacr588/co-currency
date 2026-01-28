@@ -260,6 +260,7 @@ export default function TabsLayout() {
             <Tabs.Screen name="add" />
             <Tabs.Screen name="chat" />
             <Tabs.Screen name="reports" />
+            <Tabs.Screen name="goals" options={{ href: null }} />
           </Tabs>
         </View>
       </View>
@@ -286,6 +287,7 @@ export default function TabsLayout() {
             <Tabs.Screen name="add" />
             <Tabs.Screen name="chat" />
             <Tabs.Screen name="reports" />
+            <Tabs.Screen name="goals" options={{ href: null }} />
           </Tabs>
         </View>
       </View>
@@ -299,6 +301,7 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor,
         tabBarInactiveTintColor,
+        tabBarShowLabel: false,
         tabBarStyle: {
           backgroundColor: tabBarBackgroundColor,
           borderTopWidth: 1,
@@ -307,10 +310,6 @@ export default function TabsLayout() {
           height: 80,
           paddingBottom: 20,
           paddingTop: 10,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
         },
       }}
     >
@@ -353,6 +352,7 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => <BarChart3 size={size} color={color} />,
         }}
       />
+      <Tabs.Screen name="goals" options={{ href: null }} />
     </Tabs>
   );
 }

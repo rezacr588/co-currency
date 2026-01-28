@@ -218,7 +218,11 @@ func (s *AIChatService) ChatStream(
 
 	response, err := llm.GenerateContent(ctx, messages, llms.WithStreamingFunc(streamingFunc))
 	if err != nil {
-		return nil, fmt.Errorf("calling AI: %w", err)
+		// Fallback to non-streaming if the provider doesn't support streaming.
+		response, err = llm.GenerateContent(ctx, messages)
+		if err != nil {
+			return nil, fmt.Errorf("calling AI: %w", err)
+		}
 	}
 
 	if len(response.Choices) == 0 {
@@ -228,6 +232,11 @@ func (s *AIChatService) ChatStream(
 	aiResponse := strings.TrimSpace(sb.String())
 	if aiResponse == "" {
 		aiResponse = response.Choices[0].Content
+		if onChunk != nil && aiResponse != "" {
+			if err := onChunk(aiResponse); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	// Save AI response

@@ -109,36 +109,41 @@ export const chat = {
 
         if (!dataLines) continue;
 
+        let payload: {
+          type: 'start' | 'delta' | 'done' | 'error';
+          conversation_id?: string;
+          content?: string;
+          message?: ChatMessage;
+          error?: string;
+        } | null = null;
+
         try {
-          const payload = JSON.parse(dataLines) as {
-            type: 'start' | 'delta' | 'done' | 'error';
-            conversation_id?: string;
-            content?: string;
-            message?: ChatMessage;
-            error?: string;
-          };
-
-          if (payload.type === 'start' && payload.conversation_id) {
-            handlers.onStart?.(payload.conversation_id);
-          }
-
-          if (payload.type === 'delta' && payload.content) {
-            handlers.onDelta?.(payload.content);
-          }
-
-          if (payload.type === 'done' && payload.message && payload.conversation_id) {
-            finalResponse = {
-              conversation_id: payload.conversation_id,
-              message: payload.message,
-            };
-            handlers.onDone?.(finalResponse);
-          }
-
-          if (payload.type === 'error') {
-            handlers.onError?.(payload.error || 'Streaming error');
-          }
+          payload = JSON.parse(dataLines);
         } catch {
           // Ignore malformed events.
+          continue;
+        }
+
+        if (payload.type === 'start' && payload.conversation_id) {
+          handlers.onStart?.(payload.conversation_id);
+        }
+
+        if (payload.type === 'delta' && payload.content) {
+          handlers.onDelta?.(payload.content);
+        }
+
+        if (payload.type === 'done' && payload.message && payload.conversation_id) {
+          finalResponse = {
+            conversation_id: payload.conversation_id,
+            message: payload.message,
+          };
+          handlers.onDone?.(finalResponse);
+        }
+
+        if (payload.type === 'error') {
+          const message = payload.error || 'Streaming error';
+          handlers.onError?.(message);
+          throw new Error(message);
         }
       }
     }
