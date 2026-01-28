@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -75,26 +76,14 @@ func (h *AIChatHandler) CreateConversation(w http.ResponseWriter, r *http.Reques
 		req.Title = "New Conversation"
 	}
 
-	// Get user name for context
-	user, err := h.authService.GetUserByID(r.Context(), userID)
-	userName := "User"
-	if err == nil && user != nil && user.Name != "" {
-		userName = user.Name
-	}
-
-	// Create conversation by sending an initial system message
-	response, err := h.chatService.Chat(r.Context(), userID, userName, "", "Hello! I'm ready to help with my finances.")
+	conversation, err := h.chatService.CreateConversation(r.Context(), userID, req.Title)
 	if err != nil {
-		if isAIProviderError(err) {
-			httputil.ServiceUnavailableWithContext(r.Context(), w, "AI service is unavailable. Please try again later.", err)
-		} else {
-			httputil.InternalServerErrorWithContext(r.Context(), w, "Failed to create conversation", err)
-		}
+		httputil.InternalServerErrorWithContext(r.Context(), w, "Failed to create conversation", err)
 		return
 	}
 
 	httputil.JSON(w, http.StatusCreated, map[string]interface{}{
-		"conversation_id": response.ConversationID,
+		"conversation_id": conversation.ID.String(),
 	})
 }
 
@@ -171,9 +160,14 @@ func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 
 	response, err := h.chatService.Chat(r.Context(), userID, userName, req.ConversationID, req.Message)
 	if err != nil {
-		if isAIProviderError(err) {
+		switch {
+		case errors.Is(err, service.ErrInvalidConversationID):
+			httputil.BadRequestWithContext(r.Context(), w, "Invalid conversation ID", err)
+		case errors.Is(err, service.ErrConversationNotFound):
+			httputil.NotFoundWithContext(r.Context(), w, "Conversation not found", err)
+		case isAIProviderError(err):
 			httputil.ServiceUnavailableWithContext(r.Context(), w, "AI service is unavailable. Please try again later.", err)
-		} else {
+		default:
 			httputil.InternalServerErrorWithContext(r.Context(), w, "Failed to process chat", err)
 		}
 		return
@@ -253,7 +247,11 @@ func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		message := err.Error()
-		if isAIProviderError(err) {
+		if errors.Is(err, service.ErrInvalidConversationID) {
+			message = "Invalid conversation ID"
+		} else if errors.Is(err, service.ErrConversationNotFound) {
+			message = "Conversation not found"
+		} else if isAIProviderError(err) {
 			message = "AI service is unavailable. Please try again later."
 		}
 		_ = sendEvent(map[string]interface{}{

@@ -22,6 +22,7 @@ export default function AIChat() {
     const { conversationId } = useParams<{ conversationId?: string }>();
     const [message, setMessage] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [sendError, setSendError] = useState<string | null>(null);
     const [activeConversationId, setActiveConversationId] = useState<string | null>(
         conversationId || null
     );
@@ -31,10 +32,17 @@ export default function AIChat() {
     const inputRef = useRef<HTMLInputElement>(null);
     const selectedConversationId = activeConversationId || conversationId || '';
 
+    const { data: aiStatus } = useQuery({
+        queryKey: ['ai-status'],
+        queryFn: () => api.ai.getStatus(),
+    });
+    const aiConfigured = aiStatus?.configured !== false;
+
     // Fetch conversations list
     const { data: conversationsData } = useQuery({
         queryKey: ['ai-conversations'],
         queryFn: () => api.chat.listConversations(),
+        enabled: aiConfigured,
     });
 
     // Fetch current conversation messages
@@ -44,7 +52,7 @@ export default function AIChat() {
         queryKey: ['ai-conversation', selectedConversationId],
         queryFn: () =>
             selectedConversationId ? api.chat.getConversation(selectedConversationId) : null,
-        enabled: canFetchConversation,
+        enabled: canFetchConversation && aiConfigured,
     });
 
     useEffect(() => {
@@ -163,9 +171,11 @@ export default function AIChat() {
         },
         onMutate: async (msg) => {
             setIsTyping(true);
+            setSendError(null);
             const now = new Date().toISOString();
+            const optimisticMessageId = `temp-${Date.now()}`;
             const optimisticMessage: ChatMessage = {
-                id: `temp-${Date.now()}`,
+                id: optimisticMessageId,
                 conversation_id: selectedConversationId || 'temp',
                 role: 'user',
                 content: msg,
@@ -184,7 +194,7 @@ export default function AIChat() {
                     }
                 );
                 optimisticConversationIdRef.current = selectedConversationId;
-                return { optimisticConversationId: selectedConversationId };
+                return { optimisticConversationId: selectedConversationId, optimisticMessageId };
             }
 
             const optimisticConversationId = `temp-${Date.now()}`;
@@ -221,7 +231,7 @@ export default function AIChat() {
 
             setActiveConversationId(optimisticConversationId);
             optimisticConversationIdRef.current = optimisticConversationId;
-            return { optimisticConversationId };
+            return { optimisticConversationId, optimisticMessageId };
         },
         onSuccess: (data) => {
             const serverConversationId = data.conversation_id;
@@ -271,11 +281,24 @@ export default function AIChat() {
             setIsTyping(false);
             optimisticConversationIdRef.current = null;
         },
-        onError: () => {
+        onError: (error, _msg, context) => {
             setIsTyping(false);
-            if (optimisticConversationIdRef.current?.startsWith('temp-')) {
+            setSendError(error instanceof Error ? error.message : 'Unable to reach the assistant. Please try again.');
+            if (context?.optimisticConversationId && context.optimisticMessageId) {
+                queryClient.setQueryData<ConversationWithMessages | null>(
+                    ['ai-conversation', context.optimisticConversationId],
+                    (old) => {
+                        if (!old) return old;
+                        return {
+                            ...old,
+                            messages: old.messages.filter((msg) => msg.id !== context.optimisticMessageId),
+                        };
+                    }
+                );
+            }
+            if (context?.optimisticConversationId?.startsWith('temp-')) {
                 queryClient.removeQueries({
-                    queryKey: ['ai-conversation', optimisticConversationIdRef.current],
+                    queryKey: ['ai-conversation', context.optimisticConversationId],
                 });
                 queryClient.setQueryData<{ conversations: Conversation[] } | undefined>(
                     ['ai-conversations'],
@@ -283,7 +306,7 @@ export default function AIChat() {
                         if (!old) return old;
                         return {
                             conversations: old.conversations.filter(
-                                (conv) => conv.id !== optimisticConversationIdRef.current
+                                (conv) => conv.id !== context.optimisticConversationId
                             ),
                         };
                     }
@@ -319,6 +342,10 @@ export default function AIChat() {
 
     const handleSend = () => {
         if (!message.trim() || sendMessageMutation.isPending) return;
+        if (!aiConfigured) {
+            setSendError('AI is not configured on the server.');
+            return;
+        }
         sendMessageMutation.mutate(message.trim());
         setMessage('');
     };
@@ -328,6 +355,7 @@ export default function AIChat() {
         setActiveConversationId(null);
         optimisticConversationIdRef.current = null;
         streamingStateRef.current = null;
+        setSendError(null);
         navigate(ROUTES.aiChat);
     };
 
@@ -336,6 +364,7 @@ export default function AIChat() {
         setActiveConversationId(id);
         optimisticConversationIdRef.current = null;
         streamingStateRef.current = null;
+        setSendError(null);
         navigate(`${ROUTES.aiChat}/${id}`);
     };
 
@@ -412,7 +441,21 @@ export default function AIChat() {
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {!selectedConversationId && messages.length === 0 && (
+                    {!aiConfigured && messages.length === 0 && (
+                        <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                            <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                                <Sparkles className="w-8 h-8 text-primary-500" />
+                            </div>
+                            <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
+                                AI assistant is offline
+                            </h2>
+                            <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md">
+                                The server is missing an AI configuration. Please add an AI_API_KEY and redeploy.
+                            </p>
+                        </div>
+                    )}
+
+                    {aiConfigured && !selectedConversationId && messages.length === 0 && (
                         <div className="flex flex-col items-center justify-center h-full text-center px-4">
                             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center mb-4">
                                 <Sparkles className="w-8 h-8 text-white" />
@@ -502,6 +545,13 @@ export default function AIChat() {
                 {/* Input */}
                 <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                     <div className="flex gap-2 max-w-4xl mx-auto">
+                        {sendError && (
+                            <div className="w-full mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
+                                {sendError}
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex gap-2 max-w-4xl mx-auto">
                         <input
                             ref={inputRef}
                             type="text"
@@ -509,12 +559,12 @@ export default function AIChat() {
                             onChange={(e) => setMessage(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder={t('typeMessage') || 'Ask about your finances...'}
-                            disabled={sendMessageMutation.isPending}
+                            disabled={sendMessageMutation.isPending || !aiConfigured}
                             className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                         />
                         <button
                             onClick={handleSend}
-                            disabled={!message.trim() || sendMessageMutation.isPending}
+                            disabled={!message.trim() || sendMessageMutation.isPending || !aiConfigured}
                             className="px-4 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary-500/20"
                         >
                             <Send className="w-5 h-5" />

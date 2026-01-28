@@ -172,8 +172,9 @@ export default function AIChatScreen() {
       setIsTyping(true);
       setSendError(null);
       const now = new Date().toISOString();
+      const optimisticMessageId = `temp-${Date.now()}`;
       const optimisticMessage: ChatMessage = {
-        id: `temp-${Date.now()}`,
+        id: optimisticMessageId,
         conversation_id: activeConversationId ?? 'temp',
         role: 'user',
         content: msg,
@@ -192,7 +193,7 @@ export default function AIChatScreen() {
           }
         );
         optimisticConversationIdRef.current = activeConversationId;
-        return { optimisticConversationId: activeConversationId };
+        return { optimisticConversationId: activeConversationId, optimisticMessageId };
       }
 
       const optimisticConversationId = `temp-${Date.now()}`;
@@ -230,7 +231,7 @@ export default function AIChatScreen() {
 
       setActiveConversationId(optimisticConversationId);
       optimisticConversationIdRef.current = optimisticConversationId;
-      return { optimisticConversationId };
+      return { optimisticConversationId, optimisticMessageId };
     },
     onSuccess: (data, _msg, context) => {
       const serverConversationId = data.conversation_id;
@@ -272,12 +273,36 @@ export default function AIChatScreen() {
       setIsTyping(false);
     },
     onError: (error, _msg, context) => {
+      if (context?.optimisticConversationId && context.optimisticMessageId) {
+        queryClient.setQueryData<ConversationWithMessages | null>(
+          ['ai-conversation', context.optimisticConversationId],
+          (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              messages: old.messages.filter((msg) => msg.id !== context.optimisticMessageId),
+            };
+          }
+        );
+      }
       if (context?.optimisticConversationId?.startsWith('temp-')) {
         queryClient.removeQueries({
           queryKey: ['ai-conversation', context.optimisticConversationId],
         });
+        queryClient.setQueryData<{ conversations: Conversation[] } | undefined>(
+          ['ai-conversations'],
+          (old) => {
+            if (!old) return old;
+            return {
+              conversations: old.conversations.filter(
+                (conv) => conv.id !== context.optimisticConversationId
+              ),
+            };
+          }
+        );
       }
       streamingStateRef.current = null;
+      optimisticConversationIdRef.current = null;
       setSendError(error instanceof Error ? error.message : 'Unable to reach the assistant. Please try again.');
       setIsTyping(false);
     },

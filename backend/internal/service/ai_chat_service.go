@@ -2,11 +2,13 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/tmc/langchaingo/llms"
@@ -20,6 +22,11 @@ type AIChatService struct {
 	goalRepo   *repository.GoalRepository
 	budgetRepo *repository.BudgetRepository
 }
+
+var (
+	ErrConversationNotFound  = errors.New("conversation not found")
+	ErrInvalidConversationID = errors.New("invalid conversation id")
+)
 
 // NewAIChatService creates a new AIChatService
 func NewAIChatService(
@@ -38,6 +45,11 @@ func NewAIChatService(
 	}
 }
 
+// CreateConversation creates a new conversation without invoking the LLM.
+func (s *AIChatService) CreateConversation(ctx context.Context, userID uuid.UUID, title string) (*model.ChatConversation, error) {
+	return s.chatRepo.CreateConversation(ctx, userID, title)
+}
+
 // Chat processes a user message and returns an AI response with full context
 func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName string, conversationID string, message string) (*model.ChatResponse, error) {
 	var convID uuid.UUID
@@ -48,15 +60,18 @@ func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName str
 	if conversationID != "" {
 		convID, err = uuid.Parse(conversationID)
 		if err != nil {
-			return nil, fmt.Errorf("invalid conversation ID: %w", err)
+			return nil, ErrInvalidConversationID
 		}
 		conv, err = s.chatRepo.GetConversation(ctx, convID)
 		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, ErrConversationNotFound
+			}
 			return nil, fmt.Errorf("getting conversation: %w", err)
 		}
 		// Verify ownership
 		if conv.UserID != userID {
-			return nil, fmt.Errorf("conversation not found")
+			return nil, ErrConversationNotFound
 		}
 	} else {
 		// Create new conversation with first message as title
@@ -72,9 +87,12 @@ func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName str
 	}
 
 	// Save user message
-	_, err = s.chatRepo.AddMessage(ctx, convID, "user", message, 0)
+	userMsg, err := s.chatRepo.AddMessage(ctx, convID, "user", message, 0)
 	if err != nil {
 		return nil, fmt.Errorf("saving user message: %w", err)
+	}
+	if userMsg == nil {
+		return nil, fmt.Errorf("saving user message: empty response")
 	}
 
 	// Get conversation history for context (last 20 messages)
@@ -94,7 +112,7 @@ func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName str
 	systemPrompt := s.buildSystemPrompt(userName, financialContext)
 
 	// Build message history for the LLM
-	messages := s.buildLLMMessages(systemPrompt, history, message)
+	messages := s.buildLLMMessages(systemPrompt, history, *userMsg)
 
 	// Call the AI
 	llm, err := s.aiService.getLLM(ctx)
@@ -144,15 +162,18 @@ func (s *AIChatService) ChatStream(
 	if conversationID != "" {
 		convID, err = uuid.Parse(conversationID)
 		if err != nil {
-			return nil, fmt.Errorf("invalid conversation ID: %w", err)
+			return nil, ErrInvalidConversationID
 		}
 		conv, err = s.chatRepo.GetConversation(ctx, convID)
 		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, ErrConversationNotFound
+			}
 			return nil, fmt.Errorf("getting conversation: %w", err)
 		}
 		// Verify ownership
 		if conv.UserID != userID {
-			return nil, fmt.Errorf("conversation not found")
+			return nil, ErrConversationNotFound
 		}
 	} else {
 		// Create new conversation with first message as title
@@ -172,9 +193,12 @@ func (s *AIChatService) ChatStream(
 	}
 
 	// Save user message
-	_, err = s.chatRepo.AddMessage(ctx, convID, "user", message, 0)
+	userMsg, err := s.chatRepo.AddMessage(ctx, convID, "user", message, 0)
 	if err != nil {
 		return nil, fmt.Errorf("saving user message: %w", err)
+	}
+	if userMsg == nil {
+		return nil, fmt.Errorf("saving user message: empty response")
 	}
 
 	// Get conversation history for context (last 20 messages)
@@ -193,7 +217,7 @@ func (s *AIChatService) ChatStream(
 	systemPrompt := s.buildSystemPrompt(userName, financialContext)
 
 	// Build message history for the LLM
-	messages := s.buildLLMMessages(systemPrompt, history, message)
+	messages := s.buildLLMMessages(systemPrompt, history, *userMsg)
 
 	// Call the AI (streaming)
 	llm, err := s.aiService.getLLM(ctx)
@@ -202,10 +226,12 @@ func (s *AIChatService) ChatStream(
 	}
 
 	var sb strings.Builder
+	streamedAny := false
 	streamingFunc := func(ctx context.Context, chunk []byte) error {
 		if len(chunk) == 0 {
 			return nil
 		}
+		streamedAny = true
 		text := string(chunk)
 		sb.WriteString(text)
 		if onChunk != nil {
@@ -218,10 +244,14 @@ func (s *AIChatService) ChatStream(
 
 	response, err := llm.GenerateContent(ctx, messages, llms.WithStreamingFunc(streamingFunc))
 	if err != nil {
+		if streamedAny {
+			return nil, fmt.Errorf("calling ai: streaming failed: %w", err)
+		}
+		sb.Reset()
 		// Fallback to non-streaming if the provider doesn't support streaming.
 		response, err = llm.GenerateContent(ctx, messages)
 		if err != nil {
-			return nil, fmt.Errorf("calling AI: %w", err)
+			return nil, fmt.Errorf("calling ai: %w", err)
 		}
 	}
 
@@ -335,7 +365,7 @@ Remember: You are having a conversation. Reference previous messages when releva
 }
 
 // buildLLMMessages builds the message array for the LLM with full history
-func (s *AIChatService) buildLLMMessages(systemPrompt string, history []model.ChatMessage, currentMessage string) []llms.MessageContent {
+func (s *AIChatService) buildLLMMessages(systemPrompt string, history []model.ChatMessage, currentMessage model.ChatMessage) []llms.MessageContent {
 	var messages []llms.MessageContent
 
 	// System prompt
@@ -347,7 +377,7 @@ func (s *AIChatService) buildLLMMessages(systemPrompt string, history []model.Ch
 	// Add conversation history (excluding the current message which we just saved)
 	for _, msg := range history {
 		// Skip the current message we just added
-		if msg.Content == currentMessage && msg.Role == "user" {
+		if msg.ID == currentMessage.ID {
 			continue
 		}
 		role := llms.ChatMessageTypeHuman
@@ -362,7 +392,7 @@ func (s *AIChatService) buildLLMMessages(systemPrompt string, history []model.Ch
 
 	// Add current user message
 	messages = append(messages, llms.MessageContent{
-		Parts: []llms.ContentPart{llms.TextPart(currentMessage)},
+		Parts: []llms.ContentPart{llms.TextPart(currentMessage.Content)},
 		Role:  llms.ChatMessageTypeHuman,
 	})
 
