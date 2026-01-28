@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rezacr588/currency-converter/internal/model"
@@ -84,7 +85,11 @@ func (h *AIChatHandler) CreateConversation(w http.ResponseWriter, r *http.Reques
 	// Create conversation by sending an initial system message
 	response, err := h.chatService.Chat(r.Context(), userID, userName, "", "Hello! I'm ready to help with my finances.")
 	if err != nil {
-		httputil.InternalServerErrorWithContext(r.Context(), w, "Failed to create conversation", err)
+		if isAIProviderError(err) {
+			httputil.ServiceUnavailableWithContext(r.Context(), w, "AI service is unavailable. Please try again later.", err)
+		} else {
+			httputil.InternalServerErrorWithContext(r.Context(), w, "Failed to create conversation", err)
+		}
 		return
 	}
 
@@ -166,7 +171,11 @@ func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 
 	response, err := h.chatService.Chat(r.Context(), userID, userName, req.ConversationID, req.Message)
 	if err != nil {
-		httputil.InternalServerErrorWithContext(r.Context(), w, "Failed to process chat", err)
+		if isAIProviderError(err) {
+			httputil.ServiceUnavailableWithContext(r.Context(), w, "AI service is unavailable. Please try again later.", err)
+		} else {
+			httputil.InternalServerErrorWithContext(r.Context(), w, "Failed to process chat", err)
+		}
 		return
 	}
 
@@ -243,9 +252,13 @@ func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 	if err != nil {
+		message := err.Error()
+		if isAIProviderError(err) {
+			message = "AI service is unavailable. Please try again later."
+		}
 		_ = sendEvent(map[string]interface{}{
 			"type":  "error",
-			"error": err.Error(),
+			"error": message,
 		})
 		return
 	}
@@ -255,4 +268,19 @@ func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 		"conversation_id": response.ConversationID,
 		"message":         response.Message,
 	})
+}
+
+func isAIProviderError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "getting llm") ||
+		strings.Contains(msg, "calling ai") ||
+		strings.Contains(msg, "ai service") ||
+		strings.Contains(msg, "api key") ||
+		strings.Contains(msg, "unauthorized") ||
+		strings.Contains(msg, "quota") ||
+		strings.Contains(msg, "rate limit") ||
+		strings.Contains(msg, "429")
 }

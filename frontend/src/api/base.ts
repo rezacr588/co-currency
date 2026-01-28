@@ -123,6 +123,13 @@ async function fetchWithRetry<T>(
       });
 
       if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const errorMessage =
+          (errorData && typeof errorData.message === 'string' && errorData.message) ||
+          (errorData && typeof errorData.error === 'string' && errorData.error) ||
+          (errorData && typeof errorData.details === 'string' && errorData.details) ||
+          `Request failed with status ${response.status}`;
+
         // Handle 401 Unauthorized - try to refresh token
         if (response.status === 401) {
           // If we haven't tried refreshing yet and have a refresh token
@@ -140,16 +147,11 @@ async function fetchWithRetry<T>(
 
         // Don't retry on client errors (4xx), only server errors (5xx)
         if (response.status >= 400 && response.status < 500) {
-          const errorData = await response.json().catch(() => null);
-          const errorMessage =
-            (errorData && typeof errorData.message === 'string' && errorData.message) ||
-            (errorData && typeof errorData.error === 'string' && errorData.error) ||
-            `Request failed with status ${response.status}`;
           throw new Error(errorMessage);
         }
 
         // Server error - will retry
-        throw new Error(`Server error: ${response.status}`);
+        throw new Error(errorMessage || `Server error: ${response.status}`);
       }
 
       return response.json();
