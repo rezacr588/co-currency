@@ -31,6 +31,8 @@ export function CurrencyConverter({
   initialToCurrency = 'EUR',
   initialAmount = '1',
   showQuickSelect,
+  allowedCurrencyCodes,
+  onStateChange,
 }: CurrencyConverterProps) {
   const { t } = useLanguage();
   const { width } = useWindowDimensions();
