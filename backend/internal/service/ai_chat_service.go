@@ -25,6 +25,7 @@ type AIChatService struct {
 	userRepo        *repository.UserRepository
 	recurringRepo   *repository.RecurringRepository
 	memoryRepo      *repository.MemoryRepository
+	memoryService   *MemoryService // Semantic memory with Qdrant
 }
 
 var (
@@ -43,6 +44,7 @@ func NewAIChatService(
 	userRepo *repository.UserRepository,
 	recurringRepo *repository.RecurringRepository,
 	memoryRepo *repository.MemoryRepository,
+	memoryService *MemoryService,
 ) *AIChatService {
 	return &AIChatService{
 		aiService:       aiService,
@@ -54,6 +56,7 @@ func NewAIChatService(
 		userRepo:        userRepo,
 		recurringRepo:   recurringRepo,
 		memoryRepo:      memoryRepo,
+		memoryService:   memoryService,
 	}
 }
 
@@ -124,8 +127,8 @@ func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName str
 		financialContext = &model.FinancialContext{}
 	}
 
-	// Get user memories (long-term context)
-	memories, _ := s.getUserMemories(ctx, userID)
+	// Get user memories (long-term context) - use semantic search with current message
+	memories, _ := s.getUserMemories(ctx, userID, message)
 
 	// Get exchange rates (use user's preferred currency or USD)
 	baseCurrency := financialContext.PreferredCurrency
@@ -161,6 +164,12 @@ func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName str
 	aiMsg, err := s.chatRepo.AddMessage(ctx, convID, "assistant", aiResponse, 0)
 	if err != nil {
 		return nil, fmt.Errorf("saving AI message: %w", err)
+	}
+
+	// Store messages in short-term memory (async) for semantic recall
+	if s.memoryService != nil {
+		s.memoryService.StoreShortTermMemory(ctx, userID, convID.String(), "user", message)
+		s.memoryService.StoreShortTermMemory(ctx, userID, convID.String(), "assistant", aiResponse)
 	}
 
 	return &model.ChatResponse{
@@ -243,8 +252,8 @@ func (s *AIChatService) ChatStream(
 		financialContext = &model.FinancialContext{}
 	}
 
-	// Get user memories (long-term context)
-	memories, _ := s.getUserMemories(ctx, userID)
+	// Get user memories (long-term context) - use semantic search with current message
+	memories, _ := s.getUserMemories(ctx, userID, message)
 
 	// Get exchange rates (use user's preferred currency or USD)
 	baseCurrency := financialContext.PreferredCurrency
@@ -313,6 +322,12 @@ func (s *AIChatService) ChatStream(
 	aiMsg, err := s.chatRepo.AddMessage(ctx, convID, "assistant", aiResponse, 0)
 	if err != nil {
 		return nil, fmt.Errorf("saving AI message: %w", err)
+	}
+
+	// Store messages in short-term memory (async) for semantic recall
+	if s.memoryService != nil {
+		s.memoryService.StoreShortTermMemory(ctx, userID, convID.String(), "user", message)
+		s.memoryService.StoreShortTermMemory(ctx, userID, convID.String(), "assistant", aiResponse)
 	}
 
 	return &model.ChatResponse{
@@ -702,15 +717,32 @@ func daysUntilEndOfMonth(t time.Time) int {
 }
 
 // getUserMemories retrieves long-term memories about the user
-func (s *AIChatService) getUserMemories(ctx context.Context, userID uuid.UUID) ([]model.UserMemory, error) {
+// If memoryService is available, uses semantic search; otherwise falls back to recent memories
+func (s *AIChatService) getUserMemories(ctx context.Context, userID uuid.UUID, currentMessage string) ([]model.UserMemory, error) {
+	// Try semantic search via memory service first
+	if s.memoryService != nil {
+		memories, err := s.memoryService.GetUserMemoriesForContext(ctx, userID, currentMessage)
+		if err == nil && len(memories) > 0 {
+			return memories, nil
+		}
+		// Fall through to fallback if semantic search fails
+	}
+
+	// Fallback to PostgreSQL recent memories
 	if s.memoryRepo == nil {
 		return nil, nil
 	}
 	return s.memoryRepo.GetRecent(ctx, userID, 20)
 }
 
-// SaveMemory stores a new memory about the user
+// SaveMemory stores a new memory about the user (in both PostgreSQL and Qdrant if available)
 func (s *AIChatService) SaveMemory(ctx context.Context, userID uuid.UUID, category, content, source string) (*model.UserMemory, error) {
+	// Use memory service if available (handles both PostgreSQL and Qdrant)
+	if s.memoryService != nil {
+		return s.memoryService.StoreLongTermMemory(ctx, userID, category, content, source)
+	}
+
+	// Fallback to direct PostgreSQL storage
 	if s.memoryRepo == nil {
 		return nil, fmt.Errorf("memory repository not available")
 	}

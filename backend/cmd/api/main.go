@@ -295,6 +295,60 @@ func main() {
 			if err := memoryRepo.InitSchema(context.Background()); err != nil {
 				log.Warn().Err(err).Msg("Failed to initialize memory schema")
 			}
+
+			// Initialize Qdrant and embedding services for semantic memory (optional)
+			var memoryService *service.MemoryService
+			if cfg.QdrantEnabled && cfg.QdrantURL != "" {
+				// Initialize Qdrant client
+				qdrantClient, err := repository.NewQdrantClient(repository.QdrantConfig{
+					URL:        cfg.QdrantURL,
+					APIKey:     cfg.QdrantAPIKey,
+					Dimensions: uint64(cfg.EmbeddingDimensions),
+				})
+				if err != nil {
+					log.Warn().Err(err).Msg("Failed to initialize Qdrant client, semantic memory disabled")
+				} else {
+					log.Info().
+						Str("url", cfg.QdrantURL).
+						Int("dimensions", cfg.EmbeddingDimensions).
+						Msg("Qdrant client initialized")
+
+					// Initialize embedding service
+					embeddingService, err := service.NewEmbeddingService(service.EmbeddingConfig{
+						Provider:   service.EmbeddingProvider(cfg.EmbeddingProvider),
+						APIKey:     cfg.EmbeddingAPIKey,
+						Model:      cfg.EmbeddingModel,
+						Dimensions: cfg.EmbeddingDimensions,
+						OllamaURL:  cfg.OllamaURL,
+					})
+					if err != nil {
+						log.Warn().Err(err).Msg("Failed to initialize embedding service, semantic memory disabled")
+						qdrantClient.Close()
+					} else {
+						log.Info().
+							Str("provider", cfg.EmbeddingProvider).
+							Str("model", cfg.EmbeddingModel).
+							Msg("Embedding service initialized")
+
+						// Initialize vector memory repository
+						vectorMemoryRepo := repository.NewVectorMemoryRepository(qdrantClient, cfg.ShortTermMemoryTTL)
+
+						// Initialize memory service (orchestrates PostgreSQL + Qdrant)
+						memoryService = service.NewMemoryService(
+							memoryRepo,
+							vectorMemoryRepo,
+							embeddingService,
+							cfg.MaxMemoryResults,
+						)
+						log.Info().Msg("Memory service initialized with semantic search (Qdrant)")
+					}
+				}
+			} else {
+				// Qdrant disabled, use PostgreSQL-only memory service
+				memoryService = service.NewMemoryService(memoryRepo, nil, nil, cfg.MaxMemoryResults)
+				log.Info().Msg("Memory service initialized (PostgreSQL only, Qdrant disabled)")
+			}
+
 			aiChatService = service.NewAIChatService(
 				aiService,
 				exchangeService,
@@ -305,6 +359,7 @@ func main() {
 				userRepo,
 				recurringRepo,
 				memoryRepo,
+				memoryService,
 			)
 			log.Info().Msg("AI Chat service initialized with full context")
 		}

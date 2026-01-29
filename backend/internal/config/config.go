@@ -40,6 +40,22 @@ type Config struct {
 	AIProvider     string `env:"AI_PROVIDER" envDefault:"googleai"` // googleai, openai
 	AIAPIKey       string `env:"AI_API_KEY" envDefault:""`
 	AICloudProject string `env:"AI_CLOUD_PROJECT" envDefault:""` // Google Cloud project ID
+
+	// Qdrant Vector Database
+	QdrantURL     string `env:"QDRANT_URL" envDefault:""`
+	QdrantAPIKey  string `env:"QDRANT_API_KEY" envDefault:""`
+	QdrantEnabled bool   `env:"QDRANT_ENABLED" envDefault:"false"`
+
+	// Embedding Provider (supports: huggingface, ollama, googleai)
+	EmbeddingProvider   string `env:"EMBEDDING_PROVIDER" envDefault:"huggingface"`
+	EmbeddingAPIKey     string `env:"EMBEDDING_API_KEY" envDefault:""`
+	EmbeddingModel      string `env:"EMBEDDING_MODEL" envDefault:"sentence-transformers/all-MiniLM-L6-v2"`
+	EmbeddingDimensions int    `env:"EMBEDDING_DIMENSIONS" envDefault:"384"`
+	OllamaURL           string `env:"OLLAMA_URL" envDefault:"http://localhost:11434"`
+
+	// Memory Settings
+	ShortTermMemoryTTL time.Duration `env:"SHORT_TERM_MEMORY_TTL" envDefault:"24h"`
+	MaxMemoryResults   int           `env:"MAX_MEMORY_RESULTS" envDefault:"10"`
 }
 
 // Load parses environment variables into Config
