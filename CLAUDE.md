@@ -187,9 +187,19 @@ Key patterns:
 Backend environment variables (see `/backend/.env.example`):
 - `DATABASE_URL`: PostgreSQL connection string (required for auth/wallet/goals/budgets)
 - `JWT_SECRET`: Secret for signing JWT tokens
-- `AI_PROVIDER`: LLM provider (cerebras)
+- `AI_PROVIDER`: LLM provider (cerebras, openai, googleai)
 - `AI_API_KEY`: API key for AI provider
+- `AI_MODEL`: Model name (e.g., `gpt-oss-120b` for Cerebras)
 - `RATE_LIMIT`: Requests per minute
+
+**Qdrant Vector Memory** (optional, for semantic AI memory):
+- `QDRANT_ENABLED`: Enable vector memory (`true`/`false`)
+- `QDRANT_URL`: Qdrant Cloud cluster URL
+- `QDRANT_API_KEY`: Qdrant API key
+- `EMBEDDING_PROVIDER`: Embedding provider (`huggingface`, `ollama`, `googleai`)
+- `EMBEDDING_API_KEY`: HuggingFace or Google AI API key
+- `EMBEDDING_MODEL`: Model name (default: `sentence-transformers/all-MiniLM-L6-v2`)
+- `EMBEDDING_DIMENSIONS`: Vector dimensions (384 for MiniLM, 768 for others)
 
 ## Database Schema
 
@@ -257,7 +267,24 @@ The workflow detects native changes and either pushes OTA update or triggers ful
 The AI Chat service (`internal/service/ai_chat_service.go`) provides:
 - **Financial Context**: User's balances, transactions, budgets, goals, recurring items
 - **Long-term Memory**: Stored insights about user preferences across conversations
+- **Semantic Memory** (with Qdrant): Vector similarity search for relevant past conversations
 - **Live Exchange Rates**: Real-time currency rates for accurate financial advice
 - **Conversation History**: Full chat history maintained per conversation
 
 The AI receives a rich system prompt with all user financial data, enabling personalized advice.
+
+### Vector Memory Architecture
+
+When `QDRANT_ENABLED=true`, the system uses hybrid PostgreSQL + Qdrant storage:
+- **PostgreSQL**: Source of truth for all memories
+- **Qdrant**: Semantic search index with two collections:
+  - `short_term_memory`: Recent conversation context (24h TTL)
+  - `long_term_memory`: User preferences and insights (permanent)
+- **Embedding**: HuggingFace Inference API (free) generates 384-dim vectors
+- **Fallback**: Gracefully degrades to PostgreSQL `GetRecent()` if Qdrant unavailable
+
+Key files:
+- `internal/repository/qdrant_client.go`: Qdrant connection and collection management
+- `internal/repository/vector_memory_repo.go`: Vector upsert and similarity search
+- `internal/service/embedding_service.go`: Text-to-vector embedding generation
+- `internal/service/memory_service.go`: Orchestrates PostgreSQL + Qdrant with fallback
