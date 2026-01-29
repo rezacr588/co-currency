@@ -2,7 +2,7 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator, useWindowDimensio
 import { Link } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, Wallet, ArrowRight, User, DollarSign, PiggyBank, CreditCard, Lightbulb } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Wallet, ArrowRight, User, DollarSign, PiggyBank, CreditCard, Lightbulb, Bot, PieChart, Sparkles } from 'lucide-react-native';
 import { api } from '../../../src/api';
 import { useAuth } from '../../../src/context/AuthContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
@@ -37,9 +37,31 @@ export default function DashboardScreen() {
   });
   const goals = goalsData?.goals;
 
+  const { data: budgetsData } = useQuery({
+    queryKey: ['budgets'],
+    queryFn: () => api.budgets.list(),
+  });
+  const budgets = budgetsData?.budgets || [];
+
+  const { data: forecast } = useQuery({
+    queryKey: ['forecast'],
+    queryFn: () => api.reports.forecast(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: aiStatus } = useQuery({
+    queryKey: ['ai-status'],
+    queryFn: () => api.ai.getStatus(),
+  });
+
   // Calculate stats
   const totalGoals = goals?.length || 0;
   const activeGoals = goals?.filter((g: any) => g.current_amount < g.target_amount).length || 0;
+
+  // Calculate budget stats
+  const totalBudget = budgets.reduce((acc: number, b: any) => acc + b.amount, 0);
+  const totalSpent = budgets.reduce((acc: number, b: any) => acc + (b.spent || 0), 0);
+  const budgetPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
 
   type Insight = { title: string; detail: string; tone: 'warning' | 'success' | 'info' };
   const insights: Insight[] = [];
@@ -192,7 +214,91 @@ export default function DashboardScreen() {
               <Text className="text-xs text-muted-foreground mt-1">Active goals</Text>
             </View>
           </View>
+
+          {/* Budget Status */}
+          {budgets.length > 0 && (
+            <View style={{ flex: isDesktop ? 1 : isTablet ? '48%' as any : 1, minWidth: isDesktop ? 200 : undefined }}>
+              <View className="bg-card border border-border p-5 rounded-xl h-full">
+                <View className="flex-row items-center justify-between mb-3">
+                  <Text className="text-muted-foreground text-sm">{t('budgetStatus') || 'Budget'}</Text>
+                  <PieChart size={18} color={budgetPercentage > 90 ? '#ef4444' : budgetPercentage > 70 ? '#f59e0b' : '#22c55e'} />
+                </View>
+                <Text className={`text-2xl font-bold ${budgetPercentage > 90 ? 'text-danger' : budgetPercentage > 70 ? 'text-warning' : 'text-success'}`}>
+                  {budgetPercentage}%
+                </Text>
+                <Text className="text-xs text-muted-foreground mt-1">
+                  {formatCompactCurrency(totalSpent, 'USD')} / {formatCompactCurrency(totalBudget, 'USD')}
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
+
+        {/* AI Financial Advisor Card */}
+        {aiStatus?.configured && (
+          <Link href="/(app)/(tabs)/chat" asChild>
+            <Pressable style={{ cursor: 'pointer' }}>
+              <View className="bg-gradient-to-r from-primary to-accent border border-primary/30 p-5 rounded-xl mb-6">
+                <View className="flex-row items-center">
+                  <View className="w-12 h-12 rounded-xl bg-black/10 items-center justify-center mr-4">
+                    <Bot size={24} color="#09090b" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-primary-foreground font-bold text-base">{t('aiAdvisor') || 'AI Financial Advisor'}</Text>
+                    <Text className="text-primary-foreground/70 text-sm mt-0.5">Get personalized advice based on your data</Text>
+                  </View>
+                  <ArrowRight size={20} color="#09090b" />
+                </View>
+              </View>
+            </Pressable>
+          </Link>
+        )}
+
+        {/* Spending Forecast */}
+        {forecast && forecast.avg_daily_spend > 0 && (
+          <View className="bg-card border border-border p-5 rounded-xl mb-6">
+            <View className="flex-row items-center mb-4">
+              <View className="w-10 h-10 rounded-full bg-secondary items-center justify-center mr-3">
+                {forecast.net_daily_flow >= 0 ? (
+                  <TrendingUp size={20} color="#22c55e" />
+                ) : (
+                  <TrendingDown size={20} color="#ef4444" />
+                )}
+              </View>
+              <View>
+                <Text className="text-base font-semibold text-foreground">Spending Forecast</Text>
+                <Text className="text-xs text-muted-foreground">Based on last 30 days</Text>
+              </View>
+            </View>
+            <View className="flex-row justify-between">
+              <View className="items-center flex-1">
+                <Text className="text-xs text-muted-foreground">Daily Spend</Text>
+                <Text className="text-base font-semibold text-danger">
+                  -{formatCompactCurrency(forecast.avg_daily_spend, forecast.currency)}
+                </Text>
+              </View>
+              <View className="items-center flex-1">
+                <Text className="text-xs text-muted-foreground">Daily Income</Text>
+                <Text className="text-base font-semibold text-success">
+                  +{formatCompactCurrency(forecast.avg_daily_income, forecast.currency)}
+                </Text>
+              </View>
+              <View className="items-center flex-1">
+                <Text className="text-xs text-muted-foreground">Net Flow</Text>
+                <Text className={`text-base font-semibold ${forecast.net_daily_flow >= 0 ? 'text-success' : 'text-danger'}`}>
+                  {forecast.net_daily_flow >= 0 ? '+' : ''}{formatCompactCurrency(forecast.net_daily_flow, forecast.currency)}
+                </Text>
+              </View>
+            </View>
+            {forecast.net_daily_flow < 0 && forecast.days_until_zero > 0 && (
+              <View className="bg-danger/10 border border-danger/20 p-3 rounded-lg mt-4">
+                <Text className="text-danger text-sm font-medium text-center">
+                  ⚠️ At this rate, balance reaches zero in {forecast.days_until_zero} days
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Insights */}
         <View className="bg-card border border-border p-5 rounded-xl mb-6">
