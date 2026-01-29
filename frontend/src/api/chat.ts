@@ -32,18 +32,6 @@ export interface ConversationWithMessages {
   messages: ChatMessage[];
 }
 
-type StreamHandlers = {
-  onStart?: (conversationId: string) => void;
-  onDelta?: (chunk: string) => void;
-  onDone?: (response: ChatResponse) => void;
-  onError?: (error: string) => void;
-};
-const sendMessageRequest = (data: ChatRequest) =>
-  fetchAPI<ChatResponse>('/ai/chat', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-
 export const chat = {
   listConversations: () =>
     fetchAPI<{ conversations: Conversation[] }>('/ai/conversations'),
@@ -62,20 +50,9 @@ export const chat = {
       method: 'DELETE',
     }),
 
-  sendMessage: sendMessageRequest,
-
-  streamMessage: async (
-    data: ChatRequest,
-    handlers: StreamHandlers = {}
-  ): Promise<ChatResponse> => {
-    try {
-      const response = await sendMessageRequest(data);
-      handlers.onStart?.(response.conversation_id);
-      handlers.onDone?.(response);
-      return response;
-    } catch (error) {
-      handlers.onError?.(error instanceof Error ? error.message : 'Request failed');
-      throw error;
-    }
-  },
+  sendMessage: (data: ChatRequest) =>
+    fetchAPI<ChatResponse>('/ai/chat', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };

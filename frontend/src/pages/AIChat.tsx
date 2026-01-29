@@ -26,7 +26,6 @@ export default function AIChat() {
     const [activeConversationId, setActiveConversationId] = useState<string | null>(
         conversationId || null
     );
-    const streamingStateRef = useRef<{ conversationId: string; messageId: string } | null>(null);
     const optimisticConversationIdRef = useRef<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -64,110 +63,14 @@ export default function AIChat() {
         }
     }, [conversationId]);
 
-    const ensureStreamingAssistant = (conversationId: string) => {
-        const existing = streamingStateRef.current;
-        if (existing && existing.conversationId === conversationId) {
-            return existing;
-        }
-        const messageId = `stream-${Date.now()}`;
-        const now = new Date().toISOString();
-        streamingStateRef.current = { conversationId, messageId };
-
-        queryClient.setQueryData<ConversationWithMessages | null>(
-            ['ai-conversation', conversationId],
-            (old) => {
-                const base = old ?? {
-                    conversation: {
-                        id: conversationId,
-                        user_id: '',
-                        title: t('newConversation') || 'Conversation',
-                        created_at: now,
-                        updated_at: now,
-                    },
-                    messages: [],
-                };
-                return {
-                    ...base,
-                    messages: [
-                        ...base.messages,
-                        {
-                            id: messageId,
-                            conversation_id: conversationId,
-                            role: 'assistant',
-                            content: '',
-                            created_at: now,
-                        },
-                    ],
-                };
-            }
-        );
-
-        return streamingStateRef.current;
-    };
-
-    const appendStreamingChunk = (conversationId: string, chunk: string) => {
-        const streamingState = ensureStreamingAssistant(conversationId);
-        queryClient.setQueryData<ConversationWithMessages | null>(
-            ['ai-conversation', conversationId],
-            (old) => {
-                if (!old) return old;
-                return {
-                    ...old,
-                    messages: old.messages.map((msg) =>
-                        msg.id === streamingState.messageId
-                            ? { ...msg, content: `${msg.content}${chunk}` }
-                            : msg
-                    ),
-                };
-            }
-        );
-    };
-
-    const finalizeStreamingAssistant = (conversationId: string, message: ChatMessage) => {
-        const streamingState = streamingStateRef.current;
-        queryClient.setQueryData<ConversationWithMessages | null>(
-            ['ai-conversation', conversationId],
-            (old) => {
-                if (!old) return old;
-                let messages = old.messages;
-                if (streamingState && streamingState.conversationId === conversationId) {
-                    messages = messages.filter((msg) => msg.id !== streamingState.messageId);
-                }
-                if (!messages.find((msg) => msg.id === message.id)) {
-                    messages = [...messages, message];
-                }
-                return { ...old, messages };
-            }
-        );
-        if (streamingState && streamingState.conversationId === conversationId) {
-            streamingStateRef.current = null;
-        }
-    };
 
     // Send message mutation
     const sendMessageMutation = useMutation({
         mutationFn: async (msg: string) => {
-            const optimisticConversationId =
-                optimisticConversationIdRef.current || selectedConversationId;
-            try {
-                return await api.chat.streamMessage(
-                    {
-                        conversation_id: selectedConversationId || undefined,
-                        message: msg,
-                    },
-                    {
-                        onDelta: (chunk) => {
-                            if (!optimisticConversationId) return;
-                            appendStreamingChunk(optimisticConversationId, chunk);
-                        },
-                    }
-                );
-            } catch {
-                return api.chat.sendMessage({
-                    conversation_id: selectedConversationId || undefined,
-                    message: msg,
-                });
-            }
+            return api.chat.sendMessage({
+                conversation_id: selectedConversationId || undefined,
+                message: msg,
+            });
         },
         onMutate: async (msg) => {
             setIsTyping(true);
@@ -235,23 +138,49 @@ export default function AIChat() {
         },
         onSuccess: (data) => {
             const serverConversationId = data.conversation_id;
+
+            // Validate response
+            if (!serverConversationId || !data.message || !data.message.content) {
+                setSendError('Received invalid response from server');
+                setIsTyping(false);
+                return;
+            }
+
+            // Handle optimistic conversation replacement
             if (
                 optimisticConversationIdRef.current &&
                 optimisticConversationIdRef.current !== serverConversationId
             ) {
                 const tempId = optimisticConversationIdRef.current;
+
+                // Get temp conversation data BEFORE removing it
                 const tempData = queryClient.getQueryData<ConversationWithMessages>([
                     'ai-conversation',
                     tempId,
                 ]);
-                if (tempData) {
-                    queryClient.setQueryData<ConversationWithMessages>(
-                        ['ai-conversation', serverConversationId],
-                        tempData
-                    );
-                    queryClient.removeQueries({ queryKey: ['ai-conversation', tempId] });
-                }
 
+                // Set data for real conversation, preserving user messages from temp
+                queryClient.setQueryData<ConversationWithMessages>(
+                    ['ai-conversation', serverConversationId],
+                    {
+                        conversation: {
+                            id: serverConversationId,
+                            user_id: tempData?.conversation.user_id || '',
+                            title: tempData?.conversation.title || data.message.content.slice(0, 50),
+                            created_at: tempData?.conversation.created_at || new Date().toISOString(),
+                            updated_at: new Date().toISOString(),
+                        },
+                        messages: [
+                            ...(tempData?.messages || []),
+                            data.message,
+                        ],
+                    }
+                );
+
+                // Remove temp conversation data
+                queryClient.removeQueries({ queryKey: ['ai-conversation', tempId] });
+
+                // Update conversations list
                 queryClient.setQueryData<{ conversations: Conversation[] } | undefined>(
                     ['ai-conversations'],
                     (old) => {
@@ -264,19 +193,44 @@ export default function AIChat() {
                 );
 
                 setActiveConversationId(serverConversationId);
-                if (streamingStateRef.current?.conversationId === tempId) {
-                    streamingStateRef.current = {
-                        conversationId: serverConversationId,
-                        messageId: streamingStateRef.current.messageId,
-                    };
-                }
+            } else {
+                // Existing conversation - just add the AI message
+                queryClient.setQueryData<ConversationWithMessages | null>(
+                    ['ai-conversation', serverConversationId],
+                    (old) => {
+                        if (!old) {
+                            // This shouldn't happen for existing conversations, but handle it
+                            const now = new Date().toISOString();
+                            return {
+                                conversation: {
+                                    id: serverConversationId,
+                                    user_id: '',
+                                    title: data.message.content.slice(0, 50) || 'Conversation',
+                                    created_at: now,
+                                    updated_at: now,
+                                },
+                                messages: [data.message],
+                            };
+                        }
+                        // Add message if it doesn't exist
+                        const messageExists = old.messages.some(msg => msg.id === data.message.id);
+                        if (messageExists) {
+                            return old;
+                        }
+                        return {
+                            ...old,
+                            messages: [...old.messages, data.message],
+                        };
+                    }
+                );
             }
 
+            // Navigate to the conversation if we're not already there
             if (!conversationId) {
                 navigate(`${ROUTES.aiChat}/${serverConversationId}`);
             }
 
-            finalizeStreamingAssistant(serverConversationId, data.message);
+            // Refresh conversations list
             queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
             setIsTyping(false);
             optimisticConversationIdRef.current = null;
@@ -284,18 +238,8 @@ export default function AIChat() {
         onError: (error, _msg, context) => {
             setIsTyping(false);
             setSendError(error instanceof Error ? error.message : 'Unable to reach the assistant. Please try again.');
-            if (context?.optimisticConversationId && context.optimisticMessageId) {
-                queryClient.setQueryData<ConversationWithMessages | null>(
-                    ['ai-conversation', context.optimisticConversationId],
-                    (old) => {
-                        if (!old) return old;
-                        return {
-                            ...old,
-                            messages: old.messages.filter((msg) => msg.id !== context.optimisticMessageId),
-                        };
-                    }
-                );
-            }
+
+            // Remove optimistic temp conversation (entire conversation for new chats)
             if (context?.optimisticConversationId?.startsWith('temp-')) {
                 queryClient.removeQueries({
                     queryKey: ['ai-conversation', context.optimisticConversationId],
@@ -311,8 +255,20 @@ export default function AIChat() {
                         };
                     }
                 );
+            } else if (context?.optimisticConversationId && context.optimisticMessageId) {
+                // For existing conversations, just remove the optimistic user message
+                queryClient.setQueryData<ConversationWithMessages | null>(
+                    ['ai-conversation', context.optimisticConversationId],
+                    (old) => {
+                        if (!old) return old;
+                        return {
+                            ...old,
+                            messages: old.messages.filter((msg) => msg.id !== context.optimisticMessageId),
+                        };
+                    }
+                );
             }
-            streamingStateRef.current = null;
+
             optimisticConversationIdRef.current = null;
         },
     });
@@ -320,8 +276,11 @@ export default function AIChat() {
     // Delete conversation mutation
     const deleteConversationMutation = useMutation({
         mutationFn: (id: string) => api.chat.deleteConversation(id),
-        onSuccess: () => {
+        onSuccess: (_data, deletedId) => {
+            // Invalidate both the conversations list and the specific conversation
             queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
+            queryClient.removeQueries({ queryKey: ['ai-conversation', deletedId] });
+
             if (conversationId) navigate(ROUTES.aiChat);
             setActiveConversationId(null);
         },
@@ -341,7 +300,7 @@ export default function AIChat() {
     }, [conversationId]);
 
     const handleSend = () => {
-        if (!message.trim() || sendMessageMutation.isPending) return;
+        if (!message.trim() || sendMessageMutation.isPending || isTyping) return;
         if (!aiConfigured) {
             setSendError('AI is not configured on the server.');
             return;
@@ -351,19 +310,25 @@ export default function AIChat() {
     };
 
     const handleNewConversation = () => {
+        // Don't navigate if a message is being sent
+        if (sendMessageMutation.isPending || isTyping) {
+            return;
+        }
         setIsTyping(false);
         setActiveConversationId(null);
         optimisticConversationIdRef.current = null;
-        streamingStateRef.current = null;
         setSendError(null);
         navigate(ROUTES.aiChat);
     };
 
     const handleSelectConversation = (id: string) => {
+        // Don't navigate if a message is being sent
+        if (sendMessageMutation.isPending || isTyping) {
+            return;
+        }
         setIsTyping(false);
         setActiveConversationId(id);
         optimisticConversationIdRef.current = null;
-        streamingStateRef.current = null;
         setSendError(null);
         navigate(`${ROUTES.aiChat}/${id}`);
     };
@@ -471,10 +436,12 @@ export default function AIChat() {
                                     <button
                                         key={i}
                                         onClick={() => {
+                                            if (!aiConfigured) return;
                                             setMessage(q);
                                             inputRef.current?.focus();
                                         }}
-                                        className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-sm text-slate-700 dark:text-slate-300 hover:border-primary-500 hover:text-primary-600 transition-colors"
+                                        disabled={!aiConfigured}
+                                        className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-sm text-slate-700 dark:text-slate-300 hover:border-primary-500 hover:text-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {q}
                                     </button>
@@ -544,13 +511,11 @@ export default function AIChat() {
 
                 {/* Input */}
                 <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                    <div className="flex gap-2 max-w-4xl mx-auto">
-                        {sendError && (
-                            <div className="w-full mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
-                                {sendError}
-                            </div>
-                        )}
-                    </div>
+                    {sendError && (
+                        <div className="max-w-4xl mx-auto mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
+                            {sendError}
+                        </div>
+                    )}
                     <div className="flex gap-2 max-w-4xl mx-auto">
                         <input
                             ref={inputRef}
@@ -559,12 +524,12 @@ export default function AIChat() {
                             onChange={(e) => setMessage(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder={t('typeMessage') || 'Ask about your finances...'}
-                            disabled={sendMessageMutation.isPending || !aiConfigured}
+                            disabled={sendMessageMutation.isPending || isTyping || !aiConfigured}
                             className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                         />
                         <button
                             onClick={handleSend}
-                            disabled={!message.trim() || sendMessageMutation.isPending || !aiConfigured}
+                            disabled={!message.trim() || sendMessageMutation.isPending || isTyping || !aiConfigured}
                             className="px-4 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary-500/20"
                         >
                             <Send className="w-5 h-5" />
