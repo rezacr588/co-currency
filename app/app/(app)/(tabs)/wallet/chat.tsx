@@ -1052,15 +1052,21 @@ export default function AIChatScreen() {
                   returnKeyType="send"
                   blurOnSubmit={false}
                   autoFocus={false}
-                  className="flex-1 bg-background border border-border rounded-xl px-4 py-3 text-foreground"
                   multiline
                   textAlignVertical="top"
                   style={{
-                    outlineStyle: 'none',
+                    flex: 1,
+                    backgroundColor: '#09090b',
+                    borderWidth: 1,
+                    borderColor: '#27272a',
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    color: '#fafafa',
+                    fontSize: 16,
                     minHeight: 44,
                     maxHeight: 140,
-                    color: '#fafafa', // Ensure text is visible in dark mode
-                  } as any}
+                  }}
                 />
                 <Pressable
                   onPress={handleSend}
