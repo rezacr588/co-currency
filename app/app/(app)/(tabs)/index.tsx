@@ -247,16 +247,39 @@ export default function DashboardScreen() {
 
         {/* AI Financial Advisor Card */}
         {aiStatus?.configured && (
-          <Link href="/(app)/(tabs)/chat" asChild>
+          <Link href="/(app)/(tabs)/wallet/chat" asChild>
             <Pressable style={{ cursor: 'pointer' }}>
-              <View className="bg-gradient-to-r from-primary to-accent border border-primary/30 p-5 rounded-xl mb-6">
+              <View
+                style={{
+                  backgroundColor: '#d4af37',
+                  borderWidth: 1,
+                  borderColor: 'rgba(212, 175, 55, 0.3)',
+                  padding: 20,
+                  borderRadius: 12,
+                  marginBottom: 24,
+                }}
+              >
                 <View className="flex-row items-center">
-                  <View className="w-12 h-12 rounded-xl bg-black/10 items-center justify-center mr-4">
+                  <View
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 12,
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 16,
+                    }}
+                  >
                     <Bot size={24} color="#09090b" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-primary-foreground font-bold text-base">{t('aiAdvisor') || 'AI Financial Advisor'}</Text>
-                    <Text className="text-primary-foreground/70 text-sm mt-0.5">Get personalized advice based on your data</Text>
+                    <Text style={{ color: '#09090b', fontWeight: 'bold', fontSize: 16 }}>
+                      {t('aiAdvisor') || 'AI Financial Advisor'}
+                    </Text>
+                    <Text style={{ color: 'rgba(9, 9, 11, 0.7)', fontSize: 14, marginTop: 2 }}>
+                      Get personalized advice
+                    </Text>
                   </View>
                   <ArrowRight size={20} color="#09090b" />
                 </View>

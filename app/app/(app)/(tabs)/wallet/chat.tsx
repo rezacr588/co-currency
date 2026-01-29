@@ -1116,16 +1116,21 @@ export default function AIChatScreen() {
           <View className="flex-1 flex-col">
             {/* Header */}
             <View
-              className="flex-row items-center p-4 border-b border-border bg-card"
+              className="flex-row items-center justify-between p-4 border-b border-border bg-card"
               style={contentWidthStyle}
             >
-              <View className="w-8 h-8 rounded-full bg-primary items-center justify-center">
-                <Bot size={16} color="#09090b" />
+              <View className="flex-row items-center">
+                <View className="w-8 h-8 rounded-full bg-primary items-center justify-center">
+                  <Bot size={16} color="#09090b" />
+                </View>
+                <Text className="font-semibold text-foreground ml-3">{t('aiAdvisor')}</Text>
               </View>
-              <View className="ml-3">
-                <Text className="font-semibold text-foreground">{t('aiAdvisor')}</Text>
-                <Text className="text-xs text-muted-foreground">{t('aiAdvisorDesc')}</Text>
-              </View>
+              <Pressable
+                onPress={handleNewConversation}
+                className="bg-muted px-3 py-1.5 rounded-full"
+              >
+                <Text className="text-xs text-muted-foreground">{t('newChat') || 'New Chat'}</Text>
+              </Pressable>
             </View>
 
             {/* Mobile Conversations Carousel */}
