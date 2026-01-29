@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, TextInput, Pressable, FlatList, ActivityIndicator, Modal, useWindowDimensions } from 'react-native';
-import { ArrowDownUp, ChevronDown, X, Search } from 'lucide-react-native';
+import { ArrowDownUp, ChevronDown, X, Search, AlertCircle } from 'lucide-react-native';
 import { useConvert, useCurrencies } from '../../hooks';
 import { useLanguage } from '../../context/LanguageContext';
 import { formatNumber, getCurrencyDisplay } from '../../utils/format';
@@ -44,9 +44,29 @@ export function CurrencyConverter({
   const [showCurrencyPicker, setShowCurrencyPicker] = useState<'from' | 'to' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const parsedAmount = parseFloat(amount) || 0;
-  const { data: conversion, isPending, isError } = useConvert(fromCurrency, toCurrency, parsedAmount);
+  // Parse and validate amount
+  const parsedAmount = useMemo(() => {
+    if (!amount || amount.trim() === '') return 0;
+    const cleaned = amount.replace(/[^0-9.]/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
+  }, [amount]);
+
+  const { data: conversion, isPending, isError, error } = useConvert(fromCurrency, toCurrency, parsedAmount);
   const { data: currencies } = useCurrencies();
+
+  // Handle amount input with validation
+  const handleAmountChange = useCallback((text: string) => {
+    // Allow only numbers and single decimal point
+    const cleaned = text.replace(/[^0-9.]/g, '');
+    // Prevent multiple decimal points
+    const parts = cleaned.split('.');
+    if (parts.length > 2) {
+      setAmount(parts[0] + '.' + parts.slice(1).join(''));
+    } else {
+      setAmount(cleaned);
+    }
+  }, []);
 
   const allowedCodes = useMemo(() => {
     if (!allowedCurrencyCodes || allowedCurrencyCodes.length === 0) return null;
@@ -122,16 +142,22 @@ export function CurrencyConverter({
       {variant === 'full' ? (
         <View>
           {/* Amount Input */}
-          <View className="bg-card p-4 rounded-xl mb-4">
+          <View className="bg-card border border-border p-4 rounded-xl mb-4">
             <Text className="text-sm text-muted-foreground mb-2">{t('amount')}</Text>
             <TextInput
               className="text-3xl font-bold text-foreground"
-              style={{ outlineStyle: 'none' } as any}
+              style={{
+                outlineStyle: 'none',
+                color: '#fafafa',
+                minHeight: 44,
+              } as any}
               value={amount}
-              onChangeText={setAmount}
+              onChangeText={handleAmountChange}
               keyboardType="decimal-pad"
               placeholder="0"
-              placeholderTextColor="rgb(148, 163, 184)"
+              placeholderTextColor="rgb(113, 113, 122)"
+              selectTextOnFocus
+              autoCorrect={false}
             />
           </View>
 
@@ -183,24 +209,35 @@ export function CurrencyConverter({
           {/* Result */}
           <View className="bg-card p-6 rounded-xl border-2 border-accent">
             <Text className="text-sm text-muted-foreground mb-2">{t('result')}</Text>
-            {isPending ? (
-              <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
+            {fromCurrency === toCurrency ? (
+              <View className="flex-row items-center">
+                <AlertCircle size={20} color="#f59e0b" />
+                <Text className="text-warning ml-2">{t('selectDifferentCurrencies') || 'Select different currencies'}</Text>
+              </View>
+            ) : isPending ? (
+              <View className="items-center py-4">
+                <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
+                <Text className="text-muted-foreground text-sm mt-2">{t('calculating') || 'Calculating...'}</Text>
+              </View>
             ) : isError ? (
-              <Text className="text-danger">{t('conversionError')}</Text>
+              <View className="flex-row items-center">
+                <AlertCircle size={20} color="#ef4444" />
+                <Text className="text-danger ml-2">{t('conversionError') || 'Failed to get rate'}</Text>
+              </View>
             ) : conversion ? (
               <>
-                <Text className="text-4xl font-bold text-accent">
-                  {formatNumber(conversion.result)}
+                <Text className="text-4xl font-bold text-accent" style={{ color: 'rgb(212, 175, 55)' }}>
+                  {formatNumber(conversion.result, 2)} {toCurrency}
                 </Text>
-                <Text className="text-muted-foreground mt-2">
+                <Text className="text-muted-foreground mt-2" style={{ color: 'rgb(161, 161, 170)' }}>
                   1 {fromCurrency} = {formatNumber(conversion.rate, 6)} {toCurrency}
                 </Text>
               </>
-            ) : (
-              <Text className="text-2xl text-muted-foreground">
-                {t('enterAmount')}
+            ) : parsedAmount === 0 ? (
+              <Text className="text-2xl text-muted-foreground" style={{ color: 'rgb(113, 113, 122)' }}>
+                {t('enterAmount') || 'Enter an amount'}
               </Text>
-            )}
+            ) : null}
           </View>
 
           {/* Quick Select - Popular Currencies */}
@@ -261,12 +298,17 @@ export function CurrencyConverter({
               <View className="bg-muted border border-border rounded-lg flex-row items-center">
                 <TextInput
                   className="flex-1 p-3 text-lg font-semibold text-foreground"
-                  style={{ outlineStyle: 'none' } as any}
+                  style={{
+                    outlineStyle: 'none',
+                    color: '#fafafa',
+                    minHeight: 44,
+                  } as any}
                   value={amount}
-                  onChangeText={setAmount}
+                  onChangeText={handleAmountChange}
                   keyboardType="decimal-pad"
                   placeholder="1"
                   placeholderTextColor="#52525b"
+                  selectTextOnFocus
                 />
                 <Pressable
                   onPress={() => setShowCurrencyPicker('from')}
@@ -274,7 +316,7 @@ export function CurrencyConverter({
                   className="flex-row items-center bg-secondary px-3 py-2 rounded-md mr-2"
                 >
                   <Text className="text-base mr-1">{fromDisplay.flag || '🌐'}</Text>
-                  <Text className="font-medium text-foreground text-sm">{fromCurrency}</Text>
+                  <Text className="font-medium text-foreground text-sm" style={{ color: '#fafafa' }}>{fromCurrency}</Text>
                   <ChevronDown size={14} color="#71717a" />
                 </Pressable>
               </View>
@@ -284,7 +326,7 @@ export function CurrencyConverter({
             <Pressable
               onPress={swapCurrencies}
               style={{ cursor: 'pointer' }}
-              className="bg-secondary border border-border p-2 rounded-full"
+              className="bg-secondary border border-border p-2 rounded-full active:bg-muted"
             >
               <ArrowDownUp size={18} color="#a1a1aa" />
             </Pressable>
@@ -297,15 +339,23 @@ export function CurrencyConverter({
                 className="bg-muted border border-border rounded-lg flex-row items-center p-3"
               >
                 {isPending ? (
-                  <ActivityIndicator size="small" color="#71717a" className="flex-1" />
+                  <ActivityIndicator size="small" color="rgb(212, 175, 55)" style={{ flex: 1 }} />
+                ) : isError ? (
+                  <Text className="flex-1 text-lg font-semibold text-danger" style={{ color: '#ef4444' }}>
+                    Error
+                  </Text>
+                ) : fromCurrency === toCurrency ? (
+                  <Text className="flex-1 text-lg font-semibold" style={{ color: '#f59e0b' }}>
+                    Same currency
+                  </Text>
                 ) : (
-                  <Text className="flex-1 text-lg font-semibold text-foreground">
+                  <Text className="flex-1 text-lg font-semibold text-foreground" style={{ color: '#fafafa' }}>
                     {conversion ? formatNumber(conversion.result, 2) : '0.00'}
                   </Text>
                 )}
                 <View className="flex-row items-center bg-secondary px-3 py-2 rounded-md">
                   <Text className="text-base mr-1">{toDisplay.flag || '🌐'}</Text>
-                  <Text className="font-medium text-foreground text-sm">{toCurrency}</Text>
+                  <Text className="font-medium text-foreground text-sm" style={{ color: '#fafafa' }}>{toCurrency}</Text>
                   <ChevronDown size={14} color="#71717a" />
                 </View>
               </Pressable>
@@ -313,9 +363,14 @@ export function CurrencyConverter({
           </View>
 
           {/* Rate info */}
-          {conversion && (
-            <Text className="text-muted-foreground text-xs mt-3 text-center">
+          {conversion && fromCurrency !== toCurrency && (
+            <Text className="text-muted-foreground text-xs mt-3 text-center" style={{ color: 'rgb(161, 161, 170)' }}>
               1 {fromCurrency} = {formatNumber(conversion.rate, 4)} {toCurrency}
+            </Text>
+          )}
+          {isError && (
+            <Text className="text-danger text-xs mt-3 text-center" style={{ color: '#ef4444' }}>
+              {t('conversionError') || 'Failed to get exchange rate'}
             </Text>
           )}
         </View>
