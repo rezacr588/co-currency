@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
   Alert,
   StyleSheet,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,9 +27,7 @@ import {
   Trash2,
   Sparkles,
   MessageCircle,
-  Paperclip,
-  Image as ImageIcon,
-  FileText,
+  X,
   CheckCircle2,
   AlertTriangle,
 } from 'lucide-react-native';
@@ -102,7 +101,7 @@ export default function AIChatScreen() {
 
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [showAttachmentHint, setShowAttachmentHint] = useState(false);
+  const [showInputModal, setShowInputModal] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(
@@ -585,7 +584,6 @@ export default function AIChatScreen() {
     sendMessageMutation.mutate(trimmed);
     setMessage('');
     void maybeStartAction(trimmed);
-    setShowAttachmentHint(false);
     isNearBottomRef.current = true;
     setTimeout(scrollToBottom, 50);
   };
@@ -1030,19 +1028,29 @@ export default function AIChatScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item: msg }) => (
           <View
-            className={`flex-row ${
-              msg.role === 'user' ? 'justify-end' : 'justify-start'
-            }`}
-            style={{ width: '100%' }}
+            style={{
+              flexDirection: 'row',
+              justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+              width: '100%',
+            }}
           >
             <View
-              className={`flex-row ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
-              style={{ gap: 12, maxWidth: messageMaxWidth }}
+              style={{
+                flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
+                gap: 12,
+                maxWidth: '85%',
+                alignItems: 'flex-start',
+              }}
             >
               <View
-                className={`w-8 h-8 rounded-full items-center justify-center ${
-                  msg.role === 'user' ? 'bg-secondary' : 'bg-primary'
-                }`}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: msg.role === 'user' ? '#27272a' : '#d4af37',
+                }}
               >
                 {msg.role === 'user' ? (
                   <User size={16} color="rgb(148, 163, 184)" />
@@ -1051,15 +1059,18 @@ export default function AIChatScreen() {
                 )}
               </View>
               <View
-                className={`px-4 py-3 rounded-2xl ${
-                  msg.role === 'user'
-                    ? 'bg-primary rounded-br-sm'
-                    : 'bg-card rounded-bl-sm'
-                }`}
-                style={{ flex: 1 }}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  borderRadius: 16,
+                  backgroundColor: msg.role === 'user' ? '#d4af37' : '#18181b',
+                  borderBottomRightRadius: msg.role === 'user' ? 4 : 16,
+                  borderBottomLeftRadius: msg.role === 'user' ? 16 : 4,
+                  flexShrink: 1,
+                }}
               >
                 {msg.role === 'user' ? (
-                  <Text style={{ color: '#09090b', fontSize: 14 }}>
+                  <Text style={{ color: '#09090b', fontSize: 15, lineHeight: 22 }}>
                     {msg.content}
                   </Text>
                 ) : (
@@ -1174,43 +1185,12 @@ export default function AIChatScreen() {
                   <Text className="text-danger text-xs">{sendError}</Text>
                 </View>
               )}
-              <View className="flex-row items-center justify-between mb-2">
-                <View className="flex-row items-center" style={{ gap: 8 }}>
-                  <View className="flex-row items-center bg-muted px-3 py-1.5 rounded-full border border-border">
-                    <ImageIcon size={14} color="rgb(161, 161, 170)" />
-                    <Text className="text-xs text-muted-foreground ml-2">Images</Text>
-                  </View>
-                  <View className="flex-row items-center bg-muted px-3 py-1.5 rounded-full border border-border">
-                    <FileText size={14} color="rgb(161, 161, 170)" />
-                    <Text className="text-xs text-muted-foreground ml-2">Files</Text>
-                  </View>
-                </View>
-                <Text className="text-xs text-muted-foreground">Coming soon</Text>
-              </View>
 
               <View className="flex-row items-center" style={{ gap: 12 }}>
+                {/* Tap to open input modal */}
                 <Pressable
-                  onPress={() => setShowAttachmentHint(true)}
-                  className="bg-muted border border-border rounded-xl p-3"
-                  style={{ cursor: 'pointer' }}
-                >
-                  <Paperclip size={18} color="rgb(161, 161, 170)" />
-                </Pressable>
-                <TextInput
-                  value={message}
-                  onChangeText={setMessage}
-                  placeholder={t('typeMessage')}
-                  placeholderTextColor="#71717a"
-                  onSubmitEditing={handleSend}
-                  editable={!sendMessageMutation.isPending}
-                  returnKeyType="send"
-                  blurOnSubmit={false}
-                  autoFocus={false}
-                  multiline
-                  textAlignVertical="center"
-                  selectionColor="rgb(212, 175, 55)"
-                  cursorColor="rgb(212, 175, 55)"
-                  underlineColorAndroid="transparent"
+                  onPress={() => setShowInputModal(true)}
+                  disabled={sendMessageMutation.isPending}
                   style={{
                     flex: 1,
                     backgroundColor: '#18181b',
@@ -1218,14 +1198,15 @@ export default function AIChatScreen() {
                     borderColor: '#3f3f46',
                     borderRadius: 12,
                     paddingHorizontal: 16,
-                    paddingVertical: Platform.OS === 'ios' ? 14 : 10,
-                    color: '#ffffff',
-                    fontSize: 16,
+                    paddingVertical: 14,
                     minHeight: 48,
-                    maxHeight: 140,
-                    textAlignVertical: 'center',
+                    justifyContent: 'center',
                   }}
-                />
+                >
+                  <Text style={{ color: message ? '#ffffff' : '#71717a', fontSize: 16 }} numberOfLines={1}>
+                    {message || t('typeMessage')}
+                  </Text>
+                </Pressable>
                 <Pressable
                   onPress={handleSend}
                   disabled={!message.trim() || sendMessageMutation.isPending}
@@ -1241,12 +1222,115 @@ export default function AIChatScreen() {
                   )}
                 </Pressable>
               </View>
-              {showAttachmentHint && (
-                <Text className="text-xs text-muted-foreground mt-2">
-                  File and image uploads are coming soon.
-                </Text>
-              )}
             </View>
+
+            {/* Input Modal */}
+            <Modal
+              visible={showInputModal}
+              animationType="slide"
+              presentationStyle="pageSheet"
+              onRequestClose={() => setShowInputModal(false)}
+            >
+              <SafeAreaView style={{ flex: 1, backgroundColor: '#09090b' }}>
+                <KeyboardAvoidingView
+                  style={{ flex: 1 }}
+                  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                >
+                  {/* Modal Header */}
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    borderBottomWidth: 1,
+                    borderBottomColor: '#27272a',
+                  }}>
+                    <Pressable
+                      onPress={() => setShowInputModal(false)}
+                      style={{ padding: 8 }}
+                    >
+                      <X size={24} color="#a1a1aa" />
+                    </Pressable>
+                    <Text style={{ color: '#fafafa', fontSize: 17, fontWeight: '600' }}>
+                      {t('typeMessage')}
+                    </Text>
+                    <Pressable
+                      onPress={() => {
+                        setShowInputModal(false);
+                        if (message.trim()) {
+                          handleSend();
+                        }
+                      }}
+                      disabled={!message.trim() || sendMessageMutation.isPending}
+                      style={{
+                        backgroundColor: message.trim() ? '#d4af37' : '#27272a',
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Text style={{
+                        color: message.trim() ? '#09090b' : '#71717a',
+                        fontWeight: '600',
+                      }}>
+                        {t('send') || 'Send'}
+                      </Text>
+                    </Pressable>
+                  </View>
+
+                  {/* Large Text Input */}
+                  <View style={{ flex: 1, padding: 16 }}>
+                    <TextInput
+                      value={message}
+                      onChangeText={setMessage}
+                      placeholder={t('typeMessage')}
+                      placeholderTextColor="#71717a"
+                      multiline
+                      autoFocus
+                      selectionColor="rgb(212, 175, 55)"
+                      cursorColor="rgb(212, 175, 55)"
+                      style={{
+                        flex: 1,
+                        backgroundColor: '#18181b',
+                        borderWidth: 1,
+                        borderColor: '#3f3f46',
+                        borderRadius: 12,
+                        padding: 16,
+                        color: '#ffffff',
+                        fontSize: 18,
+                        textAlignVertical: 'top',
+                      }}
+                    />
+                  </View>
+
+                  {/* Suggested prompts */}
+                  <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: '#27272a' }}>
+                    <Text style={{ color: '#71717a', fontSize: 12, marginBottom: 8 }}>
+                      {t('suggestions') || 'Suggestions'}
+                    </Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        {suggestedQuestions.slice(0, 3).map((q, i) => (
+                          <Pressable
+                            key={i}
+                            onPress={() => setMessage(q)}
+                            style={{
+                              backgroundColor: '#27272a',
+                              paddingHorizontal: 12,
+                              paddingVertical: 8,
+                              borderRadius: 8,
+                            }}
+                          >
+                            <Text style={{ color: '#fafafa', fontSize: 13 }}>{q}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </ScrollView>
+                  </View>
+                </KeyboardAvoidingView>
+              </SafeAreaView>
+            </Modal>
           </View>
         </View>
       </KeyboardAvoidingView>
