@@ -1,17 +1,27 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, TextInput, Pressable, FlatList, ActivityIndicator, Modal, useWindowDimensions } from 'react-native';
-import { ArrowDownUp, ChevronDown, X, Search, AlertCircle } from 'lucide-react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
+  Modal,
+  useWindowDimensions,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+} from 'react-native';
+import { ArrowDownUp, ChevronDown, X, Search } from 'lucide-react-native';
 import { useConvert, useCurrencies } from '../../hooks';
 import { useLanguage } from '../../context/LanguageContext';
 import { formatNumber, getCurrencyDisplay } from '../../utils/format';
 import type { Currency } from '../../types/currency';
 
-const POPULAR_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'IRR', 'TRY', 'CNY', 'INR', 'KRW'];
-
-type ConverterVariant = 'full' | 'compact';
+const POPULAR_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'IRR', 'TRY', 'CNY'];
 
 interface CurrencyConverterProps {
-  variant?: ConverterVariant;
+  variant?: 'full' | 'compact';
   initialFromCurrency?: string;
   initialToCurrency?: string;
   initialAmount?: string;
@@ -30,7 +40,7 @@ export function CurrencyConverter({
   initialFromCurrency = 'USD',
   initialToCurrency = 'EUR',
   initialAmount = '1',
-  showQuickSelect,
+  showQuickSelect = true,
   allowedCurrencyCodes,
   onStateChange,
 }: CurrencyConverterProps) {
@@ -41,489 +51,522 @@ export function CurrencyConverter({
   const [fromCurrency, setFromCurrency] = useState(initialFromCurrency);
   const [toCurrency, setToCurrency] = useState(initialToCurrency);
   const [amount, setAmount] = useState(initialAmount);
-  const [showCurrencyPicker, setShowCurrencyPicker] = useState<'from' | 'to' | null>(null);
+  const [pickerMode, setPickerMode] = useState<'from' | 'to' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Parse and validate amount
+  // Parse amount
   const parsedAmount = useMemo(() => {
     if (!amount || amount.trim() === '') return 0;
-    const cleaned = amount.replace(/[^0-9.]/g, '');
-    const num = parseFloat(cleaned);
+    const num = parseFloat(amount.replace(/[^0-9.]/g, ''));
     return isNaN(num) ? 0 : num;
   }, [amount]);
 
-  const { data: conversion, isPending, isError, error } = useConvert(fromCurrency, toCurrency, parsedAmount);
-  const { data: currencies } = useCurrencies();
+  const { data: conversion, isPending, isError } = useConvert(fromCurrency, toCurrency, parsedAmount);
+  const { data: currencies, isLoading: currenciesLoading } = useCurrencies();
 
-  // Handle amount input with validation
-  const handleAmountChange = useCallback((text: string) => {
-    // Allow only numbers and single decimal point
-    const cleaned = text.replace(/[^0-9.]/g, '');
-    // Prevent multiple decimal points
-    const parts = cleaned.split('.');
-    if (parts.length > 2) {
-      setAmount(parts[0] + '.' + parts.slice(1).join(''));
-    } else {
-      setAmount(cleaned);
+  // Filter currencies
+  const availableCurrencies = useMemo(() => {
+    let list = currencies || [];
+    if (allowedCurrencyCodes && allowedCurrencyCodes.length > 0) {
+      list = list.filter((c) => allowedCurrencyCodes.includes(c.code));
     }
-  }, []);
-
-  const allowedCodes = useMemo(() => {
-    if (!allowedCurrencyCodes || allowedCurrencyCodes.length === 0) return null;
-    return Array.from(new Set(allowedCurrencyCodes));
-  }, [allowedCurrencyCodes]);
-
-  const currencyOptions: Currency[] = useMemo(() => {
-    if (currencies && currencies.length > 0) {
-      const list = allowedCodes ? currencies.filter((c) => allowedCodes.includes(c.code)) : currencies;
-      return list;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter((c) =>
+        c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)
+      );
     }
-    if (allowedCodes && allowedCodes.length > 0) {
-      return allowedCodes.map((code) => ({
-        code,
-        name: code,
-        symbol: code,
-        priority: 0,
-      }));
-    }
-    return [];
-  }, [currencies, allowedCodes]);
+    return list;
+  }, [currencies, allowedCurrencyCodes, searchQuery]);
 
-  const filteredCurrencies = useMemo(() => {
-    const list = currencyOptions || [];
-    if (!searchQuery) return list;
-    const lower = searchQuery.toLowerCase();
-    return list.filter((c: { code: string; name: string }) =>
-      c.code.toLowerCase().includes(lower) || c.name.toLowerCase().includes(lower)
-    );
-  }, [currencyOptions, searchQuery]);
-
-  const quickSelectList = useMemo(() => {
-    if (!allowedCodes || allowedCodes.length === 0) return POPULAR_CURRENCIES;
-    return POPULAR_CURRENCIES.filter((code) => allowedCodes.includes(code));
-  }, [allowedCodes]);
-
-  useEffect(() => {
-    if (!allowedCodes || allowedCodes.length === 0) return;
-    if (!allowedCodes.includes(fromCurrency)) {
-      setFromCurrency(allowedCodes[0]);
-    }
-    if (!allowedCodes.includes(toCurrency) || toCurrency === fromCurrency) {
-      const next = allowedCodes.find((code) => code !== fromCurrency) || allowedCodes[0];
-      setToCurrency(next);
-    }
-  }, [allowedCodes, fromCurrency, toCurrency]);
-
+  // Notify parent of state changes
   useEffect(() => {
     onStateChange?.({ amount, parsedAmount, fromCurrency, toCurrency });
   }, [amount, parsedAmount, fromCurrency, toCurrency, onStateChange]);
 
-  const swapCurrencies = () => {
-    setFromCurrency(toCurrency);
-    setToCurrency(fromCurrency);
-  };
+  // Handle amount input
+  const handleAmountChange = useCallback((text: string) => {
+    // Only allow numbers and one decimal point
+    let cleaned = text.replace(/[^0-9.]/g, '');
+    const dotIndex = cleaned.indexOf('.');
+    if (dotIndex !== -1) {
+      cleaned = cleaned.slice(0, dotIndex + 1) + cleaned.slice(dotIndex + 1).replace(/\./g, '');
+    }
+    setAmount(cleaned);
+  }, []);
 
-  const handleSelectCurrency = (code: string) => {
-    if (showCurrencyPicker === 'from') {
+  // Swap currencies
+  const handleSwap = useCallback(() => {
+    const temp = fromCurrency;
+    setFromCurrency(toCurrency);
+    setToCurrency(temp);
+  }, [fromCurrency, toCurrency]);
+
+  // Select currency
+  const handleSelectCurrency = useCallback((code: string) => {
+    if (pickerMode === 'from') {
       setFromCurrency(code);
-    } else if (showCurrencyPicker === 'to') {
+    } else {
       setToCurrency(code);
     }
-    setShowCurrencyPicker(null);
+    setPickerMode(null);
     setSearchQuery('');
-  };
+  }, [pickerMode]);
+
+  // Close picker
+  const closePicker = useCallback(() => {
+    setPickerMode(null);
+    setSearchQuery('');
+  }, []);
 
   const fromDisplay = getCurrencyDisplay(fromCurrency);
   const toDisplay = getCurrencyDisplay(toCurrency);
-  const shouldShowQuickSelect = (showQuickSelect ?? variant === 'full') && quickSelectList.length > 0;
+  const isSameCurrency = fromCurrency === toCurrency;
 
+  // Currency Selector Button
+  const CurrencyButton = ({ type, currency, display }: { type: 'from' | 'to'; currency: string; display: any }) => (
+    <TouchableOpacity
+      onPress={() => setPickerMode(type)}
+      activeOpacity={0.7}
+      style={{
+        backgroundColor: '#18181b',
+        borderWidth: 1,
+        borderColor: '#27272a',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: type === 'from' ? 8 : 16,
+      }}
+    >
+      <Text style={{ fontSize: 12, color: '#a1a1aa', marginBottom: 8 }}>
+        {type === 'from' ? (t('from') || 'From') : (t('to') || 'To')}
+      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={{ fontSize: 24, marginRight: 8 }}>{display.flag || '🌐'}</Text>
+        <Text style={{ fontSize: 20, fontWeight: '600', color: '#fafafa', flex: 1 }}>
+          {currency}
+        </Text>
+        <Text style={{ color: '#71717a', marginRight: 8 }}>{display.symbol}</Text>
+        <ChevronDown size={20} color="#71717a" />
+      </View>
+    </TouchableOpacity>
+  );
+
+  // Currency Picker Modal
+  const CurrencyPickerModal = () => (
+    <Modal
+      visible={pickerMode !== null}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={closePicker}
+    >
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#09090b' }}>
+        {/* Header */}
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: 16,
+          borderBottomWidth: 1,
+          borderBottomColor: '#27272a',
+        }}>
+          <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#fafafa' }}>
+            {pickerMode === 'from' ? 'Select From Currency' : 'Select To Currency'}
+          </Text>
+          <TouchableOpacity onPress={closePicker} style={{ padding: 8 }}>
+            <X size={24} color="#a1a1aa" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Search */}
+        <View style={{ padding: 16 }}>
+          <View style={{
+            backgroundColor: '#18181b',
+            borderRadius: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 12,
+          }}>
+            <Search size={20} color="#71717a" />
+            <TextInput
+              style={{
+                flex: 1,
+                padding: 12,
+                color: '#fafafa',
+                fontSize: 16,
+              }}
+              placeholder="Search currency..."
+              placeholderTextColor="#71717a"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus
+              autoCapitalize="characters"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <X size={18} color="#71717a" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* Popular Currencies */}
+        {!searchQuery && (
+          <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
+            <Text style={{ fontSize: 12, color: '#71717a', marginBottom: 8 }}>Popular</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {POPULAR_CURRENCIES.map((code) => {
+                const display = getCurrencyDisplay(code);
+                const isSelected = pickerMode === 'from' ? code === fromCurrency : code === toCurrency;
+                return (
+                  <TouchableOpacity
+                    key={code}
+                    onPress={() => handleSelectCurrency(code)}
+                    activeOpacity={0.7}
+                    style={{
+                      backgroundColor: isSelected ? '#d4af37' : '#18181b',
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                    }}
+                  >
+                    <Text style={{
+                      color: isSelected ? '#09090b' : '#fafafa',
+                      fontWeight: isSelected ? '600' : '400',
+                    }}>
+                      {display.flag || '🌐'} {code}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* All Currencies */}
+        <Text style={{ fontSize: 12, color: '#71717a', marginLeft: 16, marginTop: 8, marginBottom: 4 }}>
+          {searchQuery ? 'Search Results' : 'All Currencies'}
+        </Text>
+
+        {currenciesLoading ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#d4af37" />
+          </View>
+        ) : (
+          <FlatList
+            data={availableCurrencies}
+            keyExtractor={(item) => item.code}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
+            ListEmptyComponent={
+              <View style={{ padding: 32, alignItems: 'center' }}>
+                <Text style={{ color: '#71717a' }}>No currencies found</Text>
+              </View>
+            }
+            renderItem={({ item }) => {
+              const display = getCurrencyDisplay(item.code);
+              const isSelected = pickerMode === 'from'
+                ? item.code === fromCurrency
+                : item.code === toCurrency;
+              return (
+                <TouchableOpacity
+                  onPress={() => handleSelectCurrency(item.code)}
+                  activeOpacity={0.7}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    padding: 12,
+                    marginBottom: 4,
+                    borderRadius: 12,
+                    backgroundColor: isSelected ? '#d4af37' : 'transparent',
+                  }}
+                >
+                  <Text style={{ fontSize: 24, marginRight: 12 }}>{display.flag || '🌐'}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{
+                      fontWeight: '600',
+                      color: isSelected ? '#09090b' : '#fafafa',
+                      fontSize: 16,
+                    }}>
+                      {item.code}
+                    </Text>
+                    <Text style={{
+                      fontSize: 13,
+                      color: isSelected ? '#09090b' : '#71717a',
+                    }}>
+                      {item.name}
+                    </Text>
+                  </View>
+                  <Text style={{ color: isSelected ? '#09090b' : '#71717a' }}>
+                    {display.symbol}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }}
+          />
+        )}
+      </SafeAreaView>
+    </Modal>
+  );
+
+  // FULL VARIANT
+  if (variant === 'full') {
+    return (
+      <View>
+        {/* Amount Input */}
+        <View style={{
+          backgroundColor: '#18181b',
+          borderWidth: 1,
+          borderColor: '#27272a',
+          borderRadius: 12,
+          padding: 16,
+          marginBottom: 16,
+        }}>
+          <Text style={{ fontSize: 12, color: '#a1a1aa', marginBottom: 8 }}>
+            {t('amount') || 'Amount'}
+          </Text>
+          <TextInput
+            style={{
+              fontSize: 32,
+              fontWeight: 'bold',
+              color: '#fafafa',
+              minHeight: 44,
+            }}
+            value={amount}
+            onChangeText={handleAmountChange}
+            keyboardType="decimal-pad"
+            placeholder="0"
+            placeholderTextColor="#52525b"
+            selectTextOnFocus
+          />
+        </View>
+
+        {/* From Currency */}
+        <CurrencyButton type="from" currency={fromCurrency} display={fromDisplay} />
+
+        {/* Swap Button */}
+        <View style={{ alignItems: 'center', marginVertical: 8 }}>
+          <TouchableOpacity
+            onPress={handleSwap}
+            activeOpacity={0.7}
+            style={{
+              backgroundColor: '#d4af37',
+              padding: 12,
+              borderRadius: 24,
+            }}
+          >
+            <ArrowDownUp size={24} color="#09090b" />
+          </TouchableOpacity>
+        </View>
+
+        {/* To Currency */}
+        <CurrencyButton type="to" currency={toCurrency} display={toDisplay} />
+
+        {/* Result */}
+        <View style={{
+          backgroundColor: '#18181b',
+          borderWidth: 2,
+          borderColor: '#d4af37',
+          borderRadius: 12,
+          padding: 24,
+        }}>
+          <Text style={{ fontSize: 12, color: '#a1a1aa', marginBottom: 8 }}>
+            {t('result') || 'Result'}
+          </Text>
+
+          {isSameCurrency ? (
+            <Text style={{ fontSize: 18, color: '#f59e0b' }}>
+              Select different currencies
+            </Text>
+          ) : isPending ? (
+            <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+              <ActivityIndicator size="large" color="#d4af37" />
+              <Text style={{ color: '#71717a', marginTop: 8 }}>Calculating...</Text>
+            </View>
+          ) : isError ? (
+            <Text style={{ fontSize: 18, color: '#ef4444' }}>
+              Failed to get rate. Try again.
+            </Text>
+          ) : conversion ? (
+            <>
+              <Text style={{ fontSize: 36, fontWeight: 'bold', color: '#d4af37' }}>
+                {formatNumber(conversion.result, 2)} {toCurrency}
+              </Text>
+              <Text style={{ color: '#71717a', marginTop: 8 }}>
+                1 {fromCurrency} = {formatNumber(conversion.rate, 6)} {toCurrency}
+              </Text>
+            </>
+          ) : (
+            <Text style={{ fontSize: 24, color: '#52525b' }}>
+              Enter an amount
+            </Text>
+          )}
+        </View>
+
+        {/* Quick Select */}
+        {showQuickSelect && (
+          <View style={{ marginTop: 24 }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#fafafa', marginBottom: 12 }}>
+              {t('popularCurrencies') || 'Popular Currencies'}
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {POPULAR_CURRENCIES.map((code) => {
+                const display = getCurrencyDisplay(code);
+                const isFrom = code === fromCurrency;
+                const isTo = code === toCurrency;
+                return (
+                  <TouchableOpacity
+                    key={code}
+                    onPress={() => {
+                      if (code !== fromCurrency) setToCurrency(code);
+                    }}
+                    onLongPress={() => {
+                      if (code !== toCurrency) setFromCurrency(code);
+                    }}
+                    activeOpacity={0.7}
+                    style={{
+                      backgroundColor: isTo ? '#d4af37' : isFrom ? 'rgba(212, 175, 55, 0.2)' : '#18181b',
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                    }}
+                  >
+                    <Text style={{
+                      color: isTo ? '#09090b' : isFrom ? '#d4af37' : '#fafafa',
+                      fontWeight: (isTo || isFrom) ? '600' : '400',
+                    }}>
+                      {display.flag || '🌐'} {code}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={{ fontSize: 11, color: '#52525b', marginTop: 8 }}>
+              Tap to set "To", long-press for "From"
+            </Text>
+          </View>
+        )}
+
+        <CurrencyPickerModal />
+      </View>
+    );
+  }
+
+  // COMPACT VARIANT
   return (
     <View>
-      {variant === 'full' ? (
-        <View>
-          {/* Amount Input */}
-          <View className="bg-card border border-border p-4 rounded-xl mb-4">
-            <Text className="text-sm text-muted-foreground mb-2">{t('amount')}</Text>
+      <View style={{
+        flexDirection: isTablet ? 'row' : 'column',
+        gap: 12,
+        alignItems: 'center'
+      }}>
+        {/* Amount & From */}
+        <View style={{ flex: isTablet ? 1 : undefined, width: isTablet ? undefined : '100%' }}>
+          <View style={{
+            backgroundColor: '#18181b',
+            borderWidth: 1,
+            borderColor: '#27272a',
+            borderRadius: 8,
+            flexDirection: 'row',
+            alignItems: 'center',
+          }}>
             <TextInput
-              className="text-3xl font-bold text-foreground"
               style={{
-                outlineStyle: 'none',
+                flex: 1,
+                padding: 12,
+                fontSize: 18,
+                fontWeight: '600',
                 color: '#fafafa',
-                minHeight: 44,
-              } as any}
+              }}
               value={amount}
               onChangeText={handleAmountChange}
               keyboardType="decimal-pad"
-              placeholder="0"
-              placeholderTextColor="rgb(113, 113, 122)"
+              placeholder="1"
+              placeholderTextColor="#52525b"
               selectTextOnFocus
-              autoCorrect={false}
             />
-          </View>
-
-          {/* From Currency */}
-          <Pressable
-            onPress={() => setShowCurrencyPicker('from')}
-            style={{ cursor: 'pointer' }}
-            className="bg-card p-4 rounded-xl mb-2 active:bg-muted"
-          >
-            <Text className="text-sm text-muted-foreground mb-2">{t('from')}</Text>
-            <View className="flex-row items-center">
-              <Text className="text-2xl mr-2">{fromDisplay.flag || '🌐'}</Text>
-              <Text className="text-xl font-semibold text-foreground flex-1">
-                {fromCurrency}
-              </Text>
-              <Text className="text-muted-foreground mr-2">{fromDisplay.symbol}</Text>
-              <ChevronDown size={20} color="rgb(148, 163, 184)" />
-            </View>
-          </Pressable>
-
-          {/* Swap Button */}
-          <View className="items-center my-2">
-            <Pressable
-              onPress={swapCurrencies}
-              style={{ cursor: 'pointer' }}
-              className="bg-primary p-3 rounded-full"
+            <TouchableOpacity
+              onPress={() => setPickerMode('from')}
+              activeOpacity={0.7}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: '#27272a',
+                paddingHorizontal: 10,
+                paddingVertical: 8,
+                borderRadius: 6,
+                marginRight: 8,
+              }}
             >
-              <ArrowDownUp size={24} color="#09090b" />
-            </Pressable>
+              <Text style={{ fontSize: 16, marginRight: 4 }}>{fromDisplay.flag || '🌐'}</Text>
+              <Text style={{ fontWeight: '500', color: '#fafafa', fontSize: 14 }}>{fromCurrency}</Text>
+              <ChevronDown size={14} color="#71717a" style={{ marginLeft: 2 }} />
+            </TouchableOpacity>
           </View>
-
-          {/* To Currency */}
-          <Pressable
-            onPress={() => setShowCurrencyPicker('to')}
-            style={{ cursor: 'pointer' }}
-            className="bg-card p-4 rounded-xl mb-4 active:bg-muted"
-          >
-            <Text className="text-sm text-muted-foreground mb-2">{t('to')}</Text>
-            <View className="flex-row items-center">
-              <Text className="text-2xl mr-2">{toDisplay.flag || '🌐'}</Text>
-              <Text className="text-xl font-semibold text-foreground flex-1">
-                {toCurrency}
-              </Text>
-              <Text className="text-muted-foreground mr-2">{toDisplay.symbol}</Text>
-              <ChevronDown size={20} color="rgb(148, 163, 184)" />
-            </View>
-          </Pressable>
-
-          {/* Result */}
-          <View className="bg-card p-6 rounded-xl border-2 border-accent">
-            <Text className="text-sm text-muted-foreground mb-2">{t('result')}</Text>
-            {fromCurrency === toCurrency ? (
-              <View className="flex-row items-center">
-                <AlertCircle size={20} color="#f59e0b" />
-                <Text className="text-warning ml-2">{t('selectDifferentCurrencies') || 'Select different currencies'}</Text>
-              </View>
-            ) : isPending ? (
-              <View className="items-center py-4">
-                <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
-                <Text className="text-muted-foreground text-sm mt-2">{t('calculating') || 'Calculating...'}</Text>
-              </View>
-            ) : isError ? (
-              <View className="flex-row items-center">
-                <AlertCircle size={20} color="#ef4444" />
-                <Text className="text-danger ml-2">{t('conversionError') || 'Failed to get rate'}</Text>
-              </View>
-            ) : conversion ? (
-              <>
-                <Text className="text-4xl font-bold text-accent" style={{ color: 'rgb(212, 175, 55)' }}>
-                  {formatNumber(conversion.result, 2)} {toCurrency}
-                </Text>
-                <Text className="text-muted-foreground mt-2" style={{ color: 'rgb(161, 161, 170)' }}>
-                  1 {fromCurrency} = {formatNumber(conversion.rate, 6)} {toCurrency}
-                </Text>
-              </>
-            ) : parsedAmount === 0 ? (
-              <Text className="text-2xl text-muted-foreground" style={{ color: 'rgb(113, 113, 122)' }}>
-                {t('enterAmount') || 'Enter an amount'}
-              </Text>
-            ) : null}
-          </View>
-
-          {/* Quick Select - Popular Currencies */}
-          {shouldShowQuickSelect && (
-            <View className="mt-8">
-              <Text className="text-lg font-semibold text-foreground mb-4">
-                {t('popularCurrencies')}
-              </Text>
-              <View className="flex-row flex-wrap gap-2">
-                {quickSelectList.map((code) => {
-                  const display = getCurrencyDisplay(code);
-                  const isFromSelected = code === fromCurrency;
-                  const isToSelected = code === toCurrency;
-                  return (
-                    <Pressable
-                      key={code}
-                      onPress={() => {
-                        if (code !== fromCurrency) {
-                          setToCurrency(code);
-                        }
-                      }}
-                      onLongPress={() => {
-                        if (code !== toCurrency) {
-                          setFromCurrency(code);
-                        }
-                      }}
-                      style={{ cursor: 'pointer' }}
-                      className={`px-4 py-2 rounded-lg ${
-                        isToSelected ? 'bg-accent' : isFromSelected ? 'bg-primary/20' : 'bg-card'
-                      }`}
-                    >
-                      <Text
-                        className={
-                          isToSelected
-                            ? 'text-accent-foreground font-semibold'
-                            : isFromSelected
-                            ? 'text-primary font-semibold'
-                            : 'text-foreground'
-                        }
-                      >
-                        {display.flag || '🌐'} {code}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-              <Text className="text-xs text-muted-foreground mt-2">
-                {t('tapToSelectTo') || 'Tap to select \"To\" currency, long-press for \"From\"'}
-              </Text>
-            </View>
-          )}
         </View>
-      ) : (
-        <View>
-          <View style={{ flexDirection: isTablet ? 'row' : 'column', gap: 12, alignItems: 'center' }}>
-            {/* Amount & From Currency */}
-            <View style={{ flex: isTablet ? 1 : undefined, width: isTablet ? undefined : '100%' }}>
-              <View className="bg-muted border border-border rounded-lg flex-row items-center">
-                <TextInput
-                  className="flex-1 p-3 text-lg font-semibold text-foreground"
-                  style={{
-                    outlineStyle: 'none',
-                    color: '#fafafa',
-                    minHeight: 44,
-                  } as any}
-                  value={amount}
-                  onChangeText={handleAmountChange}
-                  keyboardType="decimal-pad"
-                  placeholder="1"
-                  placeholderTextColor="#52525b"
-                  selectTextOnFocus
-                />
-                <Pressable
-                  onPress={() => setShowCurrencyPicker('from')}
-                  style={{ cursor: 'pointer' }}
-                  className="flex-row items-center bg-secondary px-3 py-2 rounded-md mr-2"
-                >
-                  <Text className="text-base mr-1">{fromDisplay.flag || '🌐'}</Text>
-                  <Text className="font-medium text-foreground text-sm" style={{ color: '#fafafa' }}>{fromCurrency}</Text>
-                  <ChevronDown size={14} color="#71717a" />
-                </Pressable>
-              </View>
-            </View>
 
-            {/* Swap Button */}
-            <Pressable
-              onPress={swapCurrencies}
-              style={{ cursor: 'pointer' }}
-              className="bg-secondary border border-border p-2 rounded-full active:bg-muted"
-            >
-              <ArrowDownUp size={18} color="#a1a1aa" />
-            </Pressable>
-
-            {/* To Currency & Result */}
-            <View style={{ flex: isTablet ? 1 : undefined, width: isTablet ? undefined : '100%' }}>
-              <Pressable
-                onPress={() => setShowCurrencyPicker('to')}
-                style={{ cursor: 'pointer' }}
-                className="bg-muted border border-border rounded-lg flex-row items-center p-3"
-              >
-                {isPending ? (
-                  <ActivityIndicator size="small" color="rgb(212, 175, 55)" style={{ flex: 1 }} />
-                ) : isError ? (
-                  <Text className="flex-1 text-lg font-semibold text-danger" style={{ color: '#ef4444' }}>
-                    Error
-                  </Text>
-                ) : fromCurrency === toCurrency ? (
-                  <Text className="flex-1 text-lg font-semibold" style={{ color: '#f59e0b' }}>
-                    Same currency
-                  </Text>
-                ) : (
-                  <Text className="flex-1 text-lg font-semibold text-foreground" style={{ color: '#fafafa' }}>
-                    {conversion ? formatNumber(conversion.result, 2) : '0.00'}
-                  </Text>
-                )}
-                <View className="flex-row items-center bg-secondary px-3 py-2 rounded-md">
-                  <Text className="text-base mr-1">{toDisplay.flag || '🌐'}</Text>
-                  <Text className="font-medium text-foreground text-sm" style={{ color: '#fafafa' }}>{toCurrency}</Text>
-                  <ChevronDown size={14} color="#71717a" />
-                </View>
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Rate info */}
-          {conversion && fromCurrency !== toCurrency && (
-            <Text className="text-muted-foreground text-xs mt-3 text-center" style={{ color: 'rgb(161, 161, 170)' }}>
-              1 {fromCurrency} = {formatNumber(conversion.rate, 4)} {toCurrency}
-            </Text>
-          )}
-          {isError && (
-            <Text className="text-danger text-xs mt-3 text-center" style={{ color: '#ef4444' }}>
-              {t('conversionError') || 'Failed to get exchange rate'}
-            </Text>
-          )}
-        </View>
-      )}
-
-      {/* Currency Picker Modal */}
-      <Modal
-        visible={showCurrencyPicker !== null}
-        animationType="slide"
-        transparent
-        onRequestClose={() => {
-          setShowCurrencyPicker(null);
-          setSearchQuery('');
-        }}
-      >
-        <Pressable
-          onPress={() => {
-            setShowCurrencyPicker(null);
-            setSearchQuery('');
+        {/* Swap */}
+        <TouchableOpacity
+          onPress={handleSwap}
+          activeOpacity={0.7}
+          style={{
+            backgroundColor: '#27272a',
+            padding: 8,
+            borderRadius: 20,
           }}
-          className="flex-1 bg-black/50 justify-end"
         >
-          <Pressable
-            onPress={(e) => e.stopPropagation()}
-            className="bg-background rounded-t-3xl"
+          <ArrowDownUp size={18} color="#a1a1aa" />
+        </TouchableOpacity>
+
+        {/* Result & To */}
+        <View style={{ flex: isTablet ? 1 : undefined, width: isTablet ? undefined : '100%' }}>
+          <TouchableOpacity
+            onPress={() => setPickerMode('to')}
+            activeOpacity={0.7}
             style={{
-              maxHeight: '80%',
-              minHeight: '50%',
+              backgroundColor: '#18181b',
+              borderWidth: 1,
+              borderColor: '#27272a',
+              borderRadius: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              padding: 12,
             }}
           >
-            {/* Modal Header */}
-            <View className="flex-row items-center justify-between p-4 border-b border-border">
-              <Text className="text-xl font-bold text-foreground">
-                {showCurrencyPicker === 'from'
-                  ? t('selectFromCurrency') || 'Select From Currency'
-                  : t('selectToCurrency') || 'Select To Currency'}
+            {isPending ? (
+              <ActivityIndicator size="small" color="#d4af37" style={{ flex: 1 }} />
+            ) : isError ? (
+              <Text style={{ flex: 1, fontSize: 18, fontWeight: '600', color: '#ef4444' }}>Error</Text>
+            ) : isSameCurrency ? (
+              <Text style={{ flex: 1, fontSize: 18, fontWeight: '600', color: '#f59e0b' }}>Same</Text>
+            ) : (
+              <Text style={{ flex: 1, fontSize: 18, fontWeight: '600', color: '#fafafa' }}>
+                {conversion ? formatNumber(conversion.result, 2) : '0.00'}
               </Text>
-              <Pressable
-                onPress={() => {
-                  setShowCurrencyPicker(null);
-                  setSearchQuery('');
-                }}
-                style={{ cursor: 'pointer' }}
-                className="p-2"
-              >
-                <X size={24} color="rgb(148, 163, 184)" />
-              </Pressable>
-            </View>
-
-            {/* Search Input */}
-            <View className="p-4">
-              <View className="bg-muted rounded-xl flex-row items-center px-4">
-                <Search size={20} color="rgb(148, 163, 184)" />
-                <TextInput
-                  className="flex-1 p-3 text-foreground"
-                  style={{ outlineStyle: 'none' } as any}
-                  placeholder={t('searchCurrency') || 'Search currency...'}
-                  placeholderTextColor="rgb(148, 163, 184)"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  autoFocus
-                />
-              </View>
-            </View>
-
-            {/* Popular Currencies in Modal */}
-            {!searchQuery && (
-              <View className="px-4 pb-2">
-                <Text className="text-sm text-muted-foreground mb-2">
-                  {t('popular') || 'Popular'}
-                </Text>
-                <View className="flex-row flex-wrap gap-2">
-                  {POPULAR_CURRENCIES.slice(0, 8).map((code) => {
-                    const display = getCurrencyDisplay(code);
-                    const isSelected = showCurrencyPicker === 'from' ? code === fromCurrency : code === toCurrency;
-                    return (
-                      <Pressable
-                        key={code}
-                        onPress={() => handleSelectCurrency(code)}
-                        style={{ cursor: 'pointer' }}
-                        className={`px-3 py-2 rounded-lg ${isSelected ? 'bg-accent' : 'bg-card'}`}
-                      >
-                        <Text
-                          className={isSelected ? 'text-accent-foreground font-semibold' : 'text-foreground'}
-                        >
-                          {display.flag || '🌐'} {code}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
             )}
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: '#27272a',
+              paddingHorizontal: 10,
+              paddingVertical: 8,
+              borderRadius: 6,
+            }}>
+              <Text style={{ fontSize: 16, marginRight: 4 }}>{toDisplay.flag || '🌐'}</Text>
+              <Text style={{ fontWeight: '500', color: '#fafafa', fontSize: 14 }}>{toCurrency}</Text>
+              <ChevronDown size={14} color="#71717a" style={{ marginLeft: 2 }} />
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-            {/* Currency List */}
-            <FlatList
-              data={filteredCurrencies}
-              keyExtractor={(item) => item.code}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
-              ListHeaderComponent={
-                <Text className="text-sm text-muted-foreground mb-2 mt-2">
-                  {searchQuery ? t('searchResults') || 'Search Results' : t('allCurrencies') || 'All Currencies'}
-                </Text>
-              }
-              ListEmptyComponent={
-                <View className="py-8 items-center">
-                  <Text className="text-muted-foreground">
-                    {t('noCurrencyFound') || 'No currency found'}
-                  </Text>
-                </View>
-              }
-              renderItem={({ item: currency }) => {
-                const display = getCurrencyDisplay(currency.code);
-                const isSelected = showCurrencyPicker === 'from'
-                  ? currency.code === fromCurrency
-                  : currency.code === toCurrency;
-                return (
-                  <Pressable
-                    key={currency.code}
-                    onPress={() => handleSelectCurrency(currency.code)}
-                    style={{ cursor: 'pointer' }}
-                    className={`flex-row items-center p-3 rounded-xl mb-1 ${
-                      isSelected ? 'bg-accent' : 'active:bg-muted'
-                    }`}
-                  >
-                    <Text className="text-2xl mr-3">{display.flag || '🌐'}</Text>
-                    <View className="flex-1">
-                      <Text
-                        className={`font-semibold ${
-                          isSelected ? 'text-accent-foreground' : 'text-foreground'
-                        }`}
-                      >
-                        {currency.code}
-                      </Text>
-                      <Text
-                        className={`text-sm ${
-                          isSelected ? 'text-accent-foreground/70' : 'text-muted-foreground'
-                        }`}
-                      >
-                        {currency.name}
-                      </Text>
-                    </View>
-                    <Text className={isSelected ? 'text-accent-foreground' : 'text-muted-foreground'}>
-                      {display.symbol}
-                    </Text>
-                  </Pressable>
-                );
-              }}
-            />
-          </Pressable>
-        </Pressable>
-      </Modal>
+      {/* Rate info */}
+      {conversion && !isSameCurrency && (
+        <Text style={{ color: '#71717a', fontSize: 12, textAlign: 'center', marginTop: 12 }}>
+          1 {fromCurrency} = {formatNumber(conversion.rate, 4)} {toCurrency}
+        </Text>
+      )}
+
+      <CurrencyPickerModal />
     </View>
   );
 }
