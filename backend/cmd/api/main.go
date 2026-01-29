@@ -287,11 +287,26 @@ func main() {
 		badgeService = service.NewBadgeService(badgeRepo, walletRepo, budgetRepo, goalRepo, subscriptionRepo)
 		log.Info().Msg("Badge service initialized")
 
-		// Initialize AI Chat service (requires AI service, wallet, goals, budgets)
+		// Initialize AI Chat service (requires AI service, wallet, goals, budgets, user, recurring, memory)
 		if aiService != nil {
 			chatRepo := repository.NewChatRepository(mainDB.Pool())
-			aiChatService = service.NewAIChatService(aiService, chatRepo, walletRepo, goalRepo, budgetRepo)
-			log.Info().Msg("AI Chat service initialized")
+			memoryRepo := repository.NewMemoryRepository(mainDB)
+			// Initialize memory schema
+			if err := memoryRepo.InitSchema(context.Background()); err != nil {
+				log.Warn().Err(err).Msg("Failed to initialize memory schema")
+			}
+			aiChatService = service.NewAIChatService(
+				aiService,
+				exchangeService,
+				chatRepo,
+				walletRepo,
+				goalRepo,
+				budgetRepo,
+				userRepo,
+				recurringRepo,
+				memoryRepo,
+			)
+			log.Info().Msg("AI Chat service initialized with full context")
 		}
 	}
 

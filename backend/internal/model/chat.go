@@ -124,3 +124,21 @@ type GoalSummary struct {
 	Current  float64 `json:"current"`
 	Progress float64 `json:"progress"`
 }
+
+// UserMemory represents a long-term memory about the user
+type UserMemory struct {
+	ID        uuid.UUID `json:"id"`
+	UserID    uuid.UUID `json:"user_id"`
+	Category  string    `json:"category"`  // "preference", "goal", "habit", "insight", "fact"
+	Content   string    `json:"content"`   // The memory content
+	Source    string    `json:"source"`    // "user_stated", "ai_inferred", "system"
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// ConversationSummary for AI context about past conversations
+type ConversationSummary struct {
+	Title       string `json:"title"`
+	Date        string `json:"date"`
+	TopicsSummary string `json:"topics_summary"`
+}

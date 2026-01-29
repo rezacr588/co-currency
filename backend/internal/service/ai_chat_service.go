@@ -16,11 +16,15 @@ import (
 
 // AIChatService handles AI-powered financial advisor chat with full context
 type AIChatService struct {
-	aiService  *AIService
-	chatRepo   *repository.ChatRepository
-	walletRepo *repository.WalletRepository
-	goalRepo   *repository.GoalRepository
-	budgetRepo *repository.BudgetRepository
+	aiService       *AIService
+	exchangeService *ExchangeService
+	chatRepo        *repository.ChatRepository
+	walletRepo      *repository.WalletRepository
+	goalRepo        *repository.GoalRepository
+	budgetRepo      *repository.BudgetRepository
+	userRepo        *repository.UserRepository
+	recurringRepo   *repository.RecurringRepository
+	memoryRepo      *repository.MemoryRepository
 }
 
 var (
@@ -31,17 +35,25 @@ var (
 // NewAIChatService creates a new AIChatService
 func NewAIChatService(
 	aiService *AIService,
+	exchangeService *ExchangeService,
 	chatRepo *repository.ChatRepository,
 	walletRepo *repository.WalletRepository,
 	goalRepo *repository.GoalRepository,
 	budgetRepo *repository.BudgetRepository,
+	userRepo *repository.UserRepository,
+	recurringRepo *repository.RecurringRepository,
+	memoryRepo *repository.MemoryRepository,
 ) *AIChatService {
 	return &AIChatService{
-		aiService:  aiService,
-		chatRepo:   chatRepo,
-		walletRepo: walletRepo,
-		goalRepo:   goalRepo,
-		budgetRepo: budgetRepo,
+		aiService:       aiService,
+		exchangeService: exchangeService,
+		chatRepo:        chatRepo,
+		walletRepo:      walletRepo,
+		goalRepo:        goalRepo,
+		budgetRepo:      budgetRepo,
+		userRepo:        userRepo,
+		recurringRepo:   recurringRepo,
+		memoryRepo:      memoryRepo,
 	}
 }
 
@@ -112,8 +124,18 @@ func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName str
 		financialContext = &model.FinancialContext{}
 	}
 
+	// Get user memories (long-term context)
+	memories, _ := s.getUserMemories(ctx, userID)
+
+	// Get exchange rates (use user's preferred currency or USD)
+	baseCurrency := financialContext.PreferredCurrency
+	if baseCurrency == "" {
+		baseCurrency = "USD"
+	}
+	rates := s.getExchangeRates(ctx, baseCurrency)
+
 	// Build the system prompt with rich financial context
-	systemPrompt := s.buildSystemPrompt(userName, financialContext)
+	systemPrompt := s.buildSystemPrompt(userName, financialContext, memories, rates)
 
 	// Build message history for the LLM
 	messages := s.buildLLMMessages(systemPrompt, history, *userMsg)
@@ -221,8 +243,18 @@ func (s *AIChatService) ChatStream(
 		financialContext = &model.FinancialContext{}
 	}
 
+	// Get user memories (long-term context)
+	memories, _ := s.getUserMemories(ctx, userID)
+
+	// Get exchange rates (use user's preferred currency or USD)
+	baseCurrency := financialContext.PreferredCurrency
+	if baseCurrency == "" {
+		baseCurrency = "USD"
+	}
+	rates := s.getExchangeRates(ctx, baseCurrency)
+
 	// Build the system prompt with rich financial context
-	systemPrompt := s.buildSystemPrompt(userName, financialContext)
+	systemPrompt := s.buildSystemPrompt(userName, financialContext, memories, rates)
 
 	// Build message history for the LLM
 	messages := s.buildLLMMessages(systemPrompt, history, *userMsg)
@@ -290,83 +322,170 @@ func (s *AIChatService) ChatStream(
 }
 
 // buildSystemPrompt creates a rich system prompt with financial context
-func (s *AIChatService) buildSystemPrompt(userName string, ctx *model.FinancialContext) string {
+func (s *AIChatService) buildSystemPrompt(userName string, fctx *model.FinancialContext, memories []model.UserMemory, rates map[string]float64) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf(`You are a helpful and knowledgeable personal finance advisor for %s. You have access to their complete financial data and should use it to provide personalized, actionable advice.
+	// Header with user context
+	displayName := userName
+	if displayName == "" {
+		displayName = "User"
+	}
 
-`, userName))
+	sb.WriteString(fmt.Sprintf(`You are a helpful and knowledgeable personal finance advisor for %s. You have access to their complete financial data, memories from past conversations, and real-time exchange rates. Use this information to provide personalized, actionable advice.
 
-	sb.WriteString("## USER'S FINANCIAL SNAPSHOT\n\n")
+## TODAY'S DATE
+%s (%d days until month end)
 
-	// Balance
-	sb.WriteString(fmt.Sprintf("**Total Balance**: $%.2f USD\n", ctx.TotalBalance))
+`, displayName, fctx.TodayDate, fctx.DaysUntilMonthEnd))
+
+	// User profile
+	sb.WriteString("## USER PROFILE\n")
+	if fctx.UserName != "" {
+		sb.WriteString(fmt.Sprintf("- Name: %s\n", fctx.UserName))
+	}
+	if fctx.AccountAgeDays > 0 {
+		sb.WriteString(fmt.Sprintf("- Account age: %d days\n", fctx.AccountAgeDays))
+	}
+	if fctx.PreferredCurrency != "" {
+		sb.WriteString(fmt.Sprintf("- Primary currency: %s\n", fctx.PreferredCurrency))
+	}
+	sb.WriteString("\n")
+
+	// Long-term memories
+	if len(memories) > 0 {
+		sb.WriteString("## WHAT I REMEMBER ABOUT YOU\n")
+		for _, m := range memories {
+			sb.WriteString(fmt.Sprintf("- [%s] %s\n", m.Category, m.Content))
+		}
+		sb.WriteString("\n")
+	}
+
+	// Multi-currency balances
+	sb.WriteString("## WALLET BALANCES\n")
+	if len(fctx.Balances) > 0 {
+		for _, b := range fctx.Balances {
+			sb.WriteString(fmt.Sprintf("- %s: %.2f\n", b.Currency, b.Balance))
+		}
+	} else {
+		sb.WriteString("- No balances yet\n")
+	}
+	sb.WriteString("\n")
+
+	// Exchange rates
+	if len(rates) > 0 {
+		sb.WriteString("## LIVE EXCHANGE RATES\n")
+		baseCurrency := fctx.PreferredCurrency
+		if baseCurrency == "" {
+			baseCurrency = "USD"
+		}
+		sb.WriteString(fmt.Sprintf("Base: %s\n", baseCurrency))
+		for currency, rate := range rates {
+			if currency != baseCurrency {
+				sb.WriteString(fmt.Sprintf("- 1 %s = %.4f %s\n", baseCurrency, rate, currency))
+			}
+		}
+		sb.WriteString("\n")
+	}
 
 	// Monthly overview
-	sb.WriteString(fmt.Sprintf("**This Month's Income**: $%.2f\n", ctx.MonthlyIncome))
-	sb.WriteString(fmt.Sprintf("**This Month's Expenses**: $%.2f\n", ctx.MonthlyExpenses))
-
-	savings := ctx.MonthlyIncome - ctx.MonthlyExpenses
+	sb.WriteString("## THIS MONTH'S OVERVIEW\n")
+	sb.WriteString(fmt.Sprintf("- Income: %.2f %s\n", fctx.MonthlyIncome, fctx.PreferredCurrency))
+	sb.WriteString(fmt.Sprintf("- Expenses: %.2f %s\n", fctx.MonthlyExpenses, fctx.PreferredCurrency))
+	savings := fctx.MonthlyIncome - fctx.MonthlyExpenses
 	savingsRate := float64(0)
-	if ctx.MonthlyIncome > 0 {
-		savingsRate = (savings / ctx.MonthlyIncome) * 100
+	if fctx.MonthlyIncome > 0 {
+		savingsRate = (savings / fctx.MonthlyIncome) * 100
 	}
-	sb.WriteString(fmt.Sprintf("**Net Savings This Month**: $%.2f (%.1f%% savings rate)\n\n", savings, savingsRate))
+	sb.WriteString(fmt.Sprintf("- Net savings: %.2f (%.1f%% savings rate)\n", savings, savingsRate))
+	if fctx.SpendingTrend != "" {
+		sb.WriteString(fmt.Sprintf("- Spending trend: %s vs last month\n", fctx.SpendingTrend))
+	}
+	sb.WriteString(fmt.Sprintf("- Transactions: %d\n\n", fctx.RecentTransactions))
+
+	// Recent transactions
+	if len(fctx.RecentTransactionList) > 0 {
+		sb.WriteString("## RECENT TRANSACTIONS\n")
+		for _, tx := range fctx.RecentTransactionList {
+			sign := "+"
+			if tx.Type == "debit" {
+				sign = "-"
+			}
+			sb.WriteString(fmt.Sprintf("- %s: %s%.2f %s - %s", tx.Date, sign, tx.Amount, tx.Currency, tx.Description))
+			if tx.Category != "" {
+				sb.WriteString(fmt.Sprintf(" [%s]", tx.Category))
+			}
+			sb.WriteString("\n")
+		}
+		sb.WriteString("\n")
+	}
 
 	// Top spending categories
-	if len(ctx.TopCategories) > 0 {
-		sb.WriteString("**Top Spending Categories**:\n")
-		for _, cat := range ctx.TopCategories {
-			sb.WriteString(fmt.Sprintf("- %s: $%.2f\n", cat.Category, cat.Amount))
+	if len(fctx.TopCategories) > 0 {
+		sb.WriteString("## TOP SPENDING CATEGORIES\n")
+		for _, cat := range fctx.TopCategories {
+			sb.WriteString(fmt.Sprintf("- %s: %.2f %s\n", cat.Category, cat.Amount, fctx.PreferredCurrency))
 		}
 		sb.WriteString("\n")
 	}
 
 	// Active budgets
-	if len(ctx.ActiveBudgets) > 0 {
-		sb.WriteString("**Active Budgets**:\n")
-		for _, b := range ctx.ActiveBudgets {
-			pct := (b.Spent / b.Budget) * 100
-			status := "✅ On track"
+	if len(fctx.ActiveBudgets) > 0 {
+		sb.WriteString("## BUDGETS\n")
+		for _, b := range fctx.ActiveBudgets {
+			pct := float64(0)
+			if b.Budget > 0 {
+				pct = (b.Spent / b.Budget) * 100
+			}
+			status := "on track"
 			if pct > 90 {
-				status = "⚠️ Near limit"
+				status = "NEAR LIMIT"
 			}
 			if pct > 100 {
-				status = "🔴 Over budget"
+				status = "OVER BUDGET"
 			}
-			sb.WriteString(fmt.Sprintf("- %s: $%.2f / $%.2f spent (%.0f%%) %s\n", b.Category, b.Spent, b.Budget, pct, status))
+			sb.WriteString(fmt.Sprintf("- %s: %.2f / %.2f spent (%.0f%%) - %s\n", b.Category, b.Spent, b.Budget, pct, status))
 		}
 		sb.WriteString("\n")
 	}
 
 	// Savings goals
-	if len(ctx.SavingsGoals) > 0 {
-		sb.WriteString("**Savings Goals**:\n")
-		for _, g := range ctx.SavingsGoals {
-			sb.WriteString(fmt.Sprintf("- %s: $%.2f / $%.2f (%.0f%% complete)\n", g.Name, g.Current, g.Target, g.Progress))
+	if len(fctx.SavingsGoals) > 0 {
+		sb.WriteString("## SAVINGS GOALS\n")
+		for _, g := range fctx.SavingsGoals {
+			sb.WriteString(fmt.Sprintf("- %s: %.2f / %.2f (%.0f%% complete)\n", g.Name, g.Current, g.Target, g.Progress))
 		}
 		sb.WriteString("\n")
 	}
 
-	sb.WriteString(fmt.Sprintf("**Recent Activity**: %d transactions this month\n\n", ctx.RecentTransactions))
+	// Recurring items
+	if len(fctx.RecurringItems) > 0 {
+		sb.WriteString("## RECURRING TRANSACTIONS\n")
+		for _, r := range fctx.RecurringItems {
+			sb.WriteString(fmt.Sprintf("- %s: %.2f %s (%s, next: %s)\n", r.Description, r.Amount, r.Currency, r.Frequency, r.NextDate))
+		}
+		sb.WriteString("\n")
+	}
 
 	sb.WriteString(`## YOUR ROLE
 
-1. **Be Personalized**: Reference specific numbers from their financial data when answering questions
-2. **Be Actionable**: Give concrete suggestions with specific amounts (e.g., "Cut $50 from dining" not "spend less on food")
-3. **Be Encouraging**: Celebrate progress and frame advice positively
-4. **Be Concise**: Keep responses focused and easy to read
-5. **Ask Clarifying Questions**: If the user's question is vague, ask for specifics
+1. **Use Real Data**: Always reference specific numbers from their financial data
+2. **Use Correct Rates**: When converting currencies or discussing exchange rates, use the LIVE EXCHANGE RATES provided above
+3. **Remember Context**: Reference memories and previous conversations when relevant
+4. **Be Actionable**: Give concrete suggestions with specific amounts
+5. **Be Concise**: Keep responses focused and easy to read
+6. **Track Insights**: When you learn something important about the user (preferences, goals, habits), note it for future conversations
 
-## EXAMPLE INTERACTIONS
+## CAPABILITIES
 
-User: "How am I doing financially?"
-Good response: Reference their savings rate, budget status, and goal progress with specific numbers.
+You can help with:
+- Financial analysis and advice based on their data
+- Currency conversions using real-time rates
+- Budget tracking and recommendations
+- Goal progress updates
+- Spending pattern analysis
+- Recurring expense insights
 
-User: "How can I save more?"
-Good response: Identify their top spending categories and suggest specific reductions based on their data.
-
-Remember: You are having a conversation. Reference previous messages when relevant. Be friendly but professional.
+Remember: Be friendly, professional, and always use the user's actual data when giving advice.
 `)
 
 	return sb.String()
@@ -410,25 +529,53 @@ func (s *AIChatService) buildLLMMessages(systemPrompt string, history []model.Ch
 // getFinancialContext gathers the user's financial data for the AI
 func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUID) (*model.FinancialContext, error) {
 	fctx := &model.FinancialContext{}
+	now := time.Now()
 
-	// Get total balance
-	balances, err := s.walletRepo.GetBalances(ctx, userID)
-	if err == nil {
-		for _, b := range balances {
-			// Simplified: sum all balances (in production, convert to USD)
-			fctx.TotalBalance += b.Balance
+	// Set date context
+	fctx.TodayDate = now.Format("January 2, 2006")
+	fctx.DaysUntilMonthEnd = daysUntilEndOfMonth(now)
+
+	// Get user info
+	if s.userRepo != nil {
+		user, err := s.userRepo.GetByID(ctx, userID)
+		if err == nil && user != nil {
+			fctx.UserName = user.Name
+			fctx.AccountAgeDays = int(now.Sub(user.CreatedAt).Hours() / 24)
 		}
 	}
 
-	// Get this month's income and expenses
-	now := time.Now()
+	// Get balances by currency
+	balances, err := s.walletRepo.GetBalances(ctx, userID)
+	if err == nil {
+		for _, b := range balances {
+			fctx.Balances = append(fctx.Balances, model.CurrencyBalance{
+				Currency: b.Currency,
+				Balance:  b.Balance,
+			})
+			fctx.TotalBalance += b.Balance
+		}
+		// Determine preferred currency (highest balance)
+		if len(fctx.Balances) > 0 {
+			maxBal := fctx.Balances[0]
+			for _, b := range fctx.Balances {
+				if b.Balance > maxBal.Balance {
+					maxBal = b
+				}
+			}
+			fctx.PreferredCurrency = maxBal.Currency
+		}
+	}
+
+	// Get transactions and calculate monthly stats
 	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	startOfLastMonth := startOfMonth.AddDate(0, -1, 0)
 
 	transactions, err := s.walletRepo.GetTransactions(ctx, userID, 100, 0)
 	if err == nil {
 		categoryTotals := make(map[string]float64)
 
-		for _, tx := range transactions {
+		for i, tx := range transactions {
+			// This month
 			if tx.CreatedAt.After(startOfMonth) {
 				fctx.RecentTransactions++
 				if tx.Type == "credit" {
@@ -440,6 +587,37 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 					}
 				}
 			}
+
+			// Last month (for trend)
+			if tx.CreatedAt.After(startOfLastMonth) && tx.CreatedAt.Before(startOfMonth) {
+				if tx.Type == "debit" {
+					fctx.LastMonthExpenses += tx.Amount
+				}
+			}
+
+			// Add recent transactions to list (last 10)
+			if i < 10 {
+				fctx.RecentTransactionList = append(fctx.RecentTransactionList, model.TransactionSummary{
+					Date:        tx.CreatedAt.Format("Jan 2"),
+					Type:        tx.Type,
+					Amount:      tx.Amount,
+					Currency:    tx.Currency,
+					Category:    tx.Category,
+					Description: tx.Description,
+				})
+			}
+		}
+
+		// Calculate spending trend
+		if fctx.LastMonthExpenses > 0 {
+			change := (fctx.MonthlyExpenses - fctx.LastMonthExpenses) / fctx.LastMonthExpenses * 100
+			if change > 10 {
+				fctx.SpendingTrend = "increasing"
+			} else if change < -10 {
+				fctx.SpendingTrend = "decreasing"
+			} else {
+				fctx.SpendingTrend = "stable"
+			}
 		}
 
 		// Get top 5 spending categories
@@ -449,7 +627,7 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 				Amount:   amount,
 			})
 		}
-		// Sort by amount (simple bubble sort for small list)
+		// Sort by amount
 		for i := 0; i < len(fctx.TopCategories); i++ {
 			for j := i + 1; j < len(fctx.TopCategories); j++ {
 				if fctx.TopCategories[j].Amount > fctx.TopCategories[i].Amount {
@@ -491,7 +669,74 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 		}
 	}
 
+	// Get recurring transactions
+	if s.recurringRepo != nil {
+		recurring, err := s.recurringRepo.GetByUser(ctx, userID)
+		if err == nil {
+			for _, r := range recurring {
+				if r.IsActive {
+					recType := "expense"
+					if r.Type == "credit" {
+						recType = "income"
+					}
+					fctx.RecurringItems = append(fctx.RecurringItems, model.RecurringSummary{
+						Description: r.Description,
+						Amount:      r.Amount,
+						Currency:    r.Currency,
+						Frequency:   r.Frequency,
+						NextDate:    r.NextExecution.Format("Jan 2"),
+						Type:        recType,
+					})
+				}
+			}
+		}
+	}
+
 	return fctx, nil
+}
+
+// daysUntilEndOfMonth calculates days remaining in the current month
+func daysUntilEndOfMonth(t time.Time) int {
+	firstOfNextMonth := time.Date(t.Year(), t.Month()+1, 1, 0, 0, 0, 0, t.Location())
+	return int(firstOfNextMonth.Sub(t).Hours() / 24)
+}
+
+// getUserMemories retrieves long-term memories about the user
+func (s *AIChatService) getUserMemories(ctx context.Context, userID uuid.UUID) ([]model.UserMemory, error) {
+	if s.memoryRepo == nil {
+		return nil, nil
+	}
+	return s.memoryRepo.GetRecent(ctx, userID, 20)
+}
+
+// SaveMemory stores a new memory about the user
+func (s *AIChatService) SaveMemory(ctx context.Context, userID uuid.UUID, category, content, source string) (*model.UserMemory, error) {
+	if s.memoryRepo == nil {
+		return nil, fmt.Errorf("memory repository not available")
+	}
+	return s.memoryRepo.Create(ctx, userID, category, content, source)
+}
+
+// getExchangeRates fetches current exchange rates for common currencies
+func (s *AIChatService) getExchangeRates(ctx context.Context, baseCurrency string) map[string]float64 {
+	rates := make(map[string]float64)
+	if s.exchangeService == nil {
+		return rates
+	}
+
+	// Get rates for common currencies
+	commonCurrencies := []string{"USD", "EUR", "GBP", "IRR", "TRY", "AED", "CAD", "AUD"}
+	for _, currency := range commonCurrencies {
+		if currency == baseCurrency {
+			rates[currency] = 1.0
+			continue
+		}
+		result, err := s.exchangeService.Convert(ctx, baseCurrency, currency, 1.0)
+		if err == nil {
+			rates[currency] = result.Rate
+		}
+	}
+	return rates
 }
 
 // ListConversations returns all conversations for a user
