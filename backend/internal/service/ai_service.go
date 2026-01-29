@@ -22,11 +22,12 @@ type AIService struct {
 	llm          llms.Model
 	provider     string
 	apiKey       string
+	model        string
 	cloudProject string
 }
 
 // NewAIService creates a new AIService with the specified provider
-func NewAIService(provider, apiKey, cloudProject string) (*AIService, error) {
+func NewAIService(provider, apiKey, model, cloudProject string) (*AIService, error) {
 	if apiKey == "" {
 		return nil, errors.New("AI_API_KEY is required")
 	}
@@ -45,6 +46,7 @@ func NewAIService(provider, apiKey, cloudProject string) (*AIService, error) {
 	return &AIService{
 		provider:     p,
 		apiKey:       apiKey,
+		model:        model,
 		cloudProject: cloudProject,
 	}, nil
 }
@@ -61,10 +63,14 @@ func (s *AIService) getLLM(ctx context.Context) (llms.Model, error) {
 	switch s.provider {
 	case "cerebras":
 		// Cerebras uses OpenAI-compatible API
+		model := s.model
+		if model == "" {
+			model = "llama-3.3-70b" // Default fallback
+		}
 		llm, err = openai.New(
 			openai.WithToken(s.apiKey),
 			openai.WithBaseURL("https://api.cerebras.ai/v1"),
-			openai.WithModel("llama-3.3-70b"), // Fast and capable model
+			openai.WithModel(model),
 		)
 	case "openai":
 		llm, err = openai.New(

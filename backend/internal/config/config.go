@@ -37,8 +37,9 @@ type Config struct {
 	FrontendURL string `env:"FRONTEND_URL" envDefault:"http://localhost:5173"`
 
 	// AI Service settings
-	AIProvider     string `env:"AI_PROVIDER" envDefault:"googleai"` // googleai, openai
+	AIProvider     string `env:"AI_PROVIDER" envDefault:"googleai"` // googleai, openai, cerebras
 	AIAPIKey       string `env:"AI_API_KEY" envDefault:""`
+	AIModel        string `env:"AI_MODEL" envDefault:""`           // Model name (e.g., gpt-oss-120b for Cerebras)
 	AICloudProject string `env:"AI_CLOUD_PROJECT" envDefault:""` // Google Cloud project ID
 
 	// Qdrant Vector Database

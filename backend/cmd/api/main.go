@@ -224,7 +224,7 @@ func main() {
 	var aiService *service.AIService
 	if cfg.AIAPIKey != "" {
 		var err error
-		aiService, err = service.NewAIService(cfg.AIProvider, cfg.AIAPIKey, cfg.AICloudProject)
+		aiService, err = service.NewAIService(cfg.AIProvider, cfg.AIAPIKey, cfg.AIModel, cfg.AICloudProject)
 		if err != nil {
 			log.Warn().Err(err).Msg("Failed to initialize AI service")
 		} else {
