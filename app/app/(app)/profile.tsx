@@ -377,13 +377,23 @@ export default function ProfileScreen() {
             <View className="mb-6">
               <Text className="text-muted-foreground text-sm mb-2">{t('name')}</Text>
               <TextInput
-                className="bg-muted border border-border p-3.5 rounded-lg text-foreground"
-                style={{ outlineStyle: 'none' } as any}
                 value={editName}
                 onChangeText={setEditName}
                 placeholder={t('enterName')}
-                placeholderTextColor="#52525b"
+                placeholderTextColor="#71717a"
                 autoCapitalize="words"
+                selectionColor="rgb(212, 175, 55)"
+                cursorColor="rgb(212, 175, 55)"
+                style={{
+                  backgroundColor: '#27272a',
+                  borderWidth: 1,
+                  borderColor: '#3f3f46',
+                  borderRadius: 8,
+                  padding: 14,
+                  color: '#ffffff',
+                  fontSize: 16,
+                  outlineStyle: 'none',
+                } as any}
               />
             </View>
 
@@ -400,8 +410,11 @@ export default function ProfileScreen() {
             <View className="flex-row gap-3">
               <Pressable
                 onPress={() => setShowEditModal(false)}
+                disabled={updateProfileMutation.isPending}
                 style={{ cursor: 'pointer' }}
-                className="flex-1 p-3 rounded-lg border border-border items-center"
+                className={`flex-1 p-3 rounded-lg border border-border items-center ${
+                  updateProfileMutation.isPending ? 'opacity-50' : ''
+                }`}
               >
                 <Text className="text-foreground font-medium">{t('cancel')}</Text>
               </Pressable>

@@ -68,7 +68,7 @@ func SetupTestServer(t *testing.T) *TestServer {
 	// Initialize AI service (optional)
 	var aiService *service.AIService
 	if cfg.AIAPIKey != "" {
-		aiService, _ = service.NewAIService(cfg.AIProvider, cfg.AIAPIKey, cfg.AICloudProject)
+		aiService, _ = service.NewAIService(cfg.AIProvider, cfg.AIAPIKey, cfg.AIModel, cfg.AICloudProject)
 	}
 
 	// Initialize Reports service

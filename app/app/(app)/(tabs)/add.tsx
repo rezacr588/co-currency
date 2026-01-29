@@ -18,10 +18,11 @@ import { api } from '../../../src/api';
 import { useLanguage } from '../../../src/context/LanguageContext';
 import { getCurrencyDisplay } from '../../../src/utils/format';
 import { CATEGORY_ICONS, CategoryIcon } from '../../../src/constants/icons';
+import { COMMON_CURRENCIES } from '../../../src/constants/currencies';
 import type { TransactionRequest } from '../../../src/types/wallet';
 
 const CATEGORIES = Object.keys(CATEGORY_ICONS);
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'IRR', 'JPY', 'CHF', 'CAD', 'AUD'];
+const CURRENCIES = [...COMMON_CURRENCIES];
 
 export default function AddTransactionScreen() {
   const { t } = useLanguage();
@@ -169,13 +170,21 @@ export default function AddTransactionScreen() {
                   {currencyDisplay.symbol}
                 </Text>
                 <TextInput
-                  className="flex-1 p-3.5 text-xl font-semibold text-foreground"
-                  style={{ outlineStyle: 'none' } as any}
                   value={amount}
                   onChangeText={setAmount}
                   keyboardType="decimal-pad"
                   placeholder="0.00"
-                  placeholderTextColor="#52525b"
+                  placeholderTextColor="#71717a"
+                  selectionColor="rgb(212, 175, 55)"
+                  cursorColor="rgb(212, 175, 55)"
+                  style={{
+                    flex: 1,
+                    padding: 14,
+                    fontSize: 20,
+                    fontWeight: '600',
+                    color: '#ffffff',
+                    outlineStyle: 'none',
+                  } as any}
                 />
               </View>
             </View>
@@ -294,13 +303,25 @@ export default function AddTransactionScreen() {
           <View className="mb-6">
             <Text className="text-muted-foreground text-sm mb-2">{t('description')}</Text>
             <TextInput
-              className="bg-muted border border-border p-3.5 rounded-lg text-foreground"
-              style={{ outlineStyle: 'none', minHeight: isDesktop ? 80 : undefined } as any}
               value={description}
               onChangeText={setDescription}
               placeholder={t('descriptionPlaceholder')}
-              placeholderTextColor="#52525b"
+              placeholderTextColor="#71717a"
+              selectionColor="rgb(212, 175, 55)"
+              cursorColor="rgb(212, 175, 55)"
               multiline
+              style={{
+                backgroundColor: '#27272a',
+                borderWidth: 1,
+                borderColor: '#3f3f46',
+                borderRadius: 8,
+                padding: 14,
+                color: '#ffffff',
+                fontSize: 16,
+                minHeight: isDesktop ? 80 : 48,
+                textAlignVertical: 'top',
+                outlineStyle: 'none',
+              } as any}
             />
           </View>
 

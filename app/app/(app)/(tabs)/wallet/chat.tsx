@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   useWindowDimensions,
+  Alert,
+  StyleSheet,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Markdown from 'react-native-markdown-display';
 import {
   ArrowLeft,
   Bot,
@@ -107,6 +110,140 @@ export default function AIChatScreen() {
   );
   const scrollViewRef = useRef<FlatList<ChatMessage>>(null);
   const isNearBottomRef = useRef(true);
+  const pendingMutationRef = useRef(false);
+
+  // Markdown styles for AI responses
+  const markdownStyles = useMemo(() => StyleSheet.create({
+    body: {
+      color: '#fafafa',
+      fontSize: 14,
+      lineHeight: 20,
+    },
+    heading1: {
+      color: '#fafafa',
+      fontSize: 20,
+      fontWeight: '700',
+      marginTop: 12,
+      marginBottom: 8,
+    },
+    heading2: {
+      color: '#fafafa',
+      fontSize: 18,
+      fontWeight: '600',
+      marginTop: 10,
+      marginBottom: 6,
+    },
+    heading3: {
+      color: '#fafafa',
+      fontSize: 16,
+      fontWeight: '600',
+      marginTop: 8,
+      marginBottom: 4,
+    },
+    paragraph: {
+      color: '#fafafa',
+      fontSize: 14,
+      lineHeight: 20,
+      marginTop: 0,
+      marginBottom: 8,
+    },
+    strong: {
+      color: '#fafafa',
+      fontWeight: '700',
+    },
+    em: {
+      color: '#fafafa',
+      fontStyle: 'italic',
+    },
+    link: {
+      color: 'rgb(212, 175, 55)',
+      textDecorationLine: 'underline',
+    },
+    blockquote: {
+      backgroundColor: 'rgba(39, 39, 42, 0.5)',
+      borderLeftColor: 'rgb(212, 175, 55)',
+      borderLeftWidth: 3,
+      paddingLeft: 12,
+      paddingVertical: 4,
+      marginVertical: 8,
+    },
+    code_inline: {
+      backgroundColor: '#27272a',
+      color: 'rgb(212, 175, 55)',
+      fontSize: 13,
+      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    code_block: {
+      backgroundColor: '#18181b',
+      color: '#fafafa',
+      fontSize: 13,
+      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+      padding: 12,
+      borderRadius: 8,
+      marginVertical: 8,
+      overflow: 'hidden',
+    },
+    fence: {
+      backgroundColor: '#18181b',
+      color: '#fafafa',
+      fontSize: 13,
+      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+      padding: 12,
+      borderRadius: 8,
+      marginVertical: 8,
+    },
+    list_item: {
+      color: '#fafafa',
+      fontSize: 14,
+      marginBottom: 4,
+    },
+    bullet_list: {
+      marginVertical: 4,
+    },
+    ordered_list: {
+      marginVertical: 4,
+    },
+    bullet_list_icon: {
+      color: 'rgb(212, 175, 55)',
+      fontSize: 14,
+      marginRight: 8,
+    },
+    ordered_list_icon: {
+      color: 'rgb(212, 175, 55)',
+      fontSize: 14,
+      marginRight: 8,
+    },
+    hr: {
+      backgroundColor: '#27272a',
+      height: 1,
+      marginVertical: 12,
+    },
+    table: {
+      borderColor: '#27272a',
+      borderWidth: 1,
+      marginVertical: 8,
+    },
+    thead: {
+      backgroundColor: '#27272a',
+    },
+    th: {
+      color: '#fafafa',
+      fontWeight: '600',
+      padding: 8,
+      borderColor: '#27272a',
+    },
+    td: {
+      color: '#fafafa',
+      padding: 8,
+      borderColor: '#27272a',
+    },
+    tr: {
+      borderColor: '#27272a',
+    },
+  }), []);
 
   const { data: aiStatus } = useQuery({
     queryKey: ['ai-status'],
@@ -153,6 +290,7 @@ export default function AIChatScreen() {
       });
     },
     onMutate: async (msg) => {
+      pendingMutationRef.current = true;
       setIsTyping(true);
       setSendError(null);
       const now = new Date().toISOString();
@@ -301,6 +439,7 @@ export default function AIChatScreen() {
       // Invalidate to get fresh data from server
       queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
       setIsTyping(false);
+      pendingMutationRef.current = false;
     },
     onError: (error, _msg, context) => {
       // Remove the optimistic user message on error
@@ -337,6 +476,7 @@ export default function AIChatScreen() {
       }
       setSendError(error instanceof Error ? error.message : 'Unable to reach the assistant. Please try again.');
       setIsTyping(false);
+      pendingMutationRef.current = false;
     },
   });
 
@@ -436,7 +576,7 @@ export default function AIChatScreen() {
 
 
   const handleSend = () => {
-    if (!message.trim() || sendMessageMutation.isPending) return;
+    if (!message.trim() || sendMessageMutation.isPending || pendingMutationRef.current) return;
     if (!aiConfigured) {
       setSendError('AI is not configured on the server.');
       return;
@@ -634,7 +774,18 @@ export default function AIChatScreen() {
             <Pressable
               onPress={(e) => {
                 e.stopPropagation();
-                deleteConversationMutation.mutate(conv.id);
+                Alert.alert(
+                  t('deleteConversation') || 'Delete Conversation',
+                  t('deleteConversationConfirm') || 'Are you sure you want to delete this conversation?',
+                  [
+                    { text: t('cancel') || 'Cancel', style: 'cancel' },
+                    {
+                      text: t('delete') || 'Delete',
+                      style: 'destructive',
+                      onPress: () => deleteConversationMutation.mutate(conv.id),
+                    },
+                  ]
+                );
               }}
               className="p-2"
               hitSlop={10}
@@ -905,14 +1056,17 @@ export default function AIChatScreen() {
                     ? 'bg-primary rounded-br-sm'
                     : 'bg-card rounded-bl-sm'
                 }`}
+                style={{ flex: 1 }}
               >
-                <Text
-                  className={`text-sm ${
-                    msg.role === 'user' ? 'text-primary-foreground' : 'text-foreground'
-                  }`}
-                >
-                  {msg.content}
-                </Text>
+                {msg.role === 'user' ? (
+                  <Text style={{ color: '#09090b', fontSize: 14 }}>
+                    {msg.content}
+                  </Text>
+                ) : (
+                  <Markdown style={markdownStyles}>
+                    {msg.content}
+                  </Markdown>
+                )}
               </View>
             </View>
           </View>
@@ -1046,26 +1200,30 @@ export default function AIChatScreen() {
                   value={message}
                   onChangeText={setMessage}
                   placeholder={t('typeMessage')}
-                  placeholderTextColor="rgb(148, 163, 184)"
+                  placeholderTextColor="#71717a"
                   onSubmitEditing={handleSend}
                   editable={!sendMessageMutation.isPending}
                   returnKeyType="send"
                   blurOnSubmit={false}
                   autoFocus={false}
                   multiline
-                  textAlignVertical="top"
+                  textAlignVertical="center"
+                  selectionColor="rgb(212, 175, 55)"
+                  cursorColor="rgb(212, 175, 55)"
+                  underlineColorAndroid="transparent"
                   style={{
                     flex: 1,
-                    backgroundColor: '#09090b',
+                    backgroundColor: '#18181b',
                     borderWidth: 1,
-                    borderColor: '#27272a',
+                    borderColor: '#3f3f46',
                     borderRadius: 12,
                     paddingHorizontal: 16,
-                    paddingVertical: 12,
-                    color: '#fafafa',
+                    paddingVertical: Platform.OS === 'ios' ? 14 : 10,
+                    color: '#ffffff',
                     fontSize: 16,
-                    minHeight: 44,
+                    minHeight: 48,
                     maxHeight: 140,
+                    textAlignVertical: 'center',
                   }}
                 />
                 <Pressable

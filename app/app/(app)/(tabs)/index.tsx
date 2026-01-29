@@ -10,6 +10,7 @@ import { formatCompactCurrency, formatDate } from '../../../src/utils/format';
 import { StyledCategoryIcon } from '../../../src/constants/icons';
 import { Skeleton } from '../../../src/components/ui/Skeleton';
 import { CurrencyConverter } from '../../../src/components/features/CurrencyConverter';
+import type { Goal, Budget } from '../../../src/types/goal';
 
 export default function DashboardScreen() {
   const { user } = useAuth();
@@ -21,27 +22,27 @@ export default function DashboardScreen() {
   const isTablet = width >= 768;
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
-  const { data: summary, isPending } = useQuery({
+  const { data: summary, isPending, isError: isSummaryError } = useQuery({
     queryKey: ['wallet', 'summary'],
     queryFn: () => api.wallet.getSummary(),
   });
 
-  const { data: monthlyReport } = useQuery({
+  const { data: monthlyReport, isError: isMonthlyError } = useQuery({
     queryKey: ['reports', 'monthly'],
     queryFn: () => api.reports.monthly(),
   });
 
-  const { data: goalsData } = useQuery({
+  const { data: goalsData, isError: isGoalsError } = useQuery({
     queryKey: ['goals'],
     queryFn: () => api.goals.list(),
   });
-  const goals = goalsData?.goals;
+  const goals: Goal[] | undefined = goalsData?.goals;
 
-  const { data: budgetsData } = useQuery({
+  const { data: budgetsData, isError: isBudgetsError } = useQuery({
     queryKey: ['budgets'],
     queryFn: () => api.budgets.list(),
   });
-  const budgets = budgetsData?.budgets || [];
+  const budgets: Budget[] = budgetsData?.budgets || [];
 
   const { data: forecast } = useQuery({
     queryKey: ['forecast'],
@@ -56,11 +57,11 @@ export default function DashboardScreen() {
 
   // Calculate stats
   const totalGoals = goals?.length || 0;
-  const activeGoals = goals?.filter((g: any) => g.current_amount < g.target_amount).length || 0;
+  const activeGoals = goals?.filter((g) => g.current_amount < g.target_amount).length || 0;
 
   // Calculate budget stats
-  const totalBudget = budgets.reduce((acc: number, b: any) => acc + b.amount, 0);
-  const totalSpent = budgets.reduce((acc: number, b: any) => acc + (b.spent || 0), 0);
+  const totalBudget = budgets.reduce((acc, b) => acc + b.amount, 0);
+  const totalSpent = budgets.reduce((acc, b) => acc + (b.spent || 0), 0);
   const budgetPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
 
   type Insight = { title: string; detail: string; tone: 'warning' | 'success' | 'info' };
@@ -128,6 +129,16 @@ export default function DashboardScreen() {
           paddingBottom: bottomPadding,
         }}
       >
+        {/* Error State */}
+        {(isSummaryError || isMonthlyError || isGoalsError || isBudgetsError) && (
+          <View className="bg-danger-muted border border-danger/20 p-4 rounded-xl mb-4">
+            <Text className="text-danger font-medium">{t('failedToLoad')}</Text>
+            <Text className="text-danger/70 text-sm mt-1">
+              {t('checkConnection') || 'Please check your connection and try again.'}
+            </Text>
+          </View>
+        )}
+
         {/* Mobile Header - Only show on mobile */}
         {!isDesktop && (
           <View className="flex-row items-center justify-between mb-6">

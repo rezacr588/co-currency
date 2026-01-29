@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -48,10 +48,15 @@ export default function LoginScreen() {
   }, [params.error]);
 
   // Handle deep link for OAuth callback
+  const isMountedRef = useRef(true);
+
   useEffect(() => {
+    isMountedRef.current = true;
+
     const handleDeepLink = async (event: { url: string }) => {
       const url = event.url;
       if (url.includes('/auth/callback')) {
+        if (!isMountedRef.current) return;
         setIsOAuthLoading(true);
         try {
           const urlParams = new URL(url).searchParams;
@@ -60,28 +65,39 @@ export default function LoginScreen() {
           const errorParam = urlParams.get('error');
 
           if (errorParam) {
-            setError(errorParam);
+            if (isMountedRef.current) setError(errorParam);
           } else if (token && refreshToken) {
             await handleOAuthCallback(token, refreshToken);
-            router.replace('/(app)/(tabs)');
+            if (isMountedRef.current) router.replace('/(app)/(tabs)');
           }
         } catch (err) {
-          setError(err instanceof Error ? err.message : 'OAuth failed');
+          if (isMountedRef.current) {
+            setError(err instanceof Error ? err.message : 'OAuth failed');
+          }
         } finally {
-          setIsOAuthLoading(false);
+          if (isMountedRef.current) setIsOAuthLoading(false);
         }
       }
     };
 
     const subscription = Linking.addEventListener('url', handleDeepLink);
 
-    Linking.getInitialURL().then((url) => {
-      if (url) {
-        handleDeepLink({ url });
-      }
-    });
+    Linking.getInitialURL()
+      .then((url) => {
+        if (url && isMountedRef.current) {
+          handleDeepLink({ url });
+        }
+      })
+      .catch((err) => {
+        if (isMountedRef.current) {
+          console.warn('Failed to get initial URL:', err);
+        }
+      });
 
-    return () => subscription.remove();
+    return () => {
+      isMountedRef.current = false;
+      subscription.remove();
+    };
   }, [handleOAuthCallback, router]);
 
   const handleLogin = async () => {
@@ -206,13 +222,8 @@ export default function LoginScreen() {
             <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
               <Mail size={18} color="#71717a" />
               <TextInput
-                className="flex-1 p-3.5 text-foreground"
-                style={{
-                  outlineStyle: 'none',
-                  fontSize: 15,
-                } as any}
                 placeholder={t('email')}
-                placeholderTextColor="#52525b"
+                placeholderTextColor="#71717a"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -222,6 +233,15 @@ export default function LoginScreen() {
                 autoCorrect={false}
                 editable={!isSubmitting}
                 returnKeyType="next"
+                selectionColor="rgb(212, 175, 55)"
+                cursorColor="rgb(212, 175, 55)"
+                style={{
+                  flex: 1,
+                  padding: 14,
+                  color: '#ffffff',
+                  fontSize: 15,
+                  outlineStyle: 'none',
+                } as any}
               />
             </View>
 
@@ -230,13 +250,8 @@ export default function LoginScreen() {
             <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
               <Lock size={18} color="#71717a" />
               <TextInput
-                className="flex-1 p-3.5 text-foreground"
-                style={{
-                  outlineStyle: 'none',
-                  fontSize: 15,
-                } as any}
                 placeholder={t('password')}
-                placeholderTextColor="#52525b"
+                placeholderTextColor="#71717a"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -245,6 +260,15 @@ export default function LoginScreen() {
                 autoCapitalize="none"
                 editable={!isSubmitting}
                 returnKeyType="done"
+                selectionColor="rgb(212, 175, 55)"
+                cursorColor="rgb(212, 175, 55)"
+                style={{
+                  flex: 1,
+                  padding: 14,
+                  color: '#ffffff',
+                  fontSize: 15,
+                  outlineStyle: 'none',
+                } as any}
               />
               <Pressable
                 onPress={() => setShowPassword(!showPassword)}

@@ -30,7 +30,7 @@ export default function WalletConvertScreen() {
   });
   const [error, setError] = useState('');
 
-  const { data: balances } = useQuery({
+  const { data: balances, isPending: isLoadingBalances } = useQuery({
     queryKey: ['wallet', 'balances'],
     queryFn: () => api.wallet.getBalances(),
   });
@@ -137,6 +137,20 @@ export default function WalletConvertScreen() {
           initialAmount=""
           onStateChange={setConverterState}
         />
+
+        {/* Balance Warning */}
+        {isLoadingBalances && parsedAmount > 0 && (
+          <View className="bg-muted border border-border p-3 rounded-xl mb-4">
+            <Text className="text-muted-foreground text-sm">{t('loadingBalances') || 'Loading balances...'}</Text>
+          </View>
+        )}
+        {hasInsufficientBalance && !isLoadingBalances && (
+          <View className="bg-danger-muted border border-danger/20 p-3 rounded-xl mb-4">
+            <Text className="text-danger text-sm">
+              {t('insufficientBalance') || 'Insufficient balance'}: {fromBalance ? `${fromBalance.balance} ${fromCurrency}` : `0 ${fromCurrency}`}
+            </Text>
+          </View>
+        )}
 
         {/* Convert Button */}
         <Pressable

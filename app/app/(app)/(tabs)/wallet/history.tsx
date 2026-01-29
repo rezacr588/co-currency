@@ -12,6 +12,7 @@ import {
   Modal,
   TextInput,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -34,10 +35,11 @@ import { useTheme } from '../../../../src/context/ThemeContext';
 import { formatCompactCurrency, formatDate, getCurrencyDisplay } from '../../../../src/utils/format';
 import { StyledCategoryIcon, CATEGORY_ICONS, CategoryIcon } from '../../../../src/constants/icons';
 import { SkeletonTransaction, SkeletonList } from '../../../../src/components/ui/Skeleton';
+import { COMMON_CURRENCIES } from '../../../../src/constants/currencies';
 import type { Transaction, TransactionFilter, UpdateTransactionRequest } from '../../../../src/types/wallet';
 
 const CATEGORIES = Object.keys(CATEGORY_ICONS);
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'IRR', 'JPY', 'CHF', 'CAD', 'AUD'];
+const CURRENCIES = [...COMMON_CURRENCIES];
 
 export default function TransactionHistoryScreen() {
   const { t } = useLanguage();
@@ -204,9 +206,9 @@ export default function TransactionHistoryScreen() {
         const urlWithAuth = `${fullUrl}&token=${token}`;
 
         // Open in browser to trigger download
-        const canOpen = await Linking.canOpenURL(fullUrl);
+        const canOpen = await Linking.canOpenURL(urlWithAuth);
         if (canOpen) {
-          await Linking.openURL(fullUrl);
+          await Linking.openURL(urlWithAuth);
           Alert.alert(t('export'), t('exportStarted') || 'Export started. Check your browser downloads.');
         } else {
           Alert.alert(t('export'), t('exportNotAvailable') || 'Export is only available on web');
@@ -336,12 +338,10 @@ export default function TransactionHistoryScreen() {
           return (
             <View
               className="bg-card border border-border p-4 rounded-xl flex-row items-center"
-              style={
-                {
-                  width: isDesktop ? '48%' : '100%',
-                  minWidth: 300,
-                } as any
-              }
+              style={{
+                width: isDesktop ? '48%' : '100%',
+                minWidth: 300,
+              }}
             >
               <View className="mr-3">
                 <StyledCategoryIcon
@@ -616,15 +616,19 @@ export default function TransactionHistoryScreen() {
         transparent={true}
         onRequestClose={() => setShowEditModal(false)}
       >
-        <Pressable
-          className="flex-1 bg-black/50 justify-end"
-          onPress={() => setShowEditModal(false)}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="flex-1"
         >
           <Pressable
-            className="bg-card rounded-t-3xl p-6"
-            style={{ maxHeight: '85%' }}
-            onPress={(e) => e.stopPropagation()}
+            className="flex-1 bg-black/50 justify-end"
+            onPress={() => setShowEditModal(false)}
           >
+            <Pressable
+              className="bg-card rounded-t-3xl p-6"
+              style={{ maxHeight: '85%' }}
+              onPress={(e) => e.stopPropagation()}
+            >
             <View className="flex-row items-center justify-between mb-6">
               <Text className="text-xl font-bold text-foreground">{t('editTransaction')}</Text>
               <Pressable onPress={() => setShowEditModal(false)} style={{ cursor: 'pointer' }}>
@@ -800,8 +804,9 @@ export default function TransactionHistoryScreen() {
                 )}
               </Pressable>
             </ScrollView>
+            </Pressable>
           </Pressable>
-        </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

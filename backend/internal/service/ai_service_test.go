@@ -9,7 +9,7 @@ import (
 
 // Tests for NewAIService
 func TestNewAIService_Success(t *testing.T) {
-	service, err := NewAIService("googleai", "test-api-key", "")
+	service, err := NewAIService("googleai", "test-api-key", "", "")
 	if err != nil {
 		t.Fatalf("NewAIService failed: %v", err)
 	}
@@ -24,7 +24,7 @@ func TestNewAIService_Success(t *testing.T) {
 }
 
 func TestNewAIService_EmptyAPIKey(t *testing.T) {
-	_, err := NewAIService("googleai", "", "")
+	_, err := NewAIService("googleai", "", "", "")
 	if err == nil {
 		t.Error("Expected error for empty API key")
 	}
@@ -38,7 +38,7 @@ func TestNewAIService_DifferentProviders(t *testing.T) {
 	providers := []string{"cerebras", "openai", "googleai", "gemini", ""}
 
 	for _, provider := range providers {
-		service, err := NewAIService(provider, "test-api-key", "")
+		service, err := NewAIService(provider, "test-api-key", "", "")
 		if err != nil {
 			t.Errorf("NewAIService failed for provider %s: %v", provider, err)
 		}
@@ -55,7 +55,7 @@ func TestNewAIService_DifferentProviders(t *testing.T) {
 }
 
 func TestNewAIService_WithCloudProject(t *testing.T) {
-	service, err := NewAIService("googleai", "test-api-key", "my-project")
+	service, err := NewAIService("googleai", "test-api-key", "", "my-project")
 	if err != nil {
 		t.Fatalf("NewAIService failed: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestNewAIService_WithCloudProject(t *testing.T) {
 
 // Tests for IsConfigured
 func TestIsConfigured_True(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	if !service.IsConfigured() {
 		t.Error("Expected service to be configured")
@@ -76,7 +76,7 @@ func TestIsConfigured_True(t *testing.T) {
 
 // Tests for GetProvider
 func TestGetProvider(t *testing.T) {
-	service, _ := NewAIService("openai", "test-api-key", "")
+	service, _ := NewAIService("openai", "test-api-key", "", "")
 
 	if service.GetProvider() != "openai" {
 		t.Errorf("Expected provider openai, got %s", service.GetProvider())
@@ -85,7 +85,7 @@ func TestGetProvider(t *testing.T) {
 
 // Tests for parseAIResponse
 func TestParseAIResponse_ValidJSON(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	response := `{"amount": 100.50, "currency": "USD", "type": "debit", "description": "Coffee purchase"}`
 
@@ -112,7 +112,7 @@ func TestParseAIResponse_ValidJSON(t *testing.T) {
 }
 
 func TestParseAIResponse_JSONWithMarkdown(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	response := "```json\n{\"amount\": 50.00, \"currency\": \"EUR\", \"type\": \"credit\", \"description\": \"Refund\"}\n```"
 
@@ -131,7 +131,7 @@ func TestParseAIResponse_JSONWithMarkdown(t *testing.T) {
 }
 
 func TestParseAIResponse_JSONWithExtraText(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	response := `Here is the extracted data:
 	{"amount": 25.99, "currency": "GBP", "type": "debit", "description": "Lunch"}
@@ -152,7 +152,7 @@ func TestParseAIResponse_JSONWithExtraText(t *testing.T) {
 }
 
 func TestParseAIResponse_DefaultCurrency(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	response := `{"amount": 100, "type": "debit", "description": "Test"}`
 
@@ -168,7 +168,7 @@ func TestParseAIResponse_DefaultCurrency(t *testing.T) {
 }
 
 func TestParseAIResponse_DefaultType(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	response := `{"amount": 100, "currency": "EUR", "description": "Test"}`
 
@@ -184,7 +184,7 @@ func TestParseAIResponse_DefaultType(t *testing.T) {
 }
 
 func TestParseAIResponse_InvalidType(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	response := `{"amount": 100, "currency": "EUR", "type": "invalid", "description": "Test"}`
 
@@ -200,7 +200,7 @@ func TestParseAIResponse_InvalidType(t *testing.T) {
 }
 
 func TestParseAIResponse_CurrencyNormalization(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	response := `{"amount": 100, "currency": "eur", "type": "debit", "description": "Test"}`
 
@@ -217,7 +217,7 @@ func TestParseAIResponse_CurrencyNormalization(t *testing.T) {
 
 // Tests for extractFieldsManually
 func TestExtractFieldsManually_AllFields(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	text := `Some malformed response with "amount": 75.50 and "currency": "USD" also "type": "credit" and "description": "Test payment"`
 
@@ -241,7 +241,7 @@ func TestExtractFieldsManually_AllFields(t *testing.T) {
 }
 
 func TestExtractFieldsManually_PartialFields(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	text := `Found "amount": 50.00 only`
 
@@ -262,7 +262,7 @@ func TestExtractFieldsManually_PartialFields(t *testing.T) {
 }
 
 func TestExtractFieldsManually_NoFields(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	text := `Random text with no useful data`
 
@@ -284,7 +284,7 @@ func TestExtractFieldsManually_NoFields(t *testing.T) {
 
 // Tests for calculateConfidence
 func TestCalculateConfidence_Full(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	result := &model.AIParseResult{
 		Amount:      100,
@@ -302,7 +302,7 @@ func TestCalculateConfidence_Full(t *testing.T) {
 }
 
 func TestCalculateConfidence_DefaultCurrency(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	result := &model.AIParseResult{
 		Amount:      100,
@@ -321,7 +321,7 @@ func TestCalculateConfidence_DefaultCurrency(t *testing.T) {
 }
 
 func TestCalculateConfidence_ZeroAmount(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	result := &model.AIParseResult{
 		Amount:      0,
@@ -340,7 +340,7 @@ func TestCalculateConfidence_ZeroAmount(t *testing.T) {
 }
 
 func TestCalculateConfidence_Minimal(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	result := &model.AIParseResult{
 		Amount:      0,
@@ -358,7 +358,7 @@ func TestCalculateConfidence_Minimal(t *testing.T) {
 }
 
 func TestCalculateConfidence_TypeOnly(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	result := &model.AIParseResult{
 		Amount:      0,
@@ -377,7 +377,7 @@ func TestCalculateConfidence_TypeOnly(t *testing.T) {
 
 // Tests for ParseReceipt (validation only - can't test actual LLM call)
 func TestParseReceipt_EmptyImage(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	_, err := service.ParseReceipt(context.Background(), []byte{}, "image/png")
 	if err == nil {
@@ -391,7 +391,7 @@ func TestParseReceipt_EmptyImage(t *testing.T) {
 
 // Tests for ParseReceiptText (validation only - can't test actual LLM call)
 func TestParseReceiptText_EmptyText(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	_, err := service.ParseReceiptText(context.Background(), "")
 	if err == nil {
@@ -405,7 +405,7 @@ func TestParseReceiptText_EmptyText(t *testing.T) {
 
 // Test credit type parsing
 func TestParseAIResponse_CreditType(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	response := `{"amount": 100, "currency": "USD", "type": "credit", "description": "Refund"}`
 
@@ -421,7 +421,7 @@ func TestParseAIResponse_CreditType(t *testing.T) {
 
 // Test various currency codes
 func TestParseAIResponse_VariousCurrencies(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	currencies := []string{"USD", "EUR", "GBP", "JPY", "IRR", "CAD", "AUD"}
 
@@ -441,7 +441,7 @@ func TestParseAIResponse_VariousCurrencies(t *testing.T) {
 
 // Test decimal amounts
 func TestParseAIResponse_DecimalAmounts(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	testCases := []struct {
 		input    string
@@ -468,7 +468,7 @@ func TestParseAIResponse_DecimalAmounts(t *testing.T) {
 
 // Test confidence is set after parsing
 func TestParseAIResponse_ConfidenceIsSet(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	response := `{"amount": 100.50, "currency": "EUR", "type": "debit", "description": "Coffee"}`
 
@@ -490,7 +490,7 @@ func TestParseAIResponse_ConfidenceIsSet(t *testing.T) {
 
 // Test parsing with whitespace
 func TestParseAIResponse_Whitespace(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	response := `
 
@@ -528,7 +528,7 @@ func TestNewAIService_ProviderNormalization(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		service, err := NewAIService(tc.input, "test-api-key", "")
+		service, err := NewAIService(tc.input, "test-api-key", "", "")
 		if err != nil {
 			t.Fatalf("NewAIService failed for %s: %v", tc.input, err)
 		}
@@ -541,7 +541,7 @@ func TestNewAIService_ProviderNormalization(t *testing.T) {
 
 // Test parseAIResponse with malformed JSON that falls back to manual extraction
 func TestParseAIResponse_FallbackToManualExtraction(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	// This JSON is malformed but contains extractable fields
 	response := `Here is your data: "amount": 42.50 and the "currency": "GBP" with "type": "credit"`
@@ -566,7 +566,7 @@ func TestParseAIResponse_FallbackToManualExtraction(t *testing.T) {
 
 // Test extractFieldsManually with different patterns
 func TestExtractFieldsManually_AmountOnly(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	text := `The amount found is "amount": 123.45`
 
@@ -578,7 +578,7 @@ func TestExtractFieldsManually_AmountOnly(t *testing.T) {
 }
 
 func TestExtractFieldsManually_DescriptionWithSpecialChars(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	text := `"amount": 100 and "description": "Grocery shopping at store"`
 
@@ -591,7 +591,7 @@ func TestExtractFieldsManually_DescriptionWithSpecialChars(t *testing.T) {
 
 // Test calculateConfidence edge cases
 func TestCalculateConfidence_DescriptionOnly(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	result := &model.AIParseResult{
 		Amount:      0,
@@ -609,7 +609,7 @@ func TestCalculateConfidence_DescriptionOnly(t *testing.T) {
 }
 
 func TestCalculateConfidence_AmountOnly(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	result := &model.AIParseResult{
 		Amount:      50,
@@ -628,7 +628,7 @@ func TestCalculateConfidence_AmountOnly(t *testing.T) {
 
 // Test multiple markdown code block formats
 func TestParseAIResponse_DifferentMarkdownFormats(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	testCases := []struct {
 		name     string
@@ -673,7 +673,7 @@ func TestParseAIResponse_DifferentMarkdownFormats(t *testing.T) {
 
 // Test edge cases in type normalization
 func TestParseAIResponse_TypeNormalization(t *testing.T) {
-	service, _ := NewAIService("googleai", "test-api-key", "")
+	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	testCases := []struct {
 		input    string
@@ -700,7 +700,7 @@ func TestParseAIResponse_TypeNormalization(t *testing.T) {
 
 // Test GetProvider and IsConfigured
 func TestAIService_GetProviderAndIsConfigured(t *testing.T) {
-	service, _ := NewAIService("openai", "api-key", "")
+	service, _ := NewAIService("openai", "api-key", "", "")
 
 	if service.GetProvider() != "openai" {
 		t.Errorf("Expected provider openai, got %s", service.GetProvider())
@@ -713,7 +713,7 @@ func TestAIService_GetProviderAndIsConfigured(t *testing.T) {
 
 // Test with empty provider string
 func TestNewAIService_EmptyProvider(t *testing.T) {
-	service, err := NewAIService("", "test-api-key", "")
+	service, err := NewAIService("", "test-api-key", "", "")
 	if err != nil {
 		t.Fatalf("NewAIService failed: %v", err)
 	}
