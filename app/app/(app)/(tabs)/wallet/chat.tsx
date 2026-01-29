@@ -247,6 +247,7 @@ export default function AIChatScreen() {
   const { data: aiStatus } = useQuery({
     queryKey: ['ai-status'],
     queryFn: () => api.ai.getStatus(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const aiConfigured = aiStatus?.configured !== false;
@@ -256,6 +257,7 @@ export default function AIChatScreen() {
     queryKey: ['ai-conversations'],
     queryFn: () => api.chat.listConversations(),
     enabled: aiConfigured,
+    staleTime: 30 * 1000, // 30 seconds
   });
 
   // Fetch current conversation messages
@@ -264,6 +266,7 @@ export default function AIChatScreen() {
     queryFn: () =>
       activeConversationId ? api.chat.getConversation(activeConversationId) : null,
     enabled: !!activeConversationId && aiConfigured,
+    staleTime: 30 * 1000, // 30 seconds
   });
 
   // Create conversation mutation

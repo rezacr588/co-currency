@@ -178,7 +178,7 @@ function TrendsChart({
 }) {
   if (!data || data.length === 0) return null;
 
-  const maxValue = Math.max(...data.map((d) => Math.max(d.income, d.expenses)));
+  const maxValue = data.length > 0 ? Math.max(...data.map((d) => Math.max(d.income, d.expenses))) : 0;
 
   return (
     <View>

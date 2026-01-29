@@ -21,10 +21,10 @@
       }
     },
     "production": {
-      "distribution": "internal",
+      "distribution": "store",
       "channel": "production",
       "android": {
-        "buildType": "apk"
+        "buildType": "app-bundle"
       }
     }
   }

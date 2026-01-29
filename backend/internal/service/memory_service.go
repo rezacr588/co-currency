@@ -40,16 +40,24 @@ func NewMemoryService(
 }
 
 // StoreShortTermMemory stores a chat message as short-term memory (async)
+// Note: Uses a background context since this is fire-and-forget, but with a timeout
 func (s *MemoryService) StoreShortTermMemory(ctx context.Context, userID uuid.UUID, conversationID, role, content string) {
+	// Capture values for goroutine to avoid closure issues
+	uid := userID
+	convID := conversationID
+	r := role
+	c := content
+
 	// Run async to not block chat response
 	go func() {
+		// Use background context since parent may be cancelled after HTTP response
 		bgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		if err := s.storeShortTermMemorySync(bgCtx, userID, conversationID, role, content); err != nil {
+		if err := s.storeShortTermMemorySync(bgCtx, uid, convID, r, c); err != nil {
 			log.Warn().Err(err).
-				Str("user_id", userID.String()).
-				Str("conversation_id", conversationID).
+				Str("user_id", uid.String()).
+				Str("conversation_id", convID).
 				Msg("Failed to store short-term memory")
 		}
 	}()
@@ -93,31 +101,40 @@ func (s *MemoryService) StoreLongTermMemory(ctx context.Context, userID uuid.UUI
 
 	// Store in Qdrant if available (async to not block)
 	if s.isVectorEnabled() {
+		// Capture values for goroutine to avoid closure issues
+		memoryID := pgMemory.ID.String()
+		uid := userID
+		cat := category
+		cont := content
+		src := source
+		createdAt := pgMemory.CreatedAt
+
 		go func() {
+			// Use background context since parent may be cancelled after HTTP response
 			bgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
 			// Generate embedding
-			embResp, err := s.embeddingService.Embed(bgCtx, content)
+			embResp, err := s.embeddingService.Embed(bgCtx, cont)
 			if err != nil {
-				log.Warn().Err(err).Str("memory_id", pgMemory.ID.String()).Msg("Failed to generate embedding for long-term memory")
+				log.Warn().Err(err).Str("memory_id", memoryID).Msg("Failed to generate embedding for long-term memory")
 				return
 			}
 
 			memory := &model.VectorMemory{
-				ID:         pgMemory.ID.String(),
-				UserID:     userID,
-				Category:   category,
-				Content:    content,
-				Source:     source,
+				ID:         memoryID,
+				UserID:     uid,
+				Category:   cat,
+				Content:    cont,
+				Source:     src,
 				Importance: 0.5, // Default importance
-				PostgresID: pgMemory.ID.String(),
+				PostgresID: memoryID,
 				MemoryType: model.MemoryTypeLongTerm,
-				CreatedAt:  pgMemory.CreatedAt,
+				CreatedAt:  createdAt,
 			}
 
 			if err := s.vectorRepo.StoreLongTermMemory(bgCtx, memory, embResp.Embedding); err != nil {
-				log.Warn().Err(err).Str("memory_id", pgMemory.ID.String()).Msg("Failed to store long-term memory in Qdrant")
+				log.Warn().Err(err).Str("memory_id", memoryID).Msg("Failed to store long-term memory in Qdrant")
 			}
 		}()
 	}

@@ -88,6 +88,9 @@ func (r *MemoryRepository) GetByUser(ctx context.Context, userID uuid.UUID) ([]m
 		}
 		memories = append(memories, m)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
 	return memories, nil
 }
@@ -113,6 +116,9 @@ func (r *MemoryRepository) GetByCategory(ctx context.Context, userID uuid.UUID, 
 			return nil, err
 		}
 		memories = append(memories, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return memories, nil
@@ -140,6 +146,9 @@ func (r *MemoryRepository) GetRecent(ctx context.Context, userID uuid.UUID, limi
 			return nil, err
 		}
 		memories = append(memories, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return memories, nil

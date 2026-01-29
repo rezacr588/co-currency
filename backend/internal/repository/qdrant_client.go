@@ -5,6 +5,8 @@ import (
 	"crypto/tls"
 	"fmt"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/qdrant/go-client/qdrant"
@@ -28,9 +30,9 @@ type QdrantConfig struct {
 type QdrantClient struct {
 	client     *qdrant.Client
 	config     QdrantConfig
-	isHealthy  bool
-	lastCheck  time.Time
-	checkMutex chan struct{}
+	isHealthy  atomic.Bool
+	lastCheck  atomic.Int64 // Unix timestamp
+	checkMutex sync.Mutex
 }
 
 // NewQdrantClient creates a new Qdrant client with the given configuration
@@ -64,9 +66,8 @@ func NewQdrantClient(cfg QdrantConfig) (*QdrantClient, error) {
 	}
 
 	qc := &QdrantClient{
-		client:     client,
-		config:     cfg,
-		checkMutex: make(chan struct{}, 1),
+		client: client,
+		config: cfg,
 	}
 
 	// Initialize collections
@@ -76,8 +77,8 @@ func NewQdrantClient(cfg QdrantConfig) (*QdrantClient, error) {
 	if err := qc.initCollections(ctx); err != nil {
 		log.Warn().Err(err).Msg("Failed to initialize Qdrant collections (will retry on next operation)")
 	} else {
-		qc.isHealthy = true
-		qc.lastCheck = time.Now()
+		qc.isHealthy.Store(true)
+		qc.lastCheck.Store(time.Now().Unix())
 	}
 
 	return qc, nil
@@ -122,28 +123,34 @@ func (qc *QdrantClient) createCollection(ctx context.Context, name string) error
 
 // IsHealthy returns whether the client connection is healthy
 func (qc *QdrantClient) IsHealthy() bool {
-	// Return cached health status if checked recently
-	if time.Since(qc.lastCheck) < 30*time.Second {
-		return qc.isHealthy
+	// Return cached health status if checked recently (atomic read)
+	lastCheckTime := time.Unix(qc.lastCheck.Load(), 0)
+	if time.Since(lastCheckTime) < 30*time.Second {
+		return qc.isHealthy.Load()
 	}
 
 	// Try to acquire mutex for health check (non-blocking)
-	select {
-	case qc.checkMutex <- struct{}{}:
-		defer func() { <-qc.checkMutex }()
-	default:
+	if !qc.checkMutex.TryLock() {
 		// Another health check is in progress, return cached status
-		return qc.isHealthy
+		return qc.isHealthy.Load()
+	}
+	defer qc.checkMutex.Unlock()
+
+	// Double-check after acquiring lock
+	lastCheckTime = time.Unix(qc.lastCheck.Load(), 0)
+	if time.Since(lastCheckTime) < 30*time.Second {
+		return qc.isHealthy.Load()
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	exists, err := qc.client.CollectionExists(ctx, ShortTermMemoryCollection)
-	qc.isHealthy = err == nil && exists
-	qc.lastCheck = time.Now()
+	healthy := err == nil && exists
+	qc.isHealthy.Store(healthy)
+	qc.lastCheck.Store(time.Now().Unix())
 
-	return qc.isHealthy
+	return healthy
 }
 
 // Upsert adds or updates points in a collection

@@ -35,6 +35,10 @@ let authTokenCache: string | null = null;
 let refreshTokenCache: string | null = null;
 let tokensLoaded = false;
 
+// Mutex for token refresh to prevent race conditions
+let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
+
 // Auth error callback - called when 401 is received
 type AuthErrorCallback = () => void;
 let onAuthErrorCallback: AuthErrorCallback | null = null;
@@ -110,31 +114,48 @@ async function sleep(ms: number): Promise<void> {
 }
 
 async function refreshAuthToken(): Promise<boolean> {
+  // If already refreshing, wait for the existing refresh to complete
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
   const storedRefreshToken = getRefreshToken();
   if (!storedRefreshToken) return false;
 
-  try {
-    const response = await fetch(`${API_BASE}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: storedRefreshToken }),
-    });
+  // Set mutex and create promise for concurrent callers
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: storedRefreshToken }),
+      });
 
-    if (response.ok) {
-      const data: AuthResponse = await response.json();
-      await setAuthToken(data.token);
-      if (data.refresh_token) {
-        await setRefreshToken(data.refresh_token);
+      if (response.ok) {
+        const data: AuthResponse = await response.json();
+        await setAuthToken(data.token);
+        if (data.refresh_token) {
+          await setRefreshToken(data.refresh_token);
+        }
+        return true;
       }
-      return true;
+    } catch (error) {
+      console.error('Failed to refresh token:', error);
     }
-  } catch (error) {
-    console.error('Failed to refresh token:', error);
-  }
 
-  // If refresh failed, clear tokens and logout
-  handleAuthError();
-  return false;
+    // If refresh failed, clear tokens and logout
+    handleAuthError();
+    return false;
+  })();
+
+  try {
+    return await refreshPromise;
+  } finally {
+    // Reset mutex after completion
+    isRefreshing = false;
+    refreshPromise = null;
+  }
 }
 
 async function fetchWithRetry<T>(

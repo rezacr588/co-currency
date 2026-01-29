@@ -90,7 +90,7 @@ export default function DashboardScreen() {
 
   if (summary?.recent_transactions?.length) {
     const categoryCounts = summary.recent_transactions
-      .filter((tx: any) => tx.type === 'debit' && tx.category)
+      .filter((tx: any) => tx?.type === 'debit' && tx?.category)
       .reduce((acc: Record<string, number>, tx: any) => {
         acc[tx.category] = (acc[tx.category] || 0) + 1;
         return acc;

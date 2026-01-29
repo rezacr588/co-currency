@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rs/zerolog/log"
@@ -20,6 +21,8 @@ import (
 // AIService handles AI-powered receipt/invoice parsing
 type AIService struct {
 	llm          llms.Model
+	llmOnce      sync.Once
+	llmErr       error
 	provider     string
 	apiKey       string
 	model        string
@@ -52,50 +55,55 @@ func NewAIService(provider, apiKey, model, cloudProject string) (*AIService, err
 }
 
 // getLLM initializes the LLM on first use (for text-only operations)
+// Thread-safe via sync.Once to prevent race conditions
 func (s *AIService) getLLM(ctx context.Context) (llms.Model, error) {
-	if s.llm != nil {
-		return s.llm, nil
-	}
+	s.llmOnce.Do(func() {
+		var llm llms.Model
+		var err error
 
-	var llm llms.Model
-	var err error
-
-	switch s.provider {
-	case "cerebras":
-		// Cerebras uses OpenAI-compatible API
-		model := s.model
-		if model == "" {
-			model = "llama-3.3-70b" // Default fallback
+		switch s.provider {
+		case "cerebras":
+			// Cerebras uses OpenAI-compatible API
+			model := s.model
+			if model == "" {
+				model = "llama-3.3-70b" // Default fallback
+			}
+			llm, err = openai.New(
+				openai.WithToken(s.apiKey),
+				openai.WithBaseURL("https://api.cerebras.ai/v1"),
+				openai.WithModel(model),
+			)
+		case "openai":
+			llm, err = openai.New(
+				openai.WithToken(s.apiKey),
+				openai.WithModel("gpt-4o-mini"),
+			)
+		case "googleai", "gemini", "":
+			opts := []googleai.Option{
+				googleai.WithAPIKey(s.apiKey),
+				googleai.WithDefaultModel("gemini-1.5-flash"),
+			}
+			if s.cloudProject != "" {
+				opts = append(opts, googleai.WithCloudProject(s.cloudProject))
+			}
+			llm, err = googleai.New(ctx, opts...)
+		default:
+			s.llmErr = fmt.Errorf("unsupported AI provider: %s (supported: cerebras, openai, googleai/gemini)", s.provider)
+			return
 		}
-		llm, err = openai.New(
-			openai.WithToken(s.apiKey),
-			openai.WithBaseURL("https://api.cerebras.ai/v1"),
-			openai.WithModel(model),
-		)
-	case "openai":
-		llm, err = openai.New(
-			openai.WithToken(s.apiKey),
-			openai.WithModel("gpt-4o-mini"),
-		)
-	case "googleai", "gemini", "":
-		opts := []googleai.Option{
-			googleai.WithAPIKey(s.apiKey),
-			googleai.WithDefaultModel("gemini-1.5-flash"),
-		}
-		if s.cloudProject != "" {
-			opts = append(opts, googleai.WithCloudProject(s.cloudProject))
-		}
-		llm, err = googleai.New(ctx, opts...)
-	default:
-		return nil, fmt.Errorf("unsupported AI provider: %s (supported: cerebras, openai, googleai/gemini)", s.provider)
-	}
 
-	if err != nil {
-		return nil, fmt.Errorf("initializing AI provider: %w", err)
-	}
+		if err != nil {
+			s.llmErr = fmt.Errorf("initializing AI provider: %w", err)
+			return
+		}
 
-	s.llm = llm
-	return llm, nil
+		s.llm = llm
+	})
+
+	if s.llmErr != nil {
+		return nil, s.llmErr
+	}
+	return s.llm, nil
 }
 
 const receiptPromptTemplate = `Analyze this receipt or invoice %s. Extract the following information and return ONLY a valid JSON object (no markdown, no explanation):

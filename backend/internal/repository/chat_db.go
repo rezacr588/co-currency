@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rezacr588/currency-converter/internal/model"
+	"github.com/rs/zerolog/log"
 )
 
 // ChatRepository handles database operations for chat conversations and messages
@@ -126,8 +127,11 @@ func (r *ChatRepository) AddMessage(ctx context.Context, conversationID uuid.UUI
 		return nil, fmt.Errorf("adding message: %w", err)
 	}
 
-	// Update conversation updated_at
-	r.pool.Exec(ctx, `UPDATE chat_conversations SET updated_at = NOW() WHERE id = $1`, conversationID)
+	// Update conversation updated_at (log error but don't fail the message save)
+	if _, err := r.pool.Exec(ctx, `UPDATE chat_conversations SET updated_at = NOW() WHERE id = $1`, conversationID); err != nil {
+		// Log the error but don't return it - the message was saved successfully
+		log.Warn().Err(err).Str("conversation_id", conversationID.String()).Msg("Failed to update conversation timestamp")
+	}
 
 	return msg, nil
 }

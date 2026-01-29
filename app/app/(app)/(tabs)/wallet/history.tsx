@@ -196,23 +196,12 @@ export default function TransactionHistoryScreen() {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
       } else {
-        // For mobile, open the export URL in browser (will download the file)
-        const { Linking } = await import('react-native');
-        const fullUrl = exportUrl.startsWith('/api')
-          ? `https://terrible-moselle-airez-1828dc33.koyeb.app${exportUrl}`
-          : exportUrl;
-
-        // Add token as query parameter for mobile download
-        const urlWithAuth = `${fullUrl}&token=${token}`;
-
-        // Open in browser to trigger download
-        const canOpen = await Linking.canOpenURL(urlWithAuth);
-        if (canOpen) {
-          await Linking.openURL(urlWithAuth);
-          Alert.alert(t('export'), t('exportStarted') || 'Export started. Check your browser downloads.');
-        } else {
-          Alert.alert(t('export'), t('exportNotAvailable') || 'Export is only available on web');
-        }
+        // Mobile export - recommend using web app for secure download
+        Alert.alert(
+          t('export') || 'Export',
+          t('exportMobileNotice') || 'For secure CSV downloads, please use the web app at cofinance.app. Mobile exports are not currently supported.',
+          [{ text: 'OK', style: 'default' }]
+        );
       }
     } catch (error) {
       Alert.alert(t('export'), error instanceof Error ? error.message : t('failedToLoad'));

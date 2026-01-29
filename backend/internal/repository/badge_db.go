@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -101,7 +102,7 @@ func (r *BadgeRepository) GetBadge(ctx context.Context, badgeID uuid.UUID) (*mod
 		&b.RequirementType, &reqValue, &b.Rarity, &b.CreatedAt,
 	)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("badge not found")
 		}
 		return nil, fmt.Errorf("querying badge: %w", err)
@@ -244,7 +245,7 @@ func (r *BadgeRepository) AwardBadgeByName(ctx context.Context, userID uuid.UUID
 		badgeName,
 	).Scan(&badgeID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("badge not found: %s", badgeName)
 		}
 		return nil, fmt.Errorf("finding badge: %w", err)

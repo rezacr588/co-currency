@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
+	"github.com/rs/zerolog/log"
 	"github.com/tmc/langchaingo/llms"
 )
 
@@ -128,7 +129,11 @@ func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName str
 	}
 
 	// Get user memories (long-term context) - use semantic search with current message
-	memories, _ := s.getUserMemories(ctx, userID, message)
+	memories, memErr := s.getUserMemories(ctx, userID, message)
+	if memErr != nil {
+		// Log but continue - memories are optional context
+		log.Warn().Err(memErr).Str("user_id", userID.String()).Msg("Failed to retrieve user memories for chat")
+	}
 
 	// Get exchange rates (use user's preferred currency or USD)
 	baseCurrency := financialContext.PreferredCurrency
@@ -253,7 +258,11 @@ func (s *AIChatService) ChatStream(
 	}
 
 	// Get user memories (long-term context) - use semantic search with current message
-	memories, _ := s.getUserMemories(ctx, userID, message)
+	memories, memErr := s.getUserMemories(ctx, userID, message)
+	if memErr != nil {
+		// Log but continue - memories are optional context
+		log.Warn().Err(memErr).Str("user_id", userID.String()).Msg("Failed to retrieve user memories for stream chat")
+	}
 
 	// Get exchange rates (use user's preferred currency or USD)
 	baseCurrency := financialContext.PreferredCurrency
@@ -407,7 +416,7 @@ func (s *AIChatService) buildSystemPrompt(userName string, fctx *model.Financial
 	sb.WriteString(fmt.Sprintf("- Income: %.2f %s\n", fctx.MonthlyIncome, fctx.PreferredCurrency))
 	sb.WriteString(fmt.Sprintf("- Expenses: %.2f %s\n", fctx.MonthlyExpenses, fctx.PreferredCurrency))
 	savings := fctx.MonthlyIncome - fctx.MonthlyExpenses
-	savingsRate := float64(0)
+	var savingsRate float64
 	if fctx.MonthlyIncome > 0 {
 		savingsRate = (savings / fctx.MonthlyIncome) * 100
 	}
@@ -550,12 +559,14 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 	fctx.TodayDate = now.Format("January 2, 2006")
 	fctx.DaysUntilMonthEnd = daysUntilEndOfMonth(now)
 
-	// Get user info
+	// Get user info (with nil check for both error and user)
 	if s.userRepo != nil {
 		user, err := s.userRepo.GetByID(ctx, userID)
 		if err == nil && user != nil {
 			fctx.UserName = user.Name
-			fctx.AccountAgeDays = int(now.Sub(user.CreatedAt).Hours() / 24)
+			if !user.CreatedAt.IsZero() {
+				fctx.AccountAgeDays = int(now.Sub(user.CreatedAt).Hours() / 24)
+			}
 		}
 	}
 
@@ -623,9 +634,9 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 			}
 		}
 
-		// Calculate spending trend
+		// Calculate spending trend (guard against division by zero)
 		if fctx.LastMonthExpenses > 0 {
-			change := (fctx.MonthlyExpenses - fctx.LastMonthExpenses) / fctx.LastMonthExpenses * 100
+			change := ((fctx.MonthlyExpenses - fctx.LastMonthExpenses) / fctx.LastMonthExpenses) * 100
 			if change > 10 {
 				fctx.SpendingTrend = "increasing"
 			} else if change < -10 {
@@ -633,6 +644,8 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 			} else {
 				fctx.SpendingTrend = "stable"
 			}
+		} else if fctx.MonthlyExpenses > 0 {
+			fctx.SpendingTrend = "no prior data"
 		}
 
 		// Get top 5 spending categories
@@ -642,7 +655,7 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 				Amount:   amount,
 			})
 		}
-		// Sort by amount
+		// Sort by amount (descending)
 		for i := 0; i < len(fctx.TopCategories); i++ {
 			for j := i + 1; j < len(fctx.TopCategories); j++ {
 				if fctx.TopCategories[j].Amount > fctx.TopCategories[i].Amount {
@@ -650,6 +663,7 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 				}
 			}
 		}
+		// Truncate to top 5 categories (with length guard)
 		if len(fctx.TopCategories) > 5 {
 			fctx.TopCategories = fctx.TopCategories[:5]
 		}

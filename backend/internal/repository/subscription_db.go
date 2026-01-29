@@ -85,7 +85,7 @@ func (r *SubscriptionRepository) GetSubscription(ctx context.Context, userID, su
 		&s.ReminderDays, &notes, &logoURL, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrSubscriptionNotFound
 		}
 		return nil, fmt.Errorf("querying subscription: %w", err)

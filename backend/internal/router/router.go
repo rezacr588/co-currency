@@ -43,9 +43,12 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 	r.Get("/health", h.Exchange.Health)
 	r.Get("/health/detailed", h.Exchange.HealthDetailed)
 
-	// API routes (rate limiting disabled for now)
+	// API routes with selective rate limiting
 	r.Route("/api/v1", func(r chi.Router) {
-		// r.Use(rateLimiter.Middleware) // Disabled - causing 429 errors on landing page
+		// Apply rate limiting to API routes (re-enabled with proper configuration)
+		if rateLimiter != nil {
+			r.Use(rateLimiter.Middleware)
+		}
 
 		// Public exchange routes
 		r.Get("/currencies", h.Exchange.GetCurrencies)
@@ -104,13 +107,12 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 			// Status endpoint is public
 			r.Get("/status", h.AI.GetStatus)
 
-			// Parse endpoints don't require auth (for testing)
-			r.Post("/parse-receipt", h.AI.ParseReceipt)
-			r.Post("/parse-text", h.AI.ParseReceiptText)
-
-			// Apply requires authentication
+			// All other AI endpoints require authentication
 			r.Group(func(r chi.Router) {
 				r.Use(authMiddleware.Middleware)
+				// Parse endpoints now require auth to prevent abuse
+				r.Post("/parse-receipt", h.AI.ParseReceipt)
+				r.Post("/parse-text", h.AI.ParseReceiptText)
 				r.Post("/apply-parsed", h.AI.ApplyParsed)
 
 				// AI Chat routes (protected)

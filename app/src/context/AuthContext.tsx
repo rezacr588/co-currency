@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Load tokens and user on mount
+  // Load tokens and user on mount with retry logic
   useEffect(() => {
     async function loadUser() {
       // First, load tokens from secure storage into memory
@@ -85,12 +85,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const token = getAuthToken();
       if (token) {
-        try {
-          const profile = await api.auth.getProfile();
-          setUser(profile);
-        } catch {
-          // Token might be invalid, clear it
-          await clearAuthToken();
+        // Retry profile fetch up to 3 times for transient network errors
+        const maxRetries = 3;
+        let lastError: Error | null = null;
+
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+          try {
+            const profile = await api.auth.getProfile();
+            setUser(profile);
+            setIsLoading(false);
+            return;
+          } catch (error) {
+            lastError = error instanceof Error ? error : new Error('Unknown error');
+
+            // Check if it's a network error (worth retrying) vs auth error (don't retry)
+            const isNetworkError =
+              error instanceof TypeError || // Network failure
+              (lastError.message && lastError.message.includes('network')) ||
+              (lastError.message && lastError.message.includes('fetch'));
+
+            const isAuthError =
+              lastError.message?.includes('Session expired') ||
+              lastError.message?.includes('401') ||
+              lastError.message?.includes('Unauthorized');
+
+            // Don't retry auth errors - just clear and continue
+            if (isAuthError) {
+              await clearAuthToken();
+              break;
+            }
+
+            // Only retry network errors
+            if (!isNetworkError || attempt === maxRetries - 1) {
+              // Clear token on final failure if not a network error
+              if (!isNetworkError) {
+                await clearAuthToken();
+              }
+              break;
+            }
+
+            // Wait before retry with exponential backoff
+            await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
+          }
         }
       }
       setIsLoading(false);

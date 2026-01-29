@@ -44,7 +44,12 @@ export function useAppUpdates() {
         [
           {
             text: 'Restart Now',
-            onPress: () => Updates.reloadAsync(),
+            onPress: () => {
+              Updates.reloadAsync().catch((err) => {
+                console.error('Failed to reload app after update:', err);
+                Alert.alert('Restart Failed', 'Please restart the app manually.');
+              });
+            },
           },
         ]
       );
