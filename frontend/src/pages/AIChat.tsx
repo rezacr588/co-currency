@@ -67,8 +67,12 @@ export default function AIChat() {
     // Send message mutation
     const sendMessageMutation = useMutation({
         mutationFn: async (msg: string) => {
+            // Only send conversation_id if it's a real UUID (not temp-)
+            const realConversationId = selectedConversationId && !selectedConversationId.startsWith('temp-')
+                ? selectedConversationId
+                : undefined;
             return api.chat.sendMessage({
-                conversation_id: selectedConversationId || undefined,
+                conversation_id: realConversationId,
                 message: msg,
             });
         },

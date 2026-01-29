@@ -56,8 +56,12 @@ func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName str
 	var conv *model.ChatConversation
 	var err error
 
+	// Trim and validate conversation ID
+	conversationID = strings.TrimSpace(conversationID)
+
 	// Get or create conversation
-	if conversationID != "" {
+	// Ignore temp IDs or invalid formats
+	if conversationID != "" && !strings.HasPrefix(conversationID, "temp-") {
 		convID, err = uuid.Parse(conversationID)
 		if err != nil {
 			return nil, ErrInvalidConversationID
@@ -158,8 +162,12 @@ func (s *AIChatService) ChatStream(
 	var conv *model.ChatConversation
 	var err error
 
+	// Trim and validate conversation ID
+	conversationID = strings.TrimSpace(conversationID)
+
 	// Get or create conversation
-	if conversationID != "" {
+	// Ignore temp IDs or invalid formats
+	if conversationID != "" && !strings.HasPrefix(conversationID, "temp-") {
 		convID, err = uuid.Parse(conversationID)
 		if err != nil {
 			return nil, ErrInvalidConversationID

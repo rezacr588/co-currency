@@ -46,13 +46,62 @@ type ConversationWithMessages struct {
 
 // FinancialContext represents the user's financial data for AI context
 type FinancialContext struct {
-	TotalBalance       float64            `json:"total_balance"`
+	// User info
+	UserName       string `json:"user_name"`
+	PreferredCurrency string `json:"preferred_currency"`
+	AccountAgeDays int    `json:"account_age_days"`
+
+	// Balances
+	TotalBalance       float64          `json:"total_balance"`
+	Balances           []CurrencyBalance `json:"balances"`
+
+	// Monthly overview
 	MonthlyIncome      float64            `json:"monthly_income"`
 	MonthlyExpenses    float64            `json:"monthly_expenses"`
 	TopCategories      []CategorySpending `json:"top_categories"`
+
+	// Budgets and Goals
 	ActiveBudgets      []BudgetSummary    `json:"active_budgets"`
 	SavingsGoals       []GoalSummary      `json:"savings_goals"`
-	RecentTransactions int                `json:"recent_transactions"`
+
+	// Activity
+	RecentTransactions    int                  `json:"recent_transactions"`
+	RecentTransactionList []TransactionSummary `json:"recent_transaction_list"`
+
+	// Patterns
+	RecurringItems     []RecurringSummary `json:"recurring_items"`
+	SpendingTrend      string             `json:"spending_trend"` // "increasing", "decreasing", "stable"
+	LastMonthExpenses  float64            `json:"last_month_expenses"`
+
+	// Context
+	TodayDate          string `json:"today_date"`
+	DaysUntilMonthEnd  int    `json:"days_until_month_end"`
+}
+
+// CurrencyBalance for multi-currency support
+type CurrencyBalance struct {
+	Currency string  `json:"currency"`
+	Balance  float64 `json:"balance"`
+}
+
+// TransactionSummary for recent transactions context
+type TransactionSummary struct {
+	Date        string  `json:"date"`
+	Type        string  `json:"type"` // credit/debit
+	Amount      float64 `json:"amount"`
+	Currency    string  `json:"currency"`
+	Category    string  `json:"category"`
+	Description string  `json:"description"`
+}
+
+// RecurringSummary for recurring transactions
+type RecurringSummary struct {
+	Description string  `json:"description"`
+	Amount      float64 `json:"amount"`
+	Currency    string  `json:"currency"`
+	Frequency   string  `json:"frequency"`
+	NextDate    string  `json:"next_date"`
+	Type        string  `json:"type"` // income/expense
 }
 
 // CategorySpending for AI context

@@ -106,8 +106,6 @@ export default function AIChatScreen() {
     conversationId || null
   );
   const scrollViewRef = useRef<FlatList<ChatMessage>>(null);
-  const streamingStateRef = useRef<{ conversationId: string; messageId: string } | null>(null);
-  const optimisticConversationIdRef = useRef<string | null>(null);
   const isNearBottomRef = useRef(true);
 
   const { data: aiStatus } = useQuery({
@@ -144,29 +142,15 @@ export default function AIChatScreen() {
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (msg: string) => {
-      const conversationId = activeConversationId || undefined;
-      const optimisticConversationId =
-        optimisticConversationIdRef.current || activeConversationId || '';
+      // Only send conversation_id if it's a real UUID (not temp-)
+      const realConversationId = activeConversationId && !activeConversationId.startsWith('temp-')
+        ? activeConversationId
+        : undefined;
 
-      try {
-        return await api.chat.streamMessage(
-          {
-            conversation_id: conversationId,
-            message: msg,
-          },
-          {
-            onDelta: (chunk) => {
-              if (!optimisticConversationId) return;
-              appendStreamingChunk(optimisticConversationId, chunk);
-            },
-          }
-        );
-      } catch {
-        return api.chat.sendMessage({
-          conversation_id: conversationId,
-          message: msg,
-        });
-      }
+      return api.chat.sendMessage({
+        conversation_id: realConversationId,
+        message: msg,
+      });
     },
     onMutate: async (msg) => {
       setIsTyping(true);
@@ -181,6 +165,7 @@ export default function AIChatScreen() {
         created_at: now,
       };
 
+      // If we have an existing conversation (real or temp), add the message to it
       if (activeConversationId) {
         queryClient.setQueryData<ConversationWithMessages | null>(
           ['ai-conversation', activeConversationId],
@@ -192,13 +177,12 @@ export default function AIChatScreen() {
             };
           }
         );
-        optimisticConversationIdRef.current = activeConversationId;
         return { optimisticConversationId: activeConversationId, optimisticMessageId };
       }
 
+      // New conversation - create optimistic temp conversation
       const optimisticConversationId = `temp-${Date.now()}`;
-      const title =
-        msg.trim().slice(0, 36) || t('newConversation') || 'New conversation';
+      const title = msg.trim().slice(0, 36) || t('newConversation') || 'New conversation';
 
       const optimisticConversation: Conversation = {
         id: optimisticConversationId,
@@ -230,24 +214,59 @@ export default function AIChatScreen() {
       );
 
       setActiveConversationId(optimisticConversationId);
-      optimisticConversationIdRef.current = optimisticConversationId;
       return { optimisticConversationId, optimisticMessageId };
     },
     onSuccess: (data, _msg, context) => {
+      if (!data || !data.conversation_id || !data.message) {
+        console.error('Invalid response from server:', data);
+        setIsTyping(false);
+        return;
+      }
+
       const serverConversationId = data.conversation_id;
+
+      // Get temp data BEFORE removing it
+      const tempData = context?.optimisticConversationId
+        ? queryClient.getQueryData<ConversationWithMessages>([
+            'ai-conversation',
+            context.optimisticConversationId,
+          ])
+        : null;
+
       if (context?.optimisticConversationId && context.optimisticConversationId !== serverConversationId) {
-        const tempData = queryClient.getQueryData<ConversationWithMessages>([
-          'ai-conversation',
-          context.optimisticConversationId,
-        ]);
+        // Transfer temp conversation data to server conversation
         if (tempData) {
+          // Preserve user messages and add the AI response
+          const userMessages = tempData.messages.filter(m => m.role === 'user');
           queryClient.setQueryData<ConversationWithMessages>(
             ['ai-conversation', serverConversationId],
-            tempData
+            {
+              ...tempData,
+              conversation: { ...tempData.conversation, id: serverConversationId },
+              messages: [...userMessages, data.message],
+            }
           );
-          queryClient.removeQueries({ queryKey: ['ai-conversation', context.optimisticConversationId] });
+        } else {
+          // No temp data, just set the AI response
+          queryClient.setQueryData<ConversationWithMessages>(
+            ['ai-conversation', serverConversationId],
+            {
+              conversation: {
+                id: serverConversationId,
+                user_id: '',
+                title: _msg.slice(0, 36),
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+              messages: [data.message],
+            }
+          );
         }
 
+        // Clean up temp conversation
+        queryClient.removeQueries({ queryKey: ['ai-conversation', context.optimisticConversationId] });
+
+        // Update conversations list
         queryClient.setQueryData<{ conversations: Conversation[] } | undefined>(
           ['ai-conversations'],
           (old) => {
@@ -261,18 +280,30 @@ export default function AIChatScreen() {
           }
         );
         setActiveConversationId(serverConversationId);
-        if (streamingStateRef.current?.conversationId === context.optimisticConversationId) {
-          streamingStateRef.current = {
-            conversationId: serverConversationId,
-            messageId: streamingStateRef.current.messageId,
-          };
-        }
+      } else {
+        // Same conversation - just add the AI response
+        queryClient.setQueryData<ConversationWithMessages | null>(
+          ['ai-conversation', serverConversationId],
+          (old) => {
+            if (!old) return old;
+            // Avoid duplicate messages
+            if (old.messages.find((m) => m.id === data.message.id)) {
+              return old;
+            }
+            return {
+              ...old,
+              messages: [...old.messages, data.message],
+            };
+          }
+        );
       }
 
-      finalizeStreamingAssistant(serverConversationId, data.message);
+      // Invalidate to get fresh data from server
+      queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
       setIsTyping(false);
     },
     onError: (error, _msg, context) => {
+      // Remove the optimistic user message on error
       if (context?.optimisticConversationId && context.optimisticMessageId) {
         queryClient.setQueryData<ConversationWithMessages | null>(
           ['ai-conversation', context.optimisticConversationId],
@@ -285,6 +316,7 @@ export default function AIChatScreen() {
           }
         );
       }
+      // If it was a temp conversation, remove it entirely
       if (context?.optimisticConversationId?.startsWith('temp-')) {
         queryClient.removeQueries({
           queryKey: ['ai-conversation', context.optimisticConversationId],
@@ -300,9 +332,9 @@ export default function AIChatScreen() {
             };
           }
         );
+        // Reset to no conversation
+        setActiveConversationId(null);
       }
-      streamingStateRef.current = null;
-      optimisticConversationIdRef.current = null;
       setSendError(error instanceof Error ? error.message : 'Unable to reach the assistant. Please try again.');
       setIsTyping(false);
     },
@@ -379,86 +411,6 @@ export default function AIChatScreen() {
   const messages: ChatMessage[] = currentConversation?.messages || [];
   const conversations: Conversation[] = conversationsData?.conversations || [];
 
-  const ensureStreamingAssistant = (conversationId: string) => {
-    const existing = streamingStateRef.current;
-    if (existing && existing.conversationId === conversationId) {
-      return existing;
-    }
-    const messageId = `stream-${Date.now()}`;
-    const now = new Date().toISOString();
-    streamingStateRef.current = { conversationId, messageId };
-
-    queryClient.setQueryData<ConversationWithMessages | null>(
-      ['ai-conversation', conversationId],
-      (old) => {
-        const base = old ?? {
-          conversation: {
-            id: conversationId,
-            user_id: '',
-            title: t('newConversation') || 'Conversation',
-            created_at: now,
-            updated_at: now,
-          },
-          messages: [],
-        };
-        return {
-          ...base,
-          messages: [
-            ...base.messages,
-            {
-              id: messageId,
-              conversation_id: conversationId,
-              role: 'assistant',
-              content: '',
-              created_at: now,
-            },
-          ],
-        };
-      }
-    );
-
-    return streamingStateRef.current;
-  };
-
-  const appendStreamingChunk = (conversationId: string, chunk: string) => {
-    const streamingState = ensureStreamingAssistant(conversationId);
-    queryClient.setQueryData<ConversationWithMessages | null>(
-      ['ai-conversation', conversationId],
-      (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          messages: old.messages.map((msg) =>
-            msg.id === streamingState.messageId
-              ? { ...msg, content: `${msg.content}${chunk}` }
-              : msg
-          ),
-        };
-      }
-    );
-  };
-
-  const finalizeStreamingAssistant = (conversationId: string, message: ChatMessage) => {
-    const streamingState = streamingStateRef.current;
-    queryClient.setQueryData<ConversationWithMessages | null>(
-      ['ai-conversation', conversationId],
-      (old) => {
-        if (!old) return old;
-        let messages = old.messages;
-        if (streamingState && streamingState.conversationId === conversationId) {
-          messages = messages.filter((msg) => msg.id !== streamingState.messageId);
-        }
-        if (!messages.find((msg) => msg.id === message.id)) {
-          messages = [...messages, message];
-        }
-        return { ...old, messages };
-      }
-    );
-    if (streamingState && streamingState.conversationId === conversationId) {
-      streamingStateRef.current = null;
-    }
-  };
-
   // Scroll to bottom on new messages
   const scrollToBottom = useCallback(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -499,22 +451,24 @@ export default function AIChatScreen() {
   };
 
   const handleNewConversation = () => {
-    if (createConversationMutation.isPending) return;
+    if (createConversationMutation.isPending || sendMessageMutation.isPending) return;
     if (!aiConfigured) {
       setSendError('AI is not configured on the server.');
       return;
     }
-    createConversationMutation.mutate(t('newConversation') || 'New conversation');
+    // Just reset to show welcome screen - conversation will be created when user sends first message
+    setActiveConversationId(null);
     setPendingAction(null);
-    streamingStateRef.current = null;
+    setSendError(null);
     isNearBottomRef.current = true;
   };
 
   const handleSelectConversation = (id: string) => {
+    if (sendMessageMutation.isPending) return; // Don't switch while sending
     setIsTyping(false);
     setActiveConversationId(id);
     setPendingAction(null);
-    streamingStateRef.current = null;
+    setSendError(null);
     isNearBottomRef.current = true;
   };
 
@@ -1097,10 +1051,16 @@ export default function AIChatScreen() {
                   editable={!sendMessageMutation.isPending}
                   returnKeyType="send"
                   blurOnSubmit={false}
+                  autoFocus={false}
                   className="flex-1 bg-background border border-border rounded-xl px-4 py-3 text-foreground"
                   multiline
                   textAlignVertical="top"
-                  style={{ outlineStyle: 'none', minHeight: 44, maxHeight: 140 } as any}
+                  style={{
+                    outlineStyle: 'none',
+                    minHeight: 44,
+                    maxHeight: 140,
+                    color: '#fafafa', // Ensure text is visible in dark mode
+                  } as any}
                 />
                 <Pressable
                   onPress={handleSend}
