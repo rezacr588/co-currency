@@ -1,5 +1,5 @@
 import '../global.css';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -17,6 +17,7 @@ import { LanguageProvider } from '../src/context/LanguageContext';
 import { AuthProvider } from '../src/context/AuthContext';
 import { ToastProvider } from '../src/components/ui/Toast';
 import { OfflineBanner } from '../src/components/ui/OfflineBanner';
+import { AnimatedSplash } from '../src/components/ui/AnimatedSplash';
 import { useAppUpdates } from '../src/hooks/useAppUpdates';
 import { useAndroidNavigationBar } from '../src/hooks/useAndroidNavigationBar';
 
@@ -35,6 +36,7 @@ const queryClient = new QueryClient({
 
 function RootLayoutNav() {
   const { isDark } = useTheme();
+  const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -65,7 +67,7 @@ function RootLayoutNav() {
         screenOptions={{
           headerShown: false,
           contentStyle: {
-            backgroundColor: isDark ? 'rgb(15, 26, 42)' : 'rgb(248, 250, 252)',
+            backgroundColor: isDark ? 'rgb(9, 9, 11)' : 'rgb(248, 250, 252)',
           },
         }}
       >
@@ -75,6 +77,9 @@ function RootLayoutNav() {
         <Stack.Screen name="auth" />
         <Stack.Screen name="+not-found" />
       </Stack>
+      {showAnimatedSplash && (
+        <AnimatedSplash onAnimationComplete={() => setShowAnimatedSplash(false)} />
+      )}
     </>
   );
 }

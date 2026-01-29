@@ -1,0 +1,39 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="240" fill="#d4af37"/>
+
+  <!-- Inner Shadow Ring -->
+  <circle cx="256" cy="256" r="200" fill="none" stroke="#b8960c" stroke-width="4"/>
+
+  <!-- Stylized CF Monogram -->
+  <g transform="translate(256, 256)">
+    <!-- C shape -->
+    <path d="M-60 -80
+             C-100 -80, -120 -40, -120 0
+             C-120 40, -100 80, -60 80
+             L-60 50
+             C-80 50, -90 30, -90 0
+             C-90 -30, -80 -50, -60 -50
+             Z"
+          fill="#09090b"/>
+
+    <!-- Dollar sign vertical line -->
+    <rect x="20" y="-100" width="20" height="200" rx="10" fill="#09090b"/>
+
+    <!-- Dollar S curves -->
+    <path d="M30 -60
+             C80 -60, 80 -20, 30 -10
+             C-20 0, -20 40, 30 50
+             "
+          fill="none"
+          stroke="#09090b"
+          stroke-width="24"
+          stroke-linecap="round"/>
+  </g>
+
+  <!-- Outer Ring -->
+  <circle cx="256" cy="256" r="236" fill="none" stroke="#09090b" stroke-width="8"/>
+
+  <!-- Shine effect -->
+  <ellipse cx="180" cy="140" rx="60" ry="30" fill="white" opacity="0.15" transform="rotate(-30, 180, 140)"/>
+</svg>
