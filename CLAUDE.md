@@ -4,17 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CoFinance is a full-stack personal finance application with:
-- **Currency Converter**: 160+ currencies with real-time rates from ECB
-- **User Authentication**: JWT-based auth with access/refresh tokens, password reset, account lockout
-- **Multi-Currency Wallet**: Track balances, transactions, categories, and convert between currencies
-- **Financial Goals**: Set savings targets with progress tracking and contributions
-- **Budgets**: Category-based spending limits with period tracking (monthly/yearly)
-- **Recurring Transactions**: Automated income/expense scheduling with execution
-- **Reports & Analytics**: Monthly summaries, category breakdowns, trends, net worth
-- **AI Receipt Parser**: Extract transaction data from text using Cerebras LLM
+CoFinance is a full-stack personal finance application with **three clients**: Web (React), Mobile (Expo/React Native), and a Go backend.
+
+**Features:**
+- **Currency Converter**: 160+ currencies with real-time rates from ECB + IRR rates
+- **User Authentication**: JWT-based auth with access/refresh tokens, OAuth (Google, LinkedIn)
+- **Multi-Currency Wallet**: Track balances, transactions, categories, convert between currencies
+- **Financial Goals**: Savings targets with progress tracking and contributions
+- **Budgets**: Category-based spending limits with period tracking
+- **Recurring Transactions**: Automated income/expense scheduling
+- **Reports & Analytics**: Monthly summaries, category breakdowns, trends, net worth, forecasting
+- **AI Chat Advisor**: Cerebras-powered financial advisor with user context and long-term memories
+- **AI Receipt Parser**: Extract transaction data from text
+- **Subscriptions & Badges**: Track recurring subscriptions, gamification with achievement badges
 - **Multi-Language**: English, Persian, Arabic, Turkish with RTL support
-- **PWA**: Installable, works offline
+- **PWA + Mobile**: Web app is installable PWA, mobile app uses Expo with EAS for OTA updates
 
 ## Development Commands
 
@@ -49,6 +53,16 @@ go test -v ./internal/service/...  # Test specific package
 go test -cover ./...    # Run with coverage
 ```
 
+### Mobile App Commands (run from /app)
+```bash
+npx expo start          # Start Expo dev server
+npx expo start --ios    # Run on iOS simulator
+npx expo start --android # Run on Android emulator
+npx tsc --noEmit        # TypeScript check
+eas update --branch production --message "description" # Push OTA update
+eas build --platform android --profile production # Build APK
+```
+
 ### Full Stack Commands
 ```bash
 make test               # All tests (backend + frontend)
@@ -72,6 +86,23 @@ Key patterns:
 - AuthContext for JWT token persistence in localStorage
 - Protected routes redirect to /login with return path
 - PWA with Workbox runtime caching via vite-plugin-pwa
+
+### Mobile App (`/app`)
+- **Expo Router**: File-based routing in `app/` directory
+- **app/(public)/**: Public screens (login, register, converter)
+- **app/(app)/(tabs)/**: Authenticated tab screens (dashboard, wallet, chat, add, profile)
+- **app/(app)/(tabs)/wallet/**: Wallet sub-screens (history, convert, transaction details)
+- **src/api/**: API client using `fetchAPI` with JWT auth headers
+- **src/components/features/**: Shared feature components (CurrencyConverter, etc.)
+- **src/context/**: Auth, Theme, Language contexts
+- **src/hooks/**: Custom hooks mirroring frontend (useConvert, useCurrencies, etc.)
+
+Key patterns:
+- NativeWind (Tailwind for React Native) for styling
+- TanStack Query for server state
+- Expo SecureStore for token persistence
+- EAS Update for OTA deployments (no app store review needed for JS changes)
+- Same API client pattern as web frontend
 
 ### Backend (`/backend`)
 - **cmd/api/main.go**: Application entry point, initializes DB and services
@@ -133,10 +164,23 @@ Key patterns:
 - `GET /api/v1/reports/trends?months=&currency=`
 - `GET /api/v1/reports/networth?currency=`
 
-**AI:**
+**AI & Chat (protected):**
 - `GET /api/v1/ai/status` - Check AI configuration
 - `POST /api/v1/ai/parse-text` - Parse receipt text
-- `POST /api/v1/ai/apply-parsed` (protected) - Apply to wallet
+- `POST /api/v1/ai/apply-parsed` - Apply parsed to wallet
+- `GET /api/v1/ai/conversations` - List chat conversations
+- `POST /api/v1/ai/conversations` - Create new conversation
+- `GET /api/v1/ai/conversations/{id}` - Get conversation with messages
+- `DELETE /api/v1/ai/conversations/{id}` - Delete conversation
+- `POST /api/v1/ai/chat` - Send message to AI advisor
+
+**Subscriptions (protected):**
+- `GET/POST /api/v1/subscriptions`
+- `PUT/DELETE /api/v1/subscriptions/{id}`
+
+**Badges (protected):**
+- `GET /api/v1/badges` - List all badges with unlock status
+- `GET /api/v1/badges/check` - Check and unlock new badges
 
 ## Configuration
 
@@ -160,6 +204,13 @@ PostgreSQL tables (auto-created on startup):
 - `transaction_tags`: transaction_id, tag_id (junction table)
 - `budgets`: user_id, category, amount, currency, period, spent (unique on user_id+category+period)
 - `recurring_transactions`: user_id, type, amount, currency, category, description, frequency, next_execution, is_active
+- `subscriptions`: user_id, name, amount, currency, billing_cycle, next_billing, category, is_active
+- `badges`: id, name, description, icon, category, criteria
+- `user_badges`: user_id, badge_id, unlocked_at
+- `chat_conversations`: id, user_id, title, created_at, updated_at
+- `chat_messages`: id, conversation_id, role, content, tokens_used, created_at
+- `user_memories`: id, user_id, category, content, source, created_at (AI long-term memory)
+- `oauth_states`: state, user_id, provider, expires_at (OAuth flow state management)
 
 ## Build & Deploy
 
@@ -191,3 +242,22 @@ Example queries:
 SELECT * FROM wallet_balances WHERE user_id = '...';
 SELECT * FROM transactions ORDER BY created_at DESC LIMIT 10;
 ```
+
+## Mobile Deployment
+
+Mobile app uses Expo Application Services (EAS):
+- **OTA Updates**: JavaScript changes pushed via `eas update` (no app store review)
+- **Native Builds**: Full APK/IPA builds via `eas build` when native dependencies change
+- **GitHub Actions**: `.github/workflows/mobile.yml` auto-deploys OTA on push to main
+
+The workflow detects native changes and either pushes OTA update or triggers full build.
+
+## AI Chat Architecture
+
+The AI Chat service (`internal/service/ai_chat_service.go`) provides:
+- **Financial Context**: User's balances, transactions, budgets, goals, recurring items
+- **Long-term Memory**: Stored insights about user preferences across conversations
+- **Live Exchange Rates**: Real-time currency rates for accurate financial advice
+- **Conversation History**: Full chat history maintained per conversation
+
+The AI receives a rich system prompt with all user financial data, enabling personalized advice.
