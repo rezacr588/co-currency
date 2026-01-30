@@ -42,7 +42,10 @@ npm run lint            # ESLint (strict, max-warnings=0)
 npm test                # Vitest unit tests (watch mode)
 npm run test:run        # Run tests once
 npm run test:coverage   # Generate coverage report
-npm run test:e2e        # Playwright E2E tests
+npm run test:e2e        # Playwright E2E tests (headless)
+npm run test:e2e:ui     # Playwright with UI mode
+npm run test:e2e:headed # Playwright with browser visible
+npm run test:e2e:debug  # Playwright debug mode
 ```
 
 ### Backend Commands (run from /backend)
@@ -55,9 +58,9 @@ go test -cover ./...    # Run with coverage
 
 ### Mobile App Commands (run from /app)
 ```bash
-npx expo start          # Start Expo dev server
-npx expo start --ios    # Run on iOS simulator
-npx expo start --android # Run on Android emulator
+npx expo start          # Start Expo dev server (press i/a for simulator)
+npm run ios             # Build and run on iOS simulator (native)
+npm run android         # Build and run on Android emulator (native)
 npx tsc --noEmit        # TypeScript check
 eas update --branch production --message "description" # Push OTA update
 eas build --platform android --profile production # Build APK
@@ -187,10 +190,23 @@ Key patterns:
 Backend environment variables (see `/backend/.env.example`):
 - `DATABASE_URL`: PostgreSQL connection string (required for auth/wallet/goals/budgets)
 - `JWT_SECRET`: Secret for signing JWT tokens
+- `FRONTEND_URL`: Frontend URL for OAuth redirects (default: `http://localhost:5173`)
+- `RATE_LIMIT`: Requests per minute
+- `EXPOSE_ERROR_DETAILS`: Show error details in API responses (dev only)
+
+**IRR Rate Crawler:**
+- `IRR_CRAWLER_ENABLED`: Enable Iranian Rial rate crawling (`true`/`false`)
+- `IRR_CRAWLER_INTERVAL`: Crawl interval (default: `5m`)
+
+**OAuth Providers:**
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`: Google OAuth
+- `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_REDIRECT_URI`: LinkedIn OAuth
+
+**AI Service:**
 - `AI_PROVIDER`: LLM provider (cerebras, openai, googleai)
 - `AI_API_KEY`: API key for AI provider
 - `AI_MODEL`: Model name (e.g., `gpt-oss-120b` for Cerebras)
-- `RATE_LIMIT`: Requests per minute
+- `AI_CLOUD_PROJECT`: Google Cloud project ID (for googleai provider)
 
 **Qdrant Vector Memory** (optional, for semantic AI memory):
 - `QDRANT_ENABLED`: Enable vector memory (`true`/`false`)
@@ -200,6 +216,9 @@ Backend environment variables (see `/backend/.env.example`):
 - `EMBEDDING_API_KEY`: HuggingFace or Google AI API key
 - `EMBEDDING_MODEL`: Model name (default: `sentence-transformers/all-MiniLM-L6-v2`)
 - `EMBEDDING_DIMENSIONS`: Vector dimensions (384 for MiniLM, 768 for others)
+- `OLLAMA_URL`: Ollama server URL (if using `ollama` provider, default: `http://localhost:11434`)
+- `SHORT_TERM_MEMORY_TTL`: Short-term memory expiration (default: `24h`)
+- `MAX_MEMORY_RESULTS`: Max memories returned per query (default: `10`)
 
 ## Database Schema
 
@@ -258,7 +277,7 @@ SELECT * FROM transactions ORDER BY created_at DESC LIMIT 10;
 Mobile app uses Expo Application Services (EAS):
 - **OTA Updates**: JavaScript changes pushed via `eas update` (no app store review)
 - **Native Builds**: Full APK/IPA builds via `eas build` when native dependencies change
-- **GitHub Actions**: `.github/workflows/mobile.yml` auto-deploys OTA on push to main
+- **GitHub Actions**: `.github/workflows/mobile-build.yml` auto-deploys OTA on push to main
 
 The workflow detects native changes and either pushes OTA update or triggers full build.
 

@@ -141,16 +141,21 @@ export default function DashboardScreen() {
 
         {/* Mobile Header - Only show on mobile */}
         {!isDesktop && (
-          <View className="flex-row items-center justify-between mb-6">
+          <View className="mb-6">
+            {/* Logo Row */}
+            <View className="flex-row items-center justify-between mb-4">
+              <Text className="text-2xl font-bold text-primary">CoFinance</Text>
+              <Link href="/(app)/profile" asChild>
+                <Pressable style={{ cursor: 'pointer' }} className="bg-secondary border border-border p-2.5 rounded-full">
+                  <User size={20} color="#a1a1aa" />
+                </Pressable>
+              </Link>
+            </View>
+            {/* Welcome Row */}
             <View>
               <Text className="text-muted-foreground text-sm">{t('welcomeBack')}</Text>
               <Text className="text-xl font-bold text-foreground">{user?.name}</Text>
             </View>
-            <Link href="/(app)/profile" asChild>
-              <Pressable style={{ cursor: 'pointer' }} className="bg-secondary border border-border p-2.5 rounded-full">
-                <User size={20} color="#a1a1aa" />
-              </Pressable>
-            </Link>
           </View>
         )}
 

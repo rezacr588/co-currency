@@ -875,16 +875,11 @@ export default function AIChatScreen() {
       <View style={{ gap: 16 }}>
         {isTyping && (
           <View className="flex-row justify-start" style={{ width: '100%' }}>
-            <View className="flex-row" style={{ gap: 12, maxWidth: messageMaxWidth }}>
-              <View className="w-8 h-8 rounded-full bg-primary items-center justify-center">
-                <Bot size={16} color="#09090b" />
-              </View>
-              <View className="bg-card px-4 py-3 rounded-2xl rounded-bl-sm">
-                <View className="flex-row" style={{ gap: 4 }}>
-                  <View className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
-                  <View className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
-                  <View className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
-                </View>
+            <View className="bg-card px-4 py-3 rounded-2xl rounded-bl-sm" style={{ maxWidth: '90%' }}>
+              <View className="flex-row" style={{ gap: 4 }}>
+                <View className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
+                <View className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
+                <View className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
               </View>
             </View>
           </View>
@@ -892,11 +887,7 @@ export default function AIChatScreen() {
 
         {pendingAction && (
           <View className="flex-row justify-start" style={{ width: '100%' }}>
-            <View className="flex-row" style={{ gap: 12, maxWidth: messageMaxWidth }}>
-              <View className="w-8 h-8 rounded-full bg-primary items-center justify-center">
-                <Sparkles size={16} color="#09090b" />
-              </View>
-              <View className="bg-card border border-border rounded-2xl px-4 py-3 flex-1">
+            <View className="bg-card border border-border rounded-2xl px-4 py-3" style={{ maxWidth: '90%' }}>
                 <View className="flex-row items-center justify-between mb-2">
                   <Text className="text-sm font-semibold text-foreground">
                     {pendingAction.kind === 'transaction'
@@ -1026,7 +1017,6 @@ export default function AIChatScreen() {
                 )}
               </View>
             </View>
-          </View>
         )}
       </View>
     ) : null;
@@ -1046,49 +1036,24 @@ export default function AIChatScreen() {
           >
             <View
               style={{
-                flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
-                gap: 12,
-                maxWidth: '85%',
-                alignItems: 'flex-start',
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                borderRadius: 16,
+                backgroundColor: msg.role === 'user' ? '#d4af37' : '#18181b',
+                borderBottomRightRadius: msg.role === 'user' ? 4 : 16,
+                borderBottomLeftRadius: msg.role === 'user' ? 16 : 4,
+                maxWidth: '90%',
               }}
             >
-              <View
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: msg.role === 'user' ? '#27272a' : '#d4af37',
-                }}
-              >
-                {msg.role === 'user' ? (
-                  <User size={16} color="rgb(148, 163, 184)" />
-                ) : (
-                  <Bot size={16} color="#09090b" />
-                )}
-              </View>
-              <View
-                style={{
-                  paddingHorizontal: 16,
-                  paddingVertical: 12,
-                  borderRadius: 16,
-                  backgroundColor: msg.role === 'user' ? '#d4af37' : '#18181b',
-                  borderBottomRightRadius: msg.role === 'user' ? 4 : 16,
-                  borderBottomLeftRadius: msg.role === 'user' ? 16 : 4,
-                  flexShrink: 1,
-                }}
-              >
-                {msg.role === 'user' ? (
-                  <Text style={{ color: '#09090b', fontSize: 15, lineHeight: 22 }}>
-                    {msg.content}
-                  </Text>
-                ) : (
-                  <Markdown style={markdownStyles}>
-                    {msg.content}
-                  </Markdown>
-                )}
-              </View>
+              {msg.role === 'user' ? (
+                <Text style={{ color: '#09090b', fontSize: 15, lineHeight: 22 }}>
+                  {msg.content}
+                </Text>
+              ) : (
+                <Markdown style={markdownStyles}>
+                  {msg.content}
+                </Markdown>
+              )}
             </View>
           </View>
         )}
