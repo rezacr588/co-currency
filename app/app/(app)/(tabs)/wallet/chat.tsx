@@ -110,6 +110,7 @@ export default function AIChatScreen() {
   const scrollViewRef = useRef<FlatList<ChatMessage>>(null);
   const isNearBottomRef = useRef(true);
   const pendingMutationRef = useRef(false);
+  const lastSentMessageRef = useRef<string>('');
 
   // Markdown styles for AI responses
   const markdownStyles = useMemo(() => StyleSheet.create({
@@ -442,6 +443,7 @@ export default function AIChatScreen() {
       queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
       setIsTyping(false);
       pendingMutationRef.current = false;
+      lastSentMessageRef.current = ''; // Clear saved message on success
     },
     onError: (error, _msg, context) => {
       // Remove the optimistic user message on error
@@ -475,6 +477,10 @@ export default function AIChatScreen() {
         );
         // Reset to no conversation
         setActiveConversationId(null);
+      }
+      // Restore the user's message so they can retry
+      if (lastSentMessageRef.current) {
+        setMessage(lastSentMessageRef.current);
       }
       setSendError(error instanceof Error ? error.message : 'Unable to reach the assistant. Please try again.');
       setIsTyping(false);
@@ -584,6 +590,7 @@ export default function AIChatScreen() {
       return;
     }
     const trimmed = message.trim();
+    lastSentMessageRef.current = trimmed; // Save message for retry on error
     sendMessageMutation.mutate(trimmed);
     setMessage('');
     void maybeStartAction(trimmed);

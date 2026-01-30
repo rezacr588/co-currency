@@ -319,6 +319,16 @@ func (r *WalletRepository) GetTransactions(ctx context.Context, userID uuid.UUID
 	return transactions, nil
 }
 
+// CountTransactions returns the total number of transactions for a user
+func (r *WalletRepository) CountTransactions(ctx context.Context, userID uuid.UUID) (int, error) {
+	var count int
+	err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM transactions WHERE user_id = $1`, userID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("counting transactions: %w", err)
+	}
+	return count, nil
+}
+
 // GetTransactionsFiltered retrieves transactions for a user with filters
 func (r *WalletRepository) GetTransactionsFiltered(ctx context.Context, userID uuid.UUID, filter *model.TransactionFilter, limit, offset int) ([]model.Transaction, int, error) {
 	if limit <= 0 {

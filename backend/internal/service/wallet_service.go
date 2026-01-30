@@ -193,6 +193,11 @@ func (s *WalletService) GetTransactions(ctx context.Context, userID uuid.UUID, l
 	return transactions, nil
 }
 
+// CountTransactions returns the total number of transactions for a user
+func (s *WalletService) CountTransactions(ctx context.Context, userID uuid.UUID) (int, error) {
+	return s.walletRepo.CountTransactions(ctx, userID)
+}
+
 // GetTransactionsFiltered retrieves transaction history with filters
 func (s *WalletService) GetTransactionsFiltered(ctx context.Context, userID uuid.UUID, filter *model.TransactionFilter, limit, offset int) ([]model.Transaction, int, error) {
 	transactions, total, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, filter, limit, offset)

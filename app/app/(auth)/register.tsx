@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -48,10 +48,16 @@ export default function RegisterScreen() {
     }
   }, [params.error]);
 
+  // Handle deep link for OAuth callback
+  const isMountedRef = useRef(true);
+
   useEffect(() => {
+    isMountedRef.current = true;
+
     const handleDeepLink = async (event: { url: string }) => {
       const url = event.url;
       if (url.includes('/auth/callback')) {
+        if (!isMountedRef.current) return;
         setIsOAuthLoading(true);
         try {
           const urlParams = new URL(url).searchParams;
@@ -60,28 +66,39 @@ export default function RegisterScreen() {
           const errorParam = urlParams.get('error');
 
           if (errorParam) {
-            setError(errorParam);
+            if (isMountedRef.current) setError(errorParam);
           } else if (token && refreshToken) {
             await handleOAuthCallback(token, refreshToken);
-            router.replace('/(app)/(tabs)');
+            if (isMountedRef.current) router.replace('/(app)/(tabs)');
           }
         } catch (err) {
-          setError(err instanceof Error ? err.message : 'OAuth failed');
+          if (isMountedRef.current) {
+            setError(err instanceof Error ? err.message : 'OAuth failed');
+          }
         } finally {
-          setIsOAuthLoading(false);
+          if (isMountedRef.current) setIsOAuthLoading(false);
         }
       }
     };
 
     const subscription = Linking.addEventListener('url', handleDeepLink);
 
-    Linking.getInitialURL().then((url) => {
-      if (url) {
-        handleDeepLink({ url });
-      }
-    });
+    Linking.getInitialURL()
+      .then((url) => {
+        if (url && isMountedRef.current) {
+          handleDeepLink({ url });
+        }
+      })
+      .catch((err) => {
+        if (isMountedRef.current) {
+          console.warn('Failed to get initial URL:', err);
+        }
+      });
 
-    return () => subscription.remove();
+    return () => {
+      isMountedRef.current = false;
+      subscription.remove();
+    };
   }, [handleOAuthCallback, router]);
 
   const handleRegister = async () => {

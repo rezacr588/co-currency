@@ -179,12 +179,14 @@ function IconPicker({ selectedIcon, onSelect, isOpen, onClose }: IconPickerProps
   }, [search]);
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
     if (isOpen && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 100);
+      timer = setTimeout(() => inputRef.current?.focus(), 100);
     }
     if (!isOpen) {
       setSearch('');
     }
+    return () => clearTimeout(timer);
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -435,8 +437,9 @@ export function TransactionForm() {
       return;
     }
 
-    // Normalize amount: replace comma with period to handle European locales
-    const normalizedAmount = amount.replace(',', '.');
+    // Normalize amount: remove thousand separators (commas not followed by exactly 2 digits at end)
+    // then replace remaining comma with period for European decimal separator
+    const normalizedAmount = amount.replace(/,(?=\d{3}(?:\D|$))/g, '').replace(',', '.');
     const parsedAmount = parseFloat(normalizedAmount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       setError(t('invalidAmount'));

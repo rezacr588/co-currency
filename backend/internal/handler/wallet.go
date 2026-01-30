@@ -193,7 +193,9 @@ func (h *WalletHandler) GetTransactions(w http.ResponseWriter, r *http.Request) 
 		transactions, total, err = h.walletService.GetTransactionsFiltered(r.Context(), userID, filter, limit, offset)
 	} else {
 		transactions, err = h.walletService.GetTransactions(r.Context(), userID, limit, offset)
-		total = len(transactions) // Approximate for non-filtered queries
+		if err == nil {
+			total, err = h.walletService.CountTransactions(r.Context(), userID)
+		}
 	}
 
 	if err != nil {

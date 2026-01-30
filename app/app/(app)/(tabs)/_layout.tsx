@@ -229,10 +229,12 @@ export default function TabsLayout() {
   const { isDark } = useTheme();
   const { t } = useLanguage();
   const { width } = useWindowDimensions();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768 && width < 1024;
+
+  // Sidebar collapsed by default on tablet, expanded on desktop
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(!isDesktop);
 
   // Minimal color palette for tab bar
   const tabBarActiveTintColor = '#fafafa';
@@ -272,8 +274,8 @@ export default function TabsLayout() {
     return (
       <View className="flex-1 flex-row bg-background">
         <DesktopSidebar
-          isCollapsed={true}
-          onToggle={() => {}}
+          isCollapsed={isSidebarCollapsed}
+          onToggle={() => setIsSidebarCollapsed((prev) => !prev)}
         />
         <View className="flex-1">
           <Tabs

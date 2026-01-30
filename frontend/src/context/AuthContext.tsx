@@ -68,20 +68,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Load user on mount if token exists
   useEffect(() => {
+    let isMounted = true;
     async function loadUser() {
       const token = getAuthToken();
       if (token) {
         try {
           const profile = await api.auth.getProfile();
-          setUser(profile);
+          if (isMounted) {
+            setUser(profile);
+          }
         } catch {
           // Token might be invalid, clear it
-          clearAuthToken();
+          if (isMounted) {
+            clearAuthToken();
+          }
         }
       }
-      setIsLoading(false);
+      if (isMounted) {
+        setIsLoading(false);
+      }
     }
     loadUser();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const login = async (data: LoginRequest) => {
