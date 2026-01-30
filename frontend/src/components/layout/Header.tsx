@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { Smartphone } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { Container } from './Container';
@@ -7,6 +8,8 @@ import { UserDropdown } from './UserDropdown';
 import { HamburgerMenu } from '../ui/HamburgerMenu';
 import { ROUTES } from '../../constants/routes';
 import { AUTH_NAV_WITH_FOOTER, PUBLIC_AUTH_ITEMS, PUBLIC_NAV_ITEMS } from '../../constants/navigation';
+
+const MOBILE_APP_URL = 'https://expo.dev/artifacts/eas/hX6ViqqBRjSRqsjbg2PZy4.apk';
 
 export function Header() {
   const { t, isRTL } = useLanguage();
@@ -72,6 +75,15 @@ export function Header() {
                       {t(item.labelKey)}
                     </Link>
                   ))}
+                  <a
+                    href={MOBILE_APP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    <Smartphone className="w-4 h-4" />
+                    <span className="hidden lg:inline">{t('getApp') || 'Get App'}</span>
+                  </a>
                   {PUBLIC_AUTH_ITEMS.map((item) => (
                     <Link
                       key={item.id}

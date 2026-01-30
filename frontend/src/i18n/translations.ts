@@ -86,6 +86,7 @@ export const translations = {
     rates: 'Rates',
     history: 'History',
     settings: 'Settings',
+    getApp: 'Get App',
 
     // Accessibility & Actions
     copied: 'Copied!',
@@ -682,6 +683,7 @@ export const translations = {
     rates: 'نرخ‌ها',
     history: 'تاریخچه',
     settings: 'تنظیمات',
+    getApp: 'دانلود اپ',
 
     // Accessibility & Actions
     copied: 'کپی شد!',
@@ -1278,6 +1280,7 @@ export const translations = {
     rates: 'الأسعار',
     history: 'التاريخ',
     settings: 'الإعدادات',
+    getApp: 'تحميل التطبيق',
 
     // Accessibility & Actions
     copied: 'تم النسخ!',
@@ -1874,6 +1877,7 @@ export const translations = {
     rates: 'Kurlar',
     history: 'Geçmiş',
     settings: 'Ayarlar',
+    getApp: 'Uygulamayı İndir',
 
     // Accessibility & Actions
     copied: 'Kopyalandı!',
