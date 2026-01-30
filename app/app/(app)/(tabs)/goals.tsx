@@ -19,7 +19,7 @@ import { formatCompactCurrency, formatDate } from '../../../src/utils/format';
 import { GoalIcon } from '../../../src/constants/icons';
 import { CurrencyPicker } from '../../../src/components/ui/CurrencyPicker';
 import { SkeletonGoalCard, SkeletonList } from '../../../src/components/ui/Skeleton';
-import type { CreateGoalRequest } from '../../../src/types/goal';
+import type { CreateGoalRequest, Goal } from '../../../src/types/goal';
 
 const GOAL_CATEGORIES = [
   'savings',
@@ -45,7 +45,7 @@ export default function GoalsScreen() {
   const isTablet = width >= 768;
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError, refetch } = useQuery({
     queryKey: ['goals'],
     queryFn: () => api.goals.list(),
   });
@@ -56,7 +56,7 @@ export default function GoalsScreen() {
     setRefreshing(false);
   };
 
-  const goals = data?.goals || [];
+  const goals: Goal[] = data?.goals || [];
   const activeGoals = goals.filter((g) => !g.is_completed);
   const completedGoals = goals.filter((g) => g.is_completed);
 
@@ -92,7 +92,18 @@ export default function GoalsScreen() {
           </Pressable>
         </View>
 
-        {isPending ? (
+        {isError ? (
+          <View className="bg-danger-muted border border-danger/20 p-6 rounded-xl items-center" style={{ maxWidth: isDesktop ? 500 : '100%', alignSelf: 'center', width: '100%' }}>
+            <Text className="text-danger font-medium mb-2">{t('failedToLoadGoals') || 'Failed to load goals'}</Text>
+            <Pressable
+              onPress={() => refetch()}
+              className="bg-danger/20 px-4 py-2 rounded-lg"
+              style={{ cursor: 'pointer' }}
+            >
+              <Text className="text-danger font-medium">{t('retry') || 'Retry'}</Text>
+            </Pressable>
+          </View>
+        ) : isPending ? (
           <SkeletonList count={3} ItemComponent={SkeletonGoalCard} />
         ) : goals.length === 0 ? (
           <View className="bg-card border border-border p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 500 : '100%', alignSelf: 'center', width: '100%' }}>
@@ -165,11 +176,12 @@ export default function GoalsScreen() {
   );
 }
 
-function GoalCard({ goal }: { goal: any }) {
+function GoalCard({ goal }: { goal: Goal }) {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [showContribute, setShowContribute] = useState(false);
   const [amount, setAmount] = useState('');
+  const [contributeError, setContributeError] = useState('');
   const progressPercent = Math.min(goal.progress, 100);
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
@@ -181,14 +193,21 @@ function GoalCard({ goal }: { goal: any }) {
       queryClient.invalidateQueries({ queryKey: ['goals'] });
       setShowContribute(false);
       setAmount('');
+      setContributeError('');
+    },
+    onError: (error) => {
+      setContributeError(error instanceof Error ? error.message : t('contributionFailed') || 'Failed to contribute');
     },
   });
 
   const handleContribute = () => {
     const parsedAmount = parseFloat(amount);
-    if (parsedAmount > 0) {
-      contributeMutation.mutate(parsedAmount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      setContributeError(t('enterValidAmount') || 'Please enter a valid amount');
+      return;
     }
+    setContributeError('');
+    contributeMutation.mutate(parsedAmount);
   };
 
   return (
@@ -241,31 +260,39 @@ function GoalCard({ goal }: { goal: any }) {
       {!goal.is_completed && (
         <View className="mt-3 pt-3 border-t border-border">
           {showContribute ? (
-            <View className="flex-row items-center gap-2">
-              <TextInput
-                className="flex-1 bg-muted border border-border p-2.5 rounded-md text-foreground text-sm"
-                style={{ outlineStyle: 'none' } as any}
-                value={amount}
-                onChangeText={setAmount}
-                keyboardType="decimal-pad"
-                placeholder="0.00"
-                placeholderTextColor="#52525b"
-              />
-              <Pressable
-                onPress={handleContribute}
-                disabled={contributeMutation.isPending}
-                className="bg-foreground p-2.5 rounded-md"
-                style={{ cursor: 'pointer' }}
-              >
-                {contributeMutation.isPending ? (
-                  <ActivityIndicator size="small" color="#09090b" />
-                ) : (
-                  <Plus size={18} color="#09090b" />
-                )}
-              </Pressable>
-              <Pressable onPress={() => setShowContribute(false)} className="bg-secondary p-2.5 rounded-md" style={{ cursor: 'pointer' }}>
-                <X size={18} color="#71717a" />
-              </Pressable>
+            <View>
+              {contributeError ? (
+                <Text className="text-danger text-xs mb-2">{contributeError}</Text>
+              ) : null}
+              <View className="flex-row items-center gap-2">
+                <TextInput
+                  className="flex-1 bg-muted border border-border p-2.5 rounded-md text-foreground text-sm"
+                  style={{ outlineStyle: 'none' } as any}
+                  value={amount}
+                  onChangeText={(text) => {
+                    setAmount(text);
+                    setContributeError('');
+                  }}
+                  keyboardType="decimal-pad"
+                  placeholder="0.00"
+                  placeholderTextColor="#52525b"
+                />
+                <Pressable
+                  onPress={handleContribute}
+                  disabled={contributeMutation.isPending}
+                  className="bg-foreground p-2.5 rounded-md"
+                  style={{ cursor: 'pointer' }}
+                >
+                  {contributeMutation.isPending ? (
+                    <ActivityIndicator size="small" color="#09090b" />
+                  ) : (
+                    <Plus size={18} color="#09090b" />
+                  )}
+                </Pressable>
+                <Pressable onPress={() => { setShowContribute(false); setContributeError(''); }} className="bg-secondary p-2.5 rounded-md" style={{ cursor: 'pointer' }}>
+                  <X size={18} color="#71717a" />
+                </Pressable>
+              </View>
             </View>
           ) : (
             <Pressable
@@ -336,7 +363,12 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
     };
 
     if (deadline) {
-      goalData.deadline = new Date(deadline).toISOString();
+      const parsedDate = new Date(deadline);
+      if (isNaN(parsedDate.getTime())) {
+        setError(t('invalidDate') || 'Invalid date format. Please use YYYY-MM-DD.');
+        return;
+      }
+      goalData.deadline = parsedDate.toISOString();
     }
 
     mutation.mutate(goalData);

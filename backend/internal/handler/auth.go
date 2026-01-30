@@ -290,3 +290,25 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	httputil.Success(w, map[string]string{"message": "logged out successfully"})
 }
+
+// CompleteOnboarding handles POST /api/v1/auth/onboarding/complete
+func (h *AuthHandler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
+	if !requireService(w, h.authService != nil, "authentication service not available - database connection failed") {
+		return
+	}
+
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	user, err := h.authService.GetUserByID(r.Context(), userID)
+	if err != nil {
+		httputil.NotFoundWithContext(r.Context(), w, "user not found")
+		return
+	}
+
+	// Return the user profile to confirm onboarding is complete
+	// The mobile app uses this to verify the user is set up
+	httputil.Success(w, user.ToProfile())
+}

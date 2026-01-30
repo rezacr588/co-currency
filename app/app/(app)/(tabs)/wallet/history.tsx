@@ -86,31 +86,46 @@ export default function TransactionHistoryScreen() {
 
   const hasActiveFilters = filterCategory || filterType || filterFromDate || filterToDate;
 
-  const { data, isPending } = useQuery({
+  const { data, isPending, refetch } = useQuery({
     queryKey: ['wallet', 'transactions', 'all', filter],
     queryFn: () => api.wallet.getTransactions(100, 0, hasActiveFilters ? filter : undefined),
   });
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ['wallet', 'transactions'] });
+    await refetch();
     setRefreshing(false);
-  }, [queryClient]);
+  }, [refetch]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.wallet.deleteTransaction(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
     },
+    onError: (error) => {
+      Alert.alert(
+        t('deleteFailed') || 'Delete Failed',
+        error instanceof Error ? error.message : t('failedToDelete') || 'Failed to delete transaction'
+      );
+    },
   });
+
+  const resetEditModalState = useCallback(() => {
+    setShowEditModal(false);
+    setEditingTransaction(null);
+    setEditAmount('');
+    setEditCurrency('USD');
+    setEditCategory('other');
+    setEditDescription('');
+    setEditType('debit');
+  }, []);
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateTransactionRequest }) =>
       api.wallet.updateTransaction(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
-      setShowEditModal(false);
-      setEditingTransaction(null);
+      resetEditModalState();
     },
     onError: (err) => {
       Alert.alert(t('updateFailed'), err instanceof Error ? err.message : t('updateFailed'));
@@ -603,7 +618,7 @@ export default function TransactionHistoryScreen() {
         visible={showEditModal}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setShowEditModal(false)}
+        onRequestClose={resetEditModalState}
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -611,7 +626,7 @@ export default function TransactionHistoryScreen() {
         >
           <Pressable
             className="flex-1 bg-black/50 justify-end"
-            onPress={() => setShowEditModal(false)}
+            onPress={resetEditModalState}
           >
             <Pressable
               className="bg-card rounded-t-3xl p-6"
@@ -620,7 +635,7 @@ export default function TransactionHistoryScreen() {
             >
             <View className="flex-row items-center justify-between mb-6">
               <Text className="text-xl font-bold text-foreground">{t('editTransaction')}</Text>
-              <Pressable onPress={() => setShowEditModal(false)} style={{ cursor: 'pointer' }}>
+              <Pressable onPress={resetEditModalState} style={{ cursor: 'pointer' }}>
                 <X size={24} color="rgb(148, 163, 184)" />
               </Pressable>
             </View>

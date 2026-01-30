@@ -45,6 +45,7 @@ export default function AddTransactionScreen() {
   const mutation = useMutation({
     mutationFn: (data: TransactionRequest) => api.wallet.addTransaction(data),
     onSuccess: () => {
+      setError('');
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       router.back();
     },

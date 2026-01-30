@@ -486,6 +486,11 @@ export default function AIChatScreen() {
       setIsTyping(false);
       pendingMutationRef.current = false;
     },
+    onSettled: () => {
+      // Always reset the pending mutation ref, even if the component is still mounted
+      // This ensures the user can send messages again after success or error
+      pendingMutationRef.current = false;
+    },
   });
 
   // Delete conversation mutation

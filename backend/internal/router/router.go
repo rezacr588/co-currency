@@ -83,6 +83,7 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 				r.Get("/profile", h.Auth.GetProfile)
 				r.Put("/profile", h.Auth.UpdateProfile)
 				r.Post("/password", h.Auth.ChangePassword)
+				r.Post("/onboarding/complete", h.Auth.CompleteOnboarding)
 			})
 		})
 

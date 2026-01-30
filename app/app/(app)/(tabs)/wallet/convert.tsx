@@ -30,7 +30,7 @@ export default function WalletConvertScreen() {
   });
   const [error, setError] = useState('');
 
-  const { data: balances, isPending: isLoadingBalances } = useQuery({
+  const { data: balances, isPending: isLoadingBalances, isError: isBalancesError, refetch: refetchBalances } = useQuery({
     queryKey: ['wallet', 'balances'],
     queryFn: () => api.wallet.getBalances(),
   });
@@ -114,6 +114,15 @@ export default function WalletConvertScreen() {
           </View>
         ) : null}
 
+        {isBalancesError && (
+          <View className="bg-danger-muted border border-danger/20 p-4 rounded-xl mb-4">
+            <Text className="text-danger mb-2">{t('failedToLoadBalances') || 'Failed to load balances'}</Text>
+            <Pressable onPress={() => refetchBalances()} className="bg-danger/20 px-4 py-2 rounded-lg self-start" style={{ cursor: 'pointer' }}>
+              <Text className="text-danger font-medium">{t('retry') || 'Retry'}</Text>
+            </Pressable>
+          </View>
+        )}
+
         {(balances?.balances?.length ?? 0) === 0 && (
           <View className="bg-card border border-border p-4 rounded-xl mb-6">
             <Text className="text-foreground font-medium mb-2">
@@ -155,9 +164,9 @@ export default function WalletConvertScreen() {
         {/* Convert Button */}
         <Pressable
           onPress={handleConvert}
-          disabled={mutation.isPending || !parsedAmount || fromCurrency === toCurrency || hasInsufficientBalance}
+          disabled={mutation.isPending || !parsedAmount || fromCurrency === toCurrency || hasInsufficientBalance || isLoadingBalances}
           className={`bg-primary p-4 rounded-xl flex-row items-center justify-center ${
-            mutation.isPending || !parsedAmount || fromCurrency === toCurrency || hasInsufficientBalance ? 'opacity-50' : ''
+            mutation.isPending || !parsedAmount || fromCurrency === toCurrency || hasInsufficientBalance || isLoadingBalances ? 'opacity-50' : ''
           }`}
           style={{ cursor: 'pointer' }}
         >
