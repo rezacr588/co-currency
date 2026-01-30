@@ -107,6 +107,13 @@ export default function AIChatScreen() {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(
     conversationId || null
   );
+  // Editable transaction state for validation workflow
+  const [editMode, setEditMode] = useState(false);
+  const [editAmount, setEditAmount] = useState('');
+  const [editType, setEditType] = useState<'credit' | 'debit'>('debit');
+  const [editCurrency, setEditCurrency] = useState('USD');
+  const [editDescription, setEditDescription] = useState('');
+
   const scrollViewRef = useRef<FlatList<ChatMessage>>(null);
   const isNearBottomRef = useRef(true);
   const pendingMutationRef = useRef(false);
@@ -928,33 +935,159 @@ export default function AIChatScreen() {
 
                 {pendingAction.kind === 'transaction' && pendingAction.status === 'ready' && pendingAction.parsed && (
                   <>
-                    <View className="bg-muted border border-border rounded-xl p-3 mb-3">
-                      <Text className="text-sm font-semibold text-foreground">
-                        {pendingAction.parsed.type === 'credit' ? 'Income' : 'Expense'} ·{' '}
-                        {pendingAction.parsed.currency} {pendingAction.parsed.amount}
-                      </Text>
-                      <Text className="text-xs text-muted-foreground mt-1">
-                        {pendingAction.parsed.description}
-                      </Text>
-                    </View>
-                    <View className="flex-row" style={{ gap: 8 }}>
-                      <Pressable
-                        onPress={() => applyParsedMutation.mutate(pendingAction.parsed!)}
-                        className="bg-primary px-4 py-2 rounded-lg"
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <Text className="text-primary-foreground text-sm font-semibold">
-                          Add transaction
-                        </Text>
-                      </Pressable>
-                      <Pressable
-                        onPress={() => setPendingAction(null)}
-                        className="bg-secondary px-4 py-2 rounded-lg border border-border"
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <Text className="text-foreground text-sm font-semibold">Dismiss</Text>
-                      </Pressable>
-                    </View>
+                    {!editMode ? (
+                      <>
+                        {/* Preview Mode */}
+                        <View className="bg-muted border border-border rounded-xl p-3 mb-3">
+                          <View className="flex-row items-center justify-between mb-2">
+                            <View className={`px-2 py-1 rounded ${pendingAction.parsed.type === 'credit' ? 'bg-success/20' : 'bg-danger/20'}`}>
+                              <Text className={`text-xs font-semibold ${pendingAction.parsed.type === 'credit' ? 'text-success' : 'text-danger'}`}>
+                                {pendingAction.parsed.type === 'credit' ? 'Income' : 'Expense'}
+                              </Text>
+                            </View>
+                            <Text className="text-sm font-bold text-foreground">
+                              {pendingAction.parsed.currency} {pendingAction.parsed.amount.toFixed(2)}
+                            </Text>
+                          </View>
+                          <Text className="text-xs text-muted-foreground">
+                            {pendingAction.parsed.description}
+                          </Text>
+                          {pendingAction.parsed.confidence < 0.8 && (
+                            <View className="mt-2 bg-warning/10 p-2 rounded">
+                              <Text className="text-xs text-warning">
+                                Low confidence ({(pendingAction.parsed.confidence * 100).toFixed(0)}%) - Please verify details
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                          <Pressable
+                            onPress={() => applyParsedMutation.mutate(pendingAction.parsed!)}
+                            disabled={applyParsedMutation.isPending}
+                            className={`bg-primary px-4 py-2 rounded-lg ${applyParsedMutation.isPending ? 'opacity-50' : ''}`}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <Text className="text-primary-foreground text-sm font-semibold">
+                              {applyParsedMutation.isPending ? 'Adding...' : 'Add transaction'}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => {
+                              setEditAmount(pendingAction.parsed!.amount.toString());
+                              setEditType(pendingAction.parsed!.type);
+                              setEditCurrency(pendingAction.parsed!.currency);
+                              setEditDescription(pendingAction.parsed!.description);
+                              setEditMode(true);
+                            }}
+                            className="bg-secondary px-4 py-2 rounded-lg border border-border"
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <Text className="text-foreground text-sm font-semibold">Edit</Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => setPendingAction(null)}
+                            className="px-4 py-2"
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <Text className="text-muted-foreground text-sm">Dismiss</Text>
+                          </Pressable>
+                        </View>
+                      </>
+                    ) : (
+                      <>
+                        {/* Edit Mode */}
+                        <View className="mb-3">
+                          <Text className="text-xs text-muted-foreground mb-2">Type</Text>
+                          <View className="flex-row" style={{ gap: 8 }}>
+                            <Pressable
+                              onPress={() => setEditType('debit')}
+                              className={`flex-1 p-2 rounded-lg border ${editType === 'debit' ? 'bg-danger/20 border-danger' : 'bg-muted border-border'}`}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              <Text className={`text-xs text-center font-semibold ${editType === 'debit' ? 'text-danger' : 'text-muted-foreground'}`}>
+                                Expense
+                              </Text>
+                            </Pressable>
+                            <Pressable
+                              onPress={() => setEditType('credit')}
+                              className={`flex-1 p-2 rounded-lg border ${editType === 'credit' ? 'bg-success/20 border-success' : 'bg-muted border-border'}`}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              <Text className={`text-xs text-center font-semibold ${editType === 'credit' ? 'text-success' : 'text-muted-foreground'}`}>
+                                Income
+                              </Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                        <View className="flex-row mb-3" style={{ gap: 8 }}>
+                          <View style={{ flex: 2 }}>
+                            <Text className="text-xs text-muted-foreground mb-1">Amount</Text>
+                            <TextInput
+                              value={editAmount}
+                              onChangeText={setEditAmount}
+                              keyboardType="decimal-pad"
+                              className="bg-muted border border-border rounded-lg px-3 py-2 text-foreground text-sm"
+                              style={{ outlineStyle: 'none' } as any}
+                              placeholderTextColor="#71717a"
+                            />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text className="text-xs text-muted-foreground mb-1">Currency</Text>
+                            <TextInput
+                              value={editCurrency}
+                              onChangeText={(text) => setEditCurrency(text.toUpperCase())}
+                              maxLength={3}
+                              className="bg-muted border border-border rounded-lg px-3 py-2 text-foreground text-sm"
+                              style={{ outlineStyle: 'none' } as any}
+                              placeholderTextColor="#71717a"
+                            />
+                          </View>
+                        </View>
+                        <View className="mb-3">
+                          <Text className="text-xs text-muted-foreground mb-1">Description</Text>
+                          <TextInput
+                            value={editDescription}
+                            onChangeText={setEditDescription}
+                            className="bg-muted border border-border rounded-lg px-3 py-2 text-foreground text-sm"
+                            style={{ outlineStyle: 'none' } as any}
+                            placeholderTextColor="#71717a"
+                          />
+                        </View>
+                        <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                          <Pressable
+                            onPress={() => {
+                              const parsedAmount = parseFloat(editAmount);
+                              if (isNaN(parsedAmount) || parsedAmount <= 0) {
+                                setSendError('Please enter a valid amount');
+                                return;
+                              }
+                              applyParsedMutation.mutate({
+                                amount: parsedAmount,
+                                type: editType,
+                                currency: editCurrency,
+                                description: editDescription,
+                                confidence: 1,
+                              });
+                              setEditMode(false);
+                            }}
+                            disabled={applyParsedMutation.isPending}
+                            className={`bg-primary px-4 py-2 rounded-lg ${applyParsedMutation.isPending ? 'opacity-50' : ''}`}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <Text className="text-primary-foreground text-sm font-semibold">
+                              {applyParsedMutation.isPending ? 'Adding...' : 'Confirm & Add'}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => setEditMode(false)}
+                            className="bg-secondary px-4 py-2 rounded-lg border border-border"
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <Text className="text-foreground text-sm font-semibold">Cancel</Text>
+                          </Pressable>
+                        </View>
+                      </>
+                    )}
                   </>
                 )}
 

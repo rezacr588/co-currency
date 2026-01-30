@@ -3,7 +3,7 @@ import { Link } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, ArrowLeftRight, Bot, History, MessageCircle } from 'lucide-react-native';
+import { Plus, ArrowLeftRight, Bot, History, MessageCircle, Target, PiggyBank, RefreshCw, CreditCard, BarChart3, Award } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
 import { formatCompactCurrency, getCurrencyDisplay } from '../../../../src/utils/format';
@@ -42,8 +42,17 @@ export default function WalletScreen() {
   const quickActions = [
     { label: t('addTransaction'), href: '/(app)/(tabs)/add', icon: Plus, primary: true },
     { label: t('convertCurrency') || t('convert') || 'Convert', href: '/(app)/(tabs)/wallet/convert', icon: ArrowLeftRight },
-    { label: t('aiReceiptParser') || t('aiReceiptParsing') || 'AI Parser', href: '/(app)/(tabs)/wallet/ai', icon: Bot },
+    { label: t('aiReceiptParser') || 'AI Parser', href: '/(app)/(tabs)/wallet/ai', icon: Bot },
     { label: t('aiAdvisor') || 'AI Advisor', href: '/(app)/(tabs)/wallet/chat', icon: MessageCircle },
+  ];
+
+  const featureActions = [
+    { label: t('goals') || 'Goals', href: '/(app)/(tabs)/goals', icon: Target },
+    { label: t('budgets') || 'Budgets', href: '/(app)/budgets', icon: PiggyBank },
+    { label: t('recurring') || 'Recurring', href: '/(app)/recurring', icon: RefreshCw },
+    { label: t('subscriptions') || 'Subscriptions', href: '/(app)/subscriptions', icon: CreditCard },
+    { label: t('reports') || 'Reports', href: '/(app)/(tabs)/reports', icon: BarChart3 },
+    { label: t('badges') || 'Badges', href: '/(app)/badges', icon: Award },
   ];
 
   return (
@@ -103,6 +112,46 @@ export default function WalletScreen() {
               </View>
             );
           })}
+        </View>
+
+        {/* Feature Actions */}
+        <View className="mb-6">
+          <Text className="text-lg font-semibold text-foreground mb-4">{t('features') || 'Features'}</Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 12,
+            }}
+          >
+            {featureActions.map((action) => {
+              const Icon = action.icon;
+              return (
+                <View
+                  key={action.href}
+                  style={{
+                    width: isDesktop ? '15%' : isTablet ? '31%' : '31%',
+                    minWidth: 100,
+                  }}
+                >
+                  <Link href={action.href as any} asChild>
+                    <Pressable
+                      className="bg-card border border-border rounded-xl p-3 items-center justify-center"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <Icon size={20} color="rgb(212, 175, 55)" />
+                      <Text
+                        className="mt-2 text-xs font-medium text-foreground"
+                        numberOfLines={1}
+                      >
+                        {action.label}
+                      </Text>
+                    </Pressable>
+                  </Link>
+                </View>
+              );
+            })}
+          </View>
         </View>
 
         {/* Balances */}
