@@ -283,19 +283,20 @@ func TestExtractFieldsManually_NoFields(t *testing.T) {
 }
 
 // Tests for calculateConfidence
+// New formula: amount(0.3) + currency(0.2) + type(0.2) + description(0.15) + category_inferred(0.15)
 func TestCalculateConfidence_Full(t *testing.T) {
 	service, _ := NewAIService("googleai", "test-api-key", "", "")
 
 	result := &model.AIParseResult{
 		Amount:      100,
-		Currency:    "EUR", // Non-default
+		Currency:    "EUR",
 		Type:        "debit",
-		Description: "Test",
+		Description: "coffee at starbucks", // "coffee" triggers category inference
 	}
 
 	confidence := service.calculateConfidence(result)
 
-	// 0.4 (amount > 0) + 0.2 (non-default currency) + 0.2 (type) + 0.2 (description) = 1.0
+	// 0.3 (amount > 0) + 0.2 (currency) + 0.2 (type) + 0.15 (description) + 0.15 (category inferred) = 1.0
 	if confidence != 1.0 {
 		t.Errorf("Expected confidence 1.0, got %f", confidence)
 	}
@@ -306,17 +307,17 @@ func TestCalculateConfidence_DefaultCurrency(t *testing.T) {
 
 	result := &model.AIParseResult{
 		Amount:      100,
-		Currency:    "USD", // Default
+		Currency:    "USD",
 		Type:        "debit",
-		Description: "Test",
+		Description: "uber ride", // "uber" triggers category inference
 	}
 
 	confidence := service.calculateConfidence(result)
 
-	// 0.4 (amount > 0) + 0.1 (default currency) + 0.2 (type) + 0.2 (description) = 0.9
-	expected := 0.9
+	// 0.3 (amount > 0) + 0.2 (currency - now equal for all) + 0.2 (type) + 0.15 (description) + 0.15 (category) = 1.0
+	expected := 1.0
 	if confidence < expected-0.001 || confidence > expected+0.001 {
-		t.Errorf("Expected confidence ~0.9, got %f", confidence)
+		t.Errorf("Expected confidence ~1.0, got %f", confidence)
 	}
 }
 
@@ -327,15 +328,15 @@ func TestCalculateConfidence_ZeroAmount(t *testing.T) {
 		Amount:      0,
 		Currency:    "EUR",
 		Type:        "debit",
-		Description: "Test",
+		Description: "Test", // generic description, no category match
 	}
 
 	confidence := service.calculateConfidence(result)
 
-	// 0 (amount = 0) + 0.2 (non-default currency) + 0.2 (type) + 0.2 (description) = 0.6
-	expected := 0.6
+	// 0 (amount = 0) + 0.2 (currency) + 0.2 (type) + 0.15 (description) + 0 (no category) = 0.55
+	expected := 0.55
 	if confidence < expected-0.001 || confidence > expected+0.001 {
-		t.Errorf("Expected confidence ~0.6, got %f", confidence)
+		t.Errorf("Expected confidence ~0.55, got %f", confidence)
 	}
 }
 
@@ -602,9 +603,9 @@ func TestCalculateConfidence_DescriptionOnly(t *testing.T) {
 
 	confidence := service.calculateConfidence(result)
 
-	// 0.2 for description only
-	if confidence != 0.2 {
-		t.Errorf("Expected confidence 0.2, got %f", confidence)
+	// 0.15 for description only (new formula)
+	if confidence != 0.15 {
+		t.Errorf("Expected confidence 0.15, got %f", confidence)
 	}
 }
 
@@ -620,9 +621,9 @@ func TestCalculateConfidence_AmountOnly(t *testing.T) {
 
 	confidence := service.calculateConfidence(result)
 
-	// 0.4 for amount only
-	if confidence != 0.4 {
-		t.Errorf("Expected confidence 0.4, got %f", confidence)
+	// 0.3 for amount only (new formula)
+	if confidence != 0.3 {
+		t.Errorf("Expected confidence 0.3, got %f", confidence)
 	}
 }
 

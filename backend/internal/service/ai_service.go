@@ -312,21 +312,47 @@ func (s *AIService) calculateConfidence(result *model.AIParseResult) float64 {
 	confidence := 0.0
 
 	if result.Amount > 0 {
-		confidence += 0.4
+		confidence += 0.3
 	}
-	if result.Currency != "" && result.Currency != "USD" { // Non-default currency
-		confidence += 0.2
-	} else if result.Currency == "USD" {
-		confidence += 0.1
+	if result.Currency != "" {
+		confidence += 0.2 // Equal weight for all currencies
 	}
 	if result.Type != "" {
 		confidence += 0.2
 	}
 	if result.Description != "" {
-		confidence += 0.2
+		confidence += 0.15
+	}
+	// Category inference bonus
+	if inferCategory(result.Description) != "other" {
+		confidence += 0.15
 	}
 
 	return confidence
+}
+
+// categoryKeywords maps keywords to categories for smart inference
+var categoryKeywords = map[string][]string{
+	"food":           {"coffee", "lunch", "dinner", "breakfast", "restaurant", "cafe", "food", "eat", "meal", "snack", "grocery", "groceries", "pizza", "burger", "sushi", "takeout", "delivery"},
+	"transportation": {"uber", "lyft", "taxi", "gas", "fuel", "parking", "metro", "bus", "train", "flight", "airline", "car", "transit", "commute"},
+	"entertainment":  {"movie", "netflix", "spotify", "game", "concert", "show", "theater", "museum", "subscription", "stream"},
+	"shopping":       {"amazon", "store", "shop", "clothes", "shoes", "electronics", "purchase", "buy", "bought"},
+	"bills":          {"rent", "electricity", "water", "internet", "phone", "utility", "insurance", "bill"},
+	"income":         {"salary", "paycheck", "paid", "income", "bonus", "freelance", "dividend", "interest"},
+	"transfer":       {"transfer", "send", "wire", "venmo", "paypal", "zelle"},
+}
+
+// inferCategory infers a category from description text
+func inferCategory(description string) string {
+	lowerDesc := strings.ToLower(description)
+	for category, keywords := range categoryKeywords {
+		for _, keyword := range keywords {
+			if strings.Contains(lowerDesc, keyword) {
+				return category
+			}
+		}
+	}
+	return "other"
 }
 
 // IsConfigured returns true if the AI service is properly configured
@@ -337,6 +363,231 @@ func (s *AIService) IsConfigured() bool {
 // GetProvider returns the configured AI provider name
 func (s *AIService) GetProvider() string {
 	return s.provider
+}
+
+const smartParsePromptTemplate = `Analyze this user message about a financial transaction. Extract the following information and return ONLY a valid JSON object (no markdown, no explanation):
+
+{
+  "amount": <number - the amount as a decimal number>,
+  "currency": "<3-letter ISO currency code, e.g., USD, EUR, GBP>",
+  "type": "<'credit' for income/receiving money or 'debit' for expense/spending>",
+  "description": "<brief description of the transaction, max 100 characters>",
+  "category": "<one of: food, transportation, entertainment, shopping, bills, income, transfer, other>",
+  "action_type": "<'transaction' for one-time, 'recurring' for repeated, or 'goal_contribution' for saving toward a goal>",
+  "frequency": "<only if recurring: 'daily', 'weekly', 'monthly', or 'yearly'>",
+  "goal_name": "<only if goal_contribution: the name of the savings goal>"
+}
+
+Category inference rules:
+- coffee, lunch, dinner, restaurant, grocery → food
+- uber, lyft, gas, parking, flight → transportation
+- netflix, spotify, movie, game → entertainment
+- amazon, store, clothes, electronics → shopping
+- rent, electricity, internet, phone → bills
+- salary, paycheck, income, bonus → income
+- transfer, send, venmo, paypal → transfer
+
+Action type rules:
+- Keywords like "every", "each", "monthly", "weekly", "yearly", "daily" → recurring
+- Keywords like "rent", "salary", "subscription" often indicate recurring
+- Keywords like "put toward", "save for", "contribute to", "goal", "fund" → goal_contribution
+- Default to "transaction" for one-time events
+
+Transaction type rules:
+- "spent", "paid", "bought", "cost", "dropped" → debit
+- "received", "got", "earned", "made", "deposited", "salary" → credit
+
+Currency rules:
+- If $ or no symbol, assume USD
+- If € assume EUR, if £ assume GBP
+- If IRR, toman, or rial mentioned, use IRR
+
+Return ONLY the JSON object, nothing else.
+
+User message: %s`
+
+// SmartParse parses text with enhanced context detection for transactions, recurring, and goals
+func (s *AIService) SmartParse(ctx context.Context, text string) (*model.SmartParseResult, error) {
+	if text == "" {
+		return nil, errors.New("text is required")
+	}
+
+	llm, err := s.getLLM(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting LLM: %w", err)
+	}
+
+	prompt := fmt.Sprintf(smartParsePromptTemplate, text)
+
+	response, err := llm.GenerateContent(ctx, []llms.MessageContent{
+		{
+			Parts: []llms.ContentPart{llms.TextPart(prompt)},
+			Role:  llms.ChatMessageTypeHuman,
+		},
+	})
+
+	if err != nil {
+		log.Error().
+			Err(err).
+			Str("provider", s.provider).
+			Msg("AI smart parse failed")
+		return nil, fmt.Errorf("calling AI service (smart-parse, %s): %w", s.provider, err)
+	}
+
+	if len(response.Choices) == 0 {
+		return nil, errors.New("no response from AI service")
+	}
+
+	responseText := response.Choices[0].Content
+
+	result, err := s.parseSmartResponse(responseText, text)
+	if err != nil {
+		return nil, fmt.Errorf("parsing AI response: %w", err)
+	}
+
+	result.RawText = text
+	return result, nil
+}
+
+// parseSmartResponse extracts and validates the JSON from smart parse response
+func (s *AIService) parseSmartResponse(responseText, originalText string) (*model.SmartParseResult, error) {
+	// Clean up the response
+	responseText = strings.TrimSpace(responseText)
+	responseText = strings.TrimPrefix(responseText, "```json")
+	responseText = strings.TrimPrefix(responseText, "```")
+	responseText = strings.TrimSuffix(responseText, "```")
+	responseText = strings.TrimSpace(responseText)
+
+	// Extract JSON
+	jsonStart := strings.Index(responseText, "{")
+	jsonEnd := strings.LastIndex(responseText, "}")
+	if jsonStart != -1 && jsonEnd != -1 && jsonEnd > jsonStart {
+		responseText = responseText[jsonStart : jsonEnd+1]
+	}
+
+	var result model.SmartParseResult
+	if err := json.Unmarshal([]byte(responseText), &result); err != nil {
+		// Fallback: try to extract fields manually
+		result = s.extractSmartFieldsManually(responseText, originalText)
+	}
+
+	// Validate and set defaults
+	if result.Currency == "" {
+		result.Currency = "USD"
+	}
+	result.Currency = strings.ToUpper(result.Currency)
+
+	if result.Type == "" || (result.Type != "credit" && result.Type != "debit") {
+		result.Type = "debit"
+	}
+
+	if result.ActionType == "" || (result.ActionType != "transaction" && result.ActionType != "recurring" && result.ActionType != "goal_contribution") {
+		result.ActionType = "transaction"
+	}
+
+	// Infer category if not set or is "other"
+	if result.Category == "" || result.Category == "other" {
+		result.Category = inferCategory(result.Description)
+	}
+
+	// Validate frequency for recurring
+	if result.ActionType == "recurring" && result.Frequency == "" {
+		result.Frequency = "monthly" // Default frequency
+	}
+
+	// Calculate confidence
+	result.Confidence = s.calculateSmartConfidence(&result)
+
+	return &result, nil
+}
+
+// extractSmartFieldsManually attempts to extract smart parse fields from malformed response
+func (s *AIService) extractSmartFieldsManually(text, originalText string) model.SmartParseResult {
+	result := model.SmartParseResult{
+		Type:       "debit",
+		Currency:   "USD",
+		ActionType: "transaction",
+	}
+
+	// Try to find amount
+	amountPattern := regexp.MustCompile(`"amount"\s*:\s*([0-9.]+)`)
+	if matches := amountPattern.FindStringSubmatch(text); len(matches) > 1 {
+		if amount, err := strconv.ParseFloat(matches[1], 64); err == nil {
+			result.Amount = amount
+		}
+	}
+
+	// Try to find currency
+	currencyPattern := regexp.MustCompile(`"currency"\s*:\s*"([A-Z]{3})"`)
+	if matches := currencyPattern.FindStringSubmatch(text); len(matches) > 1 {
+		result.Currency = matches[1]
+	}
+
+	// Try to find type
+	typePattern := regexp.MustCompile(`"type"\s*:\s*"(credit|debit)"`)
+	if matches := typePattern.FindStringSubmatch(text); len(matches) > 1 {
+		result.Type = matches[1]
+	}
+
+	// Try to find description
+	descPattern := regexp.MustCompile(`"description"\s*:\s*"([^"]*)"`)
+	if matches := descPattern.FindStringSubmatch(text); len(matches) > 1 {
+		result.Description = matches[1]
+	}
+
+	// Try to find category
+	catPattern := regexp.MustCompile(`"category"\s*:\s*"([^"]*)"`)
+	if matches := catPattern.FindStringSubmatch(text); len(matches) > 1 {
+		result.Category = matches[1]
+	}
+
+	// Try to find action_type
+	actionPattern := regexp.MustCompile(`"action_type"\s*:\s*"([^"]*)"`)
+	if matches := actionPattern.FindStringSubmatch(text); len(matches) > 1 {
+		result.ActionType = matches[1]
+	}
+
+	// Try to find frequency
+	freqPattern := regexp.MustCompile(`"frequency"\s*:\s*"([^"]*)"`)
+	if matches := freqPattern.FindStringSubmatch(text); len(matches) > 1 {
+		result.Frequency = matches[1]
+	}
+
+	// Try to find goal_name
+	goalPattern := regexp.MustCompile(`"goal_name"\s*:\s*"([^"]*)"`)
+	if matches := goalPattern.FindStringSubmatch(text); len(matches) > 1 {
+		result.GoalName = matches[1]
+	}
+
+	// Fallback: infer from original text
+	if result.Category == "" {
+		result.Category = inferCategory(originalText)
+	}
+
+	return result
+}
+
+// calculateSmartConfidence calculates confidence for smart parse result
+func (s *AIService) calculateSmartConfidence(result *model.SmartParseResult) float64 {
+	confidence := 0.0
+
+	if result.Amount > 0 {
+		confidence += 0.3
+	}
+	if result.Currency != "" {
+		confidence += 0.2
+	}
+	if result.Type != "" {
+		confidence += 0.2
+	}
+	if result.Description != "" {
+		confidence += 0.15
+	}
+	if result.Category != "" && result.Category != "other" {
+		confidence += 0.15
+	}
+
+	return confidence
 }
 
 // GetInsights generates financial insights based on the user's report

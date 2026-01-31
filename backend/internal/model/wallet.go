@@ -144,3 +144,34 @@ type InsightResponse struct {
 	ActionItems []string `json:"action_items"`
 	Sentiment   string   `json:"sentiment"` // "positive", "neutral", "negative"
 }
+
+// SmartParseResult represents enhanced AI parsing with action type detection
+type SmartParseResult struct {
+	Amount      float64 `json:"amount"`
+	Currency    string  `json:"currency"`
+	Type        string  `json:"type"`        // "credit" or "debit"
+	Description string  `json:"description"`
+	Category    string  `json:"category"`    // Inferred category (food, transportation, etc.)
+	ActionType  string  `json:"action_type"` // "transaction", "recurring", or "goal_contribution"
+	Frequency   string  `json:"frequency,omitempty"`  // For recurring: "daily", "weekly", "monthly", "yearly"
+	GoalName    string  `json:"goal_name,omitempty"`  // For goal contributions
+	Confidence  float64 `json:"confidence"`
+	RawText     string  `json:"raw_text,omitempty"`
+}
+
+// ApplyRecurringRequest represents a request to create a recurring transaction from AI parse
+type ApplyRecurringRequest struct {
+	Amount      float64 `json:"amount"`
+	Currency    string  `json:"currency"`
+	Type        string  `json:"type"`        // "credit" or "debit"
+	Description string  `json:"description"`
+	Category    string  `json:"category,omitempty"`
+	Frequency   string  `json:"frequency"`   // "daily", "weekly", "monthly", "yearly"
+}
+
+// ApplyGoalContributionRequest represents a request to contribute to a goal from AI parse
+type ApplyGoalContributionRequest struct {
+	Amount   float64 `json:"amount"`
+	GoalID   string  `json:"goal_id"`
+	GoalName string  `json:"goal_name,omitempty"` // Used if goal_id not provided to search
+}

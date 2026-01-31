@@ -413,6 +413,14 @@ func main() {
 	walletHandler := handler.NewWalletHandler(walletService)
 	aiHandler := handler.NewAIHandler(aiService, walletService)
 
+	// Set additional services for AI handler
+	if recurringService != nil {
+		aiHandler.SetRecurringService(recurringService)
+	}
+	if goalService != nil {
+		aiHandler.SetGoalService(goalService)
+	}
+
 	// Initialize Phase 3 handlers
 	var goalHandler *handler.GoalHandler
 	var tagHandler *handler.TagHandler

@@ -34,8 +34,9 @@ import {
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
 import type { ChatMessage, Conversation, ConversationWithMessages } from '../../../../src/api/chat';
-import type { AIParseResponse } from '../../../../src/types/wallet';
+import type { SmartParseResponse } from '../../../../src/types/wallet';
 import type { ConversionResult } from '../../../../src/types/currency';
+import type { Goal, RecurringTransaction } from '../../../../src/types/goal';
 import { formatNumber } from '../../../../src/utils/format';
 
 const suggestedQuestions = [
@@ -52,12 +53,59 @@ const suggestedActions = [
   'Rate USD to EUR',
 ];
 
+// Comprehensive transaction intent patterns
+const TRANSACTION_PATTERNS = [
+  /(?:spent|paid|bought|buy|purchase|pay|cost|dropped|blew)/i,
+  /(?:income|received|earned|got|made|collected|deposited)/i,
+  /(?:add|log|record|track)\s+(?:\$|€|£|[\d,]+)/i,
+  /(?:\$|€|£)[\d,]+\s+(?:for|on|at)/i,  // "$50 for coffee"
+];
+
+const RECURRING_PATTERNS = [
+  /(?:every|each)\s+(?:day|week|month|year)/i,
+  /(?:daily|weekly|monthly|yearly)\s+(?:expense|income|bill|payment)/i,
+  /(?:rent|salary|subscription)\s+(?:of\s+)?(?:\$|€|£)?[\d,]+/i,
+  /(?:\$|€|£)?[\d,]+\s+(?:rent|salary|subscription)/i,
+];
+
+const GOAL_PATTERNS = [
+  /(?:put|add|contribute|save)\s+(?:\$|€|£)?[\d,]+\s+(?:to|toward|towards|into)\s+(?:goal|saving|fund|vacation|house|car)/i,
+  /(?:save\s+for|saving\s+for|put\s+towards?)\s+\w+/i,
+];
+
+// Frequency keywords for recurring detection
+const FREQUENCY_KEYWORDS = {
+  daily: ['daily', 'every day', 'each day'],
+  weekly: ['weekly', 'every week', 'each week'],
+  monthly: ['monthly', 'every month', 'each month', 'rent', 'salary'],
+  yearly: ['yearly', 'annually', 'every year', 'each year'],
+};
+
 type PendingAction =
   | {
       kind: 'transaction';
       status: 'loading' | 'ready' | 'error' | 'done';
       original: string;
-      parsed?: AIParseResponse;
+      parsed?: SmartParseResponse;
+      error?: string;
+    }
+  | {
+      kind: 'recurring';
+      status: 'loading' | 'ready' | 'error' | 'done';
+      original: string;
+      parsed?: SmartParseResponse;
+      selectedFrequency?: string;
+      result?: RecurringTransaction;
+      error?: string;
+    }
+  | {
+      kind: 'goal_contribution';
+      status: 'loading' | 'ready' | 'error' | 'done';
+      original: string;
+      parsed?: SmartParseResponse;
+      selectedGoalId?: string;
+      goals?: Goal[];
+      result?: { goal: Goal; transaction: unknown };
       error?: string;
     }
   | {
@@ -512,7 +560,7 @@ export default function AIChatScreen() {
   });
 
   const applyParsedMutation = useMutation({
-    mutationFn: (data: AIParseResponse) =>
+    mutationFn: (data: SmartParseResponse) =>
       api.ai.applyParsed({
         amount: data.amount,
         currency: data.currency,
@@ -534,6 +582,67 @@ export default function AIChatScreen() {
               ...current,
               status: 'error',
               error: err instanceof Error ? err.message : 'Could not add transaction',
+            }
+          : current
+      );
+    },
+  });
+
+  const applyRecurringMutation = useMutation({
+    mutationFn: (data: { parsed: SmartParseResponse; frequency: string }) =>
+      api.ai.applyRecurring({
+        amount: data.parsed.amount,
+        currency: data.parsed.currency,
+        type: data.parsed.type,
+        description: data.parsed.description,
+        category: data.parsed.category,
+        frequency: data.frequency,
+      }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['recurring'] });
+      queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      setPendingAction((current) =>
+        current && current.kind === 'recurring'
+          ? { ...current, status: 'done', result }
+          : current
+      );
+    },
+    onError: (err) => {
+      setPendingAction((current) =>
+        current && current.kind === 'recurring'
+          ? {
+              ...current,
+              status: 'error',
+              error: err instanceof Error ? err.message : 'Could not create recurring transaction',
+            }
+          : current
+      );
+    },
+  });
+
+  const applyGoalContributionMutation = useMutation({
+    mutationFn: (data: { amount: number; goalId: string; goalName?: string }) =>
+      api.ai.applyGoalContribution({
+        amount: data.amount,
+        goal_id: data.goalId,
+        goal_name: data.goalName,
+      }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      setPendingAction((current) =>
+        current && current.kind === 'goal_contribution'
+          ? { ...current, status: 'done', result }
+          : current
+      );
+    },
+    onError: (err) => {
+      setPendingAction((current) =>
+        current && current.kind === 'goal_contribution'
+          ? {
+              ...current,
+              status: 'error',
+              error: err instanceof Error ? err.message : 'Could not contribute to goal',
             }
           : current
       );
@@ -652,8 +761,26 @@ export default function AIChatScreen() {
     return { from: match[1].toUpperCase(), to: match[2].toUpperCase() };
   };
 
+  // Check if text looks like any kind of financial transaction
   const looksLikeTransaction = (text: string) =>
-    /(spent|paid|bought|buy|purchase|income|received|earned|add)/i.test(text);
+    TRANSACTION_PATTERNS.some(pattern => pattern.test(text));
+
+  const looksLikeRecurring = (text: string) =>
+    RECURRING_PATTERNS.some(pattern => pattern.test(text));
+
+  const looksLikeGoalContribution = (text: string) =>
+    GOAL_PATTERNS.some(pattern => pattern.test(text));
+
+  // Detect frequency from text
+  const detectFrequency = (text: string): string => {
+    const lowerText = text.toLowerCase();
+    for (const [freq, keywords] of Object.entries(FREQUENCY_KEYWORDS)) {
+      if (keywords.some(kw => lowerText.includes(kw))) {
+        return freq;
+      }
+    }
+    return 'monthly'; // Default
+  };
 
   const maybeStartAction = async (text: string) => {
     const convert = parseConvertIntent(text);
@@ -718,6 +845,66 @@ export default function AIChatScreen() {
       return;
     }
 
+    // Check for goal contribution first (more specific)
+    if (looksLikeGoalContribution(text)) {
+      setPendingAction({
+        kind: 'goal_contribution',
+        status: 'loading',
+        original: text,
+      });
+      try {
+        const [parsed, goalsResponse] = await Promise.all([
+          api.ai.smartParse({ text }),
+          api.goals.list(),
+        ]);
+        setPendingAction({
+          kind: 'goal_contribution',
+          status: 'ready',
+          original: text,
+          parsed,
+          goals: goalsResponse.goals || [],
+          selectedGoalId: undefined,
+        });
+      } catch (error) {
+        setPendingAction({
+          kind: 'goal_contribution',
+          status: 'error',
+          original: text,
+          error: error instanceof Error ? error.message : 'Could not parse goal contribution',
+        });
+      }
+      return;
+    }
+
+    // Check for recurring transaction
+    if (looksLikeRecurring(text)) {
+      setPendingAction({
+        kind: 'recurring',
+        status: 'loading',
+        original: text,
+      });
+      try {
+        const parsed = await api.ai.smartParse({ text });
+        const detectedFrequency = parsed.frequency || detectFrequency(text);
+        setPendingAction({
+          kind: 'recurring',
+          status: 'ready',
+          original: text,
+          parsed,
+          selectedFrequency: detectedFrequency,
+        });
+      } catch (error) {
+        setPendingAction({
+          kind: 'recurring',
+          status: 'error',
+          original: text,
+          error: error instanceof Error ? error.message : 'Could not parse recurring transaction',
+        });
+      }
+      return;
+    }
+
+    // Regular transaction
     if (looksLikeTransaction(text)) {
       setPendingAction({
         kind: 'transaction',
@@ -725,7 +912,7 @@ export default function AIChatScreen() {
         original: text,
       });
       try {
-        const parsed = await api.ai.parseReceipt({ text });
+        const parsed = await api.ai.smartParse({ text });
         setPendingAction({
           kind: 'transaction',
           status: 'ready',
@@ -904,9 +1091,13 @@ export default function AIChatScreen() {
                   <Text className="text-sm font-semibold text-foreground">
                     {pendingAction.kind === 'transaction'
                       ? 'Transaction assistant'
-                      : pendingAction.kind === 'convert'
-                        ? 'Conversion assistant'
-                        : 'Live FX rate'}
+                      : pendingAction.kind === 'recurring'
+                        ? 'Recurring transaction'
+                        : pendingAction.kind === 'goal_contribution'
+                          ? 'Goal contribution'
+                          : pendingAction.kind === 'convert'
+                            ? 'Conversion assistant'
+                            : 'Live FX rate'}
                   </Text>
                   {pendingAction.status === 'done' && (
                     <CheckCircle2 size={16} color="#22c55e" />
@@ -920,7 +1111,7 @@ export default function AIChatScreen() {
                   <View className="flex-row items-center">
                     <ActivityIndicator size="small" color="rgb(212, 175, 55)" />
                     <Text className="text-sm text-muted-foreground ml-2">
-                      {pendingAction.kind === 'transaction'
+                      {pendingAction.kind === 'transaction' || pendingAction.kind === 'recurring' || pendingAction.kind === 'goal_contribution'
                         ? 'Analyzing…'
                         : 'Fetching rate…'}
                     </Text>
@@ -949,9 +1140,14 @@ export default function AIChatScreen() {
                               {pendingAction.parsed.currency} {pendingAction.parsed.amount.toFixed(2)}
                             </Text>
                           </View>
-                          <Text className="text-xs text-muted-foreground">
+                          <Text className="text-xs text-muted-foreground mb-1">
                             {pendingAction.parsed.description}
                           </Text>
+                          {pendingAction.parsed.category && pendingAction.parsed.category !== 'other' && (
+                            <Text className="text-xs text-accent">
+                              Category: {pendingAction.parsed.category}
+                            </Text>
+                          )}
                           {pendingAction.parsed.confidence < 0.8 && (
                             <View className="mt-2 bg-warning/10 p-2 rounded">
                               <Text className="text-xs text-warning">
@@ -1066,6 +1262,8 @@ export default function AIChatScreen() {
                                 type: editType,
                                 currency: editCurrency,
                                 description: editDescription,
+                                category: 'other',
+                                action_type: 'transaction',
                                 confidence: 1,
                               });
                               setEditMode(false);
@@ -1088,6 +1286,171 @@ export default function AIChatScreen() {
                         </View>
                       </>
                     )}
+                  </>
+                )}
+
+                {/* Recurring Transaction Card */}
+                {pendingAction.kind === 'recurring' && pendingAction.status === 'ready' && pendingAction.parsed && (
+                  <>
+                    <View className="bg-muted border border-border rounded-xl p-3 mb-3">
+                      <View className="flex-row items-center justify-between mb-2">
+                        <View className={`px-2 py-1 rounded ${pendingAction.parsed.type === 'credit' ? 'bg-success/20' : 'bg-danger/20'}`}>
+                          <Text className={`text-xs font-semibold ${pendingAction.parsed.type === 'credit' ? 'text-success' : 'text-danger'}`}>
+                            {pendingAction.parsed.type === 'credit' ? 'Recurring Income' : 'Recurring Expense'}
+                          </Text>
+                        </View>
+                        <Text className="text-sm font-bold text-foreground">
+                          {pendingAction.parsed.currency} {pendingAction.parsed.amount.toFixed(2)}
+                        </Text>
+                      </View>
+                      <Text className="text-xs text-muted-foreground mb-2">
+                        {pendingAction.parsed.description}
+                      </Text>
+                      {pendingAction.parsed.category && pendingAction.parsed.category !== 'other' && (
+                        <Text className="text-xs text-accent">
+                          Category: {pendingAction.parsed.category}
+                        </Text>
+                      )}
+                    </View>
+                    {/* Frequency selector */}
+                    <View className="mb-3">
+                      <Text className="text-xs text-muted-foreground mb-2">Frequency</Text>
+                      <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                        {['daily', 'weekly', 'monthly', 'yearly'].map((freq) => (
+                          <Pressable
+                            key={freq}
+                            onPress={() => setPendingAction(prev =>
+                              prev?.kind === 'recurring' ? { ...prev, selectedFrequency: freq } : prev
+                            )}
+                            className={`px-3 py-2 rounded-lg border ${
+                              pendingAction.selectedFrequency === freq
+                                ? 'bg-primary/20 border-primary'
+                                : 'bg-muted border-border'
+                            }`}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <Text className={`text-xs font-medium capitalize ${
+                              pendingAction.selectedFrequency === freq ? 'text-accent' : 'text-foreground'
+                            }`}>
+                              {freq}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
+                    <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                      <Pressable
+                        onPress={() => applyRecurringMutation.mutate({
+                          parsed: pendingAction.parsed!,
+                          frequency: pendingAction.selectedFrequency || 'monthly',
+                        })}
+                        disabled={applyRecurringMutation.isPending}
+                        className={`bg-primary px-4 py-2 rounded-lg ${applyRecurringMutation.isPending ? 'opacity-50' : ''}`}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <Text className="text-primary-foreground text-sm font-semibold">
+                          {applyRecurringMutation.isPending ? 'Creating...' : 'Create recurring'}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => setPendingAction(null)}
+                        className="px-4 py-2"
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <Text className="text-muted-foreground text-sm">Dismiss</Text>
+                      </Pressable>
+                    </View>
+                  </>
+                )}
+
+                {/* Goal Contribution Card */}
+                {pendingAction.kind === 'goal_contribution' && pendingAction.status === 'ready' && pendingAction.parsed && (
+                  <>
+                    <View className="bg-muted border border-border rounded-xl p-3 mb-3">
+                      <View className="flex-row items-center justify-between mb-2">
+                        <View className="px-2 py-1 rounded bg-accent/20">
+                          <Text className="text-xs font-semibold text-accent">Goal Contribution</Text>
+                        </View>
+                        <Text className="text-sm font-bold text-foreground">
+                          {pendingAction.parsed.currency} {pendingAction.parsed.amount.toFixed(2)}
+                        </Text>
+                      </View>
+                      {pendingAction.parsed.goal_name && (
+                        <Text className="text-xs text-muted-foreground">
+                          Detected goal: {pendingAction.parsed.goal_name}
+                        </Text>
+                      )}
+                    </View>
+                    {/* Goal selector */}
+                    {pendingAction.goals && pendingAction.goals.length > 0 ? (
+                      <View className="mb-3">
+                        <Text className="text-xs text-muted-foreground mb-2">Select goal to contribute to</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                          <View className="flex-row" style={{ gap: 8 }}>
+                            {pendingAction.goals.map((goal) => (
+                              <Pressable
+                                key={goal.id}
+                                onPress={() => setPendingAction(prev =>
+                                  prev?.kind === 'goal_contribution' ? { ...prev, selectedGoalId: goal.id } : prev
+                                )}
+                                className={`px-3 py-2 rounded-lg border ${
+                                  pendingAction.selectedGoalId === goal.id
+                                    ? 'bg-primary/20 border-primary'
+                                    : 'bg-muted border-border'
+                                }`}
+                                style={{ cursor: 'pointer' }}
+                              >
+                                <Text className={`text-xs font-medium ${
+                                  pendingAction.selectedGoalId === goal.id ? 'text-accent' : 'text-foreground'
+                                }`}>
+                                  {goal.name}
+                                </Text>
+                                <Text className="text-xs text-muted-foreground">
+                                  {goal.currency} {goal.current_amount.toFixed(0)} / {goal.target_amount.toFixed(0)}
+                                </Text>
+                              </Pressable>
+                            ))}
+                          </View>
+                        </ScrollView>
+                      </View>
+                    ) : (
+                      <View className="mb-3 bg-warning/10 p-2 rounded">
+                        <Text className="text-xs text-warning">
+                          No goals found. Create a goal first to contribute.
+                        </Text>
+                      </View>
+                    )}
+                    <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                      <Pressable
+                        onPress={() => {
+                          if (!pendingAction.selectedGoalId) {
+                            Alert.alert('Select Goal', 'Please select a goal to contribute to');
+                            return;
+                          }
+                          applyGoalContributionMutation.mutate({
+                            amount: pendingAction.parsed!.amount,
+                            goalId: pendingAction.selectedGoalId,
+                            goalName: pendingAction.parsed!.goal_name,
+                          });
+                        }}
+                        disabled={applyGoalContributionMutation.isPending || !pendingAction.selectedGoalId}
+                        className={`bg-primary px-4 py-2 rounded-lg ${
+                          applyGoalContributionMutation.isPending || !pendingAction.selectedGoalId ? 'opacity-50' : ''
+                        }`}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <Text className="text-primary-foreground text-sm font-semibold">
+                          {applyGoalContributionMutation.isPending ? 'Contributing...' : 'Contribute'}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => setPendingAction(null)}
+                        className="px-4 py-2"
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <Text className="text-muted-foreground text-sm">Dismiss</Text>
+                      </Pressable>
+                    </View>
                   </>
                 )}
 
@@ -1148,9 +1511,13 @@ export default function AIChatScreen() {
                   <Text className="text-sm text-success">
                     {pendingAction.kind === 'transaction'
                       ? 'Transaction added.'
-                      : pendingAction.kind === 'convert'
-                        ? 'Conversion completed.'
-                        : 'Rate updated.'}
+                      : pendingAction.kind === 'recurring'
+                        ? 'Recurring transaction created.'
+                        : pendingAction.kind === 'goal_contribution'
+                          ? 'Contribution added to goal.'
+                          : pendingAction.kind === 'convert'
+                            ? 'Conversion completed.'
+                            : 'Rate updated.'}
                   </Text>
                 )}
               </View>

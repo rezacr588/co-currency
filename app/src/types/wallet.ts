@@ -184,3 +184,34 @@ export interface AIApplyRequest {
 
 // AIApplyResponse - backend returns single Transaction directly
 export type AIApplyResponse = Transaction;
+
+// SmartParseResponse - enhanced AI parsing with action type detection
+export interface SmartParseResponse {
+  amount: number;
+  currency: string;
+  type: 'credit' | 'debit';
+  description: string;
+  category: string;
+  action_type: 'transaction' | 'recurring' | 'goal_contribution';
+  frequency?: string;
+  goal_name?: string;
+  confidence: number;
+  raw_text?: string;
+}
+
+// ApplyRecurringRequest - create recurring from AI parse
+export interface ApplyRecurringRequest {
+  amount: number;
+  currency: string;
+  type: 'credit' | 'debit';
+  description: string;
+  category?: string;
+  frequency: string;
+}
+
+// ApplyGoalContributionRequest - contribute to goal from AI parse
+export interface ApplyGoalContributionRequest {
+  amount: number;
+  goal_id?: string;
+  goal_name?: string;
+}

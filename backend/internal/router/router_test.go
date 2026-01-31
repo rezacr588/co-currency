@@ -263,9 +263,9 @@ func TestRouter_AIParseReceiptEndpoint(t *testing.T) {
 
 	r.ServeHTTP(rr, req)
 
-	// Should return service unavailable (disabled) or bad request
-	if rr.Code != http.StatusServiceUnavailable && rr.Code != http.StatusBadRequest {
-		t.Errorf("AI parse-receipt endpoint status = %v, unexpected", rr.Code)
+	// Should return 401 (unauthorized) since parse endpoints now require auth
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("AI parse-receipt endpoint status = %v, want %v", rr.Code, http.StatusUnauthorized)
 	}
 }
 
@@ -278,9 +278,9 @@ func TestRouter_AIParseTextEndpoint(t *testing.T) {
 
 	r.ServeHTTP(rr, req)
 
-	// Should return 500 (AI service not configured), 400 (bad request), or 503 (service unavailable)
-	if rr.Code != http.StatusInternalServerError && rr.Code != http.StatusBadRequest && rr.Code != http.StatusServiceUnavailable {
-		t.Errorf("AI parse-text endpoint status = %v, unexpected", rr.Code)
+	// Should return 401 (unauthorized) since parse endpoints now require auth
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("AI parse-text endpoint status = %v, want %v", rr.Code, http.StatusUnauthorized)
 	}
 }
 

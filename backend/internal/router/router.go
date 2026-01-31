@@ -119,7 +119,10 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 				// Parse endpoints now require auth to prevent abuse
 				r.Post("/parse-receipt", h.AI.ParseReceipt)
 				r.Post("/parse-text", h.AI.ParseReceiptText)
+				r.Post("/smart-parse", h.AI.SmartParse)
 				r.Post("/apply-parsed", h.AI.ApplyParsed)
+				r.Post("/apply-recurring", h.AI.ApplyRecurring)
+				r.Post("/apply-goal-contribution", h.AI.ApplyGoalContribution)
 
 				// AI Chat routes (protected)
 				if h.AIChat != nil {
