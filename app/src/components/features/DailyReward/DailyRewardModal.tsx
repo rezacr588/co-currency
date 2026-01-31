@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -26,8 +26,8 @@ export function DailyRewardModal({ onClose }: DailyRewardModalProps) {
   const [visible, setVisible] = useState(false);
   const [claimed, setClaimed] = useState(false);
   const [showAnimation, setShowAnimation] = useState(false);
-  const scaleAnim = useState(new Animated.Value(0))[0];
-  const rotateAnim = useState(new Animated.Value(0))[0];
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
 
   // Check if reward should be shown
   useEffect(() => {

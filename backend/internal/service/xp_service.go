@@ -97,7 +97,7 @@ type DailyRewardResponse struct {
 
 // ClaimDailyReward claims the daily login reward
 func (s *XPService) ClaimDailyReward(ctx context.Context, userID uuid.UUID) (*DailyRewardResponse, error) {
-	today := time.Now().Truncate(24 * time.Hour)
+	today := time.Now().UTC().Truncate(24 * time.Hour)
 
 	// Check if already claimed today
 	existing, _ := s.xpRepo.GetDailyReward(ctx, userID, today)
@@ -164,7 +164,7 @@ type DailyRewardStatus struct {
 
 // GetDailyRewardStatus checks if daily reward is available
 func (s *XPService) GetDailyRewardStatus(ctx context.Context, userID uuid.UUID) (*DailyRewardStatus, error) {
-	today := time.Now().Truncate(24 * time.Hour)
+	today := time.Now().UTC().Truncate(24 * time.Hour)
 
 	// Check if already claimed today
 	existing, _ := s.xpRepo.GetDailyReward(ctx, userID, today)
@@ -176,17 +176,15 @@ func (s *XPService) GetDailyRewardStatus(ctx context.Context, userID uuid.UUID) 
 	consecutiveDays := 0
 	if lastReward != nil {
 		yesterday := today.AddDate(0, 0, -1)
-		if lastReward.LoginDate.Truncate(24*time.Hour).Equal(yesterday) {
+		if lastReward.LoginDate.UTC().Truncate(24*time.Hour).Equal(yesterday) {
 			consecutiveDays = lastReward.ConsecutiveDays
-		} else if lastReward.LoginDate.Truncate(24*time.Hour).Equal(today) {
+		} else if lastReward.LoginDate.UTC().Truncate(24*time.Hour).Equal(today) {
 			consecutiveDays = lastReward.ConsecutiveDays
 		}
 	}
 
+	// Calculate XP for next reward
 	nextDay := consecutiveDays + 1
-	if claimedToday {
-		nextDay = consecutiveDays + 1
-	}
 
 	return &DailyRewardStatus{
 		ClaimedToday:    claimedToday,

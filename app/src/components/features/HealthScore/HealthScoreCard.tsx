@@ -33,30 +33,35 @@ function ScoreGauge({ score }: { score: number }) {
   };
 
   const color = getColor(score);
-  const rotation = (score / 100) * 180 - 90; // Map 0-100 to -90 to 90 degrees
 
   return (
     <View className="items-center">
-      {/* Score Circle */}
+      {/* Score Circle - Simple solid ring design */}
       <View
         className="w-24 h-24 rounded-full items-center justify-center"
         style={{
           borderWidth: 8,
           borderColor: `${color}30`,
+          backgroundColor: 'transparent',
         }}
       >
+        {/* Progress indicator - colored arc segment */}
         <View
           className="absolute w-24 h-24 rounded-full"
           style={{
             borderWidth: 8,
-            borderColor: color,
-            borderTopColor: 'transparent',
+            borderColor: 'transparent',
+            borderLeftColor: score > 0 ? color : 'transparent',
+            borderBottomColor: score > 25 ? color : 'transparent',
             borderRightColor: score > 50 ? color : 'transparent',
-            transform: [{ rotate: `${rotation}deg` }],
+            borderTopColor: score > 75 ? color : 'transparent',
           }}
         />
-        <Text className="text-3xl font-bold text-foreground">{score}</Text>
-        <Text className="text-xs text-muted-foreground">/100</Text>
+        {/* Score text */}
+        <View className="items-center justify-center">
+          <Text className="text-3xl font-bold text-foreground">{score}</Text>
+          <Text className="text-xs text-muted-foreground">/100</Text>
+        </View>
       </View>
     </View>
   );
