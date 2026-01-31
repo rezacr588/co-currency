@@ -20,6 +20,14 @@ import type { Currency } from '../../types/currency';
 
 const POPULAR_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'IRR', 'TRY', 'CNY'];
 
+// Font families for consistent typography
+const fonts = {
+  regular: 'Inter_400Regular',
+  medium: 'Inter_500Medium',
+  semibold: 'Inter_600SemiBold',
+  bold: 'Inter_700Bold',
+};
+
 interface CurrencyConverterProps {
   variant?: 'full' | 'compact';
   initialFromCurrency?: string;
@@ -37,8 +45,8 @@ interface CurrencyConverterProps {
 
 export function CurrencyConverter({
   variant = 'full',
-  initialFromCurrency = 'USD',
-  initialToCurrency = 'EUR',
+  initialFromCurrency = 'TRY',
+  initialToCurrency = 'USD',
   initialAmount = '1',
   showQuickSelect = true,
   allowedCurrencyCodes,
@@ -137,15 +145,15 @@ export function CurrencyConverter({
         marginBottom: type === 'from' ? 8 : 16,
       }}
     >
-      <Text style={{ fontSize: 12, color: '#a1a1aa', marginBottom: 8 }}>
+      <Text style={{ fontSize: 12, color: '#a1a1aa', marginBottom: 8, fontFamily: fonts.regular }}>
         {type === 'from' ? (t('from') || 'From') : (t('to') || 'To')}
       </Text>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Text style={{ fontSize: 24, marginRight: 8 }}>{display.flag || '🌐'}</Text>
-        <Text style={{ fontSize: 20, fontWeight: '600', color: '#fafafa', flex: 1 }}>
+        <Text style={{ fontSize: 20, color: '#fafafa', flex: 1, fontFamily: fonts.semibold }}>
           {currency}
         </Text>
-        <Text style={{ color: '#71717a', marginRight: 8 }}>{display.symbol}</Text>
+        <Text style={{ color: '#71717a', marginRight: 8, fontFamily: fonts.regular }}>{display.symbol}</Text>
         <ChevronDown size={20} color="#71717a" />
       </View>
     </TouchableOpacity>
@@ -169,7 +177,7 @@ export function CurrencyConverter({
           borderBottomWidth: 1,
           borderBottomColor: '#27272a',
         }}>
-          <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#fafafa' }}>
+          <Text style={{ fontSize: 20, color: '#fafafa', fontFamily: fonts.bold }}>
             {pickerMode === 'from' ? 'Select From Currency' : 'Select To Currency'}
           </Text>
           <TouchableOpacity onPress={closePicker} style={{ padding: 8 }}>
@@ -193,6 +201,7 @@ export function CurrencyConverter({
                 padding: 12,
                 color: '#fafafa',
                 fontSize: 16,
+                fontFamily: fonts.regular,
               }}
               placeholder="Search currency..."
               placeholderTextColor="#71717a"
@@ -212,7 +221,7 @@ export function CurrencyConverter({
         {/* Popular Currencies */}
         {!searchQuery && (
           <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
-            <Text style={{ fontSize: 12, color: '#71717a', marginBottom: 8 }}>Popular</Text>
+            <Text style={{ fontSize: 12, color: '#71717a', marginBottom: 8, fontFamily: fonts.medium }}>Popular</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {POPULAR_CURRENCIES.map((code) => {
                 const display = getCurrencyDisplay(code);
@@ -231,7 +240,7 @@ export function CurrencyConverter({
                   >
                     <Text style={{
                       color: isSelected ? '#09090b' : '#fafafa',
-                      fontWeight: isSelected ? '600' : '400',
+                      fontFamily: isSelected ? fonts.semibold : fonts.regular,
                     }}>
                       {display.flag || '🌐'} {code}
                     </Text>
@@ -243,7 +252,7 @@ export function CurrencyConverter({
         )}
 
         {/* All Currencies */}
-        <Text style={{ fontSize: 12, color: '#71717a', marginLeft: 16, marginTop: 8, marginBottom: 4 }}>
+        <Text style={{ fontSize: 12, color: '#71717a', marginLeft: 16, marginTop: 8, marginBottom: 4, fontFamily: fonts.medium }}>
           {searchQuery ? 'Search Results' : 'All Currencies'}
         </Text>
 
@@ -259,7 +268,7 @@ export function CurrencyConverter({
             contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
             ListEmptyComponent={
               <View style={{ padding: 32, alignItems: 'center' }}>
-                <Text style={{ color: '#71717a' }}>No currencies found</Text>
+                <Text style={{ color: '#71717a', fontFamily: fonts.regular }}>No currencies found</Text>
               </View>
             }
             renderItem={({ item }) => {
@@ -283,20 +292,21 @@ export function CurrencyConverter({
                   <Text style={{ fontSize: 24, marginRight: 12 }}>{display.flag || '🌐'}</Text>
                   <View style={{ flex: 1 }}>
                     <Text style={{
-                      fontWeight: '600',
                       color: isSelected ? '#09090b' : '#fafafa',
                       fontSize: 16,
+                      fontFamily: fonts.semibold,
                     }}>
                       {item.code}
                     </Text>
                     <Text style={{
                       fontSize: 13,
                       color: isSelected ? '#09090b' : '#71717a',
+                      fontFamily: fonts.regular,
                     }}>
                       {item.name}
                     </Text>
                   </View>
-                  <Text style={{ color: isSelected ? '#09090b' : '#71717a' }}>
+                  <Text style={{ color: isSelected ? '#09090b' : '#71717a', fontFamily: fonts.regular }}>
                     {display.symbol}
                   </Text>
                 </TouchableOpacity>
@@ -321,15 +331,15 @@ export function CurrencyConverter({
           padding: 16,
           marginBottom: 16,
         }}>
-          <Text style={{ fontSize: 12, color: '#a1a1aa', marginBottom: 8 }}>
+          <Text style={{ fontSize: 12, color: '#a1a1aa', marginBottom: 8, fontFamily: fonts.regular }}>
             {t('amount') || 'Amount'}
           </Text>
           <TextInput
             style={{
               fontSize: 32,
-              fontWeight: 'bold',
               color: '#fafafa',
               minHeight: 44,
+              fontFamily: fonts.bold,
             }}
             value={amount}
             onChangeText={handleAmountChange}
@@ -369,34 +379,29 @@ export function CurrencyConverter({
           borderRadius: 12,
           padding: 24,
         }}>
-          <Text style={{ fontSize: 12, color: '#a1a1aa', marginBottom: 8 }}>
+          <Text style={{ fontSize: 12, color: '#a1a1aa', marginBottom: 8, fontFamily: fonts.regular }}>
             {t('result') || 'Result'}
           </Text>
 
           {isSameCurrency ? (
-            <Text style={{ fontSize: 18, color: '#f59e0b' }}>
+            <Text style={{ fontSize: 18, color: '#f59e0b', fontFamily: fonts.medium }}>
               Select different currencies
             </Text>
-          ) : isPending ? (
-            <View style={{ alignItems: 'center', paddingVertical: 16 }}>
-              <ActivityIndicator size="large" color="#d4af37" />
-              <Text style={{ color: '#71717a', marginTop: 8 }}>Calculating...</Text>
-            </View>
           ) : isError ? (
-            <Text style={{ fontSize: 18, color: '#ef4444' }}>
+            <Text style={{ fontSize: 18, color: '#ef4444', fontFamily: fonts.medium }}>
               Failed to get rate. Try again.
             </Text>
           ) : conversion ? (
             <>
-              <Text style={{ fontSize: 36, fontWeight: 'bold', color: '#d4af37' }}>
+              <Text style={{ fontSize: 36, color: '#d4af37', fontFamily: fonts.bold }}>
                 {formatNumber(conversion.result, 2)} {toCurrency}
               </Text>
-              <Text style={{ color: '#71717a', marginTop: 8 }}>
+              <Text style={{ color: '#71717a', marginTop: 8, fontFamily: fonts.regular }}>
                 1 {fromCurrency} = {formatNumber(conversion.rate, 6)} {toCurrency}
               </Text>
             </>
           ) : (
-            <Text style={{ fontSize: 24, color: '#52525b' }}>
+            <Text style={{ fontSize: 24, color: '#52525b', fontFamily: fonts.medium }}>
               Enter an amount
             </Text>
           )}
@@ -405,7 +410,7 @@ export function CurrencyConverter({
         {/* Quick Select */}
         {showQuickSelect && (
           <View style={{ marginTop: 24 }}>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: '#fafafa', marginBottom: 12 }}>
+            <Text style={{ fontSize: 16, color: '#fafafa', marginBottom: 12, fontFamily: fonts.semibold }}>
               {t('popularCurrencies') || 'Popular Currencies'}
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -432,7 +437,7 @@ export function CurrencyConverter({
                   >
                     <Text style={{
                       color: isTo ? '#09090b' : isFrom ? '#d4af37' : '#fafafa',
-                      fontWeight: (isTo || isFrom) ? '600' : '400',
+                      fontFamily: (isTo || isFrom) ? fonts.semibold : fonts.regular,
                     }}>
                       {display.flag || '🌐'} {code}
                     </Text>
@@ -440,7 +445,7 @@ export function CurrencyConverter({
                 );
               })}
             </View>
-            <Text style={{ fontSize: 11, color: '#52525b', marginTop: 8 }}>
+            <Text style={{ fontSize: 11, color: '#52525b', marginTop: 8, fontFamily: fonts.regular }}>
               Tap to set "To", long-press for "From"
             </Text>
           </View>
@@ -474,8 +479,8 @@ export function CurrencyConverter({
                 flex: 1,
                 padding: 12,
                 fontSize: 18,
-                fontWeight: '600',
                 color: '#fafafa',
+                fontFamily: fonts.semibold,
               }}
               value={amount}
               onChangeText={handleAmountChange}
@@ -498,7 +503,7 @@ export function CurrencyConverter({
               }}
             >
               <Text style={{ fontSize: 16, marginRight: 4 }}>{fromDisplay.flag || '🌐'}</Text>
-              <Text style={{ fontWeight: '500', color: '#fafafa', fontSize: 14 }}>{fromCurrency}</Text>
+              <Text style={{ color: '#fafafa', fontSize: 14, fontFamily: fonts.medium }}>{fromCurrency}</Text>
               <ChevronDown size={14} color="#71717a" style={{ marginLeft: 2 }} />
             </TouchableOpacity>
           </View>
@@ -535,11 +540,11 @@ export function CurrencyConverter({
             {isPending ? (
               <ActivityIndicator size="small" color="#d4af37" style={{ flex: 1 }} />
             ) : isError ? (
-              <Text style={{ flex: 1, fontSize: 18, fontWeight: '600', color: '#ef4444' }}>Error</Text>
+              <Text style={{ flex: 1, fontSize: 18, color: '#ef4444', fontFamily: fonts.semibold }}>Error</Text>
             ) : isSameCurrency ? (
-              <Text style={{ flex: 1, fontSize: 18, fontWeight: '600', color: '#f59e0b' }}>Same</Text>
+              <Text style={{ flex: 1, fontSize: 18, color: '#f59e0b', fontFamily: fonts.semibold }}>Same</Text>
             ) : (
-              <Text style={{ flex: 1, fontSize: 18, fontWeight: '600', color: '#fafafa' }}>
+              <Text style={{ flex: 1, fontSize: 18, color: '#fafafa', fontFamily: fonts.semibold }}>
                 {conversion ? formatNumber(conversion.result, 2) : '0.00'}
               </Text>
             )}
@@ -552,7 +557,7 @@ export function CurrencyConverter({
               borderRadius: 6,
             }}>
               <Text style={{ fontSize: 16, marginRight: 4 }}>{toDisplay.flag || '🌐'}</Text>
-              <Text style={{ fontWeight: '500', color: '#fafafa', fontSize: 14 }}>{toCurrency}</Text>
+              <Text style={{ color: '#fafafa', fontSize: 14, fontFamily: fonts.medium }}>{toCurrency}</Text>
               <ChevronDown size={14} color="#71717a" style={{ marginLeft: 2 }} />
             </View>
           </TouchableOpacity>
@@ -561,7 +566,7 @@ export function CurrencyConverter({
 
       {/* Rate info */}
       {conversion && !isSameCurrency && (
-        <Text style={{ color: '#71717a', fontSize: 12, textAlign: 'center', marginTop: 12 }}>
+        <Text style={{ color: '#71717a', fontSize: 12, textAlign: 'center', marginTop: 12, fontFamily: fonts.regular }}>
           1 {fromCurrency} = {formatNumber(conversion.rate, 4)} {toCurrency}
         </Text>
       )}
