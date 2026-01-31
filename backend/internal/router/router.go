@@ -27,6 +27,7 @@ type Handlers struct {
 	Reports       *handler.ReportsHandler
 	Subscription  *handler.SubscriptionHandler
 	Badge         *handler.BadgeHandler
+	Note          *handler.NoteHandler
 }
 
 // New creates a new router with all routes configured
@@ -214,6 +215,20 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 					r.Get("/progress", h.Badge.GetBadgeProgress)
 					r.Post("/check", h.Badge.CheckBadges)
 				})
+			})
+		}
+
+		// Notes routes (protected)
+		if h.Note != nil {
+			r.Route("/notes", func(r chi.Router) {
+				r.Use(authMiddleware.Middleware)
+				r.Get("/", h.Note.GetNotes)
+				r.Post("/", h.Note.CreateNote)
+				r.Get("/colors", h.Note.GetColors)
+				r.Get("/{id}", h.Note.GetNote)
+				r.Put("/{id}", h.Note.UpdateNote)
+				r.Delete("/{id}", h.Note.DeleteNote)
+				r.Post("/{id}/pin", h.Note.TogglePin)
 			})
 		}
 	})

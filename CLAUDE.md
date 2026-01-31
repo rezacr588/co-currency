@@ -61,6 +61,7 @@ go test -cover ./...    # Run with coverage
 npx expo start          # Start Expo dev server (press i/a for simulator)
 npm run ios             # Build and run on iOS simulator (native)
 npm run android         # Build and run on Android emulator (native)
+npm run web             # Start Expo web version
 npx tsc --noEmit        # TypeScript check
 eas update --branch production --message "description" # Push OTA update
 eas build --platform android --profile production # Build APK
@@ -69,8 +70,13 @@ eas build --platform android --profile production # Build APK
 ### Full Stack Commands
 ```bash
 make test               # All tests (backend + frontend)
+make test-backend       # Backend tests only
+make test-frontend      # Frontend tests only
 make lint               # Lint both codebases
+make lint-backend       # Go lint with golangci-lint
+make lint-frontend      # ESLint
 make build              # Build Docker image
+make clean              # Remove build artifacts
 ```
 
 ## Architecture

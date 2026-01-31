@@ -248,6 +248,9 @@ func main() {
 	var subscriptionService *service.SubscriptionService
 	var badgeService *service.BadgeService
 
+	// Notes service
+	var noteService *service.NoteService
+
 	// AI Chat service
 	var aiChatService *service.AIChatService
 
@@ -286,6 +289,11 @@ func main() {
 		}
 		badgeService = service.NewBadgeService(badgeRepo, walletRepo, budgetRepo, goalRepo, subscriptionRepo)
 		log.Info().Msg("Badge service initialized")
+
+		// Initialize note service
+		noteRepo := repository.NewNoteRepository(mainDB)
+		noteService = service.NewNoteService(noteRepo)
+		log.Info().Msg("Note service initialized")
 
 		// Initialize AI Chat service (requires AI service, wallet, goals, budgets, user, recurring, memory)
 		if aiService != nil {
@@ -397,12 +405,16 @@ func main() {
 	// Initialize Phase 4 handlers
 	var subscriptionHandler *handler.SubscriptionHandler
 	var badgeHandler *handler.BadgeHandler
+	var noteHandler *handler.NoteHandler
 
 	if subscriptionService != nil {
 		subscriptionHandler = handler.NewSubscriptionHandler(subscriptionService)
 	}
 	if badgeService != nil {
 		badgeHandler = handler.NewBadgeHandler(badgeService)
+	}
+	if noteService != nil {
+		noteHandler = handler.NewNoteHandler(noteService)
 	}
 
 	// Initialize AI Chat handler
@@ -431,6 +443,7 @@ func main() {
 		Reports:       reportsHandler,
 		Subscription:  subscriptionHandler,
 		Badge:         badgeHandler,
+		Note:          noteHandler,
 	}
 
 	rateLimiter := middleware.NewRateLimiter(cfg.RateLimitPerMin)
