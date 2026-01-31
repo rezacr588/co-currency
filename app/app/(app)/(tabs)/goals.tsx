@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,11 @@ import {
   TextInput,
   Modal,
   useWindowDimensions,
+  Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Target, CheckCircle, X, DollarSign, Calendar } from 'lucide-react-native';
+import { Plus, Target, CheckCircle, X, DollarSign, Calendar, Pencil, Trash2 } from 'lucide-react-native';
 import { api } from '../../../src/api';
 import { useLanguage } from '../../../src/context/LanguageContext';
 import { formatCompactCurrency, formatDate } from '../../../src/utils/format';
@@ -21,7 +22,8 @@ import { haptics } from '../../../src/utils/haptics';
 import { GoalIcon } from '../../../src/constants/icons';
 import { CurrencyPicker } from '../../../src/components/ui/CurrencyPicker';
 import { SkeletonGoalCard, SkeletonList } from '../../../src/components/ui/Skeleton';
-import type { CreateGoalRequest, Goal } from '../../../src/types/goal';
+import { SwipeableRow, type SwipeAction } from '../../../src/components/ui';
+import type { CreateGoalRequest, UpdateGoalRequest, Goal } from '../../../src/types/goal';
 
 const GOAL_CATEGORIES = [
   'savings',
@@ -40,6 +42,8 @@ export default function GoalsScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -51,6 +55,41 @@ export default function GoalsScreen() {
     queryKey: ['goals'],
     queryFn: () => api.goals.list(),
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.goals.delete(id),
+    onSuccess: () => {
+      haptics.success();
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+    },
+    onError: (error) => {
+      haptics.error();
+      Alert.alert(
+        t('error') || 'Error',
+        error instanceof Error ? error.message : t('failedToDelete') || 'Failed to delete goal'
+      );
+    },
+  });
+
+  const handleDelete = useCallback((goal: Goal) => {
+    Alert.alert(
+      t('deleteGoal') || 'Delete Goal',
+      t('confirmDeleteGoal') || `Are you sure you want to delete "${goal.name}"?`,
+      [
+        { text: t('cancel') || 'Cancel', style: 'cancel' },
+        {
+          text: t('delete') || 'Delete',
+          style: 'destructive',
+          onPress: () => deleteMutation.mutate(goal.id),
+        },
+      ]
+    );
+  }, [deleteMutation, t]);
+
+  const handleEdit = useCallback((goal: Goal) => {
+    setEditingGoal(goal);
+    setShowEditModal(true);
+  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -140,7 +179,7 @@ export default function GoalsScreen() {
                       width: columns === 1 ? '100%' : `${(100 / columns) - (16 * (columns - 1) / columns)}%`,
                       minWidth: columns === 1 ? '100%' : 280,
                     }}>
-                      <GoalCard goal={goal} />
+                      <GoalCard goal={goal} onEdit={handleEdit} onDelete={handleDelete} isDesktop={isDesktop} />
                     </View>
                   ))}
                 </View>
@@ -163,7 +202,7 @@ export default function GoalsScreen() {
                       width: columns === 1 ? '100%' : `${(100 / columns) - (16 * (columns - 1) / columns)}%`,
                       minWidth: columns === 1 ? '100%' : 280,
                     }}>
-                      <GoalCard goal={goal} />
+                      <GoalCard goal={goal} onEdit={handleEdit} onDelete={handleDelete} isDesktop={isDesktop} />
                     </View>
                   ))}
                 </View>
@@ -174,19 +213,35 @@ export default function GoalsScreen() {
       </ScrollView>
 
       <GoalFormModal visible={showForm} onClose={() => setShowForm(false)} />
+
+      {editingGoal && (
+        <GoalEditModal
+          visible={showEditModal}
+          goal={editingGoal}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingGoal(null);
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
-function GoalCard({ goal }: { goal: Goal }) {
+interface GoalCardProps {
+  goal: Goal;
+  onEdit: (goal: Goal) => void;
+  onDelete: (goal: Goal) => void;
+  isDesktop: boolean;
+}
+
+function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [showContribute, setShowContribute] = useState(false);
   const [amount, setAmount] = useState('');
   const [contributeError, setContributeError] = useState('');
   const progressPercent = Math.min(goal.progress, 100);
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= 1024;
 
   const contributeMutation = useMutation({
     mutationFn: (contributionAmount: number) =>
@@ -221,8 +276,24 @@ function GoalCard({ goal }: { goal: Goal }) {
     contributeMutation.mutate(parsedAmount);
   };
 
-  return (
-    <Pressable className="bg-card border border-border p-4 rounded-lg" style={{ cursor: 'pointer' }}>
+  // Swipe actions - edit (blue) and delete (red)
+  const rightActions: SwipeAction[] = [
+    {
+      icon: 'edit',
+      color: '#ffffff',
+      backgroundColor: '#3b82f6',
+      onPress: () => onEdit(goal),
+    },
+    {
+      icon: 'delete',
+      color: '#ffffff',
+      backgroundColor: '#ef4444',
+      onPress: () => onDelete(goal),
+    },
+  ];
+
+  const cardContent = (
+    <View className="bg-card border border-border p-4 rounded-lg">
       <View className="flex-row items-center mb-3">
         <View className="bg-secondary p-2 rounded-md mr-3">
           {goal.is_completed ? (
@@ -239,6 +310,27 @@ function GoalCard({ goal }: { goal: Goal }) {
             </Text>
           )}
         </View>
+        {/* Desktop: inline action buttons */}
+        {isDesktop && (
+          <View className="flex-row items-center gap-1">
+            <Pressable
+              onPress={() => onEdit(goal)}
+              className="p-2"
+              hitSlop={10}
+              style={{ cursor: 'pointer' }}
+            >
+              <Pencil size={16} color="#71717a" />
+            </Pressable>
+            <Pressable
+              onPress={() => onDelete(goal)}
+              className="p-2"
+              hitSlop={10}
+              style={{ cursor: 'pointer' }}
+            >
+              <Trash2 size={16} color="#71717a" />
+            </Pressable>
+          </View>
+        )}
       </View>
 
       {/* Progress Bar */}
@@ -316,7 +408,16 @@ function GoalCard({ goal }: { goal: Goal }) {
           )}
         </View>
       )}
-    </Pressable>
+    </View>
+  );
+
+  return (
+    <SwipeableRow
+      rightActions={rightActions}
+      enabled={!isDesktop}
+    >
+      {cardContent}
+    </SwipeableRow>
   );
 }
 
@@ -506,6 +607,183 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
           selectedCurrency={currency}
           title={t('selectCurrency')}
         />
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
+function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goal; onClose: () => void }) {
+  const { t } = useLanguage();
+  const queryClient = useQueryClient();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
+
+  // Initialize state from the goal being edited
+  const [name, setName] = useState(goal.name);
+  const [targetAmount, setTargetAmount] = useState(goal.target_amount.toString());
+  const [category, setCategory] = useState(goal.category || 'savings');
+  const [deadline, setDeadline] = useState(
+    goal.deadline ? new Date(goal.deadline).toISOString().split('T')[0] : ''
+  );
+  const [error, setError] = useState('');
+
+  const mutation = useMutation({
+    mutationFn: (data: UpdateGoalRequest) => api.goals.update(goal.id, data),
+    onSuccess: () => {
+      haptics.success();
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      onClose();
+    },
+    onError: (err) => {
+      haptics.error();
+      setError(err instanceof Error ? err.message : 'Failed to update goal');
+    },
+  });
+
+  const handleSubmit = () => {
+    if (!name.trim()) {
+      setError(t('enterName') || 'Please enter a name');
+      return;
+    }
+    const parsedAmount = parseFloat(targetAmount);
+    if (!parsedAmount || parsedAmount <= 0) {
+      setError(t('enterValidAmount') || 'Please enter a valid amount');
+      return;
+    }
+    setError('');
+
+    const goalData: UpdateGoalRequest = {
+      name: name.trim(),
+      target_amount: parsedAmount,
+      category,
+    };
+
+    if (deadline) {
+      const parsedDate = new Date(deadline);
+      if (isNaN(parsedDate.getTime())) {
+        setError(t('invalidDate') || 'Invalid date format. Please use YYYY-MM-DD.');
+        return;
+      }
+      goalData.deadline = parsedDate.toISOString();
+    } else {
+      goalData.deadline = undefined;
+    }
+
+    mutation.mutate(goalData);
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+      <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
+        <View className="flex-row items-center justify-between p-4 border-b border-border">
+          <Text className="text-lg font-semibold text-foreground">{t('editGoal') || 'Edit Goal'}</Text>
+          <Pressable onPress={onClose} style={{ cursor: 'pointer' }} className="p-2 bg-secondary rounded-full">
+            <X size={18} color="#a1a1aa" />
+          </Pressable>
+        </View>
+
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{
+            padding: isDesktop ? 32 : 16,
+            maxWidth: 500,
+            width: '100%',
+            alignSelf: 'center',
+          }}
+        >
+          {error ? (
+            <View className="bg-danger-muted border border-danger/20 p-3 rounded-lg mb-4">
+              <Text className="text-danger text-sm">{error}</Text>
+            </View>
+          ) : null}
+
+          <View className="mb-5">
+            <Text className="text-muted-foreground text-sm mb-2">{t('goalName')}</Text>
+            <TextInput
+              className="bg-muted border border-border p-3.5 rounded-lg text-foreground"
+              style={{ outlineStyle: 'none' } as any}
+              value={name}
+              onChangeText={setName}
+              placeholder="Emergency Fund, Vacation, etc."
+              placeholderTextColor="#52525b"
+            />
+          </View>
+
+          <View className="mb-5">
+            <Text className="text-muted-foreground text-sm mb-2">{t('targetAmount')}</Text>
+            <View className="flex-row gap-2">
+              <TextInput
+                className="flex-1 bg-muted border border-border p-3.5 rounded-lg text-foreground text-lg"
+                style={{ outlineStyle: 'none' } as any}
+                value={targetAmount}
+                onChangeText={setTargetAmount}
+                keyboardType="decimal-pad"
+                placeholder="0.00"
+                placeholderTextColor="#52525b"
+              />
+              <View className="bg-secondary border border-border px-4 rounded-lg items-center justify-center">
+                <Text className="text-muted-foreground font-medium">{goal.currency}</Text>
+              </View>
+            </View>
+            <Text className="text-muted-foreground text-xs mt-1">
+              {t('currentProgress') || 'Current progress'}: {formatCompactCurrency(goal.current_amount, goal.currency)}
+            </Text>
+          </View>
+
+          <View className="mb-5">
+            <Text className="text-muted-foreground text-sm mb-2">{t('category')}</Text>
+            <View className="flex-row flex-wrap gap-2">
+              {GOAL_CATEGORIES.map((cat) => (
+                <Pressable
+                  key={cat}
+                  onPress={() => setCategory(cat)}
+                  className={`px-3 py-2 rounded-md flex-row items-center border ${
+                    category === cat ? 'bg-foreground border-foreground' : 'bg-secondary border-border'
+                  }`}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <GoalIcon
+                    category={cat}
+                    size={14}
+                    color={category === cat ? '#09090b' : '#a1a1aa'}
+                  />
+                  <Text
+                    className={`ml-2 text-sm ${
+                      category === cat ? 'text-background font-medium' : 'text-foreground'
+                    }`}
+                  >
+                    {t(cat) || cat}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          <View className="mb-6">
+            <Text className="text-muted-foreground text-sm mb-2">{t('deadline')} ({t('optional')})</Text>
+            <TextInput
+              className="bg-muted border border-border p-3.5 rounded-lg text-foreground"
+              style={{ outlineStyle: 'none' } as any}
+              value={deadline}
+              onChangeText={setDeadline}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor="#52525b"
+            />
+          </View>
+
+          <Pressable
+            onPress={handleSubmit}
+            disabled={mutation.isPending}
+            className={`bg-accent p-3.5 rounded-lg items-center ${mutation.isPending ? 'opacity-50' : ''}`}
+            style={{ cursor: 'pointer' }}
+          >
+            {mutation.isPending ? (
+              <ActivityIndicator color="#09090b" />
+            ) : (
+              <Text className="text-accent-foreground font-semibold">{t('saveChanges') || 'Save Changes'}</Text>
+            )}
+          </Pressable>
+        </ScrollView>
       </SafeAreaView>
     </Modal>
   );
