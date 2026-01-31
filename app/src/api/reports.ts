@@ -54,4 +54,29 @@ export const reports = {
     }>(`/reports/forecast${buildQuery({ currency })}`),
   insights: (currency?: string) =>
     fetchAPI<InsightResponse>(`/reports/insights${buildQuery({ currency })}`),
+  healthScore: (currency?: string) =>
+    fetchAPI<{
+      score: number;
+      trend: 'improving' | 'stable' | 'declining';
+      components: {
+        budget_adherence: number;
+        savings_rate: number;
+        goal_progress: number;
+        consistency: number;
+        bill_timing: number;
+      };
+      tips: string[];
+    }>(`/reports/health-score${buildQuery({ currency })}`),
+  weeklyRecap: (currency?: string) =>
+    fetchAPI<{
+      total_spent: number;
+      total_income: number;
+      net_change: number;
+      top_categories: { category: string; amount: number }[];
+      compared_to_last: number;
+      insights: string[];
+      action_items: string[];
+      currency: string;
+      generated_at: string;
+    }>(`/reports/weekly-recap${buildQuery({ currency })}`),
 };

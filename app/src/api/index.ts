@@ -13,6 +13,7 @@ import { notes } from './notes';
 import { loans } from './loans';
 import { notifications } from './notifications';
 import { challenges } from './challenges';
+import { xp } from './xp';
 import { currencies, rates, convert } from './exchange';
 
 export const api = {
@@ -34,6 +35,7 @@ export const api = {
   loans,
   notifications,
   challenges,
+  xp,
 };
 
 export {

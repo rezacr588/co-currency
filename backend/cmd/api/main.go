@@ -261,6 +261,9 @@ func main() {
 	// Challenge service
 	var challengeService *service.ChallengeService
 
+	// XP service
+	var xpService *service.XPService
+
 	// AI Chat service
 	var aiChatService *service.AIChatService
 
@@ -319,6 +322,11 @@ func main() {
 		challengeRepo := repository.NewChallengeRepository(mainDB)
 		challengeService = service.NewChallengeService(challengeRepo, walletRepo, budgetRepo)
 		log.Info().Msg("Challenge service initialized")
+
+		// Initialize XP service
+		xpRepo := repository.NewXPRepository(mainDB.Pool())
+		xpService = service.NewXPService(xpRepo)
+		log.Info().Msg("XP service initialized")
 
 		// Initialize AI Chat service (requires AI service, wallet, goals, budgets, user, recurring, memory)
 		if aiService != nil {
@@ -461,6 +469,12 @@ func main() {
 		challengeHandler = handler.NewChallengeHandler(challengeService)
 	}
 
+	// Initialize XP handler
+	var xpHandler *handler.XPHandler
+	if xpService != nil {
+		xpHandler = handler.NewXPHandler(xpService)
+	}
+
 	// Initialize AI Chat handler
 	var aiChatHandler *handler.AIChatHandler
 	if aiChatService != nil {
@@ -491,6 +505,7 @@ func main() {
 		Loan:          loanHandler,
 		Notification:  notificationHandler,
 		Challenge:     challengeHandler,
+		XP:            xpHandler,
 	}
 
 	rateLimiter := middleware.NewRateLimiter(cfg.RateLimitPerMin)

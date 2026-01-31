@@ -228,4 +228,106 @@ var DefaultBadges = []Badge{
 		RequirementValue: 5,
 		Rarity:           "common",
 	},
+
+	// New streak badges
+	{
+		Name:             "Century Streak",
+		Description:      "100-day tracking streak",
+		Icon:             "💯",
+		Category:         "streak",
+		RequirementType:  BadgeReqStreakDays,
+		RequirementValue: 100,
+		Rarity:           "legendary",
+	},
+	{
+		Name:             "Year Tracker",
+		Description:      "365-day tracking streak",
+		Icon:             "📅",
+		Category:         "streak",
+		RequirementType:  BadgeReqStreakDays,
+		RequirementValue: 365,
+		Rarity:           "legendary",
+	},
+
+	// Transaction milestones
+	{
+		Name:             "Transaction Master",
+		Description:      "Add 500 transactions",
+		Icon:             "📚",
+		Category:         "milestone",
+		RequirementType:  BadgeReqTransactionCount,
+		RequirementValue: 500,
+		Rarity:           "epic",
+	},
+	{
+		Name:             "Transaction Legend",
+		Description:      "Add 1000 transactions",
+		Icon:             "🏛️",
+		Category:         "milestone",
+		RequirementType:  BadgeReqTransactionCount,
+		RequirementValue: 1000,
+		Rarity:           "legendary",
+	},
+
+	// More savings badges
+	{
+		Name:             "Emergency Fund Ready",
+		Description:      "Save $5,000 (typical emergency fund)",
+		Icon:             "🛡️",
+		Category:         "savings",
+		RequirementType:  BadgeReqTotalSaved,
+		RequirementValue: 5000,
+		Rarity:           "rare",
+	},
+
+	// Budget mastery
+	{
+		Name:             "Budget Champion",
+		Description:      "Stay under budget for 6 months",
+		Icon:             "🎖️",
+		Category:         "budgeting",
+		RequirementType:  BadgeReqMonthsUnderBudget,
+		RequirementValue: 6,
+		Rarity:           "epic",
+	},
+	{
+		Name:             "Budget Legend",
+		Description:      "Stay under budget for 12 months",
+		Icon:             "🏆",
+		Category:         "budgeting",
+		RequirementType:  BadgeReqMonthsUnderBudget,
+		RequirementValue: 12,
+		Rarity:           "legendary",
+	},
+
+	// Multiple goals
+	{
+		Name:             "Goal Getter",
+		Description:      "Create 5 savings goals",
+		Icon:             "🎯",
+		Category:         "milestone",
+		RequirementType:  BadgeReqGoalCount,
+		RequirementValue: 5,
+		Rarity:           "rare",
+	},
+	{
+		Name:             "Goal Master",
+		Description:      "Create 10 savings goals",
+		Icon:             "🌟",
+		Category:         "milestone",
+		RequirementType:  BadgeReqGoalCount,
+		RequirementValue: 10,
+		Rarity:           "epic",
+	},
+
+	// Multi-currency
+	{
+		Name:             "World Traveler",
+		Description:      "Use 10 different currencies",
+		Icon:             "✈️",
+		Category:         "special",
+		RequirementType:  BadgeReqCurrencyCount,
+		RequirementValue: 10,
+		Rarity:           "epic",
+	},
 }

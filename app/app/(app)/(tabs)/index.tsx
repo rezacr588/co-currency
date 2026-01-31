@@ -11,6 +11,8 @@ import { StyledCategoryIcon } from '../../../src/constants/icons';
 import { Skeleton } from '../../../src/components/ui/Skeleton';
 import { CurrencyConverter } from '../../../src/components/features/CurrencyConverter';
 import { WeeklyRecapCard } from '../../../src/components/features/WeeklyRecap';
+import { DailyTipCard } from '../../../src/components/features/DailyTip';
+import { HealthScoreCard } from '../../../src/components/features/HealthScore';
 import type { Goal, Budget } from '../../../src/types/goal';
 
 export default function DashboardScreen() {
@@ -293,6 +295,16 @@ export default function DashboardScreen() {
             </Pressable>
           </Link>
         )}
+
+        {/* Financial Health Score */}
+        <View className="mb-6">
+          <HealthScoreCard compact />
+        </View>
+
+        {/* Daily Tip Card */}
+        <View className="mb-6">
+          <DailyTipCard />
+        </View>
 
         {/* Weekly Recap Card */}
         {aiStatus?.configured && (

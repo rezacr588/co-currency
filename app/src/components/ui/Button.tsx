@@ -13,6 +13,8 @@ interface ButtonProps extends PressableProps {
   rightIcon?: React.ReactNode;
   children: React.ReactNode;
   hapticFeedback?: boolean;
+  // Accessibility
+  accessibilityHint?: string;
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
@@ -58,6 +60,8 @@ export const Button = forwardRef<View, ButtonProps>(
       className = '',
       hapticFeedback = true,
       onPress,
+      accessibilityHint,
+      accessibilityLabel,
       ...props
     },
     ref
@@ -74,11 +78,23 @@ export const Button = forwardRef<View, ButtonProps>(
       [hapticFeedback, onPress]
     );
 
+    // Generate accessibility label from children if not provided
+    const buttonLabel =
+      accessibilityLabel ||
+      (typeof children === 'string' ? children : undefined);
+
     return (
       <Pressable
         ref={ref}
         disabled={isDisabled}
         onPress={handlePress}
+        accessibilityRole="button"
+        accessibilityLabel={buttonLabel}
+        accessibilityHint={accessibilityHint}
+        accessibilityState={{
+          disabled: isDisabled,
+          busy: isLoading,
+        }}
         className={`
           flex-row items-center justify-center rounded-xl
           ${variantStyles[variant]}

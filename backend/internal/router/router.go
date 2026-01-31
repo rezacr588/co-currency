@@ -31,6 +31,7 @@ type Handlers struct {
 	Loan          *handler.LoanHandler
 	Notification  *handler.NotificationHandler
 	Challenge     *handler.ChallengeHandler
+	XP            *handler.XPHandler
 }
 
 // New creates a new router with all routes configured
@@ -186,6 +187,8 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 				r.Get("/networth", h.Reports.GetNetWorthReport)
 				r.Get("/forecast", h.Reports.GetForecast)
 				r.Get("/insights", h.Reports.GetInsights)
+				r.Get("/health-score", h.Reports.GetHealthScore)
+				r.Get("/weekly-recap", h.Reports.GetWeeklyRecap)
 			})
 		}
 
@@ -283,6 +286,19 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 					r.Post("/check-progress", h.Challenge.CheckProgress)
 					r.Delete("/{id}/abandon", h.Challenge.AbandonChallenge)
 				})
+			})
+		}
+
+		// XP and gamification routes (protected)
+		if h.XP != nil {
+			r.Route("/xp", func(r chi.Router) {
+				r.Use(authMiddleware.Middleware)
+				r.Get("/stats", h.XP.GetStats)
+				r.Get("/history", h.XP.GetHistory)
+				r.Get("/level", h.XP.GetLevelInfo)
+				r.Post("/daily-reward", h.XP.ClaimDailyReward)
+				r.Get("/daily-reward/status", h.XP.GetDailyRewardStatus)
+				r.Get("/leaderboard", h.XP.GetLeaderboard)
 			})
 		}
 	})

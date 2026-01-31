@@ -208,3 +208,45 @@ func (h *ReportsHandler) GetInsights(w http.ResponseWriter, r *http.Request) {
 
 	httputil.Success(w, insights)
 }
+
+// GetHealthScore handles GET /api/v1/reports/health-score
+func (h *ReportsHandler) GetHealthScore(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	currency := r.URL.Query().Get("currency")
+	if currency == "" {
+		currency = "USD"
+	}
+
+	healthScore, err := h.reportsService.GetHealthScore(r.Context(), userID, currency)
+	if err != nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to calculate health score")
+		return
+	}
+
+	httputil.Success(w, healthScore)
+}
+
+// GetWeeklyRecap handles GET /api/v1/reports/weekly-recap
+func (h *ReportsHandler) GetWeeklyRecap(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	currency := r.URL.Query().Get("currency")
+	if currency == "" {
+		currency = "USD"
+	}
+
+	recap, err := h.reportsService.GetWeeklyRecap(r.Context(), userID, currency)
+	if err != nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate weekly recap")
+		return
+	}
+
+	httputil.Success(w, recap)
+}
