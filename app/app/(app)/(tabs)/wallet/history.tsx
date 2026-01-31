@@ -28,6 +28,8 @@ import {
   TrendingUp,
   TrendingDown,
   Calendar,
+  StickyNote,
+  Plus,
 } from 'lucide-react-native';
 import { api, getAuthToken, API_BASE } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
@@ -35,8 +37,11 @@ import { useTheme } from '../../../../src/context/ThemeContext';
 import { formatCompactCurrency, formatDate, getCurrencyDisplay } from '../../../../src/utils/format';
 import { StyledCategoryIcon, CATEGORY_ICONS, CategoryIcon } from '../../../../src/constants/icons';
 import { SkeletonTransaction, SkeletonList } from '../../../../src/components/ui/Skeleton';
+import { SwipeableRow, type SwipeAction } from '../../../../src/components/ui';
 import { COMMON_CURRENCIES } from '../../../../src/constants/currencies';
 import type { Transaction, TransactionFilter, UpdateTransactionRequest } from '../../../../src/types/wallet';
+import type { Note, CreateNoteRequest } from '../../../../src/types/note';
+import { haptics } from '../../../../src/utils/haptics';
 
 const CATEGORIES = Object.keys(CATEGORY_ICONS);
 const CURRENCIES = [...COMMON_CURRENCIES];
@@ -74,6 +79,12 @@ export default function TransactionHistoryScreen() {
   // Export state
   const [isExporting, setIsExporting] = useState(false);
 
+  // Notes state
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [selectedTransactionForNotes, setSelectedTransactionForNotes] = useState<Transaction | null>(null);
+  const [newNoteTitle, setNewNoteTitle] = useState('');
+  const [newNoteContent, setNewNoteContent] = useState('');
+
   // Build filter object
   const filter: TransactionFilter = useMemo(() => {
     const f: TransactionFilter = {};
@@ -96,6 +107,80 @@ export default function TransactionHistoryScreen() {
     await refetch();
     setRefreshing(false);
   }, [refetch]);
+
+  // Fetch notes for selected transaction
+  const { data: notesData, isPending: isLoadingNotes, refetch: refetchNotes } = useQuery({
+    queryKey: ['notes', 'transaction', selectedTransactionForNotes?.id],
+    queryFn: () => api.notes.getByTransaction(selectedTransactionForNotes!.id),
+    enabled: !!selectedTransactionForNotes,
+  });
+
+  const transactionNotes = notesData?.notes || [];
+
+  // Create note mutation
+  const createNoteMutation = useMutation({
+    mutationFn: (data: CreateNoteRequest) => api.notes.create(data),
+    onSuccess: () => {
+      haptics.success();
+      queryClient.invalidateQueries({ queryKey: ['notes', 'transaction', selectedTransactionForNotes?.id] });
+      setNewNoteTitle('');
+      setNewNoteContent('');
+    },
+    onError: (err) => {
+      haptics.error();
+      Alert.alert(
+        t('error') || 'Error',
+        err instanceof Error ? err.message : t('failedToCreateNote') || 'Failed to create note'
+      );
+    },
+  });
+
+  // Delete note mutation
+  const deleteNoteMutation = useMutation({
+    mutationFn: (noteId: string) => api.notes.delete(noteId),
+    onSuccess: () => {
+      haptics.success();
+      queryClient.invalidateQueries({ queryKey: ['notes', 'transaction', selectedTransactionForNotes?.id] });
+    },
+  });
+
+  const handleOpenNotes = useCallback((tx: Transaction) => {
+    haptics.light();
+    setSelectedTransactionForNotes(tx);
+    setShowNotesModal(true);
+  }, []);
+
+  const handleCloseNotesModal = useCallback(() => {
+    setShowNotesModal(false);
+    setSelectedTransactionForNotes(null);
+    setNewNoteTitle('');
+    setNewNoteContent('');
+  }, []);
+
+  const handleAddNote = useCallback(() => {
+    if (!selectedTransactionForNotes || !newNoteTitle.trim()) return;
+
+    createNoteMutation.mutate({
+      title: newNoteTitle.trim(),
+      content: newNoteContent.trim(),
+      transaction_id: selectedTransactionForNotes.id,
+    });
+  }, [selectedTransactionForNotes, newNoteTitle, newNoteContent, createNoteMutation]);
+
+  const handleDeleteNote = useCallback((noteId: string) => {
+    Alert.alert(
+      t('deleteNote') || 'Delete Note',
+      t('deleteNoteConfirm') || 'Are you sure you want to delete this note?',
+      [
+        { text: t('cancel') || 'Cancel', style: 'cancel' },
+        {
+          text: t('delete') || 'Delete',
+          style: 'destructive',
+          onPress: () => deleteNoteMutation.mutate(noteId),
+        },
+      ]
+    );
+  }, [deleteNoteMutation, t]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.wallet.deleteTransaction(id),
@@ -339,62 +424,111 @@ export default function TransactionHistoryScreen() {
           }
 
           const tx = item as Transaction;
+          const isConversion = tx.type === 'convert' || tx.type === 'convert_from' || tx.type === 'convert_to';
+
+          // Swipe actions
+          const rightActions: SwipeAction[] = [
+            {
+              icon: 'delete',
+              color: '#ffffff',
+              backgroundColor: '#ef4444',
+              onPress: () => handleDelete(tx),
+            },
+          ];
+
+          // Add edit action for non-conversions
+          if (!isConversion) {
+            rightActions.unshift({
+              icon: 'edit',
+              color: '#ffffff',
+              backgroundColor: '#3b82f6',
+              onPress: () => handleEdit(tx),
+            });
+          }
+
+          const leftActions: SwipeAction[] = [
+            {
+              icon: 'note',
+              color: '#000000',
+              backgroundColor: 'rgb(212, 175, 55)',
+              onPress: () => handleOpenNotes(tx),
+            },
+          ];
+
           return (
-            <View
-              className="bg-card border border-border p-4 rounded-xl flex-row items-center"
-              style={{
-                width: isDesktop ? '48%' : '100%',
-                minWidth: 300,
-              }}
+            <SwipeableRow
+              rightActions={rightActions}
+              leftActions={leftActions}
+              enabled={!isDesktop}
             >
-              <View className="mr-3">
-                <StyledCategoryIcon
-                  category={tx.category || 'other'}
-                  size={20}
-                  backgroundOpacity={0.15}
-                  borderRadius={10}
-                  padding={10}
-                />
-              </View>
-              <View className="flex-1">
-                <Text className="font-semibold text-foreground" numberOfLines={1}>
-                  {tx.description || tx.category || 'Transaction'}
-                </Text>
-                <Text className="text-muted-foreground text-sm">
-                  {formatDate(tx.created_at)} - {tx.category || t('uncategorized')}
-                </Text>
-              </View>
-              <Text
-                className={`text-lg font-semibold ${
-                  tx.type === 'credit' ? 'text-success' : 'text-danger'
-                }`}
+              <View
+                className="bg-card border border-border p-4 rounded-xl flex-row items-center"
+                style={{
+                  width: isDesktop ? '48%' : '100%',
+                  minWidth: 300,
+                }}
               >
-                {tx.type === 'credit' ? '+' : '-'}
-                {formatCompactCurrency(tx.amount, tx.currency)}
-              </Text>
-              {/* Edit Button */}
-              {tx.type !== 'convert' &&
-                tx.type !== 'convert_from' &&
-                tx.type !== 'convert_to' && (
-                  <Pressable
-                    onPress={() => handleEdit(tx)}
-                    className="ml-2 p-2"
-                    hitSlop={10}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <Pencil size={18} color="#71717a" />
-                  </Pressable>
+                <View className="mr-3">
+                  <StyledCategoryIcon
+                    category={tx.category || 'other'}
+                    size={20}
+                    backgroundOpacity={0.15}
+                    borderRadius={10}
+                    padding={10}
+                  />
+                </View>
+                <View className="flex-1">
+                  <Text className="font-semibold text-foreground" numberOfLines={1}>
+                    {tx.description || tx.category || 'Transaction'}
+                  </Text>
+                  <Text className="text-muted-foreground text-sm">
+                    {formatDate(tx.created_at)} - {tx.category || t('uncategorized')}
+                  </Text>
+                </View>
+                <Text
+                  className={`text-lg font-semibold ${
+                    tx.type === 'credit' ? 'text-success' : 'text-danger'
+                  }`}
+                >
+                  {tx.type === 'credit' ? '+' : '-'}
+                  {formatCompactCurrency(tx.amount, tx.currency)}
+                </Text>
+                {/* Desktop: Show buttons inline */}
+                {isDesktop && (
+                  <>
+                    {/* Notes Button */}
+                    <Pressable
+                      onPress={() => handleOpenNotes(tx)}
+                      className="ml-2 p-2"
+                      hitSlop={10}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <StickyNote size={18} color="rgb(212, 175, 55)" />
+                    </Pressable>
+                    {/* Edit Button */}
+                    {!isConversion && (
+                      <Pressable
+                        onPress={() => handleEdit(tx)}
+                        className="ml-1 p-2"
+                        hitSlop={10}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <Pencil size={18} color="#71717a" />
+                      </Pressable>
+                    )}
+                    <Pressable
+                      onPress={() => handleDelete(tx)}
+                      className="ml-1 p-2"
+                      hitSlop={10}
+                      style={{ cursor: 'pointer' }}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 size={18} color="#71717a" />
+                    </Pressable>
+                  </>
                 )}
-              <Pressable
-                onPress={() => handleDelete(tx)}
-                className="ml-1 p-2"
-                hitSlop={10}
-                style={{ cursor: 'pointer' }}
-                disabled={deleteMutation.isPending}
-              >
-                <Trash2 size={18} color="#71717a" />
-              </Pressable>
-            </View>
+              </View>
+            </SwipeableRow>
           );
         }}
         contentContainerStyle={{
@@ -808,6 +942,137 @@ export default function TransactionHistoryScreen() {
                 )}
               </Pressable>
             </ScrollView>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Notes Modal */}
+      <Modal
+        visible={showNotesModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={handleCloseNotesModal}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="flex-1"
+        >
+          <Pressable
+            className="flex-1 bg-black/50 justify-end"
+            onPress={handleCloseNotesModal}
+          >
+            <Pressable
+              className="bg-card rounded-t-3xl p-6"
+              style={{ maxHeight: '85%' }}
+              onPress={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <View className="flex-row items-center justify-between mb-4">
+                <View className="flex-1">
+                  <Text className="text-xl font-bold text-foreground">
+                    {t('transactionNotes') || 'Transaction Notes'}
+                  </Text>
+                  {selectedTransactionForNotes && (
+                    <Text className="text-muted-foreground text-sm mt-1" numberOfLines={1}>
+                      {selectedTransactionForNotes.description || selectedTransactionForNotes.category || 'Transaction'}
+                    </Text>
+                  )}
+                </View>
+                <Pressable onPress={handleCloseNotesModal} style={{ cursor: 'pointer' }}>
+                  <X size={24} color="rgb(148, 163, 184)" />
+                </Pressable>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+                {/* Existing Notes */}
+                {isLoadingNotes ? (
+                  <View className="items-center py-4">
+                    <ActivityIndicator color="rgb(212, 175, 55)" />
+                  </View>
+                ) : transactionNotes.length > 0 ? (
+                  <View className="mb-4">
+                    <Text className="text-muted-foreground text-sm mb-2">
+                      {t('existingNotes') || 'Existing Notes'} ({transactionNotes.length})
+                    </Text>
+                    {transactionNotes.map((note: Note) => (
+                      <View
+                        key={note.id}
+                        className="bg-muted p-3 rounded-lg mb-2 flex-row items-start"
+                      >
+                        <View className="flex-1">
+                          <Text className="text-foreground font-medium">{note.title}</Text>
+                          {note.content && (
+                            <Text className="text-muted-foreground text-sm mt-1">{note.content}</Text>
+                          )}
+                          <Text className="text-muted-foreground/60 text-xs mt-2">
+                            {formatDate(note.created_at)}
+                          </Text>
+                        </View>
+                        <Pressable
+                          onPress={() => handleDeleteNote(note.id)}
+                          className="p-2"
+                          hitSlop={10}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <Trash2 size={16} color="#ef4444" />
+                        </Pressable>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <View className="bg-muted/50 p-4 rounded-lg mb-4 items-center">
+                    <StickyNote size={32} color="rgb(148, 163, 184)" />
+                    <Text className="text-muted-foreground text-center mt-2">
+                      {t('noNotesForTransaction') || 'No notes for this transaction yet'}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Add New Note */}
+                <View className="border-t border-border pt-4">
+                  <Text className="text-muted-foreground text-sm mb-2">
+                    {t('addNewNote') || 'Add New Note'}
+                  </Text>
+                  <TextInput
+                    value={newNoteTitle}
+                    onChangeText={setNewNoteTitle}
+                    placeholder={t('noteTitle') || 'Note title...'}
+                    placeholderTextColor="#71717a"
+                    className="bg-muted border border-border p-3 rounded-lg text-foreground mb-2"
+                    style={{ outlineStyle: 'none' } as any}
+                  />
+                  <TextInput
+                    value={newNoteContent}
+                    onChangeText={setNewNoteContent}
+                    placeholder={t('noteContent') || 'Note content (optional)...'}
+                    placeholderTextColor="#71717a"
+                    className="bg-muted border border-border p-3 rounded-lg text-foreground mb-3"
+                    style={{ outlineStyle: 'none', minHeight: 80 } as any}
+                    multiline
+                    textAlignVertical="top"
+                  />
+                  <Pressable
+                    onPress={handleAddNote}
+                    disabled={createNoteMutation.isPending || !newNoteTitle.trim()}
+                    style={{ cursor: 'pointer' }}
+                    className={`bg-accent p-3 rounded-lg flex-row items-center justify-center ${
+                      createNoteMutation.isPending || !newNoteTitle.trim() ? 'opacity-50' : ''
+                    }`}
+                  >
+                    {createNoteMutation.isPending ? (
+                      <ActivityIndicator color="#09090b" size="small" />
+                    ) : (
+                      <>
+                        <Plus size={18} color="#09090b" />
+                        <Text className="text-accent-foreground font-semibold ml-2">
+                          {t('addNote') || 'Add Note'}
+                        </Text>
+                      </>
+                    )}
+                  </Pressable>
+                </View>
+              </ScrollView>
             </Pressable>
           </Pressable>
         </KeyboardAvoidingView>

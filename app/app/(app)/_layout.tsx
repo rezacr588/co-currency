@@ -27,6 +27,10 @@ export default function AppLayout() {
       <Stack.Screen name="subscriptions" />
       <Stack.Screen name="badges" />
       <Stack.Screen name="historical" />
+      <Stack.Screen name="notes" />
+      <Stack.Screen name="loans" />
+      <Stack.Screen name="notification-settings" />
+      <Stack.Screen name="challenges" />
       <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal' }} />
     </Stack>
   );

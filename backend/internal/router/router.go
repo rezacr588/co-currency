@@ -28,6 +28,9 @@ type Handlers struct {
 	Subscription  *handler.SubscriptionHandler
 	Badge         *handler.BadgeHandler
 	Note          *handler.NoteHandler
+	Loan          *handler.LoanHandler
+	Notification  *handler.NotificationHandler
+	Challenge     *handler.ChallengeHandler
 }
 
 // New creates a new router with all routes configured
@@ -225,10 +228,61 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 				r.Get("/", h.Note.GetNotes)
 				r.Post("/", h.Note.CreateNote)
 				r.Get("/colors", h.Note.GetColors)
+				r.Get("/transaction/{transactionId}", h.Note.GetNotesByTransaction)
 				r.Get("/{id}", h.Note.GetNote)
 				r.Put("/{id}", h.Note.UpdateNote)
 				r.Delete("/{id}", h.Note.DeleteNote)
 				r.Post("/{id}/pin", h.Note.TogglePin)
+			})
+		}
+
+		// Loans/Debts routes (protected)
+		if h.Loan != nil {
+			r.Route("/loans", func(r chi.Router) {
+				r.Use(authMiddleware.Middleware)
+				r.Get("/", h.Loan.GetAllLoans)
+				r.Post("/", h.Loan.CreateLoan)
+				r.Get("/summary", h.Loan.GetSummary)
+				r.Get("/upcoming", h.Loan.GetUpcoming)
+				r.Get("/{id}", h.Loan.GetLoan)
+				r.Put("/{id}", h.Loan.UpdateLoan)
+				r.Delete("/{id}", h.Loan.DeleteLoan)
+				r.Post("/{id}/payment", h.Loan.MakePayment)
+				r.Get("/{id}/payments", h.Loan.GetPayments)
+			})
+		}
+
+		// Notifications routes (protected)
+		if h.Notification != nil {
+			r.Route("/notifications", func(r chi.Router) {
+				r.Use(authMiddleware.Middleware)
+				r.Post("/register", h.Notification.RegisterToken)
+				r.Post("/unregister", h.Notification.UnregisterToken)
+				r.Get("/preferences", h.Notification.GetPreferences)
+				r.Put("/preferences", h.Notification.UpdatePreferences)
+				r.Post("/check-budgets", h.Notification.CheckBudgets)
+				r.Post("/check-loans", h.Notification.CheckLoans)
+			})
+		}
+
+		// Challenges routes (gamification)
+		if h.Challenge != nil {
+			r.Route("/challenges", func(r chi.Router) {
+				// Public: list all challenges
+				r.Get("/", h.Challenge.GetAllChallenges)
+				r.Get("/featured", h.Challenge.GetFeaturedChallenges)
+
+				// Protected: user-specific challenge routes
+				r.Group(func(r chi.Router) {
+					r.Use(authMiddleware.Middleware)
+					r.Get("/browse", h.Challenge.GetChallengesWithStatus)
+					r.Post("/join", h.Challenge.JoinChallenge)
+					r.Get("/active", h.Challenge.GetActiveChallenges)
+					r.Get("/history", h.Challenge.GetChallengeHistory)
+					r.Get("/stats", h.Challenge.GetChallengeStats)
+					r.Post("/check-progress", h.Challenge.CheckProgress)
+					r.Delete("/{id}/abandon", h.Challenge.AbandonChallenge)
+				})
 			})
 		}
 	})

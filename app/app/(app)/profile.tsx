@@ -27,6 +27,7 @@ import {
   CreditCard,
   Repeat,
   Trophy,
+  Target,
   History,
   Info,
   Pencil,
@@ -35,11 +36,17 @@ import {
   Lock,
   MessageCircle,
   Image,
+  StickyNote,
+  Fingerprint,
+  Eye,
+  EyeOff,
 } from 'lucide-react-native';
 import { useAuth } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useLanguage } from '../../src/context/LanguageContext';
+import { useSettings } from '../../src/context/SettingsContext';
 import { api } from '../../src/api';
+import { haptics } from '../../src/utils/haptics';
 
 const LANGUAGES = [
   { code: 'en', name: 'English', flag: '' },
@@ -52,6 +59,7 @@ export default function ProfileScreen() {
   const { user, logout, isLoading, refreshProfile } = useAuth();
   const { toggleTheme, isDark } = useTheme();
   const { t, language, setLanguage } = useLanguage();
+  const { settings, updateSettings, isBiometricAvailable, biometricType } = useSettings();
   const router = useRouter();
   const { width } = useWindowDimensions();
 
@@ -285,9 +293,19 @@ export default function ProfileScreen() {
             <View className="mt-4">
               <SettingsSection title={t('toolsAndFeatures') || 'Tools & Features'}>
                 <SettingsItem
+                  icon={<StickyNote size={20} color="rgb(212, 175, 55)" />}
+                  label={t('notes') || 'Notes'}
+                  onPress={() => router.push('/notes')}
+                />
+                <SettingsItem
                   icon={<Trophy size={20} color="rgb(212, 175, 55)" />}
                   label={t('badges') || 'Badges'}
                   onPress={() => router.push('/badges')}
+                />
+                <SettingsItem
+                  icon={<Target size={20} color="rgb(212, 175, 55)" />}
+                  label={t('challenges') || 'Challenges'}
+                  onPress={() => router.push('/challenges')}
                 />
                 <SettingsItem
                   icon={<History size={20} color="rgb(212, 175, 55)" />}
@@ -302,21 +320,93 @@ export default function ProfileScreen() {
               </SettingsSection>
             </View>
 
-            {/* Account Settings */}
+            {/* Security & Privacy */}
             <View className="mt-4">
-              <SettingsSection title={t('account')}>
+              <SettingsSection title={t('securityAndPrivacy') || 'Security & Privacy'}>
+                {/* Biometric Lock */}
+                {isBiometricAvailable && (
+                  <Pressable
+                    onPress={() => {
+                      haptics.light();
+                      updateSettings({ requireBiometricOnOpen: !settings.requireBiometricOnOpen });
+                    }}
+                    style={{ cursor: 'pointer' }}
+                    className="flex-row items-center justify-between p-4 active:bg-secondary/50"
+                  >
+                    <View className="flex-row items-center flex-1 mr-4">
+                      <Fingerprint size={20} color="rgb(212, 175, 55)" />
+                      <View className="ml-3 flex-1">
+                        <Text className="text-foreground">{biometricType || t('biometricLock') || 'Biometric Lock'}</Text>
+                        <Text className="text-muted-foreground text-xs mt-0.5">
+                          {t('requireAuthOnOpen') || 'Require authentication when opening app'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View
+                      className={`w-12 h-7 rounded-full justify-center ${
+                        settings.requireBiometricOnOpen ? 'bg-primary' : 'bg-muted'
+                      }`}
+                    >
+                      <View
+                        className={`w-5 h-5 bg-white rounded-full ${
+                          settings.requireBiometricOnOpen ? 'ml-6' : 'ml-1'
+                        }`}
+                      />
+                    </View>
+                  </Pressable>
+                )}
+
+                {/* Hide Balances */}
+                <Pressable
+                  onPress={() => {
+                    haptics.light();
+                    updateSettings({ hideBalances: !settings.hideBalances });
+                  }}
+                  style={{ cursor: 'pointer' }}
+                  className="flex-row items-center justify-between p-4 active:bg-secondary/50"
+                >
+                  <View className="flex-row items-center flex-1 mr-4">
+                    {settings.hideBalances ? (
+                      <EyeOff size={20} color="rgb(212, 175, 55)" />
+                    ) : (
+                      <Eye size={20} color="rgb(212, 175, 55)" />
+                    )}
+                    <View className="ml-3 flex-1">
+                      <Text className="text-foreground">{t('hideBalances') || 'Hide Balances'}</Text>
+                      <Text className="text-muted-foreground text-xs mt-0.5">
+                        {t('hideBalancesDesc') || 'Hide amounts on dashboard for privacy'}
+                      </Text>
+                    </View>
+                  </View>
+                  <View
+                    className={`w-12 h-7 rounded-full justify-center ${
+                      settings.hideBalances ? 'bg-primary' : 'bg-muted'
+                    }`}
+                  >
+                    <View
+                      className={`w-5 h-5 bg-white rounded-full ${
+                        settings.hideBalances ? 'ml-6' : 'ml-1'
+                      }`}
+                    />
+                  </View>
+                </Pressable>
+
+                {/* Change Password */}
                 <SettingsItem
                   icon={<Lock size={20} color="rgb(212, 175, 55)" />}
                   label={t('changePassword')}
                   onPress={() => router.push('/change-password')}
                 />
+              </SettingsSection>
+            </View>
+
+            {/* Account Settings */}
+            <View className="mt-4">
+              <SettingsSection title={t('account')}>
                 <SettingsItem
-                  icon={<Shield size={20} color="rgb(148, 163, 184)" />}
-                  label={t('security')}
-                />
-                <SettingsItem
-                  icon={<Bell size={20} color="rgb(148, 163, 184)" />}
+                  icon={<Bell size={20} color="rgb(212, 175, 55)" />}
                   label={t('notifications')}
+                  onPress={() => router.push('/notification-settings')}
                 />
               </SettingsSection>
             </View>

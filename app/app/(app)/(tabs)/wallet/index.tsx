@@ -3,7 +3,7 @@ import { Link } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, ArrowLeftRight, Bot, History, MessageCircle, Target, PiggyBank, RefreshCw, CreditCard, BarChart3, Award } from 'lucide-react-native';
+import { Plus, ArrowLeftRight, Bot, History, MessageCircle, Target, PiggyBank, RefreshCw, CreditCard, BarChart3, Award, HandCoins } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
 import { formatCompactCurrency, getCurrencyDisplay } from '../../../../src/utils/format';
@@ -49,6 +49,7 @@ export default function WalletScreen() {
   const featureActions = [
     { label: t('goals') || 'Goals', href: '/(app)/(tabs)/goals', icon: Target },
     { label: t('budgets') || 'Budgets', href: '/(app)/budgets', icon: PiggyBank },
+    { label: t('loans') || 'Loans', href: '/(app)/loans', icon: HandCoins },
     { label: t('recurring') || 'Recurring', href: '/(app)/recurring', icon: RefreshCw },
     { label: t('subscriptions') || 'Subscriptions', href: '/(app)/subscriptions', icon: CreditCard },
     { label: t('reports') || 'Reports', href: '/(app)/(tabs)/reports', icon: BarChart3 },

@@ -14,6 +14,7 @@ import { api } from '../../api';
 import { getCurrencyDisplay } from '../../utils/format';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ICON_SIZES, ICON_COLOR_MUTED } from '../../constants/icons';
+import { haptics } from '../../utils/haptics';
 
 interface CurrencyPickerProps {
   visible: boolean;
@@ -45,6 +46,7 @@ export function CurrencyPicker({
   );
 
   const handleSelect = (code: string) => {
+    haptics.selection();
     onSelect(code);
     onClose();
   };

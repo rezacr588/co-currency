@@ -202,3 +202,28 @@ func (h *NoteHandler) GetColors(w http.ResponseWriter, r *http.Request) {
 		"colors": model.NoteColors,
 	})
 }
+
+// GetNotesByTransaction handles GET /api/v1/notes/transaction/{transactionId}
+func (h *NoteHandler) GetNotesByTransaction(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	transactionIDStr := chi.URLParam(r, "transactionId")
+	transactionID, err := uuid.Parse(transactionIDStr)
+	if err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "invalid transaction ID")
+		return
+	}
+
+	notes, err := h.noteService.GetNotesByTransaction(r.Context(), userID, transactionID)
+	if err != nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get notes")
+		return
+	}
+
+	httputil.Success(w, map[string]interface{}{
+		"notes": notes,
+	})
+}

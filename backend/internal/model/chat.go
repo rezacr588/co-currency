@@ -73,9 +73,25 @@ type FinancialContext struct {
 	SpendingTrend      string             `json:"spending_trend"` // "increasing", "decreasing", "stable"
 	LastMonthExpenses  float64            `json:"last_month_expenses"`
 
+	// Loans and Debts
+	ActiveLoans        []LoanSummaryForAI `json:"active_loans"`
+	TotalDebt          float64            `json:"total_debt"`         // Money user owes
+	TotalReceivable    float64            `json:"total_receivable"`   // Money owed to user
+	NetDebtPosition    float64            `json:"net_debt_position"`  // Positive = net debtor
+
 	// Context
 	TodayDate          string `json:"today_date"`
 	DaysUntilMonthEnd  int    `json:"days_until_month_end"`
+}
+
+// LoanSummaryForAI provides loan context for AI
+type LoanSummaryForAI struct {
+	Name            string  `json:"name"`
+	Type            string  `json:"type"`  // "borrowed" or "lent"
+	RemainingAmount float64 `json:"remaining_amount"`
+	Currency        string  `json:"currency"`
+	Counterparty    string  `json:"counterparty,omitempty"`
+	DueDate         string  `json:"due_date,omitempty"`
 }
 
 // CurrencyBalance for multi-currency support

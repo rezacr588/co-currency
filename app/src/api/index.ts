@@ -9,6 +9,10 @@ import { recurring } from './recurring';
 import { reports } from './reports';
 import { subscriptions } from './subscriptions';
 import { badges } from './badges';
+import { notes } from './notes';
+import { loans } from './loans';
+import { notifications } from './notifications';
+import { challenges } from './challenges';
 import { currencies, rates, convert } from './exchange';
 
 export const api = {
@@ -26,6 +30,10 @@ export const api = {
   reports,
   subscriptions,
   badges,
+  notes,
+  loans,
+  notifications,
+  challenges,
 };
 
 export {

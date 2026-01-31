@@ -16,6 +16,8 @@ import { Plus, Target, CheckCircle, X, DollarSign, Calendar } from 'lucide-react
 import { api } from '../../../src/api';
 import { useLanguage } from '../../../src/context/LanguageContext';
 import { formatCompactCurrency, formatDate } from '../../../src/utils/format';
+import { trackPositiveAction, maybeRequestReview } from '../../../src/utils/review';
+import { haptics } from '../../../src/utils/haptics';
 import { GoalIcon } from '../../../src/constants/icons';
 import { CurrencyPicker } from '../../../src/components/ui/CurrencyPicker';
 import { SkeletonGoalCard, SkeletonList } from '../../../src/components/ui/Skeleton';
@@ -189,13 +191,22 @@ function GoalCard({ goal }: { goal: Goal }) {
   const contributeMutation = useMutation({
     mutationFn: (contributionAmount: number) =>
       api.goals.contribute(goal.id, { amount: contributionAmount }),
-    onSuccess: () => {
+    onSuccess: async (data) => {
+      haptics.success();
       queryClient.invalidateQueries({ queryKey: ['goals'] });
       setShowContribute(false);
       setAmount('');
       setContributeError('');
+
+      // Track positive action and maybe request review if goal completed
+      await trackPositiveAction();
+      if (data.is_completed) {
+        // Goal was just completed - great time to ask for review
+        await maybeRequestReview();
+      }
     },
     onError: (error) => {
+      haptics.error();
       setContributeError(error instanceof Error ? error.message : t('contributionFailed') || 'Failed to contribute');
     },
   });

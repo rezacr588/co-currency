@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   useFonts,
   Inter_400Regular,
@@ -15,9 +16,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
 import { LanguageProvider } from '../src/context/LanguageContext';
 import { AuthProvider } from '../src/context/AuthContext';
+import { SettingsProvider } from '../src/context/SettingsContext';
 import { ToastProvider } from '../src/components/ui/Toast';
 import { OfflineBanner } from '../src/components/ui/OfflineBanner';
 import { AnimatedSplash } from '../src/components/ui/AnimatedSplash';
+import { BiometricLock } from '../src/components/ui/BiometricLock';
 import { useAppUpdates } from '../src/hooks/useAppUpdates';
 import { useAndroidNavigationBar } from '../src/hooks/useAndroidNavigationBar';
 
@@ -86,18 +89,23 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <LanguageProvider>
-            <AuthProvider>
-              <ToastProvider>
-                <RootLayoutNav />
-              </ToastProvider>
-            </AuthProvider>
-          </LanguageProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <LanguageProvider>
+              <SettingsProvider>
+                <AuthProvider>
+                  <ToastProvider>
+                    <RootLayoutNav />
+                    <BiometricLock />
+                  </ToastProvider>
+                </AuthProvider>
+              </SettingsProvider>
+            </LanguageProvider>
+          </ThemeProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

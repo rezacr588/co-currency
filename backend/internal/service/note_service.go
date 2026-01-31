@@ -12,13 +12,15 @@ import (
 
 // NoteService handles business logic for notes
 type NoteService struct {
-	noteRepo *repository.NoteRepository
+	noteRepo   *repository.NoteRepository
+	walletRepo *repository.WalletRepository
 }
 
 // NewNoteService creates a new NoteService
-func NewNoteService(noteRepo *repository.NoteRepository) *NoteService {
+func NewNoteService(noteRepo *repository.NoteRepository, walletRepo *repository.WalletRepository) *NoteService {
 	return &NoteService{
-		noteRepo: noteRepo,
+		noteRepo:   noteRepo,
+		walletRepo: walletRepo,
 	}
 }
 
@@ -68,6 +70,22 @@ func (s *NoteService) CreateNote(ctx context.Context, userID uuid.UUID, req *mod
 		IsPinned: req.IsPinned,
 	}
 
+	// Parse and validate transaction ID if provided
+	if req.TransactionID != nil && *req.TransactionID != "" {
+		txID, err := uuid.Parse(*req.TransactionID)
+		if err != nil {
+			return nil, errors.New("invalid transaction ID")
+		}
+		// Verify transaction belongs to user
+		if s.walletRepo != nil {
+			tx, err := s.walletRepo.GetTransaction(ctx, userID, txID)
+			if err != nil || tx == nil {
+				return nil, errors.New("transaction not found or does not belong to user")
+			}
+		}
+		note.TransactionID = &txID
+	}
+
 	if err := s.noteRepo.Create(ctx, note); err != nil {
 		return nil, fmt.Errorf("creating note: %w", err)
 	}
@@ -104,6 +122,24 @@ func (s *NoteService) UpdateNote(ctx context.Context, userID, noteID uuid.UUID, 
 	}
 	if req.IsPinned != nil {
 		note.IsPinned = *req.IsPinned
+	}
+	if req.TransactionID != nil {
+		if *req.TransactionID == "" {
+			note.TransactionID = nil
+		} else {
+			txID, err := uuid.Parse(*req.TransactionID)
+			if err != nil {
+				return nil, errors.New("invalid transaction ID")
+			}
+			// Verify transaction belongs to user
+			if s.walletRepo != nil {
+				tx, err := s.walletRepo.GetTransaction(ctx, userID, txID)
+				if err != nil || tx == nil {
+					return nil, errors.New("transaction not found or does not belong to user")
+				}
+			}
+			note.TransactionID = &txID
+		}
 	}
 
 	if err := s.noteRepo.Update(ctx, note); err != nil {
@@ -155,6 +191,20 @@ func (s *NoteService) TogglePin(ctx context.Context, userID, noteID uuid.UUID) (
 		return nil, fmt.Errorf("toggling note pin: %w", err)
 	}
 	return note, nil
+}
+
+// GetNotesByTransaction retrieves notes linked to a specific transaction
+func (s *NoteService) GetNotesByTransaction(ctx context.Context, userID, transactionID uuid.UUID) ([]model.Note, error) {
+	notes, err := s.noteRepo.GetByTransaction(ctx, userID, transactionID)
+	if err != nil {
+		return nil, fmt.Errorf("getting notes by transaction: %w", err)
+	}
+
+	if notes == nil {
+		notes = []model.Note{}
+	}
+
+	return notes, nil
 }
 
 // isValidColor checks if the color is in the allowed list

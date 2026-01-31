@@ -27,6 +27,7 @@ type AIChatService struct {
 	recurringRepo   *repository.RecurringRepository
 	memoryRepo      *repository.MemoryRepository
 	memoryService   *MemoryService // Semantic memory with Qdrant
+	loanRepo        *repository.LoanRepository
 }
 
 var (
@@ -46,6 +47,7 @@ func NewAIChatService(
 	recurringRepo *repository.RecurringRepository,
 	memoryRepo *repository.MemoryRepository,
 	memoryService *MemoryService,
+	loanRepo *repository.LoanRepository,
 ) *AIChatService {
 	return &AIChatService{
 		aiService:       aiService,
@@ -58,6 +60,7 @@ func NewAIChatService(
 		recurringRepo:   recurringRepo,
 		memoryRepo:      memoryRepo,
 		memoryService:   memoryService,
+		loanRepo:        loanRepo,
 	}
 }
 
@@ -490,6 +493,39 @@ func (s *AIChatService) buildSystemPrompt(userName string, fctx *model.Financial
 		sb.WriteString("\n")
 	}
 
+	// Loans and Debts
+	if len(fctx.ActiveLoans) > 0 || fctx.TotalDebt > 0 || fctx.TotalReceivable > 0 {
+		sb.WriteString("## LOANS & DEBTS\n")
+		if fctx.TotalDebt > 0 {
+			sb.WriteString(fmt.Sprintf("- Total owed to others: %.2f %s\n", fctx.TotalDebt, fctx.PreferredCurrency))
+		}
+		if fctx.TotalReceivable > 0 {
+			sb.WriteString(fmt.Sprintf("- Total owed to user: %.2f %s\n", fctx.TotalReceivable, fctx.PreferredCurrency))
+		}
+		if fctx.NetDebtPosition != 0 {
+			position := "net creditor"
+			if fctx.NetDebtPosition > 0 {
+				position = "net debtor"
+			}
+			sb.WriteString(fmt.Sprintf("- Net position: %.2f %s (%s)\n", fctx.NetDebtPosition, fctx.PreferredCurrency, position))
+		}
+		if len(fctx.ActiveLoans) > 0 {
+			sb.WriteString("\nActive loans:\n")
+			for _, loan := range fctx.ActiveLoans {
+				loanType := "owes"
+				if loan.Type == "lent" {
+					loanType = "owed by"
+				}
+				sb.WriteString(fmt.Sprintf("- %s (%s %s): %.2f %s remaining", loan.Name, loanType, loan.Counterparty, loan.RemainingAmount, loan.Currency))
+				if loan.DueDate != "" {
+					sb.WriteString(fmt.Sprintf(" (due: %s)", loan.DueDate))
+				}
+				sb.WriteString("\n")
+			}
+		}
+		sb.WriteString("\n")
+	}
+
 	sb.WriteString(`## YOUR ROLE
 
 1. **Use Real Data**: Always reference specific numbers from their financial data
@@ -718,6 +754,33 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 					})
 				}
 			}
+		}
+	}
+
+	// Get loans and debts
+	if s.loanRepo != nil {
+		loans, err := s.loanRepo.GetAllByUser(ctx, userID.String(), "active", "")
+		if err == nil {
+			for _, loan := range loans {
+				loanSummary := model.LoanSummaryForAI{
+					Name:            loan.Name,
+					Type:            string(loan.Type),
+					RemainingAmount: loan.RemainingAmount,
+					Currency:        loan.Currency,
+					Counterparty:    loan.Counterparty,
+				}
+				if loan.DueDate != nil {
+					loanSummary.DueDate = loan.DueDate.Format("Jan 2, 2006")
+				}
+				fctx.ActiveLoans = append(fctx.ActiveLoans, loanSummary)
+
+				if loan.Type == model.LoanTypeBorrowed {
+					fctx.TotalDebt += loan.RemainingAmount
+				} else {
+					fctx.TotalReceivable += loan.RemainingAmount
+				}
+			}
+			fctx.NetDebtPosition = fctx.TotalDebt - fctx.TotalReceivable
 		}
 	}
 

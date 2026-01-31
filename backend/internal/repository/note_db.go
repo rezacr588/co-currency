@@ -29,8 +29,8 @@ func NewNoteRepository(db *Database) *NoteRepository {
 // Create creates a new note
 func (r *NoteRepository) Create(ctx context.Context, note *model.Note) error {
 	query := `
-		INSERT INTO notes (id, user_id, title, content, color, is_pinned, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO notes (id, user_id, transaction_id, title, content, color, is_pinned, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
 	note.ID = uuid.New()
@@ -45,6 +45,7 @@ func (r *NoteRepository) Create(ctx context.Context, note *model.Note) error {
 	_, err := r.pool.Exec(ctx, query,
 		note.ID,
 		note.UserID,
+		note.TransactionID,
 		note.Title,
 		note.Content,
 		note.Color,
@@ -63,7 +64,7 @@ func (r *NoteRepository) Create(ctx context.Context, note *model.Note) error {
 // GetByID retrieves a note by ID for a user
 func (r *NoteRepository) GetByID(ctx context.Context, userID, noteID uuid.UUID) (*model.Note, error) {
 	query := `
-		SELECT id, user_id, title, content, color, is_pinned, created_at, updated_at
+		SELECT id, user_id, transaction_id, title, content, color, is_pinned, created_at, updated_at
 		FROM notes
 		WHERE id = $1 AND user_id = $2
 	`
@@ -74,6 +75,7 @@ func (r *NoteRepository) GetByID(ctx context.Context, userID, noteID uuid.UUID) 
 	err := r.pool.QueryRow(ctx, query, noteID, userID).Scan(
 		&note.ID,
 		&note.UserID,
+		&note.TransactionID,
 		&note.Title,
 		&note.Content,
 		&color,
@@ -99,7 +101,7 @@ func (r *NoteRepository) GetByID(ctx context.Context, userID, noteID uuid.UUID) 
 // GetByUser retrieves all notes for a user, with pinned notes first
 func (r *NoteRepository) GetByUser(ctx context.Context, userID uuid.UUID) ([]model.Note, error) {
 	query := `
-		SELECT id, user_id, title, content, color, is_pinned, created_at, updated_at
+		SELECT id, user_id, transaction_id, title, content, color, is_pinned, created_at, updated_at
 		FROM notes
 		WHERE user_id = $1
 		ORDER BY is_pinned DESC, updated_at DESC
@@ -119,6 +121,7 @@ func (r *NoteRepository) GetByUser(ctx context.Context, userID uuid.UUID) ([]mod
 		if err := rows.Scan(
 			&n.ID,
 			&n.UserID,
+			&n.TransactionID,
 			&n.Title,
 			&n.Content,
 			&color,
@@ -146,7 +149,7 @@ func (r *NoteRepository) GetByUser(ctx context.Context, userID uuid.UUID) ([]mod
 // Search searches notes by title or content
 func (r *NoteRepository) Search(ctx context.Context, userID uuid.UUID, query string) ([]model.Note, error) {
 	sqlQuery := `
-		SELECT id, user_id, title, content, color, is_pinned, created_at, updated_at
+		SELECT id, user_id, transaction_id, title, content, color, is_pinned, created_at, updated_at
 		FROM notes
 		WHERE user_id = $1 AND (title ILIKE $2 OR content ILIKE $2)
 		ORDER BY is_pinned DESC, updated_at DESC
@@ -167,6 +170,7 @@ func (r *NoteRepository) Search(ctx context.Context, userID uuid.UUID, query str
 		if err := rows.Scan(
 			&n.ID,
 			&n.UserID,
+			&n.TransactionID,
 			&n.Title,
 			&n.Content,
 			&color,
@@ -195,8 +199,8 @@ func (r *NoteRepository) Search(ctx context.Context, userID uuid.UUID, query str
 func (r *NoteRepository) Update(ctx context.Context, note *model.Note) error {
 	query := `
 		UPDATE notes
-		SET title = $1, content = $2, color = $3, is_pinned = $4, updated_at = $5
-		WHERE id = $6 AND user_id = $7
+		SET title = $1, content = $2, color = $3, is_pinned = $4, transaction_id = $5, updated_at = $6
+		WHERE id = $7 AND user_id = $8
 	`
 
 	note.UpdatedAt = time.Now()
@@ -206,6 +210,7 @@ func (r *NoteRepository) Update(ctx context.Context, note *model.Note) error {
 		note.Content,
 		note.Color,
 		note.IsPinned,
+		note.TransactionID,
 		note.UpdatedAt,
 		note.ID,
 		note.UserID,
@@ -244,7 +249,7 @@ func (r *NoteRepository) TogglePin(ctx context.Context, userID, noteID uuid.UUID
 		UPDATE notes
 		SET is_pinned = NOT is_pinned, updated_at = $1
 		WHERE id = $2 AND user_id = $3
-		RETURNING id, user_id, title, content, color, is_pinned, created_at, updated_at
+		RETURNING id, user_id, transaction_id, title, content, color, is_pinned, created_at, updated_at
 	`
 
 	note := &model.Note{}
@@ -254,6 +259,7 @@ func (r *NoteRepository) TogglePin(ctx context.Context, userID, noteID uuid.UUID
 	err := r.pool.QueryRow(ctx, query, now, noteID, userID).Scan(
 		&note.ID,
 		&note.UserID,
+		&note.TransactionID,
 		&note.Title,
 		&note.Content,
 		&color,
@@ -274,4 +280,52 @@ func (r *NoteRepository) TogglePin(ctx context.Context, userID, noteID uuid.UUID
 	}
 
 	return note, nil
+}
+
+// GetByTransaction retrieves all notes linked to a transaction
+func (r *NoteRepository) GetByTransaction(ctx context.Context, userID, transactionID uuid.UUID) ([]model.Note, error) {
+	query := `
+		SELECT id, user_id, transaction_id, title, content, color, is_pinned, created_at, updated_at
+		FROM notes
+		WHERE user_id = $1 AND transaction_id = $2
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.pool.Query(ctx, query, userID, transactionID)
+	if err != nil {
+		return nil, fmt.Errorf("querying notes by transaction: %w", err)
+	}
+	defer rows.Close()
+
+	var notes []model.Note
+	for rows.Next() {
+		var n model.Note
+		var color *string
+
+		if err := rows.Scan(
+			&n.ID,
+			&n.UserID,
+			&n.TransactionID,
+			&n.Title,
+			&n.Content,
+			&color,
+			&n.IsPinned,
+			&n.CreatedAt,
+			&n.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning note: %w", err)
+		}
+
+		if color != nil {
+			n.Color = *color
+		}
+
+		notes = append(notes, n)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating notes: %w", err)
+	}
+
+	return notes, nil
 }

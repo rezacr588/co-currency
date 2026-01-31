@@ -119,6 +119,7 @@ func main() {
 	var mainDB *repository.Database
 	var userRepo *repository.UserRepository
 	var walletRepo *repository.WalletRepository
+	var loanRepo *repository.LoanRepository
 
 	// Initialize IRR database (if DATABASE_URL is configured)
 	var irrDB *repository.IRRDatabase
@@ -251,6 +252,15 @@ func main() {
 	// Notes service
 	var noteService *service.NoteService
 
+	// Loans service
+	var loanService *service.LoanService
+
+	// Notification service
+	var notificationService *service.NotificationService
+
+	// Challenge service
+	var challengeService *service.ChallengeService
+
 	// AI Chat service
 	var aiChatService *service.AIChatService
 
@@ -292,8 +302,23 @@ func main() {
 
 		// Initialize note service
 		noteRepo := repository.NewNoteRepository(mainDB)
-		noteService = service.NewNoteService(noteRepo)
+		noteService = service.NewNoteService(noteRepo, walletRepo)
 		log.Info().Msg("Note service initialized")
+
+		// Initialize loan service
+		loanRepo = repository.NewLoanRepository(mainDB.Pool())
+		loanService = service.NewLoanService(loanRepo)
+		log.Info().Msg("Loan service initialized")
+
+		// Initialize notification service
+		notificationRepo := repository.NewNotificationRepository(mainDB.Pool())
+		notificationService = service.NewNotificationService(notificationRepo, budgetRepo, loanRepo)
+		log.Info().Msg("Notification service initialized")
+
+		// Initialize challenge service
+		challengeRepo := repository.NewChallengeRepository(mainDB)
+		challengeService = service.NewChallengeService(challengeRepo, walletRepo, budgetRepo)
+		log.Info().Msg("Challenge service initialized")
 
 		// Initialize AI Chat service (requires AI service, wallet, goals, budgets, user, recurring, memory)
 		if aiService != nil {
@@ -368,6 +393,7 @@ func main() {
 				recurringRepo,
 				memoryRepo,
 				memoryService,
+				loanRepo,
 			)
 			log.Info().Msg("AI Chat service initialized with full context")
 		}
@@ -417,6 +443,24 @@ func main() {
 		noteHandler = handler.NewNoteHandler(noteService)
 	}
 
+	// Initialize loan handler
+	var loanHandler *handler.LoanHandler
+	if loanService != nil {
+		loanHandler = handler.NewLoanHandler(loanService)
+	}
+
+	// Initialize notification handler
+	var notificationHandler *handler.NotificationHandler
+	if notificationService != nil {
+		notificationHandler = handler.NewNotificationHandler(notificationService)
+	}
+
+	// Initialize challenge handler
+	var challengeHandler *handler.ChallengeHandler
+	if challengeService != nil {
+		challengeHandler = handler.NewChallengeHandler(challengeService)
+	}
+
 	// Initialize AI Chat handler
 	var aiChatHandler *handler.AIChatHandler
 	if aiChatService != nil {
@@ -444,6 +488,9 @@ func main() {
 		Subscription:  subscriptionHandler,
 		Badge:         badgeHandler,
 		Note:          noteHandler,
+		Loan:          loanHandler,
+		Notification:  notificationHandler,
+		Challenge:     challengeHandler,
 	}
 
 	rateLimiter := middleware.NewRateLimiter(cfg.RateLimitPerMin)

@@ -9,3 +9,4 @@ export { ProgressBar } from './ProgressBar';
 export { CurrencyPicker } from './CurrencyPicker';
 export { Select } from './Select';
 export { Toast, ToastProvider, useToast } from './Toast';
+export { SwipeableRow, type SwipeAction } from './SwipeableRow';

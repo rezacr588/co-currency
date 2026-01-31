@@ -1,5 +1,6 @@
-import { forwardRef } from 'react';
-import { Pressable, Text, ActivityIndicator, PressableProps, View } from 'react-native';
+import { forwardRef, useCallback } from 'react';
+import { Pressable, Text, ActivityIndicator, PressableProps, View, GestureResponderEvent } from 'react-native';
+import { haptics } from '../../utils/haptics';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'outline';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -11,6 +12,7 @@ interface ButtonProps extends PressableProps {
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   children: React.ReactNode;
+  hapticFeedback?: boolean;
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
@@ -54,16 +56,29 @@ export const Button = forwardRef<View, ButtonProps>(
       children,
       disabled,
       className = '',
+      hapticFeedback = true,
+      onPress,
       ...props
     },
     ref
   ) => {
     const isDisabled = disabled || isLoading;
 
+    const handlePress = useCallback(
+      (event: GestureResponderEvent) => {
+        if (hapticFeedback) {
+          haptics.light();
+        }
+        onPress?.(event);
+      },
+      [hapticFeedback, onPress]
+    );
+
     return (
       <Pressable
         ref={ref}
         disabled={isDisabled}
+        onPress={handlePress}
         className={`
           flex-row items-center justify-center rounded-xl
           ${variantStyles[variant]}

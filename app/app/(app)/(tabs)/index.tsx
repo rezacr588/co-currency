@@ -10,6 +10,7 @@ import { formatCompactCurrency, formatDate } from '../../../src/utils/format';
 import { StyledCategoryIcon } from '../../../src/constants/icons';
 import { Skeleton } from '../../../src/components/ui/Skeleton';
 import { CurrencyConverter } from '../../../src/components/features/CurrencyConverter';
+import { WeeklyRecapCard } from '../../../src/components/features/WeeklyRecap';
 import type { Goal, Budget } from '../../../src/types/goal';
 
 export default function DashboardScreen() {
@@ -291,6 +292,13 @@ export default function DashboardScreen() {
               </View>
             </Pressable>
           </Link>
+        )}
+
+        {/* Weekly Recap Card */}
+        {aiStatus?.configured && (
+          <View className="mb-6">
+            <WeeklyRecapCard />
+          </View>
         )}
 
         {/* Spending Forecast */}
