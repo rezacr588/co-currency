@@ -1,13 +1,15 @@
-import { View, Text, ScrollView, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { Link } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, ArrowRight, User, DollarSign, PiggyBank, Lightbulb, Bot, PieChart } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Wallet, ArrowRight, User, DollarSign, PiggyBank, CreditCard, Lightbulb, Bot, PieChart, Sparkles } from 'lucide-react-native';
 import { api } from '../../../src/api';
 import { useAuth } from '../../../src/context/AuthContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
-import { formatCompactCurrency } from '../../../src/utils/format';
+import { formatCompactCurrency, formatDate } from '../../../src/utils/format';
+import { StyledCategoryIcon } from '../../../src/constants/icons';
 import { Skeleton } from '../../../src/components/ui/Skeleton';
+import { CurrencyConverter } from '../../../src/components/features/CurrencyConverter';
 import { WeeklyRecapCard } from '../../../src/components/features/WeeklyRecap';
 import { DailyTipCard } from '../../../src/components/features/DailyTip';
 import { HealthScoreCard } from '../../../src/components/features/HealthScore';
@@ -22,13 +24,6 @@ export default function DashboardScreen() {
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
-
-  // Calculate grid item widths for mobile layouts
-  const containerPadding = isDesktop ? 32 : 16;
-  const gridGap = isDesktop ? 12 : 8;
-  const availableWidth = width - containerPadding * 2;
-  // Stats grid: 2 columns with 1 gap on mobile
-  const mobileItemWidth = (availableWidth - gridGap) / 2;
 
   const { data: summary, isPending, isError: isSummaryError } = useQuery({
     queryKey: ['wallet', 'summary'],
@@ -167,26 +162,26 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* Stats Grid - Desktop: 4+ columns, Tablet: 2 columns, Mobile: 2 columns compact */}
+        {/* Stats Grid - Desktop: 4 columns, Tablet: 2 columns, Mobile: 1 column */}
         <View
           style={{
-            flexDirection: 'row',
+            flexDirection: isTablet ? 'row' : 'column',
             flexWrap: 'wrap',
-            gap: isDesktop ? 12 : 8,
-            marginBottom: isDesktop ? 24 : 16,
+            gap: 12,
+            marginBottom: 24,
           }}
         >
           {/* Total Balance */}
-          <View style={{ width: isDesktop ? undefined : mobileItemWidth, flex: isDesktop ? 1 : undefined, minWidth: isDesktop ? 200 : undefined }}>
-            <View className={`bg-card border border-border ${isDesktop ? 'p-5' : 'p-3'} rounded-xl h-full`}>
-              <View className="flex-row items-center justify-between mb-1.5">
-                <Text className="text-muted-foreground text-xs">{t('totalBalance')}</Text>
-                <DollarSign size={14} color="#71717a" />
+          <View style={{ flex: isDesktop ? 1 : isTablet ? '48%' as any : 1, minWidth: isDesktop ? 200 : undefined }}>
+            <View className="bg-card border border-border p-5 rounded-xl h-full">
+              <View className="flex-row items-center justify-between mb-3">
+                <Text className="text-muted-foreground text-sm">{t('totalBalance')}</Text>
+                <DollarSign size={18} color="#71717a" />
               </View>
               {isPending ? (
-                <Skeleton width={80} height={22} />
+                <Skeleton width={120} height={28} />
               ) : (
-                <Text className={`${isDesktop ? 'text-2xl' : 'text-lg'} font-bold text-foreground`}>
+                <Text className="text-2xl font-bold text-foreground">
                   {formatCompactCurrency(summary?.total_balance_usd || 0, 'USD')}
                 </Text>
               )}
@@ -195,64 +190,70 @@ export default function DashboardScreen() {
 
           {/* Income */}
           {monthlyReport && (
-            <View style={{ width: isDesktop ? undefined : mobileItemWidth, flex: isDesktop ? 1 : undefined, minWidth: isDesktop ? 200 : undefined }}>
-              <View className={`bg-card border border-border ${isDesktop ? 'p-5' : 'p-3'} rounded-xl h-full`}>
-                <View className="flex-row items-center justify-between mb-1.5">
-                  <Text className="text-muted-foreground text-xs">{t('income')}</Text>
-                  <TrendingUp size={14} color="#22c55e" />
+            <View style={{ flex: isDesktop ? 1 : isTablet ? '48%' as any : 1, minWidth: isDesktop ? 200 : undefined }}>
+              <View className="bg-card border border-border p-5 rounded-xl h-full">
+                <View className="flex-row items-center justify-between mb-3">
+                  <Text className="text-muted-foreground text-sm">{t('income')}</Text>
+                  <TrendingUp size={18} color="#22c55e" />
                 </View>
-                <Text className={`${isDesktop ? 'text-2xl' : 'text-lg'} font-bold text-success`}>
+                <Text className="text-2xl font-bold text-success">
                   {formatCompactCurrency(monthlyReport.income, monthlyReport.currency)}
                 </Text>
+                <Text className="text-xs text-muted-foreground mt-1">This month</Text>
               </View>
             </View>
           )}
 
           {/* Expenses */}
           {monthlyReport && (
-            <View style={{ width: isDesktop ? undefined : mobileItemWidth, flex: isDesktop ? 1 : undefined, minWidth: isDesktop ? 200 : undefined }}>
-              <View className={`bg-card border border-border ${isDesktop ? 'p-5' : 'p-3'} rounded-xl h-full`}>
-                <View className="flex-row items-center justify-between mb-1.5">
-                  <Text className="text-muted-foreground text-xs">{t('expenses')}</Text>
-                  <TrendingDown size={14} color="#ef4444" />
+            <View style={{ flex: isDesktop ? 1 : isTablet ? '48%' as any : 1, minWidth: isDesktop ? 200 : undefined }}>
+              <View className="bg-card border border-border p-5 rounded-xl h-full">
+                <View className="flex-row items-center justify-between mb-3">
+                  <Text className="text-muted-foreground text-sm">{t('expenses')}</Text>
+                  <TrendingDown size={18} color="#ef4444" />
                 </View>
-                <Text className={`${isDesktop ? 'text-2xl' : 'text-lg'} font-bold text-danger`}>
+                <Text className="text-2xl font-bold text-danger">
                   {formatCompactCurrency(monthlyReport.expenses, monthlyReport.currency)}
                 </Text>
+                <Text className="text-xs text-muted-foreground mt-1">This month</Text>
               </View>
             </View>
           )}
 
           {/* Goals Progress */}
-          <View style={{ width: isDesktop ? undefined : mobileItemWidth, flex: isDesktop ? 1 : undefined, minWidth: isDesktop ? 200 : undefined }}>
-            <View className={`bg-card border border-border ${isDesktop ? 'p-5' : 'p-3'} rounded-xl h-full`}>
-              <View className="flex-row items-center justify-between mb-1.5">
-                <Text className="text-muted-foreground text-xs">{t('financialGoals')}</Text>
-                <PiggyBank size={14} color="#71717a" />
+          <View style={{ flex: isDesktop ? 1 : isTablet ? '48%' as any : 1, minWidth: isDesktop ? 200 : undefined }}>
+            <View className="bg-card border border-border p-5 rounded-xl h-full">
+              <View className="flex-row items-center justify-between mb-3">
+                <Text className="text-muted-foreground text-sm">{t('financialGoals')}</Text>
+                <PiggyBank size={18} color="#71717a" />
               </View>
-              <Text className={`${isDesktop ? 'text-2xl' : 'text-lg'} font-bold text-foreground`}>
+              <Text className="text-2xl font-bold text-foreground">
                 {activeGoals} / {totalGoals}
               </Text>
+              <Text className="text-xs text-muted-foreground mt-1">Active goals</Text>
             </View>
           </View>
 
           {/* Budget Status */}
           {budgets.length > 0 && (
-            <View style={{ width: isDesktop ? undefined : mobileItemWidth, flex: isDesktop ? 1 : undefined, minWidth: isDesktop ? 200 : undefined }}>
-              <View className={`bg-card border border-border ${isDesktop ? 'p-5' : 'p-3'} rounded-xl h-full`}>
-                <View className="flex-row items-center justify-between mb-1.5">
-                  <Text className="text-muted-foreground text-xs">{t('budgetStatus') || 'Budget'}</Text>
-                  <PieChart size={14} color={budgetPercentage > 90 ? '#ef4444' : budgetPercentage > 70 ? '#f59e0b' : '#22c55e'} />
+            <View style={{ flex: isDesktop ? 1 : isTablet ? '48%' as any : 1, minWidth: isDesktop ? 200 : undefined }}>
+              <View className="bg-card border border-border p-5 rounded-xl h-full">
+                <View className="flex-row items-center justify-between mb-3">
+                  <Text className="text-muted-foreground text-sm">{t('budgetStatus') || 'Budget'}</Text>
+                  <PieChart size={18} color={budgetPercentage > 90 ? '#ef4444' : budgetPercentage > 70 ? '#f59e0b' : '#22c55e'} />
                 </View>
-                <Text className={`${isDesktop ? 'text-2xl' : 'text-lg'} font-bold ${budgetPercentage > 90 ? 'text-danger' : budgetPercentage > 70 ? 'text-warning' : 'text-success'}`}>
+                <Text className={`text-2xl font-bold ${budgetPercentage > 90 ? 'text-danger' : budgetPercentage > 70 ? 'text-warning' : 'text-success'}`}>
                   {budgetPercentage}%
+                </Text>
+                <Text className="text-xs text-muted-foreground mt-1">
+                  {formatCompactCurrency(totalSpent, 'USD')} / {formatCompactCurrency(totalBudget, 'USD')}
                 </Text>
               </View>
             </View>
           )}
         </View>
 
-        {/* AI Financial Advisor Card - Compact on mobile */}
+        {/* AI Financial Advisor Card */}
         {aiStatus?.configured && (
           <Link href="/(app)/(tabs)/wallet/chat" asChild>
             <Pressable style={{ cursor: 'pointer' }}>
@@ -261,34 +262,34 @@ export default function DashboardScreen() {
                   backgroundColor: '#d4af37',
                   borderWidth: 1,
                   borderColor: 'rgba(212, 175, 55, 0.3)',
-                  padding: isDesktop ? 20 : 12,
+                  padding: 20,
                   borderRadius: 12,
-                  marginBottom: isDesktop ? 24 : 12,
+                  marginBottom: 24,
                 }}
               >
                 <View className="flex-row items-center">
                   <View
                     style={{
-                      width: isDesktop ? 48 : 36,
-                      height: isDesktop ? 48 : 36,
-                      borderRadius: 10,
+                      width: 48,
+                      height: 48,
+                      borderRadius: 12,
                       backgroundColor: 'rgba(0, 0, 0, 0.1)',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      marginRight: isDesktop ? 16 : 10,
+                      marginRight: 16,
                     }}
                   >
-                    <Bot size={isDesktop ? 24 : 18} color="#09090b" />
+                    <Bot size={24} color="#09090b" />
                   </View>
                   <View className="flex-1">
-                    <Text style={{ color: '#09090b', fontWeight: 'bold', fontSize: isDesktop ? 16 : 14 }}>
+                    <Text style={{ color: '#09090b', fontWeight: 'bold', fontSize: 16 }}>
                       {t('aiAdvisor') || 'AI Financial Advisor'}
                     </Text>
-                    <Text style={{ color: 'rgba(9, 9, 11, 0.7)', fontSize: 12 }}>
+                    <Text style={{ color: 'rgba(9, 9, 11, 0.7)', fontSize: 14, marginTop: 2 }}>
                       Get personalized advice
                     </Text>
                   </View>
-                  <ArrowRight size={18} color="#09090b" />
+                  <ArrowRight size={20} color="#09090b" />
                 </View>
               </View>
             </Pressable>
@@ -296,91 +297,92 @@ export default function DashboardScreen() {
         )}
 
         {/* Financial Health Score */}
-        <View className={isDesktop ? 'mb-6' : 'mb-4'}>
+        <View className="mb-6">
           <HealthScoreCard compact />
         </View>
 
         {/* Daily Tip Card */}
-        <View className={isDesktop ? 'mb-6' : 'mb-4'}>
+        <View className="mb-6">
           <DailyTipCard />
         </View>
 
         {/* Weekly Recap Card */}
         {aiStatus?.configured && (
-          <View className={isDesktop ? 'mb-6' : 'mb-4'}>
+          <View className="mb-6">
             <WeeklyRecapCard />
           </View>
         )}
 
-        {/* Spending Forecast - Compact on mobile */}
+        {/* Spending Forecast */}
         {forecast && forecast.avg_daily_spend > 0 && (
-          <View className={`bg-card border border-border ${isDesktop ? 'p-5' : 'p-3'} rounded-xl ${isDesktop ? 'mb-6' : 'mb-4'}`}>
-            <View className="flex-row items-center mb-3">
-              <View className={`${isDesktop ? 'w-10 h-10' : 'w-8 h-8'} rounded-full bg-secondary items-center justify-center mr-2`}>
+          <View className="bg-card border border-border p-5 rounded-xl mb-6">
+            <View className="flex-row items-center mb-4">
+              <View className="w-10 h-10 rounded-full bg-secondary items-center justify-center mr-3">
                 {forecast.net_daily_flow >= 0 ? (
-                  <TrendingUp size={isDesktop ? 20 : 16} color="#22c55e" />
+                  <TrendingUp size={20} color="#22c55e" />
                 ) : (
-                  <TrendingDown size={isDesktop ? 20 : 16} color="#ef4444" />
+                  <TrendingDown size={20} color="#ef4444" />
                 )}
               </View>
               <View>
-                <Text className="text-sm font-semibold text-foreground">Spending Forecast</Text>
-                <Text className="text-xs text-muted-foreground">Last 30 days</Text>
+                <Text className="text-base font-semibold text-foreground">Spending Forecast</Text>
+                <Text className="text-xs text-muted-foreground">Based on last 30 days</Text>
               </View>
             </View>
             <View className="flex-row justify-between">
               <View className="items-center flex-1">
-                <Text className="text-xs text-muted-foreground">Spend/day</Text>
-                <Text className="text-sm font-semibold text-danger">
+                <Text className="text-xs text-muted-foreground">Daily Spend</Text>
+                <Text className="text-base font-semibold text-danger">
                   -{formatCompactCurrency(forecast.avg_daily_spend, forecast.currency)}
                 </Text>
               </View>
               <View className="items-center flex-1">
-                <Text className="text-xs text-muted-foreground">Income/day</Text>
-                <Text className="text-sm font-semibold text-success">
+                <Text className="text-xs text-muted-foreground">Daily Income</Text>
+                <Text className="text-base font-semibold text-success">
                   +{formatCompactCurrency(forecast.avg_daily_income, forecast.currency)}
                 </Text>
               </View>
               <View className="items-center flex-1">
-                <Text className="text-xs text-muted-foreground">Net</Text>
-                <Text className={`text-sm font-semibold ${forecast.net_daily_flow >= 0 ? 'text-success' : 'text-danger'}`}>
+                <Text className="text-xs text-muted-foreground">Net Flow</Text>
+                <Text className={`text-base font-semibold ${forecast.net_daily_flow >= 0 ? 'text-success' : 'text-danger'}`}>
                   {forecast.net_daily_flow >= 0 ? '+' : ''}{formatCompactCurrency(forecast.net_daily_flow, forecast.currency)}
                 </Text>
               </View>
             </View>
             {forecast.net_daily_flow < 0 && forecast.days_until_zero > 0 && (
-              <View className="bg-danger/10 border border-danger/20 p-2 rounded-lg mt-3">
-                <Text className="text-danger text-xs font-medium text-center">
-                  ⚠️ Balance reaches zero in {forecast.days_until_zero} days
+              <View className="bg-danger/10 border border-danger/20 p-3 rounded-lg mt-4">
+                <Text className="text-danger text-sm font-medium text-center">
+                  ⚠️ At this rate, balance reaches zero in {forecast.days_until_zero} days
                 </Text>
               </View>
             )}
           </View>
         )}
 
-        {/* Insights - Compact on mobile */}
-        <View className={`bg-card border border-border ${isDesktop ? 'p-5' : 'p-3'} rounded-xl ${isDesktop ? 'mb-6' : 'mb-4'}`}>
-          <View className="flex-row items-center justify-between mb-3">
+        {/* Insights */}
+        <View className="bg-card border border-border p-5 rounded-xl mb-6">
+          <View className="flex-row items-center justify-between mb-4">
             <View className="flex-row items-center">
-              <View className={`${isDesktop ? 'w-8 h-8' : 'w-6 h-6'} rounded-full bg-secondary items-center justify-center mr-2`}>
-                <Lightbulb size={isDesktop ? 18 : 14} color="#a1a1aa" />
+              <View className="w-8 h-8 rounded-full bg-secondary items-center justify-center mr-3">
+                <Lightbulb size={18} color="#a1a1aa" />
               </View>
-              <Text className="text-sm font-semibold text-foreground">Insights</Text>
+              <Text className="text-base font-semibold text-foreground">Insights</Text>
             </View>
+            <Text className="text-xs text-muted-foreground">This month</Text>
           </View>
-          <View className="gap-2">
+          <View className="gap-3">
             {insights.length === 0 ? (
-              <View className="bg-muted border border-border p-3 rounded-lg">
-                <Text className="text-muted-foreground text-xs">
-                  Add transactions to unlock insights.
+              <View className="bg-muted border border-border p-4 rounded-lg">
+                <Text className="text-muted-foreground text-sm">
+                  Add a few transactions to unlock personalized insights.
                 </Text>
               </View>
             ) : (
-              insights.slice(0, isDesktop ? 3 : 2).map((insight, idx) => (
-                <View key={idx} className="bg-muted border border-border p-2.5 rounded-lg">
+              insights.slice(0, 3).map((insight, idx) => (
+                <View key={idx} className="bg-muted border border-border p-4 rounded-lg">
                   <View className="flex-row items-start">
                     <View
-                      className={`w-1.5 h-1.5 rounded-full mt-1.5 mr-2 ${
+                      className={`w-2 h-2 rounded-full mt-1.5 mr-3 ${
                         insight.tone === 'warning'
                           ? 'bg-warning'
                           : insight.tone === 'success'
@@ -389,8 +391,8 @@ export default function DashboardScreen() {
                       }`}
                     />
                     <View className="flex-1">
-                      <Text className="text-xs font-semibold text-foreground">{insight.title}</Text>
-                      <Text className="text-xs text-muted-foreground mt-0.5" numberOfLines={2}>{insight.detail}</Text>
+                      <Text className="text-sm font-semibold text-foreground">{insight.title}</Text>
+                      <Text className="text-xs text-muted-foreground mt-1">{insight.detail}</Text>
                     </View>
                   </View>
                 </View>
@@ -399,6 +401,133 @@ export default function DashboardScreen() {
           </View>
         </View>
 
+        {/* Currency Converter Widget */}
+        <View className="mb-6">
+          <View className="flex-row items-center justify-between mb-4">
+            <Text className="text-base font-semibold text-foreground">{t('currencyConverter') || 'Currency Converter'}</Text>
+            <Link href="/(app)/(tabs)/wallet/convert" asChild>
+              <Pressable style={{ cursor: 'pointer' }} className="flex-row items-center">
+                <Text className="text-muted-foreground text-sm mr-1">{t('fullConverter') || 'Full converter'}</Text>
+                <ArrowRight size={14} color="#71717a" />
+              </Pressable>
+            </Link>
+          </View>
+
+          <CurrencyConverter variant="full" showQuickSelect={false} />
+        </View>
+
+        {/* Two Column Layout for Desktop */}
+        <View
+          style={{
+            flexDirection: isDesktop ? 'row' : 'column',
+            gap: 24,
+          }}
+        >
+          {/* Left Column - Wallet Balances */}
+          <View style={{ flex: isDesktop ? 1 : undefined }}>
+            <View className="mb-6">
+              <View className="flex-row items-center justify-between mb-4">
+                <Text className="text-base font-semibold text-foreground">{t('walletBalances') || 'Wallet Balances'}</Text>
+                <Link href="/(app)/(tabs)/wallet" asChild>
+                  <Pressable style={{ cursor: 'pointer' }} className="flex-row items-center">
+                    <Text className="text-muted-foreground text-sm mr-1">{t('viewAll')}</Text>
+                    <ArrowRight size={14} color="#71717a" />
+                  </Pressable>
+                </Link>
+              </View>
+              {isPending ? (
+                <ActivityIndicator color="#71717a" />
+              ) : (
+                <View className="gap-2">
+                  {(summary?.balances || []).slice(0, isDesktop ? 5 : 3).map((balance) => (
+                    <View
+                      key={balance.currency}
+                      className="bg-card border border-border p-4 rounded-lg flex-row items-center justify-between"
+                    >
+                      <View className="flex-row items-center">
+                        <View className="bg-secondary p-2 rounded-md mr-3">
+                          <Wallet size={18} color="#a1a1aa" />
+                        </View>
+                        <Text className="text-base font-medium text-foreground">
+                          {balance.currency}
+                        </Text>
+                      </View>
+                      <Text className="text-base font-semibold text-foreground">
+                        {formatCompactCurrency(balance.balance, balance.currency)}
+                      </Text>
+                    </View>
+                  ))}
+                  {(summary?.balances || []).length === 0 && (
+                    <View className="bg-card border border-border p-6 rounded-lg items-center">
+                      <Wallet size={28} color="#52525b" />
+                      <Text className="text-muted-foreground mt-2 text-sm">No balances yet</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Right Column - Recent Transactions */}
+          <View style={{ flex: isDesktop ? 1 : undefined }}>
+            <View className="flex-row items-center justify-between mb-4">
+              <Text className="text-base font-semibold text-foreground">{t('recentTransactions')}</Text>
+              <Link href="/(app)/(tabs)/wallet/history" asChild>
+                <Pressable style={{ cursor: 'pointer' }} className="flex-row items-center">
+                  <Text className="text-muted-foreground text-sm mr-1">{t('viewAll')}</Text>
+                  <ArrowRight size={14} color="#71717a" />
+                </Pressable>
+              </Link>
+            </View>
+            {isPending ? (
+              <ActivityIndicator color="#71717a" />
+            ) : (
+              <View className="gap-2">
+                {(summary?.recent_transactions || []).slice(0, isDesktop ? 6 : 5).map((tx) => (
+                  <View
+                    key={tx.id}
+                    className="bg-card border border-border p-4 rounded-lg flex-row items-center justify-between"
+                  >
+                    <View className="flex-row items-center flex-1">
+                      <View className="mr-3">
+                        <StyledCategoryIcon
+                          category={tx.category || 'other'}
+                        />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="font-medium text-foreground text-sm" numberOfLines={1}>
+                          {tx.description || tx.category || 'Transaction'}
+                        </Text>
+                        <Text className="text-muted-foreground text-xs">
+                          {formatDate(tx.created_at)}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text
+                      className={`text-base font-semibold ml-2 ${
+                        tx.type === 'credit' ? 'text-success' : 'text-danger'
+                      }`}
+                    >
+                      {tx.type === 'credit' ? '+' : '-'}
+                      {formatCompactCurrency(tx.amount, tx.currency)}
+                    </Text>
+                  </View>
+                ))}
+                {(summary?.recent_transactions || []).length === 0 && (
+                  <View className="bg-card border border-border p-6 rounded-lg items-center">
+                    <CreditCard size={28} color="#52525b" />
+                    <Text className="text-muted-foreground mt-2 text-sm">No transactions yet</Text>
+                    <Link href="/(app)/(tabs)/add" asChild>
+                      <Pressable style={{ cursor: 'pointer' }} className="bg-accent px-4 py-2 rounded-lg mt-3">
+                        <Text className="text-accent-foreground font-medium text-sm">Add Transaction</Text>
+                      </Pressable>
+                    </Link>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        </View>
       </ScrollView>
 
     </SafeAreaView>
