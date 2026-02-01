@@ -2,7 +2,7 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator, useWindowDimensio
 import { Link } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, Wallet, ArrowRight, User, DollarSign, PiggyBank, CreditCard, Lightbulb, Bot, PieChart, Sparkles, StickyNote, Trophy, Target, Repeat, Receipt } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Wallet, ArrowRight, User, DollarSign, PiggyBank, CreditCard, Lightbulb, Bot, PieChart, StickyNote, Trophy, Repeat } from 'lucide-react-native';
 import { api } from '../../../src/api';
 import { useAuth } from '../../../src/context/AuthContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
@@ -24,6 +24,21 @@ export default function DashboardScreen() {
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
+
+  // Calculate grid item widths for mobile layouts
+  const containerPadding = isDesktop ? 32 : 16;
+  const gridGap = isDesktop ? 12 : 8;
+  const availableWidth = width - containerPadding * 2;
+  // Stats grid: 2 columns with 1 gap on mobile
+  const mobileItemWidth = (availableWidth - gridGap) / 2;
+  // Quick access: 4 columns with 3 gaps
+  const quickAccessItemWidth = (availableWidth - 8 * 3) / 4;
+  // Goals: full width on mobile, 2 cols on tablet, 3 cols on desktop
+  const goalItemWidth = isDesktop
+    ? (availableWidth - 6 * 2) / 3
+    : isTablet
+      ? (availableWidth - 6) / 2
+      : availableWidth;
 
   const { data: summary, isPending, isError: isSummaryError } = useQuery({
     queryKey: ['wallet', 'summary'],
@@ -172,7 +187,7 @@ export default function DashboardScreen() {
           }}
         >
           {/* Total Balance */}
-          <View style={{ width: isDesktop ? 'auto' : '48%' as any, flex: isDesktop ? 1 : undefined, minWidth: isDesktop ? 200 : undefined }}>
+          <View style={{ width: isDesktop ? undefined : mobileItemWidth, flex: isDesktop ? 1 : undefined, minWidth: isDesktop ? 200 : undefined }}>
             <View className={`bg-card border border-border ${isDesktop ? 'p-5' : 'p-3'} rounded-xl h-full`}>
               <View className="flex-row items-center justify-between mb-1.5">
                 <Text className="text-muted-foreground text-xs">{t('totalBalance')}</Text>
@@ -190,7 +205,7 @@ export default function DashboardScreen() {
 
           {/* Income */}
           {monthlyReport && (
-            <View style={{ width: isDesktop ? 'auto' : '48%' as any, flex: isDesktop ? 1 : undefined, minWidth: isDesktop ? 200 : undefined }}>
+            <View style={{ width: isDesktop ? undefined : mobileItemWidth, flex: isDesktop ? 1 : undefined, minWidth: isDesktop ? 200 : undefined }}>
               <View className={`bg-card border border-border ${isDesktop ? 'p-5' : 'p-3'} rounded-xl h-full`}>
                 <View className="flex-row items-center justify-between mb-1.5">
                   <Text className="text-muted-foreground text-xs">{t('income')}</Text>
@@ -205,7 +220,7 @@ export default function DashboardScreen() {
 
           {/* Expenses */}
           {monthlyReport && (
-            <View style={{ width: isDesktop ? 'auto' : '48%' as any, flex: isDesktop ? 1 : undefined, minWidth: isDesktop ? 200 : undefined }}>
+            <View style={{ width: isDesktop ? undefined : mobileItemWidth, flex: isDesktop ? 1 : undefined, minWidth: isDesktop ? 200 : undefined }}>
               <View className={`bg-card border border-border ${isDesktop ? 'p-5' : 'p-3'} rounded-xl h-full`}>
                 <View className="flex-row items-center justify-between mb-1.5">
                   <Text className="text-muted-foreground text-xs">{t('expenses')}</Text>
@@ -219,7 +234,7 @@ export default function DashboardScreen() {
           )}
 
           {/* Goals Progress */}
-          <View style={{ width: isDesktop ? 'auto' : '48%' as any, flex: isDesktop ? 1 : undefined, minWidth: isDesktop ? 200 : undefined }}>
+          <View style={{ width: isDesktop ? undefined : mobileItemWidth, flex: isDesktop ? 1 : undefined, minWidth: isDesktop ? 200 : undefined }}>
             <View className={`bg-card border border-border ${isDesktop ? 'p-5' : 'p-3'} rounded-xl h-full`}>
               <View className="flex-row items-center justify-between mb-1.5">
                 <Text className="text-muted-foreground text-xs">{t('financialGoals')}</Text>
@@ -233,7 +248,7 @@ export default function DashboardScreen() {
 
           {/* Budget Status */}
           {budgets.length > 0 && (
-            <View style={{ width: isDesktop ? 'auto' : '48%' as any, flex: isDesktop ? 1 : undefined, minWidth: isDesktop ? 200 : undefined }}>
+            <View style={{ width: isDesktop ? undefined : mobileItemWidth, flex: isDesktop ? 1 : undefined, minWidth: isDesktop ? 200 : undefined }}>
               <View className={`bg-card border border-border ${isDesktop ? 'p-5' : 'p-3'} rounded-xl h-full`}>
                 <View className="flex-row items-center justify-between mb-1.5">
                   <Text className="text-muted-foreground text-xs">{t('budgetStatus') || 'Budget'}</Text>
@@ -259,7 +274,7 @@ export default function DashboardScreen() {
           >
             <Link href="/(app)/notes" asChild>
               <Pressable
-                style={{ cursor: 'pointer', width: isDesktop ? 'auto' : '23%' as any, minWidth: isDesktop ? 100 : 70 }}
+                style={{ cursor: 'pointer', width: isDesktop ? undefined : quickAccessItemWidth, minWidth: isDesktop ? 100 : undefined }}
                 className="bg-card border border-border p-3 rounded-xl items-center"
               >
                 <StickyNote size={20} color="rgb(212, 175, 55)" />
@@ -268,7 +283,7 @@ export default function DashboardScreen() {
             </Link>
             <Link href="/(app)/budgets" asChild>
               <Pressable
-                style={{ cursor: 'pointer', width: isDesktop ? 'auto' : '23%' as any, minWidth: isDesktop ? 100 : 70 }}
+                style={{ cursor: 'pointer', width: isDesktop ? undefined : quickAccessItemWidth, minWidth: isDesktop ? 100 : undefined }}
                 className="bg-card border border-border p-3 rounded-xl items-center"
               >
                 <Wallet size={20} color="rgb(212, 175, 55)" />
@@ -277,7 +292,7 @@ export default function DashboardScreen() {
             </Link>
             <Link href="/(app)/recurring" asChild>
               <Pressable
-                style={{ cursor: 'pointer', width: isDesktop ? 'auto' : '23%' as any, minWidth: isDesktop ? 100 : 70 }}
+                style={{ cursor: 'pointer', width: isDesktop ? undefined : quickAccessItemWidth, minWidth: isDesktop ? 100 : undefined }}
                 className="bg-card border border-border p-3 rounded-xl items-center"
               >
                 <Repeat size={20} color="rgb(212, 175, 55)" />
@@ -286,7 +301,7 @@ export default function DashboardScreen() {
             </Link>
             <Link href="/(app)/badges" asChild>
               <Pressable
-                style={{ cursor: 'pointer', width: isDesktop ? 'auto' : '23%' as any, minWidth: isDesktop ? 100 : 70 }}
+                style={{ cursor: 'pointer', width: isDesktop ? undefined : quickAccessItemWidth, minWidth: isDesktop ? 100 : undefined }}
                 className="bg-card border border-border p-3 rounded-xl items-center"
               >
                 <Trophy size={20} color="rgb(212, 175, 55)" />
@@ -484,8 +499,7 @@ export default function DashboardScreen() {
                     <Pressable
                       style={{
                         cursor: 'pointer',
-                        width: isDesktop ? 'calc(33.33% - 4px)' as any : isTablet ? 'calc(50% - 3px)' as any : '100%',
-                        minWidth: isDesktop ? 180 : isTablet ? 150 : undefined,
+                        width: goalItemWidth,
                       }}
                     >
                       <View className="bg-card border border-border p-2.5 rounded-lg">
