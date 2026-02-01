@@ -2,7 +2,7 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator, useWindowDimensio
 import { Link } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, Wallet, ArrowRight, User, DollarSign, PiggyBank, CreditCard, Lightbulb, Bot, PieChart, Sparkles } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Wallet, ArrowRight, User, DollarSign, PiggyBank, CreditCard, Lightbulb, Bot, PieChart, Sparkles, StickyNote, Trophy, Target, Repeat, Receipt } from 'lucide-react-native';
 import { api } from '../../../src/api';
 import { useAuth } from '../../../src/context/AuthContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
@@ -245,6 +245,55 @@ export default function DashboardScreen() {
               </View>
             </View>
           )}
+        </View>
+
+        {/* Quick Access - Feature shortcuts */}
+        <View className={isDesktop ? 'mb-6' : 'mb-4'}>
+          <Text className="text-sm font-semibold text-foreground mb-2">{t('quickAccess') || 'Quick Access'}</Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 8,
+            }}
+          >
+            <Link href="/(app)/notes" asChild>
+              <Pressable
+                style={{ cursor: 'pointer', width: isDesktop ? 'auto' : '23%' as any, minWidth: isDesktop ? 100 : 70 }}
+                className="bg-card border border-border p-3 rounded-xl items-center"
+              >
+                <StickyNote size={20} color="rgb(212, 175, 55)" />
+                <Text className="text-xs text-foreground mt-1.5" numberOfLines={1}>{t('notes') || 'Notes'}</Text>
+              </Pressable>
+            </Link>
+            <Link href="/(app)/budgets" asChild>
+              <Pressable
+                style={{ cursor: 'pointer', width: isDesktop ? 'auto' : '23%' as any, minWidth: isDesktop ? 100 : 70 }}
+                className="bg-card border border-border p-3 rounded-xl items-center"
+              >
+                <Wallet size={20} color="rgb(212, 175, 55)" />
+                <Text className="text-xs text-foreground mt-1.5" numberOfLines={1}>{t('budgets') || 'Budgets'}</Text>
+              </Pressable>
+            </Link>
+            <Link href="/(app)/recurring" asChild>
+              <Pressable
+                style={{ cursor: 'pointer', width: isDesktop ? 'auto' : '23%' as any, minWidth: isDesktop ? 100 : 70 }}
+                className="bg-card border border-border p-3 rounded-xl items-center"
+              >
+                <Repeat size={20} color="rgb(212, 175, 55)" />
+                <Text className="text-xs text-foreground mt-1.5" numberOfLines={1}>{t('recurring') || 'Recurring'}</Text>
+              </Pressable>
+            </Link>
+            <Link href="/(app)/badges" asChild>
+              <Pressable
+                style={{ cursor: 'pointer', width: isDesktop ? 'auto' : '23%' as any, minWidth: isDesktop ? 100 : 70 }}
+                className="bg-card border border-border p-3 rounded-xl items-center"
+              >
+                <Trophy size={20} color="rgb(212, 175, 55)" />
+                <Text className="text-xs text-foreground mt-1.5" numberOfLines={1}>{t('badges') || 'Badges'}</Text>
+              </Pressable>
+            </Link>
+          </View>
         </View>
 
         {/* AI Financial Advisor Card - Compact on mobile */}
