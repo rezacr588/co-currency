@@ -1,15 +1,13 @@
-import { View, Text, ScrollView, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, Pressable, useWindowDimensions } from 'react-native';
 import { Link } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, Wallet, ArrowRight, User, DollarSign, PiggyBank, CreditCard, Lightbulb, Bot, PieChart, StickyNote, Trophy, Repeat } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, ArrowRight, User, DollarSign, PiggyBank, Lightbulb, Bot, PieChart } from 'lucide-react-native';
 import { api } from '../../../src/api';
 import { useAuth } from '../../../src/context/AuthContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
-import { formatCompactCurrency, formatDate } from '../../../src/utils/format';
-import { StyledCategoryIcon } from '../../../src/constants/icons';
+import { formatCompactCurrency } from '../../../src/utils/format';
 import { Skeleton } from '../../../src/components/ui/Skeleton';
-import { CurrencyConverter } from '../../../src/components/features/CurrencyConverter';
 import { WeeklyRecapCard } from '../../../src/components/features/WeeklyRecap';
 import { DailyTipCard } from '../../../src/components/features/DailyTip';
 import { HealthScoreCard } from '../../../src/components/features/HealthScore';
@@ -31,14 +29,6 @@ export default function DashboardScreen() {
   const availableWidth = width - containerPadding * 2;
   // Stats grid: 2 columns with 1 gap on mobile
   const mobileItemWidth = (availableWidth - gridGap) / 2;
-  // Quick access: 4 columns with 3 gaps
-  const quickAccessItemWidth = (availableWidth - 8 * 3) / 4;
-  // Goals: full width on mobile, 2 cols on tablet, 3 cols on desktop
-  const goalItemWidth = isDesktop
-    ? (availableWidth - 6 * 2) / 3
-    : isTablet
-      ? (availableWidth - 6) / 2
-      : availableWidth;
 
   const { data: summary, isPending, isError: isSummaryError } = useQuery({
     queryKey: ['wallet', 'summary'],
@@ -262,55 +252,6 @@ export default function DashboardScreen() {
           )}
         </View>
 
-        {/* Quick Access - Feature shortcuts */}
-        <View className={isDesktop ? 'mb-6' : 'mb-4'}>
-          <Text className="text-sm font-semibold text-foreground mb-2">{t('quickAccess') || 'Quick Access'}</Text>
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: 8,
-            }}
-          >
-            <Link href="/(app)/notes" asChild>
-              <Pressable
-                style={{ cursor: 'pointer', width: isDesktop ? undefined : quickAccessItemWidth, minWidth: isDesktop ? 100 : undefined }}
-                className="bg-card border border-border p-3 rounded-xl items-center"
-              >
-                <StickyNote size={20} color="rgb(212, 175, 55)" />
-                <Text className="text-xs text-foreground mt-1.5" numberOfLines={1}>{t('notes') || 'Notes'}</Text>
-              </Pressable>
-            </Link>
-            <Link href="/(app)/budgets" asChild>
-              <Pressable
-                style={{ cursor: 'pointer', width: isDesktop ? undefined : quickAccessItemWidth, minWidth: isDesktop ? 100 : undefined }}
-                className="bg-card border border-border p-3 rounded-xl items-center"
-              >
-                <Wallet size={20} color="rgb(212, 175, 55)" />
-                <Text className="text-xs text-foreground mt-1.5" numberOfLines={1}>{t('budgets') || 'Budgets'}</Text>
-              </Pressable>
-            </Link>
-            <Link href="/(app)/recurring" asChild>
-              <Pressable
-                style={{ cursor: 'pointer', width: isDesktop ? undefined : quickAccessItemWidth, minWidth: isDesktop ? 100 : undefined }}
-                className="bg-card border border-border p-3 rounded-xl items-center"
-              >
-                <Repeat size={20} color="rgb(212, 175, 55)" />
-                <Text className="text-xs text-foreground mt-1.5" numberOfLines={1}>{t('recurring') || 'Recurring'}</Text>
-              </Pressable>
-            </Link>
-            <Link href="/(app)/badges" asChild>
-              <Pressable
-                style={{ cursor: 'pointer', width: isDesktop ? undefined : quickAccessItemWidth, minWidth: isDesktop ? 100 : undefined }}
-                className="bg-card border border-border p-3 rounded-xl items-center"
-              >
-                <Trophy size={20} color="rgb(212, 175, 55)" />
-                <Text className="text-xs text-foreground mt-1.5" numberOfLines={1}>{t('badges') || 'Badges'}</Text>
-              </Pressable>
-            </Link>
-          </View>
-        </View>
-
         {/* AI Financial Advisor Card - Compact on mobile */}
         {aiStatus?.configured && (
           <Link href="/(app)/(tabs)/wallet/chat" asChild>
@@ -458,192 +399,6 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* Currency Converter Widget - Compact */}
-        <View className={isDesktop ? 'mb-6' : 'mb-4'}>
-          <View className="flex-row items-center justify-between mb-2">
-            <Text className="text-sm font-semibold text-foreground">{t('currencyConverter') || 'Currency Converter'}</Text>
-            <Link href="/(app)/(tabs)/wallet/convert" asChild>
-              <Pressable style={{ cursor: 'pointer' }} className="flex-row items-center">
-                <Text className="text-muted-foreground text-xs mr-1">{t('fullConverter') || 'Full'}</Text>
-                <ArrowRight size={12} color="#71717a" />
-              </Pressable>
-            </Link>
-          </View>
-
-          <CurrencyConverter variant="compact" showQuickSelect={false} />
-        </View>
-
-        {/* Goals Section - Compact Display */}
-        {goals && goals.length > 0 && (
-          <View className={isDesktop ? 'mb-6' : 'mb-4'}>
-            <View className="flex-row items-center justify-between mb-2">
-              <Text className="text-sm font-semibold text-foreground">{t('financialGoals')}</Text>
-              <Link href="/(app)/(tabs)/goals" asChild>
-                <Pressable style={{ cursor: 'pointer' }} className="flex-row items-center">
-                  <Text className="text-muted-foreground text-xs mr-1">{t('viewAll')}</Text>
-                  <ArrowRight size={12} color="#71717a" />
-                </Pressable>
-              </Link>
-            </View>
-            <View
-              style={{
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                gap: 6,
-              }}
-            >
-              {goals.filter((g) => !g.is_completed).slice(0, isDesktop ? 6 : 3).map((goal) => {
-                const progress = Math.min(goal.progress, 100);
-                return (
-                  <Link key={goal.id} href="/(app)/(tabs)/goals" asChild>
-                    <Pressable
-                      style={{
-                        cursor: 'pointer',
-                        width: goalItemWidth,
-                      }}
-                    >
-                      <View className="bg-card border border-border p-2.5 rounded-lg">
-                        <View className="flex-row items-center justify-between mb-1.5">
-                          <Text className="text-xs font-medium text-foreground flex-1 mr-2" numberOfLines={1}>
-                            {goal.name}
-                          </Text>
-                          <Text className="text-xs font-medium text-muted-foreground">
-                            {progress.toFixed(0)}%
-                          </Text>
-                        </View>
-                        <View className="h-1 bg-secondary rounded-full">
-                          <View
-                            className="h-full bg-foreground rounded-full"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </View>
-                        <Text className="text-xs text-muted-foreground mt-1">
-                          {formatCompactCurrency(goal.current_amount, goal.currency)} / {formatCompactCurrency(goal.target_amount, goal.currency)}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  </Link>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* Two Column Layout for Desktop */}
-        <View
-          style={{
-            flexDirection: isDesktop ? 'row' : 'column',
-            gap: 24,
-          }}
-        >
-          {/* Left Column - Wallet Balances */}
-          <View style={{ flex: isDesktop ? 1 : undefined }}>
-            <View className="mb-6">
-              <View className="flex-row items-center justify-between mb-3">
-                <Text className="text-base font-semibold text-foreground">{t('walletBalances') || 'Wallet Balances'}</Text>
-                <Link href="/(app)/(tabs)/wallet" asChild>
-                  <Pressable style={{ cursor: 'pointer' }} className="flex-row items-center">
-                    <Text className="text-muted-foreground text-sm mr-1">{t('viewAll')}</Text>
-                    <ArrowRight size={14} color="#71717a" />
-                  </Pressable>
-                </Link>
-              </View>
-              {isPending ? (
-                <ActivityIndicator color="#71717a" />
-              ) : (
-                <View className="gap-2">
-                  {(summary?.balances || []).slice(0, isDesktop ? 5 : 3).map((balance) => (
-                    <View
-                      key={balance.currency}
-                      className="bg-card border border-border p-3 rounded-lg flex-row items-center justify-between"
-                    >
-                      <View className="flex-row items-center">
-                        <View className="bg-secondary p-1.5 rounded-md mr-2">
-                          <Wallet size={16} color="#a1a1aa" />
-                        </View>
-                        <Text className="text-sm font-medium text-foreground">
-                          {balance.currency}
-                        </Text>
-                      </View>
-                      <Text className="text-sm font-semibold text-foreground">
-                        {formatCompactCurrency(balance.balance, balance.currency)}
-                      </Text>
-                    </View>
-                  ))}
-                  {(summary?.balances || []).length === 0 && (
-                    <View className="bg-card border border-border p-4 rounded-lg items-center">
-                      <Wallet size={24} color="#52525b" />
-                      <Text className="text-muted-foreground mt-2 text-sm">No balances yet</Text>
-                    </View>
-                  )}
-                </View>
-              )}
-            </View>
-          </View>
-
-          {/* Right Column - Recent Transactions */}
-          <View style={{ flex: isDesktop ? 1 : undefined }}>
-            <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-base font-semibold text-foreground">{t('recentTransactions')}</Text>
-              <Link href="/(app)/(tabs)/wallet/history" asChild>
-                <Pressable style={{ cursor: 'pointer' }} className="flex-row items-center">
-                  <Text className="text-muted-foreground text-sm mr-1">{t('viewAll')}</Text>
-                  <ArrowRight size={14} color="#71717a" />
-                </Pressable>
-              </Link>
-            </View>
-            {isPending ? (
-              <ActivityIndicator color="#71717a" />
-            ) : (
-              <View className="gap-1.5">
-                {(summary?.recent_transactions || []).slice(0, isDesktop ? 6 : 5).map((tx) => (
-                  <View
-                    key={tx.id}
-                    className="bg-card border border-border p-3 rounded-lg flex-row items-center justify-between"
-                  >
-                    <View className="flex-row items-center flex-1">
-                      <View className="mr-2">
-                        <StyledCategoryIcon
-                          category={tx.category || 'other'}
-                          size={16}
-                          padding={6}
-                          borderRadius={6}
-                        />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="font-medium text-foreground text-sm" numberOfLines={1}>
-                          {tx.description || tx.category || 'Transaction'}
-                        </Text>
-                        <Text className="text-muted-foreground text-xs">
-                          {formatDate(tx.created_at)}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text
-                      className={`text-sm font-semibold ml-2 ${
-                        tx.type === 'credit' ? 'text-success' : 'text-danger'
-                      }`}
-                    >
-                      {tx.type === 'credit' ? '+' : '-'}
-                      {formatCompactCurrency(tx.amount, tx.currency)}
-                    </Text>
-                  </View>
-                ))}
-                {(summary?.recent_transactions || []).length === 0 && (
-                  <View className="bg-card border border-border p-4 rounded-lg items-center">
-                    <CreditCard size={24} color="#52525b" />
-                    <Text className="text-muted-foreground mt-2 text-sm">No transactions yet</Text>
-                    <Link href="/(app)/(tabs)/add" asChild>
-                      <Pressable style={{ cursor: 'pointer' }} className="bg-accent px-4 py-2 rounded-lg mt-3">
-                        <Text className="text-accent-foreground font-medium text-sm">Add Transaction</Text>
-                      </Pressable>
-                    </Link>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
-        </View>
       </ScrollView>
 
     </SafeAreaView>
