@@ -1,12 +1,249 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, useWindowDimensions } from 'react-native';
+import { useState, useMemo } from 'react';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, useWindowDimensions, Modal } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, PieChart, BarChart3, Wallet, Calendar, ArrowUp, ArrowDown } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, PieChart, BarChart3, Wallet, Calendar, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, X } from 'lucide-react-native';
 import { api } from '../../../src/api';
 import { useLanguage } from '../../../src/context/LanguageContext';
 import { formatCompactCurrency, formatNumber } from '../../../src/utils/format';
 import { StyledCategoryIcon, CATEGORY_COLORS, getCategoryBackground } from '../../../src/constants/icons';
+
+// Date range preset types
+type DatePreset = 'this_month' | 'last_month' | 'last_3_months' | 'last_6_months' | 'this_year' | 'last_year' | 'all_time' | 'custom';
+
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const FULL_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+// Get date range from preset
+function getDateRangeFromPreset(preset: DatePreset): { year?: number; month?: number; fromDate?: string; toDate?: string; label: string } {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  switch (preset) {
+    case 'this_month':
+      return { year: currentYear, month: currentMonth, label: `${FULL_MONTH_NAMES[currentMonth - 1]} ${currentYear}` };
+    case 'last_month': {
+      const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+      const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+      return { year: lastMonthYear, month: lastMonth, label: `${FULL_MONTH_NAMES[lastMonth - 1]} ${lastMonthYear}` };
+    }
+    case 'last_3_months': {
+      const fromDate = new Date(currentYear, currentMonth - 4, 1);
+      const toDate = new Date(currentYear, currentMonth, 0);
+      return {
+        fromDate: fromDate.toISOString().split('T')[0],
+        toDate: toDate.toISOString().split('T')[0],
+        label: 'Last 3 Months',
+      };
+    }
+    case 'last_6_months': {
+      const fromDate = new Date(currentYear, currentMonth - 7, 1);
+      const toDate = new Date(currentYear, currentMonth, 0);
+      return {
+        fromDate: fromDate.toISOString().split('T')[0],
+        toDate: toDate.toISOString().split('T')[0],
+        label: 'Last 6 Months',
+      };
+    }
+    case 'this_year':
+      return {
+        fromDate: `${currentYear}-01-01`,
+        toDate: `${currentYear}-12-31`,
+        label: `${currentYear}`,
+      };
+    case 'last_year':
+      return {
+        fromDate: `${currentYear - 1}-01-01`,
+        toDate: `${currentYear - 1}-12-31`,
+        label: `${currentYear - 1}`,
+      };
+    case 'all_time':
+      return { label: 'All Time' };
+    default:
+      return { year: currentYear, month: currentMonth, label: `${FULL_MONTH_NAMES[currentMonth - 1]} ${currentYear}` };
+  }
+}
+
+// Month Picker Modal Component
+function MonthYearPicker({
+  visible,
+  onClose,
+  selectedYear,
+  selectedMonth,
+  onSelect,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  selectedYear: number;
+  selectedMonth: number;
+  onSelect: (year: number, month: number) => void;
+}) {
+  const [viewYear, setViewYear] = useState(selectedYear);
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable
+        className="flex-1 bg-black/60 justify-center items-center"
+        onPress={onClose}
+      >
+        <Pressable
+          className="bg-card rounded-2xl p-6 mx-6 w-full max-w-sm"
+          onPress={(e) => e.stopPropagation()}
+        >
+          {/* Year selector */}
+          <View className="flex-row items-center justify-between mb-6">
+            <Pressable
+              onPress={() => setViewYear(viewYear - 1)}
+              className="p-2 rounded-lg bg-secondary"
+            >
+              <ChevronLeft size={20} color="#a1a1aa" />
+            </Pressable>
+            <Text className="text-foreground text-xl font-bold">{viewYear}</Text>
+            <Pressable
+              onPress={() => viewYear < currentYear && setViewYear(viewYear + 1)}
+              className={`p-2 rounded-lg ${viewYear >= currentYear ? 'opacity-30' : 'bg-secondary'}`}
+              disabled={viewYear >= currentYear}
+            >
+              <ChevronRight size={20} color="#a1a1aa" />
+            </Pressable>
+          </View>
+
+          {/* Month grid */}
+          <View className="flex-row flex-wrap gap-2">
+            {MONTH_NAMES.map((month, index) => {
+              const monthNum = index + 1;
+              const isSelected = selectedYear === viewYear && selectedMonth === monthNum;
+              const isFuture = viewYear === currentYear && monthNum > currentMonth;
+              const isCurrentMonth = viewYear === currentYear && monthNum === currentMonth;
+
+              return (
+                <Pressable
+                  key={month}
+                  onPress={() => !isFuture && onSelect(viewYear, monthNum)}
+                  disabled={isFuture}
+                  style={{ width: '31%' }}
+                  className={`py-3 rounded-xl items-center ${
+                    isSelected
+                      ? 'bg-accent'
+                      : isCurrentMonth
+                        ? 'bg-accent/20 border border-accent'
+                        : isFuture
+                          ? 'bg-secondary/30 opacity-40'
+                          : 'bg-secondary'
+                  }`}
+                >
+                  <Text
+                    className={`font-medium ${
+                      isSelected ? 'text-background' : isFuture ? 'text-muted-foreground' : 'text-foreground'
+                    }`}
+                  >
+                    {month}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* Close button */}
+          <Pressable
+            onPress={onClose}
+            className="mt-6 bg-secondary py-3 rounded-xl items-center"
+          >
+            <Text className="text-foreground font-medium">Close</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+// Date Range Selector Component
+function DateRangeSelector({
+  selectedPreset,
+  onPresetChange,
+  selectedYear,
+  selectedMonth,
+  onMonthSelect,
+  dateLabel,
+  isCompact,
+}: {
+  selectedPreset: DatePreset;
+  onPresetChange: (preset: DatePreset) => void;
+  selectedYear: number;
+  selectedMonth: number;
+  onMonthSelect: (year: number, month: number) => void;
+  dateLabel: string;
+  isCompact?: boolean;
+}) {
+  const [showPicker, setShowPicker] = useState(false);
+
+  const presets: { key: DatePreset; label: string; icon?: string }[] = [
+    { key: 'this_month', label: 'This Month' },
+    { key: 'last_month', label: 'Last Month' },
+    { key: 'last_3_months', label: '3 Months' },
+    { key: 'last_6_months', label: '6 Months' },
+    { key: 'this_year', label: 'This Year' },
+    { key: 'all_time', label: 'All Time' },
+  ];
+
+  return (
+    <View className="mb-6">
+      {/* Current Selection & Calendar Button */}
+      <View className="flex-row items-center justify-between mb-3">
+        <Pressable
+          onPress={() => setShowPicker(true)}
+          className="flex-row items-center bg-card border border-border px-4 py-2.5 rounded-xl"
+        >
+          <Calendar size={18} color="rgb(212, 175, 55)" />
+          <Text className="text-foreground font-semibold ml-2">{dateLabel}</Text>
+          <ChevronRight size={16} color="#71717a" className="ml-1" />
+        </Pressable>
+      </View>
+
+      {/* Preset Pills */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 8 }}
+      >
+        {presets.map((preset) => (
+          <Pressable
+            key={preset.key}
+            onPress={() => onPresetChange(preset.key)}
+            className={`px-4 py-2 rounded-full ${
+              selectedPreset === preset.key
+                ? 'bg-accent'
+                : 'bg-secondary border border-border'
+            }`}
+          >
+            <Text
+              className={`text-sm font-medium ${
+                selectedPreset === preset.key ? 'text-background' : 'text-foreground'
+              }`}
+            >
+              {preset.label}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+
+      {/* Month Picker Modal */}
+      <MonthYearPicker
+        visible={showPicker}
+        onClose={() => setShowPicker(false)}
+        selectedYear={selectedYear}
+        selectedMonth={selectedMonth}
+        onSelect={(year, month) => {
+          onMonthSelect(year, month);
+          setShowPicker(false);
+        }}
+      />
+    </View>
+  );
+}
 
 // Simple bar chart component using View widths
 function HorizontalBarChart({
@@ -234,14 +471,64 @@ export default function ReportsScreen() {
   const isTablet = width >= 768;
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
+  // Date range state
+  const now = new Date();
+  const [selectedPreset, setSelectedPreset] = useState<DatePreset>('this_month');
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+
+  // Get date range from current selection
+  const dateRange = useMemo(() => {
+    if (selectedPreset === 'custom' || selectedPreset === 'this_month' || selectedPreset === 'last_month') {
+      return {
+        year: selectedYear,
+        month: selectedMonth,
+        label: `${FULL_MONTH_NAMES[selectedMonth - 1]} ${selectedYear}`,
+      };
+    }
+    return getDateRangeFromPreset(selectedPreset);
+  }, [selectedPreset, selectedYear, selectedMonth]);
+
+  // Handle preset change
+  const handlePresetChange = (preset: DatePreset) => {
+    setSelectedPreset(preset);
+    if (preset === 'this_month') {
+      setSelectedYear(now.getFullYear());
+      setSelectedMonth(now.getMonth() + 1);
+    } else if (preset === 'last_month') {
+      const lastMonth = now.getMonth() === 0 ? 12 : now.getMonth();
+      const lastMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+      setSelectedYear(lastMonthYear);
+      setSelectedMonth(lastMonth);
+    }
+  };
+
+  // Handle month selection from picker
+  const handleMonthSelect = (year: number, month: number) => {
+    setSelectedYear(year);
+    setSelectedMonth(month);
+    setSelectedPreset('custom');
+  };
+
   const { data: monthlyReport, isPending: isLoadingMonthly } = useQuery({
-    queryKey: ['reports', 'monthly'],
-    queryFn: () => api.reports.monthly(),
+    queryKey: ['reports', 'monthly', dateRange.year, dateRange.month],
+    queryFn: () => api.reports.monthly(dateRange.year, dateRange.month),
   });
 
   const { data: categoryReport, isPending: isLoadingCategory } = useQuery({
-    queryKey: ['reports', 'category'],
-    queryFn: () => api.reports.category(),
+    queryKey: ['reports', 'category', dateRange.fromDate, dateRange.toDate],
+    queryFn: () => {
+      if (dateRange.fromDate && dateRange.toDate) {
+        return api.reports.category(dateRange.fromDate, dateRange.toDate);
+      }
+      // For single month, calculate from/to dates
+      const startDate = new Date(dateRange.year || now.getFullYear(), (dateRange.month || now.getMonth() + 1) - 1, 1);
+      const endDate = new Date(dateRange.year || now.getFullYear(), dateRange.month || now.getMonth() + 1, 0);
+      return api.reports.category(
+        startDate.toISOString().split('T')[0],
+        endDate.toISOString().split('T')[0]
+      );
+    },
   });
 
   const { data: networth, isPending: isLoadingNetworth } = useQuery({
@@ -277,7 +564,18 @@ export default function ReportsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <Text className="text-3xl font-bold text-foreground mb-6">{t('reportsAndStats')}</Text>
+        <Text className="text-3xl font-bold text-foreground mb-4">{t('reportsAndStats')}</Text>
+
+        {/* Date Range Selector */}
+        <DateRangeSelector
+          selectedPreset={selectedPreset}
+          onPresetChange={handlePresetChange}
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
+          onMonthSelect={handleMonthSelect}
+          dateLabel={dateRange.label}
+          isCompact={!isDesktop}
+        />
 
         {isPending ? (
           <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
