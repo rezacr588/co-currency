@@ -1,11 +1,12 @@
 import { View, Text, ScrollView, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQuery } from '@tanstack/react-query';
-import { Trophy, Target, Lock, Award, ChevronLeft } from 'lucide-react-native';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Trophy, Target, Lock, Award, ChevronLeft, RefreshCw, Gift } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { Card } from '../../src/components/ui';
+import { haptics } from '../../src/utils/haptics';
 
 interface Badge {
   id: string;
@@ -97,15 +98,33 @@ function BadgeCard({ progress }: { progress: BadgeProgress }) {
 export default function BadgesScreen() {
   const { t } = useLanguage();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
 
   const isLargeScreen = width > 768;
   const numColumns = width > 1024 ? 6 : width > 768 ? 4 : width > 480 ? 3 : 2;
 
-  const { data, isPending, error } = useQuery({
+  const { data, isPending, error, refetch } = useQuery({
     queryKey: ['badges', 'progress'],
     queryFn: () => api.badges.getProgress(),
   });
+
+  // Mutation to check and claim new badges
+  const checkBadgesMutation = useMutation({
+    mutationFn: () => api.badges.check(),
+    onSuccess: (result) => {
+      // Refresh badge progress after checking
+      queryClient.invalidateQueries({ queryKey: ['badges'] });
+      if (result.newly_earned && result.newly_earned.length > 0) {
+        haptics.success();
+      }
+    },
+  });
+
+  const handleClaimRewards = () => {
+    haptics.medium();
+    checkBadgesMutation.mutate();
+  };
 
   const earned = data?.progress?.filter((p: BadgeProgress) => p.is_earned) || [];
   const inProgress =
@@ -117,18 +136,55 @@ export default function BadgesScreen() {
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       <ScrollView className="flex-1" contentContainerClassName="p-4">
         {/* Header */}
-        <View className="flex-row items-center mb-6">
+        <View className="flex-row items-center justify-between mb-6">
+          <View className="flex-row items-center">
+            <Pressable
+              onPress={() => router.back()}
+              style={{ cursor: 'pointer' }}
+              className="p-2 mr-2"
+            >
+              <ChevronLeft size={24} color="rgb(148, 163, 184)" />
+            </Pressable>
+            <Text className="text-2xl font-bold text-foreground">
+              {t('badges') || 'Badges'}
+            </Text>
+          </View>
           <Pressable
-            onPress={() => router.back()}
+            onPress={handleClaimRewards}
+            disabled={checkBadgesMutation.isPending}
             style={{ cursor: 'pointer' }}
-            className="p-2 mr-2"
+            className="bg-primary px-4 py-2 rounded-xl flex-row items-center"
           >
-            <ChevronLeft size={24} color="rgb(148, 163, 184)" />
+            {checkBadgesMutation.isPending ? (
+              <ActivityIndicator size="small" color="#09090b" />
+            ) : (
+              <>
+                <Gift size={18} color="#09090b" />
+                <Text className="text-primary-foreground font-semibold ml-2">
+                  {t('claimRewards') || 'Claim Rewards'}
+                </Text>
+              </>
+            )}
           </Pressable>
-          <Text className="text-2xl font-bold text-foreground">
-            {t('badges') || 'Badges'}
-          </Text>
         </View>
+
+        {/* Newly Earned Badges Alert */}
+        {checkBadgesMutation.data?.newly_earned && checkBadgesMutation.data.newly_earned.length > 0 && (
+          <View className="bg-success/10 border border-success/30 p-4 rounded-xl mb-6">
+            <Text className="text-success font-semibold text-center mb-2">
+              🎉 {t('newBadgesEarned') || 'New Badges Earned!'}
+            </Text>
+            <View className="flex-row flex-wrap justify-center gap-2">
+              {checkBadgesMutation.data.newly_earned.map((badge: any) => (
+                <View key={badge.badge_id} className="bg-success/20 px-3 py-1 rounded-full">
+                  <Text className="text-success text-sm">
+                    {badge.badge?.icon} {badge.badge?.name}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {isPending ? (
           <View className="flex-1 items-center justify-center py-12">

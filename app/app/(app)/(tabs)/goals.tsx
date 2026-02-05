@@ -27,13 +27,14 @@ import type { CreateGoalRequest, UpdateGoalRequest, Goal } from '../../../src/ty
 
 const GOAL_CATEGORIES = [
   'savings',
-  'emergency',
+  'emergency_fund',
   'vacation',
   'home',
   'car',
   'education',
   'retirement',
   'investment',
+  'debt_payoff',
   'other',
 ];
 
@@ -109,6 +110,16 @@ export default function GoalsScreen() {
   };
   const columns = getGridColumns();
 
+  // Calculate card widths for grid layout
+  const containerPadding = isDesktop ? 32 : 16;
+  const gap = 16;
+  const availableWidth = width - containerPadding * 2;
+  const getCardWidth = () => {
+    if (columns === 1) return availableWidth;
+    return (availableWidth - gap * (columns - 1)) / columns;
+  };
+  const cardWidth = getCardWidth();
+
   return (
     <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
       <ScrollView
@@ -176,8 +187,8 @@ export default function GoalsScreen() {
                 }}>
                   {activeGoals.map((goal) => (
                     <View key={goal.id} style={{
-                      width: columns === 1 ? '100%' : `${(100 / columns) - (16 * (columns - 1) / columns)}%`,
-                      minWidth: columns === 1 ? '100%' : 280,
+                      width: cardWidth,
+                      minWidth: columns === 1 ? undefined : 280,
                     }}>
                       <GoalCard goal={goal} onEdit={handleEdit} onDelete={handleDelete} isDesktop={isDesktop} />
                     </View>
@@ -199,8 +210,8 @@ export default function GoalsScreen() {
                 }}>
                   {completedGoals.map((goal) => (
                     <View key={goal.id} style={{
-                      width: columns === 1 ? '100%' : `${(100 / columns) - (16 * (columns - 1) / columns)}%`,
-                      minWidth: columns === 1 ? '100%' : 280,
+                      width: cardWidth,
+                      minWidth: columns === 1 ? undefined : 280,
                     }}>
                       <GoalCard goal={goal} onEdit={handleEdit} onDelete={handleDelete} isDesktop={isDesktop} />
                     </View>
@@ -249,6 +260,10 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
     onSuccess: async (data) => {
       haptics.success();
       queryClient.invalidateQueries({ queryKey: ['goals'] });
+      // Check for new badges in background
+      api.badges.check().then(() => {
+        queryClient.invalidateQueries({ queryKey: ['badges'] });
+      }).catch(() => {});
       setShowContribute(false);
       setAmount('');
       setContributeError('');
@@ -438,6 +453,10 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
     mutationFn: (data: CreateGoalRequest) => api.goals.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goals'] });
+      // Check for new badges in background
+      api.badges.check().then(() => {
+        queryClient.invalidateQueries({ queryKey: ['badges'] });
+      }).catch(() => {});
       onClose();
       resetForm();
     },

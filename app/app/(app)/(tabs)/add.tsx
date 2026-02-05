@@ -35,6 +35,13 @@ export default function AddTransactionScreen() {
   const isTablet = width >= 768;
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
+  // Calculate category card widths
+  const containerPadding = isDesktop ? 32 : 24;
+  const categoryGap = 8;
+  const availableWidth = width - containerPadding * 2;
+  const categoryCols = isDesktop ? 6 : isTablet ? 4 : 3;
+  const categoryCardWidth = (availableWidth - categoryGap * (categoryCols - 1)) / categoryCols;
+
   const [type, setType] = useState<'credit' | 'debit'>('debit');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('USD');
@@ -47,6 +54,12 @@ export default function AddTransactionScreen() {
     onSuccess: () => {
       setError('');
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      // Check for new badges in background (non-blocking)
+      api.badges.check().then(() => {
+        queryClient.invalidateQueries({ queryKey: ['badges'] });
+      }).catch(() => {
+        // Silently ignore badge check errors
+      });
       router.back();
     },
     onError: (err) => {
@@ -272,12 +285,7 @@ export default function AddTransactionScreen() {
                     onPress={() => setCategory(cat)}
                     style={{
                       cursor: 'pointer',
-                      width: isDesktop
-                        ? `${100 / getCategoryColumns() - 2}%`
-                        : isTablet
-                        ? `${100 / 4 - 2}%`
-                        : undefined,
-                      minWidth: isDesktop || isTablet ? undefined : 100,
+                      width: categoryCardWidth,
                     }}
                     className={`px-3 py-2.5 rounded-md flex-row items-center justify-center gap-2 border ${
                       isSelected ? 'bg-foreground border-foreground' : 'bg-secondary border-border'

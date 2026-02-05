@@ -216,6 +216,10 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
     mutationFn: (data: CreateBudgetRequest) => api.budgets.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      // Check for new badges in background
+      api.badges.check().then(() => {
+        queryClient.invalidateQueries({ queryKey: ['badges'] });
+      }).catch(() => {});
       onClose();
       resetForm();
     },
