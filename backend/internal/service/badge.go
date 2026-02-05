@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"sort"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rezacr588/currency-converter/internal/model"
@@ -110,7 +112,7 @@ func (s *BadgeService) CheckAndAwardBadges(ctx context.Context, userID uuid.UUID
 func (s *BadgeService) getUserStats(ctx context.Context, userID uuid.UUID) (*repository.UserStats, error) {
 	stats := &repository.UserStats{}
 
-	// Get transaction count
+	// Get transaction count and calculate stats
 	if s.walletRepo != nil {
 		transactions, err := s.walletRepo.GetTransactions(ctx, userID, 0, 0)
 		if err == nil {
@@ -122,17 +124,20 @@ func (s *BadgeService) getUserStats(ctx context.Context, userID uuid.UUID) (*rep
 				currencies[t.Currency] = true
 			}
 			stats.CurrencyCount = len(currencies)
+		}
 
-			// Calculate total saved (credits minus debits)
-			var totalCredits, totalDebits float64
-			for _, t := range transactions {
-				if t.Type == "credit" {
-					totalCredits += t.Amount
-				} else if t.Type == "debit" {
-					totalDebits += t.Amount
-				}
+		// Use wallet balances for TotalSaved (already correctly calculated per currency)
+		// This is more accurate than summing transactions which may be in different currencies
+		balances, err := s.walletRepo.GetBalances(ctx, userID)
+		if err == nil {
+			var totalBalance float64
+			for _, b := range balances {
+				// Sum all balances (they're already in their respective currencies)
+				// For a more accurate comparison, you'd convert to a single currency
+				// but for badge purposes, we use the sum as a rough indicator
+				totalBalance += b.Balance
 			}
-			stats.TotalSaved = totalCredits - totalDebits
+			stats.TotalSaved = totalBalance
 			if stats.TotalSaved < 0 {
 				stats.TotalSaved = 0
 			}
@@ -145,7 +150,9 @@ func (s *BadgeService) getUserStats(ctx context.Context, userID uuid.UUID) (*rep
 		if err == nil {
 			stats.BudgetCount = len(budgets)
 
-			// Check months under budget (simplified - just count budgets not exceeded)
+			// Count budgets that are currently under their limit
+			// Note: This counts budget categories, not historical months.
+			// A proper implementation would track budget compliance over time.
 			underBudgetCount := 0
 			for _, b := range budgets {
 				if b.Spent <= b.Amount {
@@ -172,35 +179,68 @@ func (s *BadgeService) getUserStats(ctx context.Context, userID uuid.UUID) (*rep
 		}
 	}
 
-	// Calculate streak days (simplified - count consecutive days with transactions)
-	// This is a basic implementation; a more sophisticated version would track daily activity
+	// Calculate streak days - actual consecutive days with transactions
 	stats.StreakDays = s.calculateStreak(ctx, userID)
 
 	return stats, nil
 }
 
-// calculateStreak calculates the current tracking streak
+// calculateStreak calculates the current tracking streak (consecutive days with transactions)
 func (s *BadgeService) calculateStreak(ctx context.Context, userID uuid.UUID) int {
-	// Simplified implementation - in production, you'd track daily activity
-	// For now, we'll just return a basic count based on recent activity
 	if s.walletRepo == nil {
 		return 0
 	}
 
-	// Get recent transactions
-	transactions, err := s.walletRepo.GetTransactions(ctx, userID, 30, 0)
+	// Get all transactions (we need to check consecutive days)
+	transactions, err := s.walletRepo.GetTransactions(ctx, userID, 0, 0)
 	if err != nil || len(transactions) == 0 {
 		return 0
 	}
 
-	// Count unique days in the last 30 days
-	days := make(map[string]bool)
+	// Get unique days with transactions
+	daysMap := make(map[string]bool)
 	for _, t := range transactions {
 		day := t.CreatedAt.Format("2006-01-02")
-		days[day] = true
+		daysMap[day] = true
 	}
 
-	return len(days)
+	// Convert to sorted slice
+	days := make([]string, 0, len(daysMap))
+	for day := range daysMap {
+		days = append(days, day)
+	}
+	sort.Strings(days)
+
+	if len(days) == 0 {
+		return 0
+	}
+
+	// Check if today or yesterday has activity (streak must be current)
+	today := time.Now().Format("2006-01-02")
+	yesterday := time.Now().AddDate(0, 0, -1).Format("2006-01-02")
+
+	lastActivityDay := days[len(days)-1]
+	if lastActivityDay != today && lastActivityDay != yesterday {
+		// Streak is broken - no recent activity
+		return 0
+	}
+
+	// Count consecutive days backwards from the most recent activity day
+	streak := 1
+	for i := len(days) - 2; i >= 0; i-- {
+		currentDay, _ := time.Parse("2006-01-02", days[i+1])
+
+		// Check if days are consecutive
+		expectedPrev := currentDay.AddDate(0, 0, -1).Format("2006-01-02")
+		if days[i] == expectedPrev {
+			streak++
+		} else {
+			// Gap found, streak ends
+			break
+		}
+	}
+
+	return streak
 }
 
 // AwardSpecialBadge awards a special badge manually
