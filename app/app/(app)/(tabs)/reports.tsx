@@ -471,6 +471,13 @@ export default function ReportsScreen() {
   const isTablet = width >= 768;
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
+  // Calculate category card widths
+  const containerPadding = isDesktop ? 32 : 24;
+  const cardGap = 12;
+  const availableWidth = width - containerPadding * 2;
+  const categoryCols = isDesktop ? 3 : isTablet ? 2 : 1;
+  const categoryCardWidth = categoryCols === 1 ? availableWidth : (availableWidth - cardGap * (categoryCols - 1)) / categoryCols;
+
   // Date range state
   const now = new Date();
   const [selectedPreset, setSelectedPreset] = useState<DatePreset>('this_month');
@@ -645,8 +652,7 @@ export default function ReportsScreen() {
                           monthlyReport.net >= 0 ? 'text-success' : 'text-danger'
                         }`}
                       >
-                        {monthlyReport.net >= 0 ? '+' : ''}
-                        {formatCompactCurrency(monthlyReport.net, monthlyReport.currency)}
+                        {`${monthlyReport.net >= 0 ? '+' : ''}${formatCompactCurrency(monthlyReport.net, monthlyReport.currency)}`}
                       </Text>
                     </View>
                     <View className="flex-1 bg-secondary/50 p-3 rounded-lg">
@@ -715,9 +721,9 @@ export default function ReportsScreen() {
                         key={cat.category}
                         className="bg-secondary/30 border border-border p-4 rounded-xl"
                         style={{
-                          width: isDesktop ? '31%' : isTablet ? '48%' : '100%',
-                          minWidth: isDesktop ? 200 : undefined,
-                        } as any}
+                          width: categoryCardWidth,
+                          minWidth: categoryCols === 1 ? undefined : 200,
+                        }}
                       >
                         <View className="flex-row items-center justify-between mb-3">
                           <View className="flex-row items-center">

@@ -273,8 +273,7 @@ export default function LoansScreen() {
                     summary.net_debt > 0 ? 'text-danger' : 'text-success'
                   }`}
                 >
-                  {summary.net_debt > 0 ? '-' : '+'}
-                  {formatCompactCurrency(Math.abs(summary.net_debt), summary.currency)}
+                  {`${summary.net_debt > 0 ? '-' : '+'}${formatCompactCurrency(Math.abs(summary.net_debt), summary.currency)}`}
                 </Text>
               </View>
               <Text className="text-xs text-muted-foreground text-center mt-1">

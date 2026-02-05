@@ -146,8 +146,7 @@ export function WeeklyRecapCard({ compact = false }: WeeklyRecapCardProps) {
                     weeklyChange <= 0 ? 'text-success' : 'text-danger'
                   }`}
                 >
-                  {weeklyChange <= 0 ? '' : '+'}
-                  {formatCompactCurrency(Math.abs(weeklyChange), monthlyReport.currency)}
+                  {`${weeklyChange < 0 ? '-' : weeklyChange > 0 ? '+' : ''}${formatCompactCurrency(Math.abs(weeklyChange), monthlyReport.currency)}`}
                 </Text>
               </View>
             </View>

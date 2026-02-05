@@ -192,8 +192,7 @@ function RecurringCard({ transaction }: { transaction: any }) {
             transaction.type === 'credit' ? 'text-success' : 'text-danger'
           }`}
         >
-          {transaction.type === 'credit' ? '+' : '-'}
-          {formatCompactCurrency(transaction.amount, transaction.currency)}
+          {`${transaction.type === 'credit' ? '+' : '-'}${formatCompactCurrency(transaction.amount, transaction.currency)}`}
         </Text>
       </View>
 

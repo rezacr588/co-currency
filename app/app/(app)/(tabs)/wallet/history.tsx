@@ -490,8 +490,7 @@ export default function TransactionHistoryScreen() {
                     tx.type === 'credit' ? 'text-success' : 'text-danger'
                   }`}
                 >
-                  {tx.type === 'credit' ? '+' : '-'}
-                  {formatCompactCurrency(tx.amount, tx.currency)}
+                  {`${tx.type === 'credit' ? '+' : '-'}${formatCompactCurrency(tx.amount, tx.currency)}`}
                 </Text>
                 {/* Desktop: Show buttons inline */}
                 {isDesktop && (

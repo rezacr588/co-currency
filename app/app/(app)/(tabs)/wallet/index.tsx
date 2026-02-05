@@ -20,6 +20,27 @@ export default function WalletScreen() {
   const isTablet = width >= 768;
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
+  // Calculate widths for grid layouts
+  const containerPadding = isDesktop ? 32 : 24;
+  const gap = 12;
+  const availableWidth = width - containerPadding * 2;
+
+  // Quick actions: 4 cols on desktop, 2 cols on tablet/mobile
+  const quickActionCols = isDesktop ? 4 : 2;
+  const quickActionWidth = (availableWidth - gap * (quickActionCols - 1)) / quickActionCols;
+
+  // Feature actions: 6 cols on desktop, 3 cols on tablet/mobile
+  const featureActionCols = isDesktop ? 6 : 3;
+  const featureActionWidth = (availableWidth - gap * (featureActionCols - 1)) / featureActionCols;
+
+  // Balance cards: 3 cols on desktop, 2 cols on tablet, 1 on mobile
+  const balanceCols = isDesktop ? 3 : isTablet ? 2 : 1;
+  const balanceCardWidth = balanceCols === 1 ? availableWidth : (availableWidth - gap * (balanceCols - 1)) / balanceCols;
+
+  // Transaction cards: 2 cols on desktop, 1 on tablet/mobile
+  const txCols = isDesktop ? 2 : 1;
+  const txCardWidth = txCols === 1 ? availableWidth : (availableWidth - gap * (txCols - 1)) / txCols;
+
   const { data: balancesData, isPending: isLoadingBalances } = useQuery({
     queryKey: ['wallet', 'balances'],
     queryFn: () => api.wallet.getBalances(),
@@ -88,7 +109,7 @@ export default function WalletScreen() {
               <View
                 key={action.href}
                 style={{
-                  width: isDesktop ? '23%' : isTablet ? '48%' : '48%',
+                  width: quickActionWidth,
                   minWidth: 140,
                 }}
               >
@@ -131,7 +152,7 @@ export default function WalletScreen() {
                 <View
                   key={action.href}
                   style={{
-                    width: isDesktop ? '15%' : isTablet ? '31%' : '31%',
+                    width: featureActionWidth,
                     minWidth: 100,
                   }}
                 >
@@ -177,9 +198,9 @@ export default function WalletScreen() {
                     key={balance.currency}
                     className="bg-card p-4 rounded-xl flex-row items-center justify-between"
                     style={{
-                      width: isDesktop ? '32%' : isTablet ? '48%' : '100%',
-                      minWidth: 250,
-                    } as any}
+                      width: balanceCardWidth,
+                      minWidth: balanceCols === 1 ? undefined : 250,
+                    }}
                   >
                     <View className="flex-row items-center">
                       <Text className="text-2xl mr-3">{display.flag || '🌐'}</Text>
@@ -236,9 +257,9 @@ export default function WalletScreen() {
                   key={tx.id}
                   className="bg-card p-4 rounded-xl flex-row items-center justify-between"
                   style={{
-                    width: isDesktop ? '48%' : '100%',
-                    minWidth: 280,
-                  } as any}
+                    width: txCardWidth,
+                    minWidth: txCols === 1 ? undefined : 280,
+                  }}
                 >
                   <View className="flex-1">
                     <Text className="font-semibold text-foreground" numberOfLines={1}>
@@ -253,8 +274,7 @@ export default function WalletScreen() {
                       tx.type === 'credit' ? 'text-success' : 'text-danger'
                     }`}
                   >
-                    {tx.type === 'credit' ? '+' : '-'}
-                    {formatCompactCurrency(tx.amount, tx.currency)}
+                    {`${tx.type === 'credit' ? '+' : '-'}${formatCompactCurrency(tx.amount, tx.currency)}`}
                   </Text>
                 </View>
               ))}

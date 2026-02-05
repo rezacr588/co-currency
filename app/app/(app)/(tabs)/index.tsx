@@ -345,7 +345,7 @@ export default function DashboardScreen() {
               <View className="items-center flex-1">
                 <Text className="text-xs text-muted-foreground">Net Flow</Text>
                 <Text className={`text-base font-semibold ${forecast.net_daily_flow >= 0 ? 'text-success' : 'text-danger'}`}>
-                  {forecast.net_daily_flow >= 0 ? '+' : ''}{formatCompactCurrency(forecast.net_daily_flow, forecast.currency)}
+                  {`${forecast.net_daily_flow >= 0 ? '+' : ''}${formatCompactCurrency(forecast.net_daily_flow, forecast.currency)}`}
                 </Text>
               </View>
             </View>
@@ -508,8 +508,7 @@ export default function DashboardScreen() {
                         tx.type === 'credit' ? 'text-success' : 'text-danger'
                       }`}
                     >
-                      {tx.type === 'credit' ? '+' : '-'}
-                      {formatCompactCurrency(tx.amount, tx.currency)}
+                      {`${tx.type === 'credit' ? '+' : '-'}${formatCompactCurrency(tx.amount, tx.currency)}`}
                     </Text>
                   </View>
                 ))}
