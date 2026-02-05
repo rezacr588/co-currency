@@ -652,7 +652,7 @@ export default function ReportsScreen() {
                           monthlyReport.net >= 0 ? 'text-success' : 'text-danger'
                         }`}
                       >
-                        {`${monthlyReport.net >= 0 ? '+' : ''}${formatCompactCurrency(monthlyReport.net, monthlyReport.currency)}`}
+                        {`${monthlyReport.net >= 0 ? '+' : '-'}${formatCompactCurrency(Math.abs(monthlyReport.net), monthlyReport.currency)}`}
                       </Text>
                     </View>
                     <View className="flex-1 bg-secondary/50 p-3 rounded-lg">
