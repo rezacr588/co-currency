@@ -152,8 +152,12 @@ func (s *ReportsService) GetMonthlyReport(ctx context.Context, userID uuid.UUID,
 	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
 	endDate := startDate.AddDate(0, 1, 0).Add(-time.Second)
 
-	// Get all transactions for the month
-	transactions, _, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, nil, 10000, 0)
+	// Get transactions for the month using date filters
+	filter := &model.TransactionFilter{
+		FromDate: startDate.Format("2006-01-02"),
+		ToDate:   endDate.Format("2006-01-02"),
+	}
+	transactions, _, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, filter, 10000, 0)
 	if err != nil {
 		return nil, fmt.Errorf("getting transactions: %w", err)
 	}
@@ -163,9 +167,6 @@ func (s *ReportsService) GetMonthlyReport(ctx context.Context, userID uuid.UUID,
 	categoryCounts := make(map[string]int)
 
 	for _, tx := range transactions {
-		if tx.CreatedAt.Before(startDate) || tx.CreatedAt.After(endDate) {
-			continue
-		}
 
 		// Convert amount to target currency if needed
 		amount := tx.Amount
@@ -258,18 +259,22 @@ func (s *ReportsService) GetYearlyReport(ctx context.Context, userID uuid.UUID, 
 
 // GetCategoryReport generates a category-wise spending report
 func (s *ReportsService) GetCategoryReport(ctx context.Context, userID uuid.UUID, fromDate, toDate, currency string) (*CategoryReport, error) {
-	startTime, err := time.Parse("2006-01-02", fromDate)
+	_, err := time.Parse("2006-01-02", fromDate)
 	if err != nil {
 		return nil, fmt.Errorf("invalid from_date format (expected YYYY-MM-DD): %w", err)
 	}
-	endTime, err := time.Parse("2006-01-02", toDate)
+	_, err = time.Parse("2006-01-02", toDate)
 	if err != nil {
 		return nil, fmt.Errorf("invalid to_date format (expected YYYY-MM-DD): %w", err)
 	}
-	endTime = endTime.Add(24*time.Hour - time.Second)
 
-	// Get all transactions
-	transactions, _, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, nil, 10000, 0)
+	// Get transactions within date range
+	filter := &model.TransactionFilter{
+		FromDate: fromDate,
+		ToDate:   toDate,
+		Type:     "debit",
+	}
+	transactions, _, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, filter, 10000, 0)
 	if err != nil {
 		return nil, fmt.Errorf("getting transactions: %w", err)
 	}
@@ -279,13 +284,6 @@ func (s *ReportsService) GetCategoryReport(ctx context.Context, userID uuid.UUID
 	var total float64
 
 	for _, tx := range transactions {
-		if tx.CreatedAt.Before(startTime) || tx.CreatedAt.After(endTime) {
-			continue
-		}
-		if tx.Type != "debit" {
-			continue
-		}
-
 		// Convert amount to target currency if needed
 		amount := tx.Amount
 		if tx.Currency != currency {
@@ -333,8 +331,17 @@ func (s *ReportsService) GetTrendsReport(ctx context.Context, userID uuid.UUID, 
 	now := time.Now()
 	trends := make([]TrendData, months)
 
-	// Get all transactions
-	transactions, _, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, nil, 10000, 0)
+	// Calculate full date range for all months
+	oldestMonth := now.AddDate(0, -(months-1), 0)
+	rangeStart := time.Date(oldestMonth.Year(), oldestMonth.Month(), 1, 0, 0, 0, 0, time.UTC)
+	rangeEnd := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, 1, 0).Add(-time.Second)
+
+	// Get transactions for the full range
+	filter := &model.TransactionFilter{
+		FromDate: rangeStart.Format("2006-01-02"),
+		ToDate:   rangeEnd.Format("2006-01-02"),
+	}
+	transactions, _, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, filter, 10000, 0)
 	if err != nil {
 		return nil, fmt.Errorf("getting transactions: %w", err)
 	}
@@ -442,16 +449,17 @@ func (s *ReportsService) GetForecast(ctx context.Context, userID uuid.UUID, curr
 	endDate := time.Now()
 	startDate := endDate.AddDate(0, 0, -30)
 
-	transactions, _, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, nil, 10000, 0)
+	filter := &model.TransactionFilter{
+		FromDate: startDate.Format("2006-01-02"),
+		ToDate:   endDate.Format("2006-01-02"),
+	}
+	transactions, _, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, filter, 10000, 0)
 	if err != nil {
 		return nil, err
 	}
 
 	var totalIncome, totalExpenses float64
 	for _, tx := range transactions {
-		if tx.CreatedAt.Before(startDate) || tx.CreatedAt.After(endDate) {
-			continue
-		}
 
 		amount := tx.Amount
 		if tx.Currency != currency {
@@ -566,15 +574,17 @@ func (s *ReportsService) GetHealthScore(ctx context.Context, userID uuid.UUID, c
 
 	// 4. Consistency (15% weight) - based on transaction frequency
 	consistency := 50.0
-	transactions, _, _ := s.walletRepo.GetTransactionsFiltered(ctx, userID, nil, 100, 0)
+	thirtyDaysAgo := now.AddDate(0, 0, -30)
+	consistencyFilter := &model.TransactionFilter{
+		FromDate: thirtyDaysAgo.Format("2006-01-02"),
+		ToDate:   now.Format("2006-01-02"),
+	}
+	transactions, _, _ := s.walletRepo.GetTransactionsFiltered(ctx, userID, consistencyFilter, 10000, 0)
 	if len(transactions) > 0 {
 		// Count unique days with transactions in last 30 days
-		thirtyDaysAgo := now.AddDate(0, 0, -30)
 		activeDays := make(map[string]bool)
 		for _, tx := range transactions {
-			if tx.CreatedAt.After(thirtyDaysAgo) {
-				activeDays[tx.CreatedAt.Format("2006-01-02")] = true
-			}
+			activeDays[tx.CreatedAt.Format("2006-01-02")] = true
 		}
 		dayCount := len(activeDays)
 		if dayCount >= 20 {
@@ -663,8 +673,12 @@ func (s *ReportsService) GetWeeklyRecap(ctx context.Context, userID uuid.UUID, c
 	weekStart := now.AddDate(0, 0, -7)
 	prevWeekStart := weekStart.AddDate(0, 0, -7)
 
-	// Get all transactions
-	transactions, _, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, nil, 1000, 0)
+	// Get transactions for both weeks
+	filter := &model.TransactionFilter{
+		FromDate: prevWeekStart.Format("2006-01-02"),
+		ToDate:   now.Format("2006-01-02"),
+	}
+	transactions, _, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, filter, 10000, 0)
 	if err != nil {
 		return nil, err
 	}

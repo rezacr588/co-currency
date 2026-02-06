@@ -334,8 +334,8 @@ func (r *WalletRepository) GetTransactionsFiltered(ctx context.Context, userID u
 	if limit <= 0 {
 		limit = 50
 	}
-	if limit > 100 {
-		limit = 100
+	if limit > 10000 {
+		limit = 10000
 	}
 
 	// Build dynamic query
