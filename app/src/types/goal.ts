@@ -202,6 +202,28 @@ export interface InsightResponse {
   sentiment: 'positive' | 'neutral' | 'negative';
 }
 
+export interface WeeklyRecapReport {
+  total_spent: number;
+  total_income: number;
+  net_change: number;
+  top_categories: { category: string; amount: number }[];
+  compared_to_last: number;
+  insights: string[];
+  action_items: string[];
+  currency: string;
+  generated_at: string;
+}
+
+export interface ForecastReport {
+  currency: string;
+  current_balance: number;
+  avg_daily_spend: number;
+  avg_daily_income: number;
+  net_daily_flow: number;
+  days_until_zero: number;
+  estimated_zero_date?: string;
+}
+
 // Subscription types
 export interface Subscription {
   id: string;

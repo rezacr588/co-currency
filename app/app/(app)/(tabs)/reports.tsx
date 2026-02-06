@@ -1,69 +1,26 @@
 import { useState, useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, useWindowDimensions, Modal } from 'react-native';
+import { View, Text, ScrollView, Pressable, RefreshControl, useWindowDimensions, Modal } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, PieChart, BarChart3, Wallet, Calendar, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, X } from 'lucide-react-native';
+import { Wallet, Calendar, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { api } from '../../../src/api';
 import { useLanguage } from '../../../src/context/LanguageContext';
 import { formatCompactCurrency, formatNumber } from '../../../src/utils/format';
-import { StyledCategoryIcon, CATEGORY_COLORS, getCategoryBackground } from '../../../src/constants/icons';
-
-// Date range preset types
-type DatePreset = 'this_month' | 'last_month' | 'last_3_months' | 'last_6_months' | 'this_year' | 'last_year' | 'all_time' | 'custom';
-
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const FULL_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
-// Get date range from preset
-function getDateRangeFromPreset(preset: DatePreset): { year?: number; month?: number; fromDate?: string; toDate?: string; label: string } {
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
-
-  switch (preset) {
-    case 'this_month':
-      return { year: currentYear, month: currentMonth, label: `${FULL_MONTH_NAMES[currentMonth - 1]} ${currentYear}` };
-    case 'last_month': {
-      const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
-      const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
-      return { year: lastMonthYear, month: lastMonth, label: `${FULL_MONTH_NAMES[lastMonth - 1]} ${lastMonthYear}` };
-    }
-    case 'last_3_months': {
-      const fromDate = new Date(currentYear, currentMonth - 4, 1);
-      const toDate = new Date(currentYear, currentMonth, 0);
-      return {
-        fromDate: fromDate.toISOString().split('T')[0],
-        toDate: toDate.toISOString().split('T')[0],
-        label: 'Last 3 Months',
-      };
-    }
-    case 'last_6_months': {
-      const fromDate = new Date(currentYear, currentMonth - 7, 1);
-      const toDate = new Date(currentYear, currentMonth, 0);
-      return {
-        fromDate: fromDate.toISOString().split('T')[0],
-        toDate: toDate.toISOString().split('T')[0],
-        label: 'Last 6 Months',
-      };
-    }
-    case 'this_year':
-      return {
-        fromDate: `${currentYear}-01-01`,
-        toDate: `${currentYear}-12-31`,
-        label: `${currentYear}`,
-      };
-    case 'last_year':
-      return {
-        fromDate: `${currentYear - 1}-01-01`,
-        toDate: `${currentYear - 1}-12-31`,
-        label: `${currentYear - 1}`,
-      };
-    case 'all_time':
-      return { label: 'All Time' };
-    default:
-      return { year: currentYear, month: currentMonth, label: `${FULL_MONTH_NAMES[currentMonth - 1]} ${currentYear}` };
-  }
-}
+import { CATEGORY_COLORS } from '../../../src/constants/icons';
+import {
+  type DatePreset,
+  MONTH_NAMES,
+  FULL_MONTH_NAMES,
+  getDateRangeFromPreset,
+} from '../../../src/utils/dateRange';
+import {
+  ReportPeriodTabs,
+  type ReportPeriod,
+  DailyReportView,
+  WeeklyReportView,
+  MonthlyReportView,
+  YearlyReportView,
+} from '../../../src/components/features/Reports';
 
 // Month Picker Modal Component
 function MonthYearPicker({
@@ -72,12 +29,14 @@ function MonthYearPicker({
   selectedYear,
   selectedMonth,
   onSelect,
+  t,
 }: {
   visible: boolean;
   onClose: () => void;
   selectedYear: number;
   selectedMonth: number;
   onSelect: (year: number, month: number) => void;
+  t: (key: string) => string;
 }) {
   const [viewYear, setViewYear] = useState(selectedYear);
   const currentYear = new Date().getFullYear();
@@ -98,6 +57,8 @@ function MonthYearPicker({
             <Pressable
               onPress={() => setViewYear(viewYear - 1)}
               className="p-2 rounded-lg bg-secondary"
+              accessibilityRole="button"
+              accessibilityLabel="Previous year"
             >
               <ChevronLeft size={20} color="#a1a1aa" />
             </Pressable>
@@ -106,6 +67,8 @@ function MonthYearPicker({
               onPress={() => viewYear < currentYear && setViewYear(viewYear + 1)}
               className={`p-2 rounded-lg ${viewYear >= currentYear ? 'opacity-30' : 'bg-secondary'}`}
               disabled={viewYear >= currentYear}
+              accessibilityRole="button"
+              accessibilityLabel="Next year"
             >
               <ChevronRight size={20} color="#a1a1aa" />
             </Pressable>
@@ -134,6 +97,9 @@ function MonthYearPicker({
                           ? 'bg-secondary/30 opacity-40'
                           : 'bg-secondary'
                   }`}
+                  accessibilityRole="button"
+                  accessibilityLabel={month}
+                  accessibilityState={{ selected: isSelected, disabled: isFuture }}
                 >
                   <Text
                     className={`font-medium ${
@@ -151,8 +117,10 @@ function MonthYearPicker({
           <Pressable
             onPress={onClose}
             className="mt-6 bg-secondary py-3 rounded-xl items-center"
+            accessibilityRole="button"
+            accessibilityLabel={t('close')}
           >
-            <Text className="text-foreground font-medium">Close</Text>
+            <Text className="text-foreground font-medium">{t('close')}</Text>
           </Pressable>
         </Pressable>
       </Pressable>
@@ -160,7 +128,7 @@ function MonthYearPicker({
   );
 }
 
-// Date Range Selector Component
+// Date Range Selector Component (for Monthly view)
 function DateRangeSelector({
   selectedPreset,
   onPresetChange,
@@ -168,7 +136,7 @@ function DateRangeSelector({
   selectedMonth,
   onMonthSelect,
   dateLabel,
-  isCompact,
+  t,
 }: {
   selectedPreset: DatePreset;
   onPresetChange: (preset: DatePreset) => void;
@@ -176,17 +144,17 @@ function DateRangeSelector({
   selectedMonth: number;
   onMonthSelect: (year: number, month: number) => void;
   dateLabel: string;
-  isCompact?: boolean;
+  t: (key: string) => string;
 }) {
   const [showPicker, setShowPicker] = useState(false);
 
-  const presets: { key: DatePreset; label: string; icon?: string }[] = [
-    { key: 'this_month', label: 'This Month' },
-    { key: 'last_month', label: 'Last Month' },
-    { key: 'last_3_months', label: '3 Months' },
-    { key: 'last_6_months', label: '6 Months' },
-    { key: 'this_year', label: 'This Year' },
-    { key: 'all_time', label: 'All Time' },
+  const presets: { key: DatePreset; labelKey: string }[] = [
+    { key: 'this_month', labelKey: 'thisMonth' },
+    { key: 'last_month', labelKey: 'lastMonth' },
+    { key: 'last_3_months', labelKey: 'threeMonths' },
+    { key: 'last_6_months', labelKey: 'sixMonths' },
+    { key: 'this_year', labelKey: 'thisYear' },
+    { key: 'all_time', labelKey: 'allTime' },
   ];
 
   return (
@@ -196,6 +164,8 @@ function DateRangeSelector({
         <Pressable
           onPress={() => setShowPicker(true)}
           className="flex-row items-center bg-card border border-border px-4 py-2.5 rounded-xl"
+          accessibilityRole="button"
+          accessibilityLabel="Select date range"
         >
           <Calendar size={18} color="rgb(212, 175, 55)" />
           <Text className="text-foreground font-semibold ml-2">{dateLabel}</Text>
@@ -218,13 +188,16 @@ function DateRangeSelector({
                 ? 'bg-accent'
                 : 'bg-secondary border border-border'
             }`}
+            accessibilityRole="button"
+            accessibilityLabel={t(preset.labelKey)}
+            accessibilityState={{ selected: selectedPreset === preset.key }}
           >
             <Text
               className={`text-sm font-medium ${
                 selectedPreset === preset.key ? 'text-background' : 'text-foreground'
               }`}
             >
-              {preset.label}
+              {t(preset.labelKey)}
             </Text>
           </Pressable>
         ))}
@@ -240,118 +213,13 @@ function DateRangeSelector({
           onMonthSelect(year, month);
           setShowPicker(false);
         }}
+        t={t}
       />
     </View>
   );
 }
 
-// Simple bar chart component using View widths
-function HorizontalBarChart({
-  data,
-  maxValue,
-  labelKey,
-  valueKey,
-  colorKey,
-  formatValue,
-}: {
-  data: any[];
-  maxValue: number;
-  labelKey: string;
-  valueKey: string;
-  colorKey?: string;
-  formatValue?: (value: number) => string;
-}) {
-  return (
-    <View className="gap-3">
-      {data.map((item, index) => {
-        const value = item[valueKey];
-        const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
-        const color = colorKey ? item[colorKey] : CATEGORY_COLORS[item[labelKey]?.toLowerCase()] || 'rgb(212, 175, 55)';
-
-        return (
-          <View key={index}>
-            <View className="flex-row items-center justify-between mb-1">
-              <Text className="text-foreground text-sm capitalize">{item[labelKey]}</Text>
-              <Text className="text-muted-foreground text-sm">
-                {formatValue ? formatValue(value) : value}
-              </Text>
-            </View>
-            <View className="h-3 bg-secondary rounded-full overflow-hidden">
-              <View
-                className="h-full rounded-full"
-                style={{
-                  width: `${Math.min(percentage, 100)}%`,
-                  backgroundColor: color,
-                }}
-              />
-            </View>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
-// Comparison bar chart for income vs expenses
-function ComparisonBarChart({
-  income,
-  expenses,
-  currency,
-  t,
-}: {
-  income: number;
-  expenses: number;
-  currency: string;
-  t: (key: string) => string;
-}) {
-  const maxValue = Math.max(income, expenses);
-  const incomePercent = maxValue > 0 ? (income / maxValue) * 100 : 0;
-  const expensePercent = maxValue > 0 ? (expenses / maxValue) * 100 : 0;
-
-  return (
-    <View className="gap-4">
-      {/* Income Bar */}
-      <View>
-        <View className="flex-row items-center justify-between mb-1">
-          <View className="flex-row items-center">
-            <ArrowUp size={14} color="rgb(16, 185, 129)" />
-            <Text className="text-foreground text-sm ml-1">{t('income')}</Text>
-          </View>
-          <Text className="text-success text-sm font-medium">
-            {formatCompactCurrency(income, currency)}
-          </Text>
-        </View>
-        <View className="h-4 bg-secondary rounded-full overflow-hidden">
-          <View
-            className="h-full rounded-full bg-success"
-            style={{ width: `${incomePercent}%` }}
-          />
-        </View>
-      </View>
-
-      {/* Expenses Bar */}
-      <View>
-        <View className="flex-row items-center justify-between mb-1">
-          <View className="flex-row items-center">
-            <ArrowDown size={14} color="rgb(220, 38, 38)" />
-            <Text className="text-foreground text-sm ml-1">{t('expenses')}</Text>
-          </View>
-          <Text className="text-danger text-sm font-medium">
-            {formatCompactCurrency(expenses, currency)}
-          </Text>
-        </View>
-        <View className="h-4 bg-secondary rounded-full overflow-hidden">
-          <View
-            className="h-full rounded-full bg-danger"
-            style={{ width: `${expensePercent}%` }}
-          />
-        </View>
-      </View>
-    </View>
-  );
-}
-
-// Donut/Ring chart placeholder using nested Views
+// Ring chart for net worth display
 function RingChart({
   segments,
   centerLabel,
@@ -362,7 +230,7 @@ function RingChart({
   centerValue: string;
 }) {
   const total = segments.reduce((sum, s) => sum + s.value, 0);
-  let currentAngle = 0;
+  if (total === 0) return null;
 
   return (
     <View className="items-center">
@@ -370,7 +238,6 @@ function RingChart({
         style={{ width: 160, height: 160 }}
         className="relative items-center justify-center"
       >
-        {/* Background ring */}
         <View
           style={{
             width: 160,
@@ -381,13 +248,11 @@ function RingChart({
             position: 'absolute',
           }}
         />
-        {/* Simplified visualization - show percentages as stacked bars around center */}
         <View className="absolute items-center justify-center">
           <Text className="text-muted-foreground text-xs">{centerLabel}</Text>
           <Text className="text-foreground text-lg font-bold">{centerValue}</Text>
         </View>
       </View>
-      {/* Legend */}
       <View className="flex-row flex-wrap justify-center gap-3 mt-4">
         {segments.slice(0, 4).map((segment, index) => (
           <View key={index} className="flex-row items-center">
@@ -400,61 +265,6 @@ function RingChart({
             </Text>
           </View>
         ))}
-      </View>
-    </View>
-  );
-}
-
-// Trends mini line chart using bars
-function TrendsChart({
-  data,
-  t,
-}: {
-  data: { period: string; income: number; expenses: number; net: number }[];
-  t: (key: string) => string;
-}) {
-  if (!data || data.length === 0) return null;
-
-  const maxValue = data.length > 0 ? Math.max(...data.map((d) => Math.max(d.income, d.expenses))) : 0;
-
-  return (
-    <View>
-      <View className="flex-row items-end justify-between gap-2" style={{ height: 100 }}>
-        {data.slice(-6).map((item, index) => {
-          const incomeHeight = maxValue > 0 ? (item.income / maxValue) * 80 : 0;
-          const expenseHeight = maxValue > 0 ? (item.expenses / maxValue) * 80 : 0;
-
-          return (
-            <View key={index} className="flex-1 items-center">
-              <View className="flex-row gap-1 items-end" style={{ height: 80 }}>
-                {/* Income bar */}
-                <View
-                  className="w-2 rounded-t bg-success"
-                  style={{ height: Math.max(incomeHeight, 2) }}
-                />
-                {/* Expense bar */}
-                <View
-                  className="w-2 rounded-t bg-danger"
-                  style={{ height: Math.max(expenseHeight, 2) }}
-                />
-              </View>
-              <Text className="text-muted-foreground text-xs mt-1">
-                {item.period.split('-')[1] || item.period}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
-      {/* Legend */}
-      <View className="flex-row justify-center gap-4 mt-3">
-        <View className="flex-row items-center">
-          <View className="w-2 h-2 rounded-full bg-success mr-1" />
-          <Text className="text-muted-foreground text-xs">{t('income')}</Text>
-        </View>
-        <View className="flex-row items-center">
-          <View className="w-2 h-2 rounded-full bg-danger mr-1" />
-          <Text className="text-muted-foreground text-xs">{t('expenses')}</Text>
-        </View>
       </View>
     </View>
   );
@@ -478,7 +288,10 @@ export default function ReportsScreen() {
   const categoryCols = isDesktop ? 3 : isTablet ? 2 : 1;
   const categoryCardWidth = categoryCols === 1 ? availableWidth : (availableWidth - cardGap * (categoryCols - 1)) / categoryCols;
 
-  // Date range state
+  // Report period state
+  const [period, setPeriod] = useState<ReportPeriod>('monthly');
+
+  // Date range state (for monthly view)
   const now = new Date();
   const [selectedPreset, setSelectedPreset] = useState<DatePreset>('this_month');
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
@@ -517,44 +330,20 @@ export default function ReportsScreen() {
     setSelectedPreset('custom');
   };
 
-  const { data: monthlyReport, isPending: isLoadingMonthly } = useQuery({
-    queryKey: ['reports', 'monthly', dateRange.year, dateRange.month],
-    queryFn: () => api.reports.monthly(dateRange.year, dateRange.month),
-  });
-
-  const { data: categoryReport, isPending: isLoadingCategory } = useQuery({
-    queryKey: ['reports', 'category', dateRange.fromDate, dateRange.toDate],
-    queryFn: () => {
-      if (dateRange.fromDate && dateRange.toDate) {
-        return api.reports.category(dateRange.fromDate, dateRange.toDate);
-      }
-      // For single month, calculate from/to dates
-      const startDate = new Date(dateRange.year || now.getFullYear(), (dateRange.month || now.getMonth() + 1) - 1, 1);
-      const endDate = new Date(dateRange.year || now.getFullYear(), dateRange.month || now.getMonth() + 1, 0);
-      return api.reports.category(
-        startDate.toISOString().split('T')[0],
-        endDate.toISOString().split('T')[0]
-      );
-    },
-  });
-
-  const { data: networth, isPending: isLoadingNetworth } = useQuery({
+  // Only fetch networth for monthly view (shown as header)
+  const { data: networth, isError: networthError } = useQuery({
     queryKey: ['reports', 'networth'],
     queryFn: () => api.reports.networth(),
-  });
-
-  const { data: trendsReport, isPending: isLoadingTrends } = useQuery({
-    queryKey: ['reports', 'trends'],
-    queryFn: () => api.reports.trends(6),
+    enabled: period === 'monthly',
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const onRefresh = async () => {
     setRefreshing(true);
     await queryClient.invalidateQueries({ queryKey: ['reports'] });
+    await queryClient.invalidateQueries({ queryKey: ['transactions'] });
     setRefreshing(false);
   };
-
-  const isPending = isLoadingMonthly || isLoadingCategory || isLoadingNetworth || isLoadingTrends;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
@@ -573,210 +362,76 @@ export default function ReportsScreen() {
       >
         <Text className="text-3xl font-bold text-foreground mb-4">{t('reportsAndStats')}</Text>
 
-        {/* Date Range Selector */}
-        <DateRangeSelector
-          selectedPreset={selectedPreset}
-          onPresetChange={handlePresetChange}
-          selectedYear={selectedYear}
-          selectedMonth={selectedMonth}
-          onMonthSelect={handleMonthSelect}
-          dateLabel={dateRange.label}
-          isCompact={!isDesktop}
-        />
+        {/* Report Period Tabs */}
+        <ReportPeriodTabs selected={period} onSelect={setPeriod} />
 
-        {isPending ? (
-          <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
-        ) : (
+        {/* Conditional content based on period */}
+        {period === 'daily' && (
+          <DailyReportView isTablet={isTablet} />
+        )}
+
+        {period === 'weekly' && (
+          <WeeklyReportView isTablet={isTablet} />
+        )}
+
+        {period === 'monthly' && (
           <>
-            {/* Top Row: Net Worth and Monthly Summary */}
-            <View style={{
-              flexDirection: isTablet ? 'row' : 'column',
-              gap: 16,
-              marginBottom: 24,
-            }}>
-              {/* Net Worth Card */}
-              {networth && (
-                <View className="bg-card p-6 rounded-xl" style={{ flex: isTablet ? 1 : undefined }}>
-                  <View className="flex-row items-center mb-4">
-                    <View className="bg-accent/20 p-2 rounded-lg mr-3">
-                      <Wallet size={20} color="rgb(212, 175, 55)" />
-                    </View>
-                    <Text className="text-muted-foreground">{t('netWorth')}</Text>
-                  </View>
-                  <Text className="text-4xl font-bold text-accent mb-4">
-                    {formatCompactCurrency(networth.total_balance, networth.currency)}
-                  </Text>
+            {/* Date Range Selector */}
+            <DateRangeSelector
+              selectedPreset={selectedPreset}
+              onPresetChange={handlePresetChange}
+              selectedYear={selectedYear}
+              selectedMonth={selectedMonth}
+              onMonthSelect={handleMonthSelect}
+              dateLabel={dateRange.label}
+              t={t}
+            />
 
-                  {/* Balance Distribution */}
-                  {networth.balances && networth.balances.length > 0 && (
-                    <View className="mt-2">
-                      <Text className="text-muted-foreground text-sm mb-3">{t('balanceDistribution')}</Text>
-                      <RingChart
-                        segments={networth.balances.slice(0, 5).map((b) => ({
-                          value: b.balance_in_base,
-                          color: CATEGORY_COLORS[b.currency.toLowerCase()] || '#d4af37',
-                          label: b.currency,
-                        }))}
-                        centerLabel={t('total')}
-                        centerValue={formatCompactCurrency(networth.total_balance, networth.currency)}
-                      />
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {/* Monthly Summary */}
-              {monthlyReport && (
-                <View className="bg-card p-6 rounded-xl" style={{ flex: isTablet ? 1 : undefined }}>
-                  <View className="flex-row items-center mb-4">
-                    <View className="bg-secondary p-2 rounded-lg mr-3">
-                      <Calendar size={20} color="rgb(148, 163, 184)" />
-                    </View>
-                    <Text className="text-muted-foreground">{t('monthlySummary')}</Text>
-                  </View>
-
-                  {/* Income vs Expenses Chart */}
-                  <ComparisonBarChart
-                    income={monthlyReport.income}
-                    expenses={monthlyReport.expenses}
-                    currency={monthlyReport.currency}
-                    t={t}
-                  />
-
-                  {/* Net & Savings Rate */}
-                  <View className="flex-row gap-4 mt-6">
-                    <View className="flex-1 bg-secondary/50 p-3 rounded-lg">
-                      <Text className="text-muted-foreground text-xs mb-1">{t('net')}</Text>
-                      <Text
-                        className={`text-lg font-bold ${
-                          monthlyReport.net >= 0 ? 'text-success' : 'text-danger'
-                        }`}
-                      >
-                        {`${monthlyReport.net >= 0 ? '+' : '-'}${formatCompactCurrency(Math.abs(monthlyReport.net), monthlyReport.currency)}`}
-                      </Text>
-                    </View>
-                    <View className="flex-1 bg-secondary/50 p-3 rounded-lg">
-                      <Text className="text-muted-foreground text-xs mb-1">{t('savingsRate')}</Text>
-                      <Text
-                        className={`text-lg font-bold ${
-                          monthlyReport.savings_rate >= 0 ? 'text-success' : 'text-danger'
-                        }`}
-                      >
-                        {formatNumber(monthlyReport.savings_rate, 1)}%
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              )}
-            </View>
-
-            {/* Trends Chart */}
-            {trendsReport && trendsReport.trends && trendsReport.trends.length > 0 && (
+            {/* Net Worth Card (stays at top for monthly) */}
+            {networth && !networthError && (
               <View className="bg-card p-6 rounded-xl mb-6">
                 <View className="flex-row items-center mb-4">
-                  <View className="bg-secondary p-2 rounded-lg mr-3">
-                    <BarChart3 size={20} color="rgb(148, 163, 184)" />
+                  <View className="bg-accent/20 p-2 rounded-lg mr-3">
+                    <Wallet size={20} color="rgb(212, 175, 55)" />
                   </View>
-                  <Text className="text-foreground font-semibold">{t('incomeVsExpenses')}</Text>
-                  <Text className="text-muted-foreground text-sm ml-2">
-                    ({trendsReport.months} {t('months')})
-                  </Text>
+                  <Text className="text-muted-foreground">{t('netWorth')}</Text>
                 </View>
-                <TrendsChart data={trendsReport.trends} t={t} />
-              </View>
-            )}
-
-            {/* Category Breakdown */}
-            {categoryReport && categoryReport.categories.length > 0 && (
-              <View className="bg-card p-6 rounded-xl">
-                <View className="flex-row items-center mb-4">
-                  <View className="bg-secondary p-2 rounded-lg mr-3">
-                    <PieChart size={20} color="rgb(148, 163, 184)" />
-                  </View>
-                  <Text className="text-foreground font-semibold">{t('spendingByCategory')}</Text>
-                </View>
-
-                {/* Horizontal Bar Chart for Categories */}
-                <View className="mb-6">
-                  <HorizontalBarChart
-                    data={categoryReport.categories.slice(0, 6)}
-                    maxValue={Math.max(...categoryReport.categories.map((c) => c.amount))}
-                    labelKey="category"
-                    valueKey="amount"
-                    formatValue={(v) => formatCompactCurrency(v, categoryReport.currency)}
-                  />
-                </View>
-
-                {/* Category Cards Grid */}
-                <View style={{
-                  flexDirection: 'row',
-                  flexWrap: 'wrap',
-                  gap: 12,
-                  marginTop: 16,
-                }}>
-                  {categoryReport.categories.slice(0, 6).map((cat) => {
-                    const categoryColor = CATEGORY_COLORS[cat.category.toLowerCase()] || 'rgb(212, 175, 55)';
-                    return (
-                      <View
-                        key={cat.category}
-                        className="bg-secondary/30 border border-border p-4 rounded-xl"
-                        style={{
-                          width: categoryCardWidth,
-                          minWidth: categoryCols === 1 ? undefined : 200,
-                        }}
-                      >
-                        <View className="flex-row items-center justify-between mb-3">
-                          <View className="flex-row items-center">
-                            <StyledCategoryIcon
-                              category={cat.category}
-                              size={16}
-                              backgroundOpacity={0.15}
-                              borderRadius={6}
-                              padding={6}
-                            />
-                            <Text className="font-medium text-foreground capitalize ml-2">
-                              {cat.category}
-                            </Text>
-                          </View>
-                          <Text className="text-foreground font-semibold">
-                            {formatCompactCurrency(cat.amount, categoryReport.currency)}
-                          </Text>
-                        </View>
-                        <View className="h-2 bg-secondary rounded-full overflow-hidden">
-                          <View
-                            className="h-full rounded-full"
-                            style={{
-                              width: `${cat.percentage}%`,
-                              backgroundColor: categoryColor,
-                            }}
-                          />
-                        </View>
-                        <View className="flex-row justify-between mt-2">
-                          <Text className="text-muted-foreground text-sm">
-                            {cat.count} {t('transactions')}
-                          </Text>
-                          <Text className="text-muted-foreground text-sm">
-                            {formatNumber(cat.percentage, 1)}%
-                          </Text>
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
-            )}
-
-            {/* Empty State */}
-            {!monthlyReport && !categoryReport && !networth && (
-              <View className="bg-card p-8 rounded-xl items-center">
-                <BarChart3 size={48} color="rgb(71, 71, 71)" />
-                <Text className="text-foreground font-semibold mt-4 text-lg">{t('noDataAvailable')}</Text>
-                <Text className="text-muted-foreground mt-2 text-center">
-                  {t('addTransaction')}
+                <Text className="text-4xl font-bold text-accent mb-4">
+                  {formatCompactCurrency(networth.total_balance, networth.currency)}
                 </Text>
+
+                {networth.balances && networth.balances.length > 0 && (
+                  <View className="mt-2">
+                    <Text className="text-muted-foreground text-sm mb-3">{t('balanceDistribution')}</Text>
+                    <RingChart
+                      segments={networth.balances.slice(0, 5).map((b) => ({
+                        value: b.balance_in_base,
+                        color: CATEGORY_COLORS[b.currency.toLowerCase()] || '#d4af37',
+                        label: b.currency,
+                      }))}
+                      centerLabel={t('total')}
+                      centerValue={formatCompactCurrency(networth.total_balance, networth.currency)}
+                    />
+                  </View>
+                )}
               </View>
             )}
+
+            {/* Monthly Report View */}
+            <MonthlyReportView
+              year={dateRange.year || selectedYear}
+              month={dateRange.month || selectedMonth}
+              fromDate={dateRange.fromDate}
+              toDate={dateRange.toDate}
+              isTablet={isTablet}
+              categoryCardWidth={categoryCardWidth}
+              categoryCols={categoryCols}
+            />
           </>
+        )}
+
+        {period === 'yearly' && (
+          <YearlyReportView isTablet={isTablet} />
         )}
       </ScrollView>
     </SafeAreaView>
