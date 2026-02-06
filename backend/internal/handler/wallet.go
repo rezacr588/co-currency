@@ -357,7 +357,7 @@ func escapeCSVField(field string) string {
 func parsePaginationParams(w http.ResponseWriter, r *http.Request) (int, int, bool) {
 	limit := 50
 	offset := 0
-	const maxLimit = 100
+	const maxLimit = 500
 
 	if l := r.URL.Query().Get("limit"); l != "" {
 		parsed, err := strconv.Atoi(l)
