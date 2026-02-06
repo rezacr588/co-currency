@@ -75,17 +75,17 @@ export default function DashboardScreen() {
     const expenses = monthlyReport.expenses;
     if (expenses > income) {
       insights.push({
-        title: 'Spending exceeds income',
-        detail: `You spent ${formatCompactCurrency(expenses - income, monthlyReport.currency)} more than you earned this month.`,
+        title: t('spendingExceedsIncome') || 'Spending exceeds income',
+        detail: t('spentMoreThanEarned') || `You spent ${formatCompactCurrency(expenses - income, monthlyReport.currency)} more than you earned this month.`,
         tone: 'warning',
       });
     } else if (income > 0) {
       const savingsRate = (income - expenses) / income;
       insights.push({
-        title: `Savings rate: ${Math.round(savingsRate * 100)}%`,
+        title: `${t('savingsRate') || 'Savings rate'}: ${Math.round(savingsRate * 100)}%`,
         detail: savingsRate < 0.2
-          ? 'Try nudging this toward 20% by trimming one category.'
-          : 'Nice work — keep this pace to grow your savings.',
+          ? (t('nudgeSavings') || 'Try nudging this toward 20% by trimming one category.')
+          : (t('keepSavingsPace') || 'Nice work — keep this pace to grow your savings.'),
         tone: savingsRate < 0.2 ? 'info' : 'success',
       });
     }
@@ -104,8 +104,8 @@ export default function DashboardScreen() {
     if (topCategory) {
       const readable = topCategory.replace(/_/g, ' ');
       insights.push({
-        title: `Top spending: ${readable}`,
-        detail: 'Consider setting a small weekly limit to stay on track.',
+        title: `${t('topSpending') || 'Top spending'}: ${readable}`,
+        detail: t('considerWeeklyLimit') || 'Consider setting a small weekly limit to stay on track.',
         tone: 'info',
       });
     }
@@ -113,8 +113,8 @@ export default function DashboardScreen() {
 
   if (totalGoals === 0) {
     insights.push({
-      title: 'Set your first goal',
-      detail: 'A simple target helps you see progress faster.',
+      title: t('setFirstGoal') || 'Set your first goal',
+      detail: t('simpleTargetHelps') || 'A simple target helps you see progress faster.',
       tone: 'info',
     });
   }
@@ -199,7 +199,7 @@ export default function DashboardScreen() {
                 <Text className="text-2xl font-bold text-success">
                   {formatCompactCurrency(monthlyReport.income, monthlyReport.currency)}
                 </Text>
-                <Text className="text-xs text-muted-foreground mt-1">This month</Text>
+                <Text className="text-xs text-muted-foreground mt-1">{t('thisMonth')}</Text>
               </View>
             </View>
           )}
@@ -215,7 +215,7 @@ export default function DashboardScreen() {
                 <Text className="text-2xl font-bold text-danger">
                   {formatCompactCurrency(monthlyReport.expenses, monthlyReport.currency)}
                 </Text>
-                <Text className="text-xs text-muted-foreground mt-1">This month</Text>
+                <Text className="text-xs text-muted-foreground mt-1">{t('thisMonth')}</Text>
               </View>
             </View>
           )}
@@ -230,7 +230,7 @@ export default function DashboardScreen() {
               <Text className="text-2xl font-bold text-foreground">
                 {activeGoals} / {totalGoals}
               </Text>
-              <Text className="text-xs text-muted-foreground mt-1">Active goals</Text>
+              <Text className="text-xs text-muted-foreground mt-1">{t('activeGoals')}</Text>
             </View>
           </View>
 
@@ -286,7 +286,7 @@ export default function DashboardScreen() {
                       {t('aiAdvisor') || 'AI Financial Advisor'}
                     </Text>
                     <Text style={{ color: 'rgba(9, 9, 11, 0.7)', fontSize: 14, marginTop: 2 }}>
-                      Get personalized advice
+                      {t('getPersonalizedAdvice') || 'Get personalized advice'}
                     </Text>
                   </View>
                   <ArrowRight size={20} color="#09090b" />
@@ -325,25 +325,25 @@ export default function DashboardScreen() {
                 )}
               </View>
               <View>
-                <Text className="text-base font-semibold text-foreground">Spending Forecast</Text>
-                <Text className="text-xs text-muted-foreground">Based on last 30 days</Text>
+                <Text className="text-base font-semibold text-foreground">{t('spendingForecast') || 'Spending Forecast'}</Text>
+                <Text className="text-xs text-muted-foreground">{t('basedOnLast30Days') || 'Based on last 30 days'}</Text>
               </View>
             </View>
             <View className="flex-row justify-between">
               <View className="items-center flex-1">
-                <Text className="text-xs text-muted-foreground">Daily Spend</Text>
+                <Text className="text-xs text-muted-foreground">{t('dailySpend') || 'Daily Spend'}</Text>
                 <Text className="text-base font-semibold text-danger">
                   -{formatCompactCurrency(forecast.avg_daily_spend, forecast.currency)}
                 </Text>
               </View>
               <View className="items-center flex-1">
-                <Text className="text-xs text-muted-foreground">Daily Income</Text>
+                <Text className="text-xs text-muted-foreground">{t('dailyIncome') || 'Daily Income'}</Text>
                 <Text className="text-base font-semibold text-success">
                   +{formatCompactCurrency(forecast.avg_daily_income, forecast.currency)}
                 </Text>
               </View>
               <View className="items-center flex-1">
-                <Text className="text-xs text-muted-foreground">Net Flow</Text>
+                <Text className="text-xs text-muted-foreground">{t('netFlow') || 'Net Flow'}</Text>
                 <Text className={`text-base font-semibold ${forecast.net_daily_flow >= 0 ? 'text-success' : 'text-danger'}`}>
                   {`${forecast.net_daily_flow >= 0 ? '+' : '-'}${formatCompactCurrency(Math.abs(forecast.net_daily_flow), forecast.currency)}`}
                 </Text>
@@ -352,7 +352,7 @@ export default function DashboardScreen() {
             {forecast.net_daily_flow < 0 && forecast.days_until_zero > 0 && (
               <View className="bg-danger/10 border border-danger/20 p-3 rounded-lg mt-4">
                 <Text className="text-danger text-sm font-medium text-center">
-                  ⚠️ At this rate, balance reaches zero in {forecast.days_until_zero} days
+                  ⚠️ {t('balanceReachesZeroIn') || `At this rate, balance reaches zero in ${forecast.days_until_zero} days`}
                 </Text>
               </View>
             )}
@@ -366,15 +366,15 @@ export default function DashboardScreen() {
               <View className="w-8 h-8 rounded-full bg-secondary items-center justify-center mr-3">
                 <Lightbulb size={18} color="#a1a1aa" />
               </View>
-              <Text className="text-base font-semibold text-foreground">Insights</Text>
+              <Text className="text-base font-semibold text-foreground">{t('insights')}</Text>
             </View>
-            <Text className="text-xs text-muted-foreground">This month</Text>
+            <Text className="text-xs text-muted-foreground">{t('thisMonth')}</Text>
           </View>
           <View className="gap-3">
             {insights.length === 0 ? (
               <View className="bg-muted border border-border p-4 rounded-lg">
                 <Text className="text-muted-foreground text-sm">
-                  Add a few transactions to unlock personalized insights.
+                  {t('addTransactionsForInsights') || 'Add a few transactions to unlock personalized insights.'}
                 </Text>
               </View>
             ) : (
@@ -460,7 +460,7 @@ export default function DashboardScreen() {
                   {(summary?.balances || []).length === 0 && (
                     <View className="bg-card border border-border p-6 rounded-lg items-center">
                       <Wallet size={28} color="#52525b" />
-                      <Text className="text-muted-foreground mt-2 text-sm">No balances yet</Text>
+                      <Text className="text-muted-foreground mt-2 text-sm">{t('noBalancesYet') || 'No balances yet'}</Text>
                     </View>
                   )}
                 </View>
@@ -515,10 +515,10 @@ export default function DashboardScreen() {
                 {(summary?.recent_transactions || []).length === 0 && (
                   <View className="bg-card border border-border p-6 rounded-lg items-center">
                     <CreditCard size={28} color="#52525b" />
-                    <Text className="text-muted-foreground mt-2 text-sm">No transactions yet</Text>
+                    <Text className="text-muted-foreground mt-2 text-sm">{t('noTransactionsYet') || 'No transactions yet'}</Text>
                     <Link href="/(app)/(tabs)/add" asChild>
                       <Pressable style={{ cursor: 'pointer' }} className="bg-accent px-4 py-2 rounded-lg mt-3">
-                        <Text className="text-accent-foreground font-medium text-sm">Add Transaction</Text>
+                        <Text className="text-accent-foreground font-medium text-sm">{t('addTransaction')}</Text>
                       </Pressable>
                     </Link>
                   </View>

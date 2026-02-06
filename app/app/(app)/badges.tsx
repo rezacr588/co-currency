@@ -1,12 +1,14 @@
+import { useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Trophy, Target, Lock, Award, ChevronLeft, RefreshCw, Gift } from 'lucide-react-native';
+import { Trophy, Target, Lock, Award, ChevronLeft, RefreshCw, Gift, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { Card } from '../../src/components/ui';
 import { haptics } from '../../src/utils/haptics';
+import { useToast } from '../../src/components/ui/Toast';
 
 interface Badge {
   id: string;
@@ -100,6 +102,8 @@ export default function BadgesScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
+  const { showToast } = useToast();
+  const [showNewlyEarned, setShowNewlyEarned] = useState(false);
 
   const isLargeScreen = width > 768;
   const numColumns = width > 1024 ? 6 : width > 768 ? 4 : width > 480 ? 3 : 2;
@@ -117,7 +121,13 @@ export default function BadgesScreen() {
       queryClient.invalidateQueries({ queryKey: ['badges'] });
       if (result.newly_earned && result.newly_earned.length > 0) {
         haptics.success();
+        setShowNewlyEarned(true);
+      } else {
+        showToast(t('noNewBadges') || 'No new badges to claim', 'info');
       }
+    },
+    onError: () => {
+      showToast(t('failedToCheckBadges') || 'Failed to check badges', 'error');
     },
   });
 
@@ -169,11 +179,16 @@ export default function BadgesScreen() {
         </View>
 
         {/* Newly Earned Badges Alert */}
-        {checkBadgesMutation.data?.newly_earned && checkBadgesMutation.data.newly_earned.length > 0 && (
+        {showNewlyEarned && checkBadgesMutation.data?.newly_earned && checkBadgesMutation.data.newly_earned.length > 0 && (
           <View className="bg-success/10 border border-success/30 p-4 rounded-xl mb-6">
-            <Text className="text-success font-semibold text-center mb-2">
-              🎉 {t('newBadgesEarned') || 'New Badges Earned!'}
-            </Text>
+            <View className="flex-row items-center justify-between mb-2">
+              <Text className="text-success font-semibold">
+                🎉 {t('newBadgesEarned') || 'New Badges Earned!'}
+              </Text>
+              <Pressable onPress={() => setShowNewlyEarned(false)} style={{ cursor: 'pointer' }} className="p-1">
+                <X size={18} color="rgb(34, 197, 94)" />
+              </Pressable>
+            </View>
             <View className="flex-row flex-wrap justify-center gap-2">
               {checkBadgesMutation.data.newly_earned.map((badge: any) => (
                 <View key={badge.badge_id} className="bg-success/20 px-3 py-1 rounded-full">

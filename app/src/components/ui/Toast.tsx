@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { View, Text, Pressable, Animated } from 'react-native';
+import { useEffect, useState as useStateToast } from 'react';
+import { View, Text, Pressable, Animated, Keyboard, Platform } from 'react-native';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react-native';
 import { ICON_SIZES } from '../../constants/icons';
 
@@ -45,6 +45,7 @@ export function Toast({
 }: ToastProps) {
   const styles = variantStyles[variant];
   const Icon = styles.icon;
+  const [keyboardHeight, setKeyboardHeight] = useStateToast(0);
 
   useEffect(() => {
     if (visible && duration > 0) {
@@ -53,10 +54,20 @@ export function Toast({
     }
   }, [visible, duration, onDismiss]);
 
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
+
   if (!visible) return null;
 
+  const bottomOffset = keyboardHeight > 0 ? keyboardHeight + 16 : 80;
+
   return (
-    <View className="absolute bottom-20 left-4 right-4 z-50">
+    <View className="absolute left-4 right-4 z-50" style={{ bottom: bottomOffset }}>
       <View className={`${styles.bg} p-4 rounded-xl flex-row items-center shadow-lg`}>
         <Icon size={ICON_SIZES.default} color={styles.color} />
         <Text

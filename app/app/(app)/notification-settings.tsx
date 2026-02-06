@@ -34,7 +34,7 @@ export default function NotificationSettingsScreen() {
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
-  const { expoPushToken, error: pushError, registerForPushNotifications } = usePushNotifications();
+  const { expoPushToken, error: pushError, isLoading: isPushLoading, registerForPushNotifications } = usePushNotifications();
 
   const iconColor = isDark ? 'rgb(248, 250, 252)' : 'rgb(51, 65, 85)';
 
@@ -169,6 +169,13 @@ export default function NotificationSettingsScreen() {
                 {t('notificationsEnabled') || 'Push notifications are enabled'}
               </Text>
             </View>
+          ) : isPushLoading ? (
+            <View className="items-center py-2">
+              <ActivityIndicator color="rgb(212, 175, 55)" />
+              <Text className="text-muted-foreground text-sm mt-2">
+                {t('checkingPermissions') || 'Checking permissions...'}
+              </Text>
+            </View>
           ) : pushError ? (
             <View>
               <View className="bg-danger/10 border border-danger/20 p-3 rounded-lg mb-3">
@@ -187,11 +194,20 @@ export default function NotificationSettingsScreen() {
               </Pressable>
             </View>
           ) : (
-            <View className="items-center py-2">
-              <ActivityIndicator color="rgb(212, 175, 55)" />
-              <Text className="text-muted-foreground text-sm mt-2">
-                {t('checkingPermissions') || 'Checking permissions...'}
-              </Text>
+            <View>
+              <View className="bg-muted/50 border border-border p-3 rounded-lg mb-3">
+                <Text className="text-muted-foreground text-sm">
+                  {t('notificationsNotSetUp') || 'Push notifications are not set up yet'}
+                </Text>
+              </View>
+              <Pressable
+                onPress={handleRequestPermission}
+                className="bg-accent p-3 rounded-lg items-center"
+              >
+                <Text className="text-accent-foreground font-medium">
+                  {t('enableNotifications') || 'Enable Notifications'}
+                </Text>
+              </Pressable>
             </View>
           )}
         </View>

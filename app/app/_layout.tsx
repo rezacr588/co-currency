@@ -23,6 +23,7 @@ import { AnimatedSplash } from '../src/components/ui/AnimatedSplash';
 import { BiometricLock } from '../src/components/ui/BiometricLock';
 import { useAppUpdates } from '../src/hooks/useAppUpdates';
 import { useAndroidNavigationBar } from '../src/hooks/useAndroidNavigationBar';
+import { usePushNotifications } from '../src/hooks/usePushNotifications';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -50,6 +51,8 @@ function RootLayoutNav() {
   // Check for OTA updates on app launch
   useAppUpdates();
   useAndroidNavigationBar();
+  // Initialize push notifications on app launch (requests permission when authenticated)
+  usePushNotifications();
 
   useEffect(() => {
     if (fontsLoaded) {

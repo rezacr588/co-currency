@@ -526,6 +526,7 @@ function ChallengeCard({
   onPress: () => void;
   isDark: boolean;
 }) {
+  const { t } = useLanguage();
   const isActive = challenge.user_status === 'active';
 
   return (
@@ -551,7 +552,7 @@ function ChallengeCard({
             </Text>
             {challenge.is_featured && (
               <View className="bg-accent/20 px-2 py-0.5 rounded ml-2">
-                <Text className="text-xs text-accent font-medium">Featured</Text>
+                <Text className="text-xs text-accent font-medium">{t('featured') || 'Featured'}</Text>
               </View>
             )}
           </View>

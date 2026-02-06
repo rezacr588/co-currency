@@ -9,6 +9,7 @@ import {
   TextInput,
   Modal,
   useWindowDimensions,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -26,6 +27,7 @@ import {
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { formatCompactCurrency, formatDate } from '../../src/utils/format';
+import { useToast } from '../../src/components/ui/Toast';
 import type { CreateSubscriptionRequest, Subscription } from '../../src/types/goal';
 
 const BILLING_CYCLES = ['weekly', 'monthly', 'quarterly', 'yearly'] as const;
@@ -58,7 +60,7 @@ export default function SubscriptionsScreen() {
   };
   const columns = getGridColumns();
 
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError, refetch } = useQuery({
     queryKey: ['subscriptions'],
     queryFn: () => api.subscriptions.list(),
   });
@@ -129,7 +131,18 @@ export default function SubscriptionsScreen() {
           </View>
         )}
 
-        {isPending ? (
+        {isError ? (
+          <View className="bg-danger-muted border border-danger/20 p-6 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
+            <Text className="text-danger font-medium mb-2">{t('failedToLoadSubscriptions') || 'Failed to load subscriptions'}</Text>
+            <Pressable
+              onPress={() => refetch()}
+              className="bg-danger/20 px-4 py-2 rounded-lg"
+              style={{ cursor: 'pointer' }}
+            >
+              <Text className="text-danger font-medium">{t('retry') || 'Retry'}</Text>
+            </Pressable>
+          </View>
+        ) : isPending ? (
           <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
         ) : subscriptions.length === 0 ? (
           <View className="bg-card p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
@@ -198,16 +211,38 @@ export default function SubscriptionsScreen() {
 function SubscriptionCard({ subscription }: { subscription: Subscription }) {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
 
   const updateMutation = useMutation({
     mutationFn: (status: 'active' | 'paused' | 'cancelled') =>
       api.subscriptions.update(subscription.id, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      showToast(t('subscriptionUpdated') || 'Subscription updated', 'success');
+    },
+    onError: (err) => {
+      showToast(err instanceof Error ? err.message : t('failedToUpdate') || 'Failed to update', 'error');
     },
   });
 
   const isPaused = subscription.status === 'paused';
+
+  const handleToggle = () => {
+    const newStatus = isPaused ? 'active' : 'paused';
+    const action = isPaused
+      ? t('resumeSubscription') || 'Resume'
+      : t('pauseSubscription') || 'Pause';
+    Alert.alert(
+      action,
+      isPaused
+        ? t('resumeSubscriptionConfirm') || `Resume ${subscription.name}?`
+        : t('pauseSubscriptionConfirm') || `Pause ${subscription.name}?`,
+      [
+        { text: t('cancel') || 'Cancel', style: 'cancel' },
+        { text: action, onPress: () => updateMutation.mutate(newStatus) },
+      ]
+    );
+  };
 
   return (
     <View className={`bg-card p-4 rounded-xl ${isPaused ? 'opacity-60' : ''}`}>
@@ -240,7 +275,7 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
         </View>
         <View className="flex-row gap-2">
           <Pressable
-            onPress={() => updateMutation.mutate(isPaused ? 'active' : 'paused')}
+            onPress={handleToggle}
             disabled={updateMutation.isPending}
             className={`p-2 rounded-lg ${isPaused ? 'bg-success/20' : 'bg-warning/20'}`}
             style={{ cursor: 'pointer' }}
@@ -262,6 +297,7 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
 function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const [name, setName] = useState('');
@@ -279,9 +315,10 @@ function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
       onClose();
       resetForm();
+      showToast(t('subscriptionCreated') || 'Subscription created', 'success');
     },
     onError: (err) => {
-      setError(err instanceof Error ? err.message : 'Failed to create subscription');
+      setError(err instanceof Error ? err.message : t('failedToCreate') || 'Failed to create subscription');
     },
   });
 

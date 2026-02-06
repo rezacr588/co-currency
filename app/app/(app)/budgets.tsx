@@ -18,6 +18,7 @@ import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { formatCompactCurrency, formatNumber } from '../../src/utils/format';
 import { StyledCategoryIcon, CATEGORY_COLORS, getCategoryBackground, CategoryIcon } from '../../src/constants/icons';
+import { useToast } from '../../src/components/ui/Toast';
 import type { CreateBudgetRequest } from '../../src/types/goal';
 
 const CATEGORIES = ['food', 'transportation', 'entertainment', 'shopping', 'bills', 'other'];
@@ -42,7 +43,7 @@ export default function BudgetsScreen() {
   };
   const columns = getGridColumns();
 
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError, refetch } = useQuery({
     queryKey: ['budgets'],
     queryFn: () => api.budgets.list(),
   });
@@ -80,7 +81,18 @@ export default function BudgetsScreen() {
         }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {isPending ? (
+        {isError ? (
+          <View className="bg-danger-muted border border-danger/20 p-6 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
+            <Text className="text-danger font-medium mb-2">{t('failedToLoadBudgets') || 'Failed to load budgets'}</Text>
+            <Pressable
+              onPress={() => refetch()}
+              className="bg-danger/20 px-4 py-2 rounded-lg"
+              style={{ cursor: 'pointer' }}
+            >
+              <Text className="text-danger font-medium">{t('retry') || 'Retry'}</Text>
+            </Pressable>
+          </View>
+        ) : isPending ? (
           <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
         ) : budgets.length === 0 ? (
           <View className="bg-card p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
@@ -204,6 +216,7 @@ function BudgetCard({ budget }: { budget: any }) {
 function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const [category, setCategory] = useState('food');
@@ -222,6 +235,7 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
       }).catch(() => {});
       onClose();
       resetForm();
+      showToast(t('budgetCreated') || 'Budget created', 'success');
     },
     onError: (err) => {
       setError(err instanceof Error ? err.message : 'Failed to create budget');

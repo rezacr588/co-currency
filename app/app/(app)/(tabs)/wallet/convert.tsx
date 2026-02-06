@@ -8,6 +8,7 @@ import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
 import { useTheme } from '../../../../src/context/ThemeContext';
 import { CurrencyConverter } from '../../../../src/components/features/CurrencyConverter';
+import { useToast } from '../../../../src/components/ui/Toast';
 
 export default function WalletConvertScreen() {
   const { t } = useLanguage();
@@ -29,6 +30,7 @@ export default function WalletConvertScreen() {
     toCurrency: 'EUR',
   });
   const [error, setError] = useState('');
+  const { showToast } = useToast();
 
   const { data: balances, isPending: isLoadingBalances, isError: isBalancesError, refetch: refetchBalances } = useQuery({
     queryKey: ['wallet', 'balances'],
@@ -55,6 +57,7 @@ export default function WalletConvertScreen() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      showToast(t('conversionSuccess') || 'Conversion completed', 'success');
       router.back();
     },
     onError: (err) => {

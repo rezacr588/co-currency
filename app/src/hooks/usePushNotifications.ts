@@ -56,6 +56,7 @@ export function usePushNotifications() {
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
   const [notification, setNotification] = useState<unknown | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const notificationListener = useRef<{ remove: () => void } | null>(null);
   const responseListener = useRef<{ remove: () => void } | null>(null);
@@ -149,13 +150,19 @@ export function usePushNotifications() {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated || !Notifications) return;
+    if (!isAuthenticated || !Notifications) {
+      setIsLoading(false);
+      return;
+    }
 
     // Register for push notifications
+    setIsLoading(true);
     registerForPushNotifications().then((token) => {
       if (token) {
         registerTokenWithBackend(token);
       }
+    }).finally(() => {
+      setIsLoading(false);
     });
 
     // Listen for incoming notifications while app is foregrounded
@@ -190,6 +197,7 @@ export function usePushNotifications() {
     expoPushToken,
     notification,
     error,
+    isLoading,
     registerForPushNotifications,
   };
 }

@@ -19,6 +19,7 @@ import { useLanguage } from '../../../src/context/LanguageContext';
 import { getCurrencyDisplay } from '../../../src/utils/format';
 import { CATEGORY_ICONS, CategoryIcon } from '../../../src/constants/icons';
 import { COMMON_CURRENCIES } from '../../../src/constants/currencies';
+import { useToast } from '../../../src/components/ui/Toast';
 import type { TransactionRequest } from '../../../src/types/wallet';
 
 const CATEGORIES = Object.keys(CATEGORY_ICONS);
@@ -48,6 +49,7 @@ export default function AddTransactionScreen() {
   const [category, setCategory] = useState('other');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
+  const { showToast } = useToast();
 
   const mutation = useMutation({
     mutationFn: (data: TransactionRequest) => api.wallet.addTransaction(data),
@@ -60,6 +62,7 @@ export default function AddTransactionScreen() {
       }).catch(() => {
         // Silently ignore badge check errors
       });
+      showToast(t('transactionAdded') || 'Transaction added', 'success');
       router.back();
     },
     onError: (err) => {

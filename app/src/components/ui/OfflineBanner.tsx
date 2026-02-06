@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { View, Text, Animated, Platform } from 'react-native';
+import { View, Text, Animated } from 'react-native';
 import { WifiOff, Wifi } from 'lucide-react-native';
 import * as Network from 'expo-network';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../context/LanguageContext';
 
 export function OfflineBanner() {
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const [isOnline, setIsOnline] = useState(true);
   const [showBanner, setShowBanner] = useState(false);
   const translateY = useState(new Animated.Value(-50))[0];
@@ -83,7 +85,7 @@ export function OfflineBanner() {
           isOnline ? 'bg-success' : 'bg-danger'
         }`}
         style={{
-          paddingTop: Platform.OS === 'ios' ? 44 : 24,
+          paddingTop: insets.top,
         }}
       >
         {isOnline ? (

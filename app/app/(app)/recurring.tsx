@@ -10,6 +10,7 @@ import {
   Modal,
   Switch,
   useWindowDimensions,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +20,7 @@ import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { formatCompactCurrency, formatDate } from '../../src/utils/format';
 import { FrequencyIcon, StyledCategoryIcon, CATEGORY_COLORS, getCategoryBackground, CategoryIcon } from '../../src/constants/icons';
+import { useToast } from '../../src/components/ui/Toast';
 import type { CreateRecurringRequest } from '../../src/types/goal';
 
 const CATEGORIES = ['income', 'bills', 'food', 'transportation', 'entertainment', 'other'];
@@ -43,7 +45,7 @@ export default function RecurringScreen() {
   };
   const columns = getGridColumns();
 
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError, refetch } = useQuery({
     queryKey: ['recurring'],
     queryFn: () => api.recurring.list(),
   });
@@ -83,7 +85,18 @@ export default function RecurringScreen() {
         }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {isPending ? (
+        {isError ? (
+          <View className="bg-danger-muted border border-danger/20 p-6 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
+            <Text className="text-danger font-medium mb-2">{t('failedToLoadRecurring') || 'Failed to load recurring transactions'}</Text>
+            <Pressable
+              onPress={() => refetch()}
+              className="bg-danger/20 px-4 py-2 rounded-lg"
+              style={{ cursor: 'pointer' }}
+            >
+              <Text className="text-danger font-medium">{t('retry') || 'Retry'}</Text>
+            </Pressable>
+          </View>
+        ) : isPending ? (
           <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
         ) : transactions.length === 0 ? (
           <View className="bg-card p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
@@ -148,12 +161,17 @@ export default function RecurringScreen() {
 function RecurringCard({ transaction }: { transaction: any }) {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
 
   const executeMutation = useMutation({
     mutationFn: () => api.recurring.execute(transaction.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recurring'] });
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      showToast(t('transactionExecuted') || 'Transaction executed', 'success');
+    },
+    onError: (err) => {
+      showToast(err instanceof Error ? err.message : t('failedToExecute') || 'Failed to execute', 'error');
     },
   });
 
@@ -161,8 +179,44 @@ function RecurringCard({ transaction }: { transaction: any }) {
     mutationFn: () => api.recurring.update(transaction.id, { is_active: !transaction.is_active }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recurring'] });
+      showToast(
+        transaction.is_active
+          ? t('recurringPaused') || 'Recurring paused'
+          : t('recurringResumed') || 'Recurring resumed',
+        'success'
+      );
+    },
+    onError: (err) => {
+      showToast(err instanceof Error ? err.message : t('failedToUpdate') || 'Failed to update', 'error');
     },
   });
+
+  const handleExecute = () => {
+    Alert.alert(
+      t('executeTransaction') || 'Execute Transaction',
+      t('executeTransactionConfirm') || 'Are you sure you want to execute this transaction now?',
+      [
+        { text: t('cancel') || 'Cancel', style: 'cancel' },
+        { text: t('execute') || 'Execute', onPress: () => executeMutation.mutate() },
+      ]
+    );
+  };
+
+  const handleToggle = () => {
+    const action = transaction.is_active
+      ? t('pauseRecurring') || 'Pause'
+      : t('resumeRecurring') || 'Resume';
+    Alert.alert(
+      action,
+      transaction.is_active
+        ? t('pauseRecurringConfirm') || 'Are you sure you want to pause this recurring transaction?'
+        : t('resumeRecurringConfirm') || 'Resume this recurring transaction?',
+      [
+        { text: t('cancel') || 'Cancel', style: 'cancel' },
+        { text: action, onPress: () => toggleMutation.mutate() },
+      ]
+    );
+  };
 
   return (
     <View className={`bg-card border border-border p-4 rounded-xl ${!transaction.is_active ? 'opacity-60' : ''}`}>
@@ -203,7 +257,7 @@ function RecurringCard({ transaction }: { transaction: any }) {
         </View>
         <View className="flex-row items-center gap-2">
           <Pressable
-            onPress={() => executeMutation.mutate()}
+            onPress={handleExecute}
             disabled={executeMutation.isPending || !transaction.is_active}
             className={`bg-accent p-2 rounded-lg ${!transaction.is_active ? 'opacity-50' : ''}`}
             style={{ cursor: 'pointer' }}
@@ -215,7 +269,7 @@ function RecurringCard({ transaction }: { transaction: any }) {
             )}
           </Pressable>
           <Pressable
-            onPress={() => toggleMutation.mutate()}
+            onPress={handleToggle}
             disabled={toggleMutation.isPending}
             className={`p-2 rounded-lg ${transaction.is_active ? 'bg-warning/20' : 'bg-success/20'}`}
             style={{ cursor: 'pointer' }}
@@ -237,6 +291,7 @@ function RecurringCard({ transaction }: { transaction: any }) {
 function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const [type, setType] = useState<'credit' | 'debit'>('debit');
@@ -253,6 +308,7 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
       queryClient.invalidateQueries({ queryKey: ['recurring'] });
       onClose();
       resetForm();
+      showToast(t('recurringCreated') || 'Recurring transaction created', 'success');
     },
     onError: (err) => {
       setError(err instanceof Error ? err.message : 'Failed to create recurring transaction');

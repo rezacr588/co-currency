@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Tabs, usePathname, useRouter } from 'expo-router';
 import { View, Text, Pressable, useWindowDimensions, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   LayoutDashboard,
   Wallet,
@@ -229,6 +230,7 @@ export default function TabsLayout() {
   const { isDark } = useTheme();
   const { t } = useLanguage();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768 && width < 1024;
@@ -309,8 +311,8 @@ export default function TabsLayout() {
           borderTopWidth: 1,
           borderTopColor: '#27272a',
           elevation: 0,
-          height: 80,
-          paddingBottom: 20,
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom,
           paddingTop: 10,
         },
       }}
@@ -334,7 +336,7 @@ export default function TabsLayout() {
         options={{
           title: '',
           tabBarIcon: ({ focused }) => (
-            <View className="bg-foreground rounded-full p-3.5 -mt-6">
+            <View className="bg-foreground rounded-full p-3.5" style={{ marginTop: -24 }}>
               <Plus size={22} color="#09090b" />
             </View>
           ),

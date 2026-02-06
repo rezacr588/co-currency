@@ -23,6 +23,7 @@ import { GoalIcon } from '../../../src/constants/icons';
 import { CurrencyPicker } from '../../../src/components/ui/CurrencyPicker';
 import { SkeletonGoalCard, SkeletonList } from '../../../src/components/ui/Skeleton';
 import { SwipeableRow, type SwipeAction } from '../../../src/components/ui';
+import { useToast } from '../../../src/components/ui/Toast';
 import type { CreateGoalRequest, UpdateGoalRequest, Goal } from '../../../src/types/goal';
 
 const GOAL_CATEGORIES = [
@@ -254,12 +255,15 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
   const [contributeError, setContributeError] = useState('');
   const progressPercent = Math.min(goal.progress, 100);
 
+  const { showToast } = useToast();
+
   const contributeMutation = useMutation({
     mutationFn: (contributionAmount: number) =>
       api.goals.contribute(goal.id, { amount: contributionAmount }),
     onSuccess: async (data) => {
       haptics.success();
       queryClient.invalidateQueries({ queryKey: ['goals'] });
+      showToast(t('contributionAdded') || 'Contribution added', 'success');
       // Check for new badges in background
       api.badges.check().then(() => {
         queryClient.invalidateQueries({ queryKey: ['badges'] });
