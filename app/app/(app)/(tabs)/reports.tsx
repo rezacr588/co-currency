@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, RefreshControl, useWindowDimensions, Modal } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -9,8 +9,6 @@ import { formatCompactCurrency, formatNumber } from '../../../src/utils/format';
 import { CATEGORY_COLORS } from '../../../src/constants/icons';
 import {
   type DatePreset,
-  MONTH_NAMES,
-  FULL_MONTH_NAMES,
   getDateRangeFromPreset,
 } from '../../../src/utils/dateRange';
 import {
@@ -22,6 +20,22 @@ import {
   YearlyReportView,
 } from '../../../src/components/features/Reports';
 
+const LANGUAGE_LOCALES: Record<string, string> = {
+  en: 'en-US',
+  fa: 'fa-IR',
+  ar: 'ar-SA',
+  tr: 'tr-TR',
+};
+
+function createDateFormatter(language: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const locale = LANGUAGE_LOCALES[language] || 'en-US';
+  const formatOptions: Intl.DateTimeFormatOptions = { ...options };
+  if (language === 'fa') {
+    (formatOptions as Record<string, unknown>).calendar = 'persian';
+  }
+  return new Intl.DateTimeFormat(locale, formatOptions);
+}
+
 // Month Picker Modal Component
 function MonthYearPicker({
   visible,
@@ -29,6 +43,9 @@ function MonthYearPicker({
   selectedYear,
   selectedMonth,
   onSelect,
+  monthLabels,
+  previousYearLabel,
+  nextYearLabel,
   t,
 }: {
   visible: boolean;
@@ -36,11 +53,20 @@ function MonthYearPicker({
   selectedYear: number;
   selectedMonth: number;
   onSelect: (year: number, month: number) => void;
+  monthLabels: string[];
+  previousYearLabel: string;
+  nextYearLabel: string;
   t: (key: string) => string;
 }) {
   const [viewYear, setViewYear] = useState(selectedYear);
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
+
+  useEffect(() => {
+    if (visible) {
+      setViewYear(selectedYear);
+    }
+  }, [selectedYear, visible]);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -58,7 +84,7 @@ function MonthYearPicker({
               onPress={() => setViewYear(viewYear - 1)}
               className="p-2 rounded-lg bg-secondary"
               accessibilityRole="button"
-              accessibilityLabel="Previous year"
+              accessibilityLabel={previousYearLabel}
             >
               <ChevronLeft size={20} color="#a1a1aa" />
             </Pressable>
@@ -68,7 +94,7 @@ function MonthYearPicker({
               className={`p-2 rounded-lg ${viewYear >= currentYear ? 'opacity-30' : 'bg-secondary'}`}
               disabled={viewYear >= currentYear}
               accessibilityRole="button"
-              accessibilityLabel="Next year"
+              accessibilityLabel={nextYearLabel}
             >
               <ChevronRight size={20} color="#a1a1aa" />
             </Pressable>
@@ -76,7 +102,7 @@ function MonthYearPicker({
 
           {/* Month grid */}
           <View className="flex-row flex-wrap gap-2">
-            {MONTH_NAMES.map((month, index) => {
+            {monthLabels.map((monthLabel, index) => {
               const monthNum = index + 1;
               const isSelected = selectedYear === viewYear && selectedMonth === monthNum;
               const isFuture = viewYear === currentYear && monthNum > currentMonth;
@@ -84,7 +110,7 @@ function MonthYearPicker({
 
               return (
                 <Pressable
-                  key={month}
+                  key={`${monthLabel}-${monthNum}`}
                   onPress={() => !isFuture && onSelect(viewYear, monthNum)}
                   disabled={isFuture}
                   style={{ width: '31%' }}
@@ -98,7 +124,7 @@ function MonthYearPicker({
                           : 'bg-secondary'
                   }`}
                   accessibilityRole="button"
-                  accessibilityLabel={month}
+                  accessibilityLabel={monthLabel}
                   accessibilityState={{ selected: isSelected, disabled: isFuture }}
                 >
                   <Text
@@ -106,7 +132,7 @@ function MonthYearPicker({
                       isSelected ? 'text-background' : isFuture ? 'text-muted-foreground' : 'text-foreground'
                     }`}
                   >
-                    {month}
+                    {monthLabel}
                   </Text>
                 </Pressable>
               );
@@ -136,6 +162,10 @@ function DateRangeSelector({
   selectedMonth,
   onMonthSelect,
   dateLabel,
+  monthLabels,
+  selectDateRangeLabel,
+  previousYearLabel,
+  nextYearLabel,
   t,
 }: {
   selectedPreset: DatePreset;
@@ -144,6 +174,10 @@ function DateRangeSelector({
   selectedMonth: number;
   onMonthSelect: (year: number, month: number) => void;
   dateLabel: string;
+  monthLabels: string[];
+  selectDateRangeLabel: string;
+  previousYearLabel: string;
+  nextYearLabel: string;
   t: (key: string) => string;
 }) {
   const [showPicker, setShowPicker] = useState(false);
@@ -165,7 +199,7 @@ function DateRangeSelector({
           onPress={() => setShowPicker(true)}
           className="flex-row items-center bg-card border border-border px-4 py-2.5 rounded-xl"
           accessibilityRole="button"
-          accessibilityLabel="Select date range"
+          accessibilityLabel={selectDateRangeLabel}
         >
           <Calendar size={18} color="rgb(212, 175, 55)" />
           <Text className="text-foreground font-semibold ml-2">{dateLabel}</Text>
@@ -213,6 +247,9 @@ function DateRangeSelector({
           onMonthSelect(year, month);
           setShowPicker(false);
         }}
+        monthLabels={monthLabels}
+        previousYearLabel={previousYearLabel}
+        nextYearLabel={nextYearLabel}
         t={t}
       />
     </View>
@@ -271,7 +308,7 @@ function RingChart({
 }
 
 export default function ReportsScreen() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
@@ -297,17 +334,40 @@ export default function ReportsScreen() {
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
 
+  const monthShortLabels = useMemo(() => {
+    const formatter = createDateFormatter(language, { month: 'short' });
+    return Array.from({ length: 12 }, (_, index) => formatter.format(new Date(2024, index, 1)));
+  }, [language]);
+
+  const monthLongLabels = useMemo(() => {
+    const formatter = createDateFormatter(language, { month: 'long' });
+    return Array.from({ length: 12 }, (_, index) => formatter.format(new Date(2024, index, 1)));
+  }, [language]);
+
   // Get date range from current selection
   const dateRange = useMemo(() => {
     if (selectedPreset === 'custom' || selectedPreset === 'this_month' || selectedPreset === 'last_month') {
       return {
         year: selectedYear,
         month: selectedMonth,
-        label: `${FULL_MONTH_NAMES[selectedMonth - 1]} ${selectedYear}`,
+        label: `${monthLongLabels[selectedMonth - 1]} ${selectedYear}`,
       };
     }
-    return getDateRangeFromPreset(selectedPreset);
-  }, [selectedPreset, selectedYear, selectedMonth]);
+
+    const baseRange = getDateRangeFromPreset(selectedPreset);
+    const localizedLabelMap: Partial<Record<DatePreset, string>> = {
+      last_3_months: t('threeMonths'),
+      last_6_months: t('sixMonths'),
+      this_year: t('thisYear'),
+      last_year: t('lastYear'),
+      all_time: t('allTime'),
+    };
+
+    return {
+      ...baseRange,
+      label: localizedLabelMap[selectedPreset] || baseRange.label,
+    };
+  }, [monthLongLabels, selectedMonth, selectedPreset, selectedYear, t]);
 
   // Handle preset change
   const handlePresetChange = (preset: DatePreset) => {
@@ -384,6 +444,10 @@ export default function ReportsScreen() {
               selectedMonth={selectedMonth}
               onMonthSelect={handleMonthSelect}
               dateLabel={dateRange.label}
+              monthLabels={monthShortLabels}
+              selectDateRangeLabel={t('selectDateRange')}
+              previousYearLabel={t('previousYear')}
+              nextYearLabel={t('nextYear')}
               t={t}
             />
 

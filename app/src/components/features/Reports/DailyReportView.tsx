@@ -1,11 +1,19 @@
-import { useState, useMemo } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { useMemo, useState } from 'react';
+import { View, Text, Pressable, ActivityIndicator, ScrollView } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react-native';
+import {
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  TrendingUp,
+  TrendingDown,
+  AlertCircle,
+  RotateCcw,
+} from 'lucide-react-native';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { formatCompactCurrency } from '../../../utils/format';
-import { getWeekRange, formatDateKey, safeMax } from '../../../utils/dateRange';
+import { formatDateKey, safeMax } from '../../../utils/dateRange';
 import { StyledCategoryIcon } from '../../../constants/icons';
 import type { Transaction } from '../../../types/wallet';
 
@@ -13,8 +21,56 @@ interface DailyReportViewProps {
   isTablet?: boolean;
 }
 
-// Group transactions by day
-function groupByDay(transactions: Transaction[]): Map<string, { income: number; expenses: number; transactions: Transaction[] }> {
+interface DailySummary {
+  date: Date;
+  dateKey: string;
+  income: number;
+  expenses: number;
+  net: number;
+  transactions: Transaction[];
+  isToday: boolean;
+  isYesterday: boolean;
+}
+
+const WINDOW_DAYS = 30;
+const LANGUAGE_LOCALES: Record<string, string> = {
+  en: 'en-US',
+  fa: 'fa-IR',
+  ar: 'ar-SA',
+  tr: 'tr-TR',
+};
+
+function startOfDay(date: Date): Date {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function getRollingWindow(windowIndex: number): { start: Date; end: Date } {
+  const today = startOfDay(new Date());
+  const end = addDays(today, -(windowIndex * WINDOW_DAYS));
+  const start = addDays(end, -(WINDOW_DAYS - 1));
+  return { start, end };
+}
+
+function createDateFormatter(language: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const locale = LANGUAGE_LOCALES[language] || 'en-US';
+  const formatOptions: Intl.DateTimeFormatOptions = { ...options };
+  if (language === 'fa') {
+    (formatOptions as Record<string, unknown>).calendar = 'persian';
+  }
+  return new Intl.DateTimeFormat(locale, formatOptions);
+}
+
+function groupByDay(
+  transactions: Transaction[]
+): Map<string, { income: number; expenses: number; transactions: Transaction[] }> {
   const groups = new Map<string, { income: number; expenses: number; transactions: Transaction[] }>();
 
   transactions.forEach((tx) => {
@@ -26,6 +82,7 @@ function groupByDay(transactions: Transaction[]): Map<string, { income: number; 
     } else {
       current.expenses += tx.amount;
     }
+
     current.transactions.push(tx);
     groups.set(dateKey, current);
   });
@@ -33,83 +90,90 @@ function groupByDay(transactions: Transaction[]): Map<string, { income: number; 
   return groups;
 }
 
-const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
 export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
-  const { t } = useLanguage();
-  const [weekOffset, setWeekOffset] = useState(0);
+  const { t, language } = useLanguage();
+  const [windowIndex, setWindowIndex] = useState(0);
 
-  // Calculate week range based on offset
-  const { start: weekStart, end: weekEnd } = useMemo(() => {
-    const now = new Date();
-    now.setDate(now.getDate() + weekOffset * 7);
-    return getWeekRange(now);
-  }, [weekOffset]);
+  const { start: windowStart, end: windowEnd } = useMemo(
+    () => getRollingWindow(windowIndex),
+    [windowIndex]
+  );
 
-  const fromDate = formatDateKey(weekStart);
-  const toDate = formatDateKey(weekEnd);
+  const fromDate = formatDateKey(windowStart);
+  const toDate = formatDateKey(windowEnd);
 
-  const { data: transactionsData, isPending, isError, error } = useQuery({
-    queryKey: ['transactions', 'daily', fromDate, toDate],
-    queryFn: () => api.wallet.getTransactions(500, 0, { from_date: fromDate, to_date: toDate }),
-    staleTime: 2 * 60 * 1000, // 2 minutes
+  const { data: transactionsData, isPending, isError } = useQuery({
+    queryKey: ['transactions', 'daily-history', fromDate, toDate],
+    queryFn: () => api.wallet.getTransactions(1000, 0, { from_date: fromDate, to_date: toDate }),
+    staleTime: 2 * 60 * 1000,
   });
 
-  const dailyData = useMemo(() => {
-    if (!transactionsData?.transactions) return null;
+  const groupedData = useMemo(() => {
+    if (!transactionsData?.transactions) return new Map<string, { income: number; expenses: number; transactions: Transaction[] }>();
     return groupByDay(transactionsData.transactions);
   }, [transactionsData]);
 
-  // Generate array of days in the week
-  const weekDays = useMemo(() => {
-    const days = [];
-    const current = new Date(weekStart);
-    for (let i = 0; i < 7; i++) {
-      days.push(new Date(current));
-      current.setDate(current.getDate() + 1);
-    }
-    return days;
-  }, [weekStart]);
+  const windowDays = useMemo(() => {
+    return Array.from({ length: WINDOW_DAYS }, (_, index) => addDays(windowStart, index));
+  }, [windowStart]);
 
-  // Calculate totals
-  const totals = useMemo(() => {
-    if (!dailyData) return { income: 0, expenses: 0, net: 0 };
-    let income = 0, expenses = 0;
-    dailyData.forEach((day) => {
-      income += day.income;
-      expenses += day.expenses;
-    });
-    return { income, expenses, net: income - expenses };
-  }, [dailyData]);
-
-  // Find max for chart scaling
-  const maxDailyValue = useMemo(() => {
-    if (!dailyData) return 1;
-    const values: number[] = [];
-    dailyData.forEach((day) => {
-      values.push(day.income, day.expenses);
-    });
-    return safeMax(values) || 1;
-  }, [dailyData]);
-
-  // Format week label
-  const weekLabel = useMemo(() => {
-    const startMonth = weekStart.toLocaleDateString('en-US', { month: 'short' });
-    const endMonth = weekEnd.toLocaleDateString('en-US', { month: 'short' });
-    const startDay = weekStart.getDate();
-    const endDay = weekEnd.getDate();
-
-    if (weekOffset === 0) return t('thisWeek');
-
-    if (startMonth === endMonth) {
-      return `${startMonth} ${startDay} - ${endDay}`;
-    }
-    return `${startMonth} ${startDay} - ${endMonth} ${endDay}`;
-  }, [weekStart, weekEnd, weekOffset, t]);
-
-  // Get today's date key
   const todayKey = formatDateKey(new Date());
-  const yesterdayKey = formatDateKey(new Date(Date.now() - 86400000));
+  const yesterdayKey = formatDateKey(addDays(new Date(), -1));
+
+  const daySummaries = useMemo<DailySummary[]>(() => {
+    return windowDays.map((date) => {
+      const dateKey = formatDateKey(date);
+      const dayData = groupedData.get(dateKey);
+      const income = dayData?.income || 0;
+      const expenses = dayData?.expenses || 0;
+      return {
+        date,
+        dateKey,
+        income,
+        expenses,
+        net: income - expenses,
+        transactions: dayData?.transactions || [],
+        isToday: dateKey === todayKey,
+        isYesterday: dateKey === yesterdayKey,
+      };
+    });
+  }, [groupedData, todayKey, windowDays, yesterdayKey]);
+
+  const totals = useMemo(() => {
+    return daySummaries.reduce(
+      (acc, day) => {
+        acc.income += day.income;
+        acc.expenses += day.expenses;
+        acc.net += day.net;
+        return acc;
+      },
+      { income: 0, expenses: 0, net: 0 }
+    );
+  }, [daySummaries]);
+
+  const averageDailyNet = totals.net / WINDOW_DAYS;
+
+  const maxDailyValue = useMemo(() => {
+    const values = daySummaries.flatMap((day) => [day.income, day.expenses]);
+    return safeMax(values) || 1;
+  }, [daySummaries]);
+
+  const rangeFormatter = useMemo(
+    () => createDateFormatter(language, { month: 'short', day: 'numeric' }),
+    [language]
+  );
+  const weekdayFormatter = useMemo(
+    () => createDateFormatter(language, { weekday: 'short' }),
+    [language]
+  );
+  const breakdownDateFormatter = useMemo(
+    () => createDateFormatter(language, { weekday: 'short', month: 'short', day: 'numeric' }),
+    [language]
+  );
+
+  const rangeLabel = `${rangeFormatter.format(windowStart)} - ${rangeFormatter.format(windowEnd)}`;
+  const isCurrentWindow = windowIndex === 0;
+  const historyRows = useMemo(() => [...daySummaries].reverse(), [daySummaries]);
 
   if (isPending) {
     return (
@@ -129,118 +193,155 @@ export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
     );
   }
 
-  // Get currency from first transaction or default
   const currency = transactionsData?.transactions?.[0]?.currency || 'USD';
 
   return (
     <View>
-      {/* Week Navigation */}
-      <View className="flex-row items-center justify-center mb-6 gap-4">
-        <Pressable
-          onPress={() => setWeekOffset((o) => o - 1)}
-          className="p-3 rounded-xl bg-secondary"
-          accessibilityRole="button"
-          accessibilityLabel="Previous week"
-        >
-          <ChevronLeft size={20} color="#a1a1aa" />
-        </Pressable>
-        <View className="bg-card px-6 py-3 rounded-xl flex-row items-center">
-          <Calendar size={18} color="rgb(212, 175, 55)" />
-          <Text className="text-foreground text-lg font-bold ml-2">{weekLabel}</Text>
+      <View className="bg-card p-5 rounded-xl mb-6">
+        <View className="flex-row items-center justify-between gap-3">
+          <Pressable
+            onPress={() => setWindowIndex((index) => index + 1)}
+            className="p-3 rounded-xl bg-secondary"
+            accessibilityRole="button"
+            accessibilityLabel={t('previous30Days')}
+          >
+            <ChevronLeft size={20} color="#a1a1aa" />
+          </Pressable>
+
+          <View className="flex-1 bg-secondary/40 border border-border px-4 py-3 rounded-xl items-center">
+            <View className="flex-row items-center">
+              <Calendar size={16} color="rgb(212, 175, 55)" />
+              <Text className="text-foreground font-semibold ml-2">
+                {isCurrentWindow ? t('last30Days') : t('history30Days')}
+              </Text>
+            </View>
+            <Text className="text-muted-foreground text-sm mt-1">{rangeLabel}</Text>
+            {isCurrentWindow && (
+              <Text className="text-accent text-xs mt-1">{t('currentPeriod')}</Text>
+            )}
+          </View>
+
+          <Pressable
+            onPress={() => !isCurrentWindow && setWindowIndex((index) => index - 1)}
+            className={`p-3 rounded-xl ${isCurrentWindow ? 'bg-secondary/30 opacity-50' : 'bg-secondary'}`}
+            disabled={isCurrentWindow}
+            accessibilityRole="button"
+            accessibilityLabel={t('next30Days')}
+          >
+            <ChevronRight size={20} color="#a1a1aa" />
+          </Pressable>
         </View>
-        <Pressable
-          onPress={() => weekOffset < 0 && setWeekOffset((o) => o + 1)}
-          className={`p-3 rounded-xl ${weekOffset >= 0 ? 'bg-secondary/30 opacity-50' : 'bg-secondary'}`}
-          disabled={weekOffset >= 0}
-          accessibilityRole="button"
-          accessibilityLabel="Next week"
-        >
-          <ChevronRight size={20} color="#a1a1aa" />
-        </Pressable>
+
+        {!isCurrentWindow && (
+          <Pressable
+            onPress={() => setWindowIndex(0)}
+            className="mt-3 py-2.5 px-4 rounded-lg bg-accent/15 border border-accent/30 flex-row items-center justify-center"
+            accessibilityRole="button"
+            accessibilityLabel={t('goToCurrentPeriod')}
+          >
+            <RotateCcw size={14} color="rgb(212, 175, 55)" />
+            <Text className="text-accent font-medium ml-2">{t('goToCurrentPeriod')}</Text>
+          </Pressable>
+        )}
       </View>
 
-      {/* Weekly Summary Card */}
-      <View className="bg-card p-6 rounded-xl mb-6">
-        <View style={{
-          flexDirection: isTablet ? 'row' : 'column',
+      <View
+        className="mb-6"
+        style={{
+          flexDirection: 'row',
+          flexWrap: 'wrap',
           gap: 12,
-        }}>
-          <View className="flex-1 bg-success/10 border border-success/30 p-4 rounded-xl">
-            <View className="flex-row items-center mb-2">
-              <TrendingUp size={16} color="rgb(16, 185, 129)" />
-              <Text className="text-muted-foreground text-sm ml-2">{t('totalIncome')}</Text>
-            </View>
-            <Text className="text-success text-2xl font-bold">
-              {formatCompactCurrency(totals.income, currency)}
-            </Text>
+        }}
+      >
+        <View className="bg-success/10 border border-success/30 rounded-xl p-4" style={{ width: isTablet ? '48.5%' : '48%' }}>
+          <View className="flex-row items-center mb-1">
+            <TrendingUp size={16} color="rgb(16, 185, 129)" />
+            <Text className="text-muted-foreground text-xs ml-2">{t('totalIncome')}</Text>
           </View>
-
-          <View className="flex-1 bg-danger/10 border border-danger/30 p-4 rounded-xl">
-            <View className="flex-row items-center mb-2">
-              <TrendingDown size={16} color="rgb(220, 38, 38)" />
-              <Text className="text-muted-foreground text-sm ml-2">{t('totalExpenses')}</Text>
-            </View>
-            <Text className="text-danger text-2xl font-bold">
-              {formatCompactCurrency(totals.expenses, currency)}
-            </Text>
-          </View>
+          <Text className="text-success text-lg font-bold">
+            {formatCompactCurrency(totals.income, currency)}
+          </Text>
         </View>
 
-        <View className="mt-4 bg-secondary/50 p-4 rounded-lg">
-          <Text className="text-muted-foreground text-sm mb-1">{t('net')}</Text>
-          <Text
-            className={`text-2xl font-bold ${totals.net >= 0 ? 'text-success' : 'text-danger'}`}
-          >
-            {totals.net >= 0 ? '+' : ''}{formatCompactCurrency(totals.net, currency)}
+        <View className="bg-danger/10 border border-danger/30 rounded-xl p-4" style={{ width: isTablet ? '48.5%' : '48%' }}>
+          <View className="flex-row items-center mb-1">
+            <TrendingDown size={16} color="rgb(220, 38, 38)" />
+            <Text className="text-muted-foreground text-xs ml-2">{t('totalExpenses')}</Text>
+          </View>
+          <Text className="text-danger text-lg font-bold">
+            {formatCompactCurrency(totals.expenses, currency)}
+          </Text>
+        </View>
+
+        <View className="bg-secondary/45 border border-border rounded-xl p-4" style={{ width: isTablet ? '48.5%' : '48%' }}>
+          <Text className="text-muted-foreground text-xs mb-1">{t('net')}</Text>
+          <Text className={`text-lg font-bold ${totals.net >= 0 ? 'text-success' : 'text-danger'}`}>
+            {totals.net >= 0 ? '+' : ''}
+            {formatCompactCurrency(totals.net, currency)}
+          </Text>
+        </View>
+
+        <View className="bg-accent/10 border border-accent/25 rounded-xl p-4" style={{ width: isTablet ? '48.5%' : '48%' }}>
+          <Text className="text-muted-foreground text-xs mb-1">{t('avgDaily')}</Text>
+          <Text className={`text-lg font-bold ${averageDailyNet >= 0 ? 'text-success' : 'text-danger'}`}>
+            {averageDailyNet >= 0 ? '+' : ''}
+            {formatCompactCurrency(averageDailyNet, currency)}
           </Text>
         </View>
       </View>
 
-      {/* Daily Bar Chart */}
-      <View className="bg-card p-6 rounded-xl mb-6">
-        <View className="flex-row items-center mb-4">
-          <View className="bg-secondary p-2 rounded-lg mr-3">
-            <Calendar size={20} color="rgb(148, 163, 184)" />
+      <View className="bg-card p-5 rounded-xl mb-6">
+        <View className="flex-row items-center justify-between mb-4">
+          <View className="flex-row items-center">
+            <View className="bg-secondary p-2 rounded-lg mr-3">
+              <Calendar size={18} color="rgb(148, 163, 184)" />
+            </View>
+            <View>
+              <Text className="text-foreground font-semibold">{t('dailyTimeline')}</Text>
+              <Text className="text-muted-foreground text-xs">{rangeLabel}</Text>
+            </View>
           </View>
-          <Text className="text-foreground font-semibold">{t('incomeVsExpenses')}</Text>
         </View>
 
-        <View className="flex-row items-end justify-between gap-2" style={{ height: 140 }}>
-          {weekDays.map((date, index) => {
-            const dateKey = formatDateKey(date);
-            const dayData = dailyData?.get(dateKey);
-            const incomeHeight = dayData ? (dayData.income / maxDailyValue) * 100 : 0;
-            const expenseHeight = dayData ? (dayData.expenses / maxDailyValue) * 100 : 0;
-            const isToday = dateKey === todayKey;
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
+          {daySummaries.map((day, index) => {
+            const incomeHeight = day.income > 0 ? Math.max((day.income / maxDailyValue) * 96, 4) : 2;
+            const expenseHeight = day.expenses > 0 ? Math.max((day.expenses / maxDailyValue) * 96, 4) : 2;
+            const showLabel =
+              index === 0 ||
+              index === daySummaries.length - 1 ||
+              day.isToday ||
+              index % 5 === 0;
 
             return (
-              <View key={dateKey} className="flex-1 items-center">
-                <View className="flex-row gap-1 items-end" style={{ height: 100 }}>
+              <View key={day.dateKey} className="items-center" style={{ width: 22 }}>
+                <View style={{ height: 104, flexDirection: 'row', alignItems: 'flex-end', gap: 2 }}>
                   <View
-                    className="w-2 rounded-t bg-success"
-                    style={{ height: Math.max(incomeHeight, 2) }}
+                    className={`w-2 rounded-t ${day.income > 0 ? 'bg-success' : 'bg-secondary/50'}`}
+                    style={{ height: incomeHeight }}
                   />
                   <View
-                    className="w-2 rounded-t bg-danger"
-                    style={{ height: Math.max(expenseHeight, 2) }}
+                    className={`w-2 rounded-t ${day.expenses > 0 ? 'bg-danger' : 'bg-secondary/50'}`}
+                    style={{ height: expenseHeight }}
                   />
                 </View>
-                <Text
-                  className={`text-xs mt-1 ${isToday ? 'text-accent font-bold' : 'text-muted-foreground'}`}
-                >
-                  {DAY_NAMES[index]}
-                </Text>
-                <Text
-                  className={`text-[10px] ${isToday ? 'text-accent' : 'text-muted-foreground'}`}
-                >
-                  {date.getDate()}
-                </Text>
+                {showLabel ? (
+                  <>
+                    <Text className={`text-[10px] mt-1 ${day.isToday ? 'text-accent font-semibold' : 'text-muted-foreground'}`}>
+                      {weekdayFormatter.format(day.date)}
+                    </Text>
+                    <Text className={`text-[10px] ${day.isToday ? 'text-accent font-semibold' : 'text-muted-foreground'}`}>
+                      {rangeFormatter.format(day.date)}
+                    </Text>
+                  </>
+                ) : (
+                  <View style={{ height: 24 }} />
+                )}
               </View>
             );
           })}
-        </View>
+        </ScrollView>
 
-        {/* Legend */}
         <View className="flex-row justify-center gap-4 mt-4">
           <View className="flex-row items-center">
             <View className="w-2 h-2 rounded-full bg-success mr-1" />
@@ -253,57 +354,51 @@ export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
         </View>
       </View>
 
-      {/* Daily Breakdown List */}
-      <View className="bg-card p-6 rounded-xl">
-        <Text className="text-foreground font-semibold mb-4">{t('dailyReport')}</Text>
-        <View className="gap-3">
-          {weekDays.map((date) => {
-            const dateKey = formatDateKey(date);
-            const dayData = dailyData?.get(dateKey);
-            const net = (dayData?.income || 0) - (dayData?.expenses || 0);
-            const isToday = dateKey === todayKey;
-            const isYesterday = dateKey === yesterdayKey;
-
-            let dayLabel = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-            if (isToday) dayLabel = t('today');
-            if (isYesterday) dayLabel = t('yesterday');
+      <View className="bg-card p-5 rounded-xl">
+        <View className="flex-row items-center justify-between mb-4">
+          <Text className="text-foreground font-semibold">{t('dailyBreakdown')}</Text>
+          <Text className="text-muted-foreground text-xs">{rangeLabel}</Text>
+        </View>
+        <View className="gap-2">
+          {historyRows.map((day) => {
+            const dayLabel = day.isToday
+              ? t('today')
+              : day.isYesterday
+                ? t('yesterday')
+                : breakdownDateFormatter.format(day.date);
 
             return (
               <View
-                key={dateKey}
-                className={`p-3 rounded-lg ${isToday ? 'bg-accent/10 border border-accent/30' : 'bg-secondary/30'}`}
+                key={day.dateKey}
+                className={`rounded-lg border p-3 ${day.isToday ? 'bg-accent/10 border-accent/30' : 'bg-secondary/25 border-border/60'}`}
               >
                 <View className="flex-row items-center justify-between">
-                  <Text className={`font-medium ${isToday ? 'text-accent' : 'text-foreground'}`}>
-                    {dayLabel}
-                  </Text>
-                  <View className="flex-row items-center gap-3">
-                    {dayData ? (
-                      <>
-                        <Text className="text-success text-sm">
-                          +{formatCompactCurrency(dayData.income, currency)}
-                        </Text>
-                        <Text className="text-danger text-sm">
-                          -{formatCompactCurrency(dayData.expenses, currency)}
-                        </Text>
-                        <Text
-                          className={`font-semibold ${net >= 0 ? 'text-success' : 'text-danger'}`}
-                        >
-                          {net >= 0 ? '+' : ''}{formatCompactCurrency(net, currency)}
-                        </Text>
-                      </>
-                    ) : (
-                      <Text className="text-muted-foreground text-sm">-</Text>
-                    )}
+                  <View className="flex-1 pr-2">
+                    <Text className={`font-medium ${day.isToday ? 'text-accent' : 'text-foreground'}`}>
+                      {dayLabel}
+                    </Text>
+                    <Text className="text-muted-foreground text-xs mt-0.5">
+                      {day.transactions.length === 0
+                        ? t('noActivity')
+                        : `${day.transactions.length} ${t('transactions')}`}
+                    </Text>
+                  </View>
+                  <View className="items-end">
+                    <Text className={`font-semibold ${day.net >= 0 ? 'text-success' : 'text-danger'}`}>
+                      {day.net >= 0 ? '+' : ''}
+                      {formatCompactCurrency(day.net, currency)}
+                    </Text>
+                    <Text className="text-muted-foreground text-xs mt-0.5">
+                      +{formatCompactCurrency(day.income, currency)} / -{formatCompactCurrency(day.expenses, currency)}
+                    </Text>
                   </View>
                 </View>
 
-                {/* Show transactions for this day */}
-                {dayData && dayData.transactions && dayData.transactions.length > 0 && (
-                  <View className="mt-2 pt-2 border-t border-border/30">
-                    {dayData.transactions.slice(0, 3).map((tx) => (
+                {day.transactions.length > 0 && (
+                  <View className="mt-2 pt-2 border-t border-border/40">
+                    {day.transactions.slice(0, 2).map((tx) => (
                       <View key={tx.id} className="flex-row items-center justify-between py-1">
-                        <View className="flex-row items-center flex-1">
+                        <View className="flex-row items-center flex-1 pr-3">
                           <StyledCategoryIcon
                             category={tx.category || 'other'}
                             size={12}
@@ -312,19 +407,18 @@ export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
                             padding={4}
                           />
                           <Text className="text-muted-foreground text-xs ml-2 flex-1" numberOfLines={1}>
-                            {tx.description || tx.category || 'Transaction'}
+                            {tx.description || tx.category || t('transactions')}
                           </Text>
                         </View>
-                        <Text
-                          className={`text-xs font-medium ${tx.type === 'credit' ? 'text-success' : 'text-danger'}`}
-                        >
-                          {tx.type === 'credit' ? '+' : '-'}{formatCompactCurrency(tx.amount, tx.currency)}
+                        <Text className={`text-xs font-medium ${tx.type === 'credit' ? 'text-success' : 'text-danger'}`}>
+                          {tx.type === 'credit' ? '+' : '-'}
+                          {formatCompactCurrency(tx.amount, tx.currency)}
                         </Text>
                       </View>
                     ))}
-                    {dayData.transactions.length > 3 && (
+                    {day.transactions.length > 2 && (
                       <Text className="text-muted-foreground text-xs mt-1">
-                        +{dayData.transactions.length - 3} more
+                        +{day.transactions.length - 2} {t('transactions')}
                       </Text>
                     )}
                   </View>

@@ -4,19 +4,30 @@ import { Sidebar } from './Sidebar';
 import { MobileHeader } from './MobileHeader';
 import { BottomNav } from './BottomNav';
 
+const MOBILE_MEDIA_QUERY = '(max-width: 1023px)';
+
+function getInitialMobileState() {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  return window.matchMedia(MOBILE_MEDIA_QUERY).matches;
+}
+
 export function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(getInitialMobileState);
 
-  // Check screen size
+  // Keep layout in sync with viewport without desktop-first flash on mobile.
   useEffect(() => {
-    const checkScreenSize = () => {
-      setIsMobile(window.innerWidth < 1024);
+    const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY);
+    const handleChange = (event: MediaQueryListEvent) => {
+      setIsMobile(event.matches);
     };
 
-    checkScreenSize();
-    window.addEventListener('resize', checkScreenSize);
-    return () => window.removeEventListener('resize', checkScreenSize);
+    setIsMobile(mediaQuery.matches);
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
   return (
@@ -45,4 +56,3 @@ export function AppLayout() {
     </div>
   );
 }
-

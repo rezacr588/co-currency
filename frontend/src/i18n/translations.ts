@@ -571,6 +571,7 @@ export const translations = {
 
     // AI Chat
     newConversation: 'New Chat',
+    deleteConversation: 'Delete conversation',
     aiAdvisor: 'Finance Advisor',
     aiAdvisorDesc: 'Powered by AI',
     aiWelcome: "Hi! I'm your Finance Advisor",
@@ -1168,6 +1169,7 @@ export const translations = {
 
     // AI Chat
     newConversation: 'گفتگوی جدید',
+    deleteConversation: 'حذف گفتگو',
     aiAdvisor: 'مشاور مالی',
     aiAdvisorDesc: 'با هوش مصنوعی',
     aiWelcome: 'سلام! من مشاور مالی شما هستم',
@@ -1765,6 +1767,7 @@ export const translations = {
 
     // AI Chat
     newConversation: 'محادثة جديدة',
+    deleteConversation: 'حذف المحادثة',
     aiAdvisor: 'المستشار المالي',
     aiAdvisorDesc: 'مدعوم بالذكاء الاصطناعي',
     aiWelcome: 'مرحباً! أنا مستشارك المالي',
@@ -2362,6 +2365,7 @@ export const translations = {
 
     // AI Chat
     newConversation: 'Yeni Sohbet',
+    deleteConversation: 'Sohbeti sil',
     aiAdvisor: 'Finans Danışmanı',
     aiAdvisorDesc: 'Yapay Zeka Destekli',
     aiWelcome: 'Merhaba! Ben finans danışmanınızım',

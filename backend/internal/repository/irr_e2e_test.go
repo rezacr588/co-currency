@@ -7,11 +7,34 @@ import (
 	"time"
 )
 
+const irrE2EEnvVar = "RUN_IRR_E2E_TESTS"
+
+func requireIRRE2E(t *testing.T) {
+	t.Helper()
+
+	if testing.Short() {
+		t.Skip("Skipping IRR E2E tests in short mode")
+	}
+
+	if os.Getenv(irrE2EEnvVar) != "1" {
+		t.Skip("Set RUN_IRR_E2E_TESTS=1 to run IRR E2E tests")
+	}
+}
+
+func requireIRRDatabaseURL(t *testing.T) string {
+	t.Helper()
+	requireIRRE2E(t)
+
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		t.Skip("DATABASE_URL not set, skipping IRR database integration test")
+	}
+	return dbURL
+}
+
 // TestIRRClient_FetchFromPriceDB tests fetching rates from the PriceDB API
 func TestIRRClient_FetchFromPriceDB(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping E2E test in short mode")
-	}
+	requireIRRE2E(t)
 
 	client := NewIRRClient(nil)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -51,9 +74,7 @@ func TestIRRClient_FetchFromPriceDB(t *testing.T) {
 
 // TestIRRClient_GetRates tests the full GetRates flow with caching
 func TestIRRClient_GetRates(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping E2E test in short mode")
-	}
+	requireIRRE2E(t)
 
 	client := NewIRRClient(nil)
 	ctx := context.Background()
@@ -89,9 +110,7 @@ func TestIRRClient_GetRates(t *testing.T) {
 
 // TestIRRClient_ConvertToIRR tests currency conversion to IRR
 func TestIRRClient_ConvertToIRR(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping E2E test in short mode")
-	}
+	requireIRRE2E(t)
 
 	client := NewIRRClient(nil)
 	ctx := context.Background()
@@ -131,9 +150,7 @@ func TestIRRClient_ConvertToIRR(t *testing.T) {
 
 // TestIRRClient_ConvertFromIRR tests currency conversion from IRR
 func TestIRRClient_ConvertFromIRR(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping E2E test in short mode")
-	}
+	requireIRRE2E(t)
 
 	client := NewIRRClient(nil)
 	ctx := context.Background()
@@ -157,10 +174,7 @@ func TestIRRClient_ConvertFromIRR(t *testing.T) {
 
 // TestIRRDatabase_Integration tests database operations
 func TestIRRDatabase_Integration(t *testing.T) {
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		t.Skip("DATABASE_URL not set, skipping database integration test")
-	}
+	dbURL := requireIRRDatabaseURL(t)
 
 	ctx := context.Background()
 
@@ -218,10 +232,7 @@ func TestIRRDatabase_Integration(t *testing.T) {
 
 // TestIRRCrawler_Integration tests the full crawler flow
 func TestIRRCrawler_Integration(t *testing.T) {
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		t.Skip("DATABASE_URL not set, skipping crawler integration test")
-	}
+	dbURL := requireIRRDatabaseURL(t)
 
 	ctx := context.Background()
 
@@ -268,9 +279,7 @@ func TestIRRCrawler_Integration(t *testing.T) {
 
 // TestIRRRates_Accuracy tests that rates are within expected ranges
 func TestIRRRates_Accuracy(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping E2E accuracy test in short mode")
-	}
+	requireIRRE2E(t)
 
 	client := NewIRRClient(nil)
 	ctx := context.Background()
@@ -317,9 +326,7 @@ func TestIRRRates_Accuracy(t *testing.T) {
 
 // TestPriceDBSource_Reliability tests that the PriceDB source is responsive
 func TestPriceDBSource_Reliability(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping reliability test in short mode")
-	}
+	requireIRRE2E(t)
 
 	client := NewIRRClient(nil)
 	ctx := context.Background()

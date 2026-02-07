@@ -112,6 +112,12 @@ Key patterns:
 - Expo SecureStore for token persistence
 - EAS Update for OTA deployments (no app store review needed for JS changes)
 - Same API client pattern as web frontend
+- i18n: `const { t } = useLanguage()` with fallback `t('key') || 'Fallback'`
+- Toast: `const { showToast } = useToast()` then `showToast(message, 'success'|'error'|'info')`
+- Confirmations: `Alert.alert(title, message, [{text: 'Cancel'}, {text: 'Confirm', onPress, style: 'destructive'}])`
+- Safe areas: Always use `useSafeAreaInsets()` from `react-native-safe-area-context`
+- Sub-components must call `useLanguage()` themselves — React hooks cannot be passed from parent
+- Translations file (`src/i18n/translations.ts`) has 4 parallel sections (en, fa, ar, tr) — new keys must be added to ALL four
 
 ### Backend (`/backend`)
 - **cmd/api/main.go**: Application entry point, initializes DB and services
@@ -128,6 +134,7 @@ Key patterns:
 - In-memory caching with go-cache for exchange rates
 - JWT authentication with access tokens (15min) and refresh tokens (7 days)
 - Embedded React build in Go binary for single-container deployment
+- Transaction API handler limit is 500 (in `parsePaginationParams`), repository limit is 10,000
 
 ### API Endpoints
 
@@ -172,6 +179,7 @@ Key patterns:
 - `GET /api/v1/reports/category?currency=`
 - `GET /api/v1/reports/trends?months=&currency=`
 - `GET /api/v1/reports/networth?currency=`
+- `GET /api/v1/reports/forecast?currency=`
 
 **AI & Chat (protected):**
 - `GET /api/v1/ai/status` - Check AI configuration
@@ -189,7 +197,8 @@ Key patterns:
 
 **Badges (protected):**
 - `GET /api/v1/badges` - List all badges with unlock status
-- `GET /api/v1/badges/check` - Check and unlock new badges
+- `GET /api/v1/badges/progress` - Badge progress with percentages
+- `POST /api/v1/badges/check` - Check and unlock new badges
 
 ## Configuration
 
@@ -257,7 +266,7 @@ make run-local          # Test production build locally
 
 CI/CD: GitHub Actions runs tests and auto-deploys to Koyeb on main branch push.
 
-Pre-commit hook runs Go tests and frontend TypeScript/tests before commits.
+Pre-push hook runs Docker build, EAS OTA updates (internal/development/preview branches), and pushes to GitHub. This takes ~2 minutes. The hook also triggers Koyeb auto-deploy from the main branch.
 
 ## Deployment
 

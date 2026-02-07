@@ -38,10 +38,12 @@ export function OfflineBanner() {
 
     return (
         <div
-            className={`fixed top-0 left-0 right-0 z-[100] py-2 px-4 text-center text-sm font-medium transition-all duration-300 safe-area-top ${isOnline
+            className={`pointer-events-none fixed top-0 left-0 right-0 z-[100] py-2 px-4 text-center text-sm font-medium transition-all duration-300 safe-area-top ${isOnline
                     ? 'bg-emerald-500 text-white'
                     : 'bg-amber-500 text-amber-900'
                 }`}
+            role="status"
+            aria-live="polite"
         >
             <div className="flex items-center justify-center gap-2">
                 {!isOnline && <WifiOff className="w-4 h-4" />}

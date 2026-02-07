@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { Send, Bot, User, Plus, Trash2, ArrowLeft, Sparkles } from 'lucide-react';
+import { Send, Bot, User, Plus, Trash2, ArrowLeft, Sparkles, Menu, X } from 'lucide-react';
 import { api } from '../api';
 import { ROUTES } from '../constants/routes';
 import type { ChatMessage, Conversation, ConversationWithMessages } from '../api/chat';
@@ -23,6 +23,7 @@ export default function AIChat() {
     const [message, setMessage] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [sendError, setSendError] = useState<string | null>(null);
+    const [isMobileConversationsOpen, setIsMobileConversationsOpen] = useState(false);
     const [activeConversationId, setActiveConversationId] = useState<string | null>(
         conversationId || null
     );
@@ -58,10 +59,39 @@ export default function AIChat() {
         if (conversationId) {
             setActiveConversationId(conversationId);
             optimisticConversationIdRef.current = null;
+            setIsMobileConversationsOpen(false);
         } else if (!optimisticConversationIdRef.current) {
             setActiveConversationId(null);
         }
     }, [conversationId]);
+
+    useEffect(() => {
+        if (!isMobileConversationsOpen) {
+            return;
+        }
+
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setIsMobileConversationsOpen(false);
+            }
+        };
+
+        document.addEventListener('keydown', handleEscape);
+        return () => document.removeEventListener('keydown', handleEscape);
+    }, [isMobileConversationsOpen]);
+
+    useEffect(() => {
+        if (!isMobileConversationsOpen) {
+            return;
+        }
+
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        return () => {
+            document.body.style.overflow = previousOverflow;
+        };
+    }, [isMobileConversationsOpen]);
 
 
     // Send message mutation
@@ -290,7 +320,10 @@ export default function AIChat() {
         },
     });
 
-    const messages: ChatMessage[] = currentConversation?.messages || [];
+    const messages: ChatMessage[] = useMemo(
+        () => currentConversation?.messages || [],
+        [currentConversation?.messages]
+    );
     const conversations: Conversation[] = conversationsData?.conversations || [];
 
     // Scroll to bottom on new messages
@@ -344,6 +377,8 @@ export default function AIChat() {
         }
     };
 
+    const canChangeConversation = !sendMessageMutation.isPending && !isTyping;
+
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex">
             {/* Sidebar - Conversations */}
@@ -383,6 +418,74 @@ export default function AIChat() {
                 </div>
             </div>
 
+            {/* Mobile Conversations Drawer */}
+            {isMobileConversationsOpen && (
+                <div className="fixed inset-0 z-50 md:hidden">
+                    <button
+                        type="button"
+                        onClick={() => setIsMobileConversationsOpen(false)}
+                        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+                        aria-label={t('closeMenu') || 'Close menu'}
+                    />
+                    <aside className="absolute left-0 top-0 h-full w-[86%] max-w-sm bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col">
+                        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+                            <button
+                                onClick={() => {
+                                    if (!canChangeConversation) return;
+                                    handleNewConversation();
+                                    setIsMobileConversationsOpen(false);
+                                }}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-medium hover:from-primary-600 hover:to-primary-700 transition-all"
+                                disabled={!canChangeConversation}
+                            >
+                                <Plus className="w-5 h-5" />
+                                {t('newConversation') || 'New Chat'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsMobileConversationsOpen(false)}
+                                className="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                aria-label={t('closeMenu') || 'Close menu'}
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                            {conversations.map((conv) => (
+                                <div
+                                    key={conv.id}
+                                    className={`flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors ${conv.id === selectedConversationId
+                                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                                        : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                                        }`}
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (!canChangeConversation) return;
+                                            handleSelectConversation(conv.id);
+                                            setIsMobileConversationsOpen(false);
+                                        }}
+                                        className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                                        disabled={!canChangeConversation}
+                                    >
+                                        <Bot className="w-4 h-4 flex-shrink-0" />
+                                        <span className="truncate text-sm">{conv.title}</span>
+                                    </button>
+                                    <button
+                                        onClick={() => deleteConversationMutation.mutate(conv.id)}
+                                        className="p-1.5 hover:text-red-500 rounded-md transition-colors"
+                                        aria-label={t('deleteConversation') || 'Delete conversation'}
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </aside>
+                </div>
+            )}
+
             {/* Main Chat Area */}
             <div className="flex-1 flex flex-col">
                 {/* Header */}
@@ -406,6 +509,14 @@ export default function AIChat() {
                             </div>
                         </div>
                     </div>
+                    <button
+                        type="button"
+                        onClick={() => setIsMobileConversationsOpen(true)}
+                        className="md:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        aria-label={t('openMenu') || 'Open menu'}
+                    >
+                        <Menu className="w-5 h-5" />
+                    </button>
                 </div>
 
                 {/* Messages */}

@@ -12,6 +12,7 @@ import { SEOHead } from './components/SEOHead';
 import { PublicLayout } from './components/layout/PublicLayout';
 import { AuthenticatedLayout } from './components/layout/AuthenticatedLayout';
 import { HybridLayout } from './components/layout/HybridLayout';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import { queryClient } from './queryClient';
 import { ROUTES } from './constants/routes';
@@ -93,9 +94,25 @@ function AppContent() {
             <Route path={ROUTES.reports} element={<Reports />} />
             <Route path={ROUTES.subscriptions} element={<Subscriptions />} />
             <Route path={ROUTES.badges} element={<Badges />} />
-            <Route path={ROUTES.aiChat} element={<AIChat />} />
-            <Route path={ROUTES.aiChatConversation} element={<AIChat />} />
           </Route>
+
+          {/* AI chat has its own shell, so keep it protected without AppLayout */}
+          <Route
+            path={ROUTES.aiChat}
+            element={(
+              <ProtectedRoute>
+                <AIChat />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path={ROUTES.aiChatConversation}
+            element={(
+              <ProtectedRoute>
+                <AIChat />
+              </ProtectedRoute>
+            )}
+          />
         </Routes>
       </Suspense>
     </div>
