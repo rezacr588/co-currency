@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rezacr588/currency-converter/internal/model"
@@ -93,31 +92,37 @@ func (r *CategoryRepository) CreateCategory(ctx context.Context, userID uuid.UUI
 
 // DeleteCategory deletes a user category
 func (r *CategoryRepository) DeleteCategory(ctx context.Context, userID, categoryID uuid.UUID) error {
-	var ownerID *uuid.UUID
-	var isDefault bool
-	if err := r.pool.QueryRow(ctx, `
-		SELECT user_id, is_default
-		FROM categories
-		WHERE id = $1
-	`, categoryID).Scan(&ownerID, &isDefault); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrCategoryNotFound
-		}
-		return fmt.Errorf("finding category: %w", err)
-	}
-
-	if isDefault {
-		return ErrCategoryDefaultProtected
-	}
-	if ownerID == nil || *ownerID != userID {
-		return ErrCategoryNotFound
-	}
-
-	result, err := r.pool.Exec(ctx, `DELETE FROM categories WHERE id = $1 AND user_id = $2 AND is_default = FALSE`, categoryID, userID)
+	var exists, isDefault, isOwned, deleted bool
+	err := r.pool.QueryRow(ctx, `
+		WITH target AS (
+			SELECT user_id, is_default
+			FROM categories
+			WHERE id = $1
+		),
+		deleted AS (
+			DELETE FROM categories
+			WHERE id = $1
+				AND user_id = $2
+				AND is_default = FALSE
+			RETURNING 1
+		)
+		SELECT
+			EXISTS(SELECT 1 FROM target) AS exists,
+			COALESCE((SELECT is_default FROM target), FALSE) AS is_default,
+			COALESCE((SELECT user_id = $2 FROM target), FALSE) AS is_owned,
+			EXISTS(SELECT 1 FROM deleted) AS deleted
+	`, categoryID, userID).Scan(&exists, &isDefault, &isOwned, &deleted)
 	if err != nil {
 		return fmt.Errorf("deleting category: %w", err)
 	}
-	if result.RowsAffected() == 0 {
+
+	if !exists {
+		return ErrCategoryNotFound
+	}
+	if isDefault {
+		return ErrCategoryDefaultProtected
+	}
+	if !isOwned || !deleted {
 		return ErrCategoryNotFound
 	}
 

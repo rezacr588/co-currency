@@ -375,13 +375,24 @@ func (r *WalletRepository) GetTransactionsFiltered(ctx context.Context, userID u
 			countQuery += fmt.Sprintf(" AND (description ILIKE $%d OR category ILIKE $%d)", argCount, argCount)
 			args = append(args, "%"+filter.Search+"%")
 		}
-		if filter.FromDate != "" {
+		// Prefer exact timestamps when provided. Fallback to date-only filters otherwise.
+		if filter.FromTimestamp != "" {
+			argCount++
+			query += fmt.Sprintf(" AND created_at >= $%d", argCount)
+			countQuery += fmt.Sprintf(" AND created_at >= $%d", argCount)
+			args = append(args, filter.FromTimestamp)
+		} else if filter.FromDate != "" {
 			argCount++
 			query += fmt.Sprintf(" AND created_at >= $%d", argCount)
 			countQuery += fmt.Sprintf(" AND created_at >= $%d", argCount)
 			args = append(args, filter.FromDate)
 		}
-		if filter.ToDate != "" {
+		if filter.ToTimestamp != "" {
+			argCount++
+			query += fmt.Sprintf(" AND created_at <= $%d", argCount)
+			countQuery += fmt.Sprintf(" AND created_at <= $%d", argCount)
+			args = append(args, filter.ToTimestamp)
+		} else if filter.ToDate != "" {
 			argCount++
 			query += fmt.Sprintf(" AND created_at <= $%d", argCount)
 			countQuery += fmt.Sprintf(" AND created_at <= $%d", argCount)

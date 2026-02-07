@@ -112,6 +112,8 @@ export interface TransactionFilter {
   currency?: string;
   from_date?: string;
   to_date?: string;
+  from_ts?: string;
+  to_ts?: string;
 }
 
 export interface Category {

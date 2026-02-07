@@ -87,12 +87,14 @@ func DefaultCategories() []Category {
 
 // TransactionFilter represents filter options for transactions
 type TransactionFilter struct {
-	Search   string `json:"search,omitempty"`
-	Category string `json:"category,omitempty"`
-	Type     string `json:"type,omitempty"`
-	Currency string `json:"currency,omitempty"`
-	FromDate string `json:"from_date,omitempty"`
-	ToDate   string `json:"to_date,omitempty"`
+	Search        string `json:"search,omitempty"`
+	Category      string `json:"category,omitempty"`
+	Type          string `json:"type,omitempty"`
+	Currency      string `json:"currency,omitempty"`
+	FromDate      string `json:"from_date,omitempty"`
+	ToDate        string `json:"to_date,omitempty"`
+	FromTimestamp string `json:"from_ts,omitempty"`
+	ToTimestamp   string `json:"to_ts,omitempty"`
 }
 
 // ConvertBalanceRequest represents a currency conversion request
@@ -104,11 +106,11 @@ type ConvertBalanceRequest struct {
 
 // ConvertBalanceResponse represents the result of a balance conversion
 type ConvertBalanceResponse struct {
-	FromCurrency string  `json:"from_currency"`
-	ToCurrency   string  `json:"to_currency"`
-	FromAmount   float64 `json:"from_amount"`
-	ToAmount     float64 `json:"to_amount"`
-	Rate         float64 `json:"rate"`
+	FromCurrency string       `json:"from_currency"`
+	ToCurrency   string       `json:"to_currency"`
+	FromAmount   float64      `json:"from_amount"`
+	ToAmount     float64      `json:"to_amount"`
+	Rate         float64      `json:"rate"`
 	Transaction  *Transaction `json:"transaction"`
 }
 
@@ -149,12 +151,12 @@ type InsightResponse struct {
 type SmartParseResult struct {
 	Amount      float64 `json:"amount"`
 	Currency    string  `json:"currency"`
-	Type        string  `json:"type"`        // "credit" or "debit"
+	Type        string  `json:"type"` // "credit" or "debit"
 	Description string  `json:"description"`
-	Category    string  `json:"category"`    // Inferred category (food, transportation, etc.)
-	ActionType  string  `json:"action_type"` // "transaction", "recurring", or "goal_contribution"
-	Frequency   string  `json:"frequency,omitempty"`  // For recurring: "daily", "weekly", "monthly", "yearly"
-	GoalName    string  `json:"goal_name,omitempty"`  // For goal contributions
+	Category    string  `json:"category"`            // Inferred category (food, transportation, etc.)
+	ActionType  string  `json:"action_type"`         // "transaction", "recurring", or "goal_contribution"
+	Frequency   string  `json:"frequency,omitempty"` // For recurring: "daily", "weekly", "monthly", "yearly"
+	GoalName    string  `json:"goal_name,omitempty"` // For goal contributions
 	Confidence  float64 `json:"confidence"`
 	RawText     string  `json:"raw_text,omitempty"`
 }
@@ -163,10 +165,10 @@ type SmartParseResult struct {
 type ApplyRecurringRequest struct {
 	Amount      float64 `json:"amount"`
 	Currency    string  `json:"currency"`
-	Type        string  `json:"type"`        // "credit" or "debit"
+	Type        string  `json:"type"` // "credit" or "debit"
 	Description string  `json:"description"`
 	Category    string  `json:"category,omitempty"`
-	Frequency   string  `json:"frequency"`   // "daily", "weekly", "monthly", "yearly"
+	Frequency   string  `json:"frequency"` // "daily", "weekly", "monthly", "yearly"
 }
 
 // ApplyGoalContributionRequest represents a request to contribute to a goal from AI parse
