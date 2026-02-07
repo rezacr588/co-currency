@@ -2,11 +2,17 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
+)
+
+var (
+	ErrCategoryNameRequired = errors.New("category name is required")
 )
 
 // CategoryService handles category operations
@@ -35,11 +41,12 @@ func (s *CategoryService) GetCategories(ctx context.Context, userID uuid.UUID) (
 
 // CreateCategory creates a new user category
 func (s *CategoryService) CreateCategory(ctx context.Context, userID uuid.UUID, name, icon, color string) (*model.Category, error) {
-	if name == "" {
-		return nil, fmt.Errorf("category name is required")
+	normalized := strings.TrimSpace(name)
+	if normalized == "" {
+		return nil, ErrCategoryNameRequired
 	}
 
-	category, err := s.categoryRepo.CreateCategory(ctx, userID, name, icon, color)
+	category, err := s.categoryRepo.CreateCategory(ctx, userID, normalized, icon, color)
 	if err != nil {
 		return nil, fmt.Errorf("creating category: %w", err)
 	}

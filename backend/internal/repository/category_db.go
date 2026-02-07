@@ -2,11 +2,20 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rezacr588/currency-converter/internal/model"
+)
+
+var (
+	ErrCategoryNotFound         = errors.New("category not found")
+	ErrCategoryDefaultProtected = errors.New("default category cannot be deleted")
+	ErrCategoryAlreadyExists    = errors.New("category already exists")
 )
 
 // CategoryRepository handles database operations for categories
@@ -72,6 +81,10 @@ func (r *CategoryRepository) CreateCategory(ctx context.Context, userID uuid.UUI
 		&c.ID, &c.UserID, &c.Name, &c.Icon, &c.Color, &c.IsDefault,
 	)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return nil, ErrCategoryAlreadyExists
+		}
 		return nil, fmt.Errorf("creating category: %w", err)
 	}
 
@@ -80,15 +93,32 @@ func (r *CategoryRepository) CreateCategory(ctx context.Context, userID uuid.UUI
 
 // DeleteCategory deletes a user category
 func (r *CategoryRepository) DeleteCategory(ctx context.Context, userID, categoryID uuid.UUID) error {
-	query := `DELETE FROM categories WHERE id = $1 AND user_id = $2 AND is_default = FALSE`
+	var ownerID *uuid.UUID
+	var isDefault bool
+	if err := r.pool.QueryRow(ctx, `
+		SELECT user_id, is_default
+		FROM categories
+		WHERE id = $1
+	`, categoryID).Scan(&ownerID, &isDefault); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrCategoryNotFound
+		}
+		return fmt.Errorf("finding category: %w", err)
+	}
 
-	result, err := r.pool.Exec(ctx, query, categoryID, userID)
+	if isDefault {
+		return ErrCategoryDefaultProtected
+	}
+	if ownerID == nil || *ownerID != userID {
+		return ErrCategoryNotFound
+	}
+
+	result, err := r.pool.Exec(ctx, `DELETE FROM categories WHERE id = $1 AND user_id = $2 AND is_default = FALSE`, categoryID, userID)
 	if err != nil {
 		return fmt.Errorf("deleting category: %w", err)
 	}
-
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("category not found or is a default category")
+		return ErrCategoryNotFound
 	}
 
 	return nil

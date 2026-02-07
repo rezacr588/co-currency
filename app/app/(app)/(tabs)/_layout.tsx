@@ -260,7 +260,12 @@ export default function TabsLayout() {
             }}
           >
             <Tabs.Screen name="index" />
-            <Tabs.Screen name="wallet" />
+            <Tabs.Screen
+              name="wallet"
+              options={{
+                popToTopOnBlur: true,
+              }}
+            />
             <Tabs.Screen name="add" />
             <Tabs.Screen name="chat" />
             <Tabs.Screen name="reports" />
@@ -287,7 +292,12 @@ export default function TabsLayout() {
             }}
           >
             <Tabs.Screen name="index" />
-            <Tabs.Screen name="wallet" />
+            <Tabs.Screen
+              name="wallet"
+              options={{
+                popToTopOnBlur: true,
+              }}
+            />
             <Tabs.Screen name="add" />
             <Tabs.Screen name="chat" />
             <Tabs.Screen name="reports" />
@@ -328,6 +338,7 @@ export default function TabsLayout() {
         name="wallet"
         options={{
           title: t('wallet'),
+          popToTopOnBlur: true,
           tabBarIcon: ({ color, size }) => <Wallet size={size} color={color} />,
         }}
       />

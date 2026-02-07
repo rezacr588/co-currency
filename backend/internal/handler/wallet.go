@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -82,6 +83,7 @@ func (h *WalletHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	req.Name = strings.TrimSpace(req.Name)
 	if req.Name == "" {
 		httputil.BadRequest(w, "category name is required")
 		return
@@ -89,7 +91,7 @@ func (h *WalletHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
 
 	category, err := h.categoryService.CreateCategory(r.Context(), userID, req.Name, req.Icon, req.Color)
 	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "failed to create category")
+		handleCreateCategoryError(r.Context(), w, err)
 		return
 	}
 
@@ -115,7 +117,7 @@ func (h *WalletHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.categoryService.DeleteCategory(r.Context(), userID, categoryID); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "failed to delete category")
+		handleDeleteCategoryError(r.Context(), w, err)
 		return
 	}
 
@@ -237,16 +239,20 @@ func (h *WalletHandler) GetTransactions(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	limit, offset, ok := parsePaginationParams(w, r)
-	if !ok {
-		return
-	}
-
 	filter := parseTransactionFilter(r)
 
 	// Check if any filter is set
 	hasFilter := filter.Search != "" || filter.Category != "" || filter.Type != "" ||
 		filter.Currency != "" || filter.FromDate != "" || filter.ToDate != ""
+
+	maxLimit := 500
+	if hasFilter {
+		maxLimit = 2000
+	}
+	limit, offset, ok := parsePaginationParamsWithMax(w, r, maxLimit)
+	if !ok {
+		return
+	}
 
 	var transactions []model.Transaction
 	var total int
@@ -418,9 +424,12 @@ func escapeCSVField(field string) string {
 }
 
 func parsePaginationParams(w http.ResponseWriter, r *http.Request) (int, int, bool) {
+	return parsePaginationParamsWithMax(w, r, 500)
+}
+
+func parsePaginationParamsWithMax(w http.ResponseWriter, r *http.Request, maxLimit int) (int, int, bool) {
 	limit := 50
 	offset := 0
-	const maxLimit = 500
 
 	if l := r.URL.Query().Get("limit"); l != "" {
 		parsed, err := strconv.Atoi(l)
@@ -455,6 +464,28 @@ func parseTransactionFilter(r *http.Request) *model.TransactionFilter {
 		Currency: r.URL.Query().Get("currency"),
 		FromDate: r.URL.Query().Get("from_date"),
 		ToDate:   r.URL.Query().Get("to_date"),
+	}
+}
+
+func handleCreateCategoryError(ctx context.Context, w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, service.ErrCategoryNameRequired):
+		httputil.BadRequestWithContext(ctx, w, err.Error(), err)
+	case errors.Is(err, repository.ErrCategoryAlreadyExists):
+		httputil.ErrorWithContext(ctx, w, http.StatusConflict, "conflict", "category already exists", err)
+	default:
+		httputil.InternalServerErrorWithContext(ctx, w, "failed to create category", err)
+	}
+}
+
+func handleDeleteCategoryError(ctx context.Context, w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, repository.ErrCategoryNotFound):
+		httputil.NotFoundWithContext(ctx, w, "category not found", err)
+	case errors.Is(err, repository.ErrCategoryDefaultProtected):
+		httputil.BadRequestWithContext(ctx, w, "default categories cannot be deleted", err)
+	default:
+		httputil.InternalServerErrorWithContext(ctx, w, "failed to delete category", err)
 	}
 }
 

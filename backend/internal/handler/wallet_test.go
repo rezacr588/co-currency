@@ -1123,6 +1123,78 @@ func TestGetTransactionsHandler_WithNegativePaginationParams(t *testing.T) {
 	}
 }
 
+func TestParsePaginationParamsWithMax_FilteredHighLimitAllowed(t *testing.T) {
+	req := httptest.NewRequest("GET", "/api/v1/wallet/transactions?limit=1000&offset=0", nil)
+	rr := httptest.NewRecorder()
+
+	limit, offset, ok := parsePaginationParamsWithMax(rr, req, 2000)
+	if !ok {
+		t.Fatalf("expected pagination parse to succeed, got status %d", rr.Code)
+	}
+	if limit != 1000 {
+		t.Fatalf("expected limit 1000, got %d", limit)
+	}
+	if offset != 0 {
+		t.Fatalf("expected offset 0, got %d", offset)
+	}
+}
+
+func TestParsePaginationParamsWithMax_UnfilteredHighLimitRejected(t *testing.T) {
+	req := httptest.NewRequest("GET", "/api/v1/wallet/transactions?limit=1000", nil)
+	rr := httptest.NewRecorder()
+
+	_, _, ok := parsePaginationParamsWithMax(rr, req, 500)
+	if ok {
+		t.Fatal("expected pagination parse to fail")
+	}
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", rr.Code)
+	}
+}
+
+func TestParsePaginationParamsWithMax_InvalidOffsetRejected(t *testing.T) {
+	req := httptest.NewRequest("GET", "/api/v1/wallet/transactions?offset=-1", nil)
+	rr := httptest.NewRecorder()
+
+	_, _, ok := parsePaginationParamsWithMax(rr, req, 500)
+	if ok {
+		t.Fatal("expected pagination parse to fail")
+	}
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", rr.Code)
+	}
+}
+
+func TestHandleCreateCategoryError_Duplicate(t *testing.T) {
+	rr := httptest.NewRecorder()
+
+	handleCreateCategoryError(context.Background(), rr, repository.ErrCategoryAlreadyExists)
+
+	if rr.Code != http.StatusConflict {
+		t.Fatalf("expected status 409, got %d", rr.Code)
+	}
+}
+
+func TestHandleDeleteCategoryError_NotFound(t *testing.T) {
+	rr := httptest.NewRecorder()
+
+	handleDeleteCategoryError(context.Background(), rr, repository.ErrCategoryNotFound)
+
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d", rr.Code)
+	}
+}
+
+func TestHandleDeleteCategoryError_DefaultProtected(t *testing.T) {
+	rr := httptest.NewRecorder()
+
+	handleDeleteCategoryError(context.Background(), rr, repository.ErrCategoryDefaultProtected)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", rr.Code)
+	}
+}
+
 // Tests for ExportTransactions Handler with nil service
 func TestWalletHandler_ExportTransactions_NilService(t *testing.T) {
 	handler := NewWalletHandler(nil)
