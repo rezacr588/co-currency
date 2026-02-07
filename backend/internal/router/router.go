@@ -106,6 +106,8 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 			r.Put("/transactions/{id}", h.Wallet.UpdateTransaction)
 			r.Delete("/transactions/{id}", h.Wallet.DeleteTransaction)
 			r.Get("/categories", h.Wallet.GetCategories)
+			r.Post("/categories", h.Wallet.CreateCategory)
+			r.Delete("/categories/{id}", h.Wallet.DeleteCategory)
 		})
 
 		// AI routes

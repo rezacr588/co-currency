@@ -61,6 +61,69 @@ func (h *WalletHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// CreateCategory handles POST /api/v1/wallet/categories
+func (h *WalletHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
+	if !requireService(w, h.categoryService != nil, "category service not available - database connection failed") {
+		return
+	}
+
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	var req struct {
+		Name  string `json:"name"`
+		Icon  string `json:"icon,omitempty"`
+		Color string `json:"color,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.BadRequest(w, "invalid request body")
+		return
+	}
+
+	if req.Name == "" {
+		httputil.BadRequest(w, "category name is required")
+		return
+	}
+
+	category, err := h.categoryService.CreateCategory(r.Context(), userID, req.Name, req.Icon, req.Color)
+	if err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "failed to create category")
+		return
+	}
+
+	httputil.Created(w, category)
+}
+
+// DeleteCategory handles DELETE /api/v1/wallet/categories/{id}
+func (h *WalletHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
+	if !requireService(w, h.categoryService != nil, "category service not available - database connection failed") {
+		return
+	}
+
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	categoryIDStr := chi.URLParam(r, "id")
+	categoryID, err := uuid.Parse(categoryIDStr)
+	if err != nil {
+		httputil.BadRequest(w, "invalid category ID")
+		return
+	}
+
+	if err := h.categoryService.DeleteCategory(r.Context(), userID, categoryID); err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "failed to delete category")
+		return
+	}
+
+	httputil.Success(w, map[string]interface{}{
+		"message": "category deleted successfully",
+	})
+}
+
 // GetBalances handles GET /api/v1/wallet/balances
 func (h *WalletHandler) GetBalances(w http.ResponseWriter, r *http.Request) {
 	if !requireService(w, h.walletService != nil, "wallet service not available - database connection failed") {

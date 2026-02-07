@@ -51,6 +51,15 @@ export const wallet = {
       body: JSON.stringify(data),
     }),
   getCategories: () => fetchAPI<{ categories: Category[] }>('/wallet/categories'),
+  createCategory: (data: { name: string; icon?: string; color?: string }) =>
+    fetchAPI<Category>('/wallet/categories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  deleteCategory: (id: string) =>
+    fetchAPI<{ message: string }>(`/wallet/categories/${id}`, {
+      method: 'DELETE',
+    }),
   exportTransactions: (format: string = 'csv', filter?: TransactionFilter) => {
     const query = buildQuery({
       format,

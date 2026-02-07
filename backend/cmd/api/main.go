@@ -241,6 +241,7 @@ func main() {
 	// Initialize Phase 3 services (goals, tags, budgets, recurring, reports)
 	var goalService *service.GoalService
 	var tagService *service.TagService
+	var categoryService *service.CategoryService
 	var budgetService *service.BudgetService
 	var recurringService *service.RecurringService
 	var reportsService *service.ReportsService
@@ -275,6 +276,13 @@ func main() {
 		tagRepo := repository.NewTagRepository(mainDB)
 		tagService = service.NewTagService(tagRepo)
 		log.Info().Msg("Tag service initialized")
+
+		categoryRepo := repository.NewCategoryRepository(mainDB)
+		if err := categoryRepo.InitDefaultCategories(context.Background()); err != nil {
+			log.Warn().Err(err).Msg("Failed to initialize default categories")
+		}
+		categoryService = service.NewCategoryService(categoryRepo)
+		log.Info().Msg("Category service initialized")
 
 		budgetRepo := repository.NewBudgetRepository(mainDB)
 		budgetService = service.NewBudgetService(budgetRepo)
@@ -411,6 +419,9 @@ func main() {
 	exchangeHandler := handler.New(exchangeService)
 	authHandler := handler.NewAuthHandler(authService)
 	walletHandler := handler.NewWalletHandler(walletService)
+	if categoryService != nil {
+		walletHandler = handler.NewWalletHandlerWithCategories(walletService, categoryService)
+	}
 	aiHandler := handler.NewAIHandler(aiService, walletService)
 
 	// Set additional services for AI handler
