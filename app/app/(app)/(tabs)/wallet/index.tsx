@@ -3,11 +3,12 @@ import { Link } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, ArrowLeftRight, Bot, History, MessageCircle, Target, PiggyBank, RefreshCw, CreditCard, BarChart3, Award, HandCoins } from 'lucide-react-native';
+import { Plus, ArrowLeftRight, Bot, History, MessageCircle, Target, PiggyBank, RefreshCw, CreditCard, BarChart3, Award, HandCoins, Wallet } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
-import { formatCompactCurrency, getCurrencyDisplay } from '../../../../src/utils/format';
-import { SkeletonBalance, SkeletonTransaction, SkeletonList } from '../../../../src/components/ui/Skeleton';
+import { formatCurrency, formatCompactCurrency, getCurrencyDisplay, formatDate } from '../../../../src/utils/format';
+import { StyledCategoryIcon } from '../../../../src/constants/icons';
+import { Skeleton, SkeletonList, SkeletonTransaction, SkeletonBalance } from '../../../../src/components/ui/Skeleton';
 
 export default function WalletScreen() {
   const { t } = useLanguage();
@@ -20,26 +21,23 @@ export default function WalletScreen() {
   const isTablet = width >= 768;
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
-  // Calculate widths for grid layouts
   const containerPadding = isDesktop ? 32 : 24;
-  const gap = 12;
   const availableWidth = width - containerPadding * 2;
 
-  // Quick actions: 4 cols on desktop, 2 cols on tablet/mobile
-  const quickActionCols = isDesktop ? 4 : 2;
-  const quickActionWidth = (availableWidth - gap * (quickActionCols - 1)) / quickActionCols;
-
-  // Feature actions: 6 cols on desktop, 3 cols on tablet/mobile
-  const featureActionCols = isDesktop ? 6 : 3;
-  const featureActionWidth = (availableWidth - gap * (featureActionCols - 1)) / featureActionCols;
-
-  // Balance cards: 3 cols on desktop, 2 cols on tablet, 1 on mobile
-  const balanceCols = isDesktop ? 3 : isTablet ? 2 : 1;
-  const balanceCardWidth = balanceCols === 1 ? availableWidth : (availableWidth - gap * (balanceCols - 1)) / balanceCols;
+  // Balance cards: 3 cols on desktop, 2 cols on tablet/mobile
+  const balanceCols = isDesktop ? 3 : 2;
+  const balanceGap = 10;
+  const balanceCardWidth = (availableWidth - balanceGap * (balanceCols - 1)) / balanceCols;
 
   // Transaction cards: 2 cols on desktop, 1 on tablet/mobile
   const txCols = isDesktop ? 2 : 1;
-  const txCardWidth = txCols === 1 ? availableWidth : (availableWidth - gap * (txCols - 1)) / txCols;
+  const txGap = 12;
+  const txCardWidth = txCols === 1 ? availableWidth : (availableWidth - txGap * (txCols - 1)) / txCols;
+
+  const { data: summary, isPending: isLoadingSummary } = useQuery({
+    queryKey: ['wallet', 'summary'],
+    queryFn: () => api.wallet.getSummary(),
+  });
 
   const { data: balancesData, isPending: isLoadingBalances } = useQuery({
     queryKey: ['wallet', 'balances'],
@@ -59,23 +57,28 @@ export default function WalletScreen() {
 
   const balances = balancesData?.balances || [];
   const transactions = transactionsData?.transactions || [];
+  const mobileBalanceLimit = 4;
+  const showViewAllBalances = !isDesktop && balances.length > mobileBalanceLimit;
+  const displayedBalances = isDesktop ? balances : balances.slice(0, mobileBalanceLimit);
 
   const quickActions = [
-    { label: t('addTransaction'), href: '/(app)/(tabs)/add', icon: Plus, primary: true },
-    { label: t('convertCurrency') || t('convert') || 'Convert', href: '/(app)/(tabs)/wallet/convert', icon: ArrowLeftRight },
     { label: t('aiReceiptParser') || 'AI Parser', href: '/(app)/(tabs)/wallet/ai', icon: Bot },
     { label: t('aiAdvisor') || 'AI Advisor', href: '/(app)/(tabs)/wallet/chat', icon: MessageCircle },
+    { label: t('history') || 'History', href: '/(app)/(tabs)/wallet/history', icon: History },
+    { label: t('goals') || 'Goals', href: '/(app)/(tabs)/goals', icon: Target },
   ];
 
   const featureActions = [
-    { label: t('goals') || 'Goals', href: '/(app)/(tabs)/goals', icon: Target },
     { label: t('budgets') || 'Budgets', href: '/(app)/budgets', icon: PiggyBank },
     { label: t('loans') || 'Loans', href: '/(app)/loans', icon: HandCoins },
     { label: t('recurring') || 'Recurring', href: '/(app)/recurring', icon: RefreshCw },
-    { label: t('subscriptions') || 'Subscriptions', href: '/(app)/subscriptions', icon: CreditCard },
+    { label: t('subscriptions') || 'Subs', href: '/(app)/subscriptions', icon: CreditCard },
     { label: t('reports') || 'Reports', href: '/(app)/(tabs)/reports', icon: BarChart3 },
     { label: t('badges') || 'Badges', href: '/(app)/badges', icon: Award },
   ];
+
+  // Feature grid: 7 cols on desktop (single row), 4 cols on tablet/mobile
+  const featureCols = isDesktop ? 7 : 4;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
@@ -92,151 +95,206 @@ export default function WalletScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <Text className="text-3xl font-bold text-foreground mb-6">{t('wallet')}</Text>
+        {/* 1. Hero Balance Card */}
+        <View className="bg-card border border-border rounded-2xl p-6 mb-6" style={{ overflow: 'hidden' }}>
+          {isLoadingSummary ? (
+            <View>
+              <Skeleton width={120} height={14} borderRadius={4} />
+              <View style={{ marginTop: 12 }}>
+                <Skeleton width={200} height={36} borderRadius={6} />
+              </View>
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
+                <Skeleton width="48%" height={44} borderRadius={12} />
+                <Skeleton width="48%" height={44} borderRadius={12} />
+              </View>
+            </View>
+          ) : (
+            <>
+              <View className="flex-row items-center mb-2">
+                <Wallet size={16} color="rgb(161, 161, 170)" />
+                <Text className="text-muted-foreground text-sm ml-2 font-medium">
+                  {t('totalBalance') || 'Total Balance'}
+                </Text>
+              </View>
+              <Text className="text-foreground text-3xl font-bold mb-5">
+                {formatCurrency(summary?.total_balance_usd ?? 0, 'USD')}
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <Link href={'/(app)/(tabs)/add' as any} asChild>
+                  <Pressable
+                    className="flex-1 bg-primary rounded-xl flex-row items-center justify-center"
+                    style={{ height: 44, cursor: 'pointer' }}
+                  >
+                    <Plus size={18} color="#09090b" />
+                    <Text className="text-primary-foreground font-semibold ml-2 text-sm">
+                      {t('addTransaction')}
+                    </Text>
+                  </Pressable>
+                </Link>
+                <Link href={'/(app)/(tabs)/wallet/convert' as any} asChild>
+                  <Pressable
+                    className="flex-1 bg-secondary rounded-xl flex-row items-center justify-center"
+                    style={{ height: 44, cursor: 'pointer' }}
+                  >
+                    <ArrowLeftRight size={18} color="rgb(161, 161, 170)" />
+                    <Text className="text-foreground font-semibold ml-2 text-sm">
+                      {t('convertCurrency') || t('convert') || 'Convert'}
+                    </Text>
+                  </Pressable>
+                </Link>
+              </View>
+            </>
+          )}
+        </View>
 
-        {/* Quick Actions */}
+        {/* 2. Quick Actions - Single Horizontal Row */}
         <View
           className="mb-6"
           style={{
             flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: 12,
+            justifyContent: 'space-around',
           }}
         >
           {quickActions.map((action) => {
             const Icon = action.icon;
             return (
-              <View
-                key={action.href}
-                style={{
-                  width: quickActionWidth,
-                  minWidth: 140,
-                }}
-              >
-                <Link href={action.href as any} asChild>
-                  <Pressable
-                    className={`rounded-xl p-4 items-center justify-center ${
-                      action.primary ? 'bg-primary' : 'bg-card border border-border'
-                    }`}
-                    style={{ cursor: 'pointer' }}
+              <Link key={action.href} href={action.href as any} asChild>
+                <Pressable className="items-center" style={{ cursor: 'pointer' }}>
+                  <View
+                    className="bg-card border border-border items-center justify-center"
+                    style={{ width: 48, height: 48, borderRadius: 24 }}
                   >
-                    <Icon size={22} color={action.primary ? '#09090b' : 'rgb(161, 161, 170)'} />
+                    <Icon size={20} color="rgb(212, 175, 55)" />
+                  </View>
+                  <Text className="text-foreground text-xs mt-2 text-center" numberOfLines={1}>
+                    {action.label}
+                  </Text>
+                </Pressable>
+              </Link>
+            );
+          })}
+        </View>
+
+        {/* 3. Features Grid - Compact Circular Icons */}
+        <View className="mb-6">
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              justifyContent: isDesktop ? 'flex-start' : 'flex-start',
+              gap: 16,
+            }}
+          >
+            {featureActions.map((action) => {
+              const Icon = action.icon;
+              const itemWidth = isDesktop
+                ? (availableWidth - 16 * (featureCols - 1)) / featureCols
+                : (availableWidth - 16 * (featureCols - 1)) / featureCols;
+              return (
+                <Link key={action.href} href={action.href as any} asChild>
+                  <Pressable
+                    className="items-center"
+                    style={{ width: itemWidth, cursor: 'pointer' }}
+                  >
+                    <View
+                      className="bg-secondary items-center justify-center"
+                      style={{ width: 48, height: 48, borderRadius: 24 }}
+                    >
+                      <Icon size={20} color="rgb(212, 175, 55)" />
+                    </View>
                     <Text
-                      className={`mt-2 text-xs font-semibold ${
-                        action.primary ? 'text-primary-foreground' : 'text-foreground'
-                      }`}
+                      className="text-foreground mt-2 text-center"
+                      style={{ fontSize: 10 }}
                       numberOfLines={1}
                     >
                       {action.label}
                     </Text>
                   </Pressable>
                 </Link>
-              </View>
-            );
-          })}
-        </View>
-
-        {/* Feature Actions */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold text-foreground mb-4">{t('features') || 'Features'}</Text>
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: 12,
-            }}
-          >
-            {featureActions.map((action) => {
-              const Icon = action.icon;
-              return (
-                <View
-                  key={action.href}
-                  style={{
-                    width: featureActionWidth,
-                    minWidth: 100,
-                  }}
-                >
-                  <Link href={action.href as any} asChild>
-                    <Pressable
-                      className="bg-card border border-border rounded-xl p-3 items-center justify-center"
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <Icon size={20} color="rgb(212, 175, 55)" />
-                      <Text
-                        className="mt-2 text-xs font-medium text-foreground"
-                        numberOfLines={1}
-                      >
-                        {action.label}
-                      </Text>
-                    </Pressable>
-                  </Link>
-                </View>
               );
             })}
           </View>
         </View>
 
-        {/* Balances */}
+        {/* 4. Currency Balances - 2-Column Compact Grid */}
         <View className="mb-6">
           <Text className="text-lg font-semibold text-foreground mb-4">{t('balances')}</Text>
           {isLoadingBalances ? (
-            <SkeletonList count={3} ItemComponent={SkeletonBalance} />
+            <SkeletonList count={4} ItemComponent={SkeletonBalance} />
           ) : balances.length === 0 ? (
             <View className="bg-card p-6 rounded-xl items-center">
               <Text className="text-muted-foreground">{t('noBalances')}</Text>
             </View>
           ) : (
-            <View style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: 12,
-            }}>
-              {balances.map((balance) => {
-                const display = getCurrencyDisplay(balance.currency);
-                return (
-                  <View
-                    key={balance.currency}
-                    className="bg-card p-4 rounded-xl flex-row items-center justify-between"
-                    style={{
-                      width: balanceCardWidth,
-                      minWidth: balanceCols === 1 ? undefined : 250,
-                    }}
-                  >
-                    <View className="flex-row items-center">
-                      <Text className="text-2xl mr-3">{display.flag || '🌐'}</Text>
-                      <View>
-                        <Text className="text-lg font-semibold text-foreground">
-                          {balance.currency}
-                        </Text>
-                        <Text className="text-muted-foreground text-sm">
-                          {display.symbol}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text
-                      className={`text-xl font-bold ${
-                        balance.balance >= 0 ? 'text-foreground' : 'text-danger'
-                      }`}
+            <>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: balanceGap }}>
+                {displayedBalances.map((balance) => {
+                  const display = getCurrencyDisplay(balance.currency);
+                  return (
+                    <View
+                      key={balance.currency}
+                      className="bg-card rounded-xl"
+                      style={{
+                        width: balanceCardWidth,
+                        padding: 12,
+                        overflow: 'hidden',
+                      }}
                     >
-                      {formatCompactCurrency(balance.balance, balance.currency)}
+                      {/* Left accent bar */}
+                      <View
+                        style={{
+                          position: 'absolute',
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: 3,
+                          backgroundColor: 'rgba(212, 175, 55, 0.5)',
+                          borderTopLeftRadius: 12,
+                          borderBottomLeftRadius: 12,
+                        }}
+                      />
+                      <View className="flex-row items-center mb-1" style={{ paddingLeft: 4 }}>
+                        <Text className="text-2xl mr-2">{display.flag || '🌐'}</Text>
+                        <Text className="text-foreground font-bold text-sm">{balance.currency}</Text>
+                      </View>
+                      <Text
+                        className={`font-semibold ${
+                          balance.balance >= 0 ? 'text-foreground' : 'text-danger'
+                        }`}
+                        style={{ fontSize: 15, paddingLeft: 4 }}
+                        numberOfLines={1}
+                      >
+                        {formatCompactCurrency(balance.balance, balance.currency)}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+              {showViewAllBalances && (
+                <Link href={'/(app)/(tabs)/wallet/history' as any} asChild>
+                  <Pressable className="mt-3 items-center" style={{ cursor: 'pointer' }}>
+                    <Text className="text-accent text-sm font-medium">
+                      {t('viewAll') || 'View All'} ({balances.length})
                     </Text>
-                  </View>
-                );
-              })}
-            </View>
+                  </Pressable>
+                </Link>
+              )}
+            </>
           )}
         </View>
 
-        {/* Recent Transactions */}
+        {/* 5. Recent Transactions - Enhanced Cards */}
         <View>
           <View className="flex-row items-center justify-between mb-4">
-            <Text className="text-lg font-semibold text-foreground">
-              {t('recentTransactions')}
-            </Text>
-            <Link href="/(app)/(tabs)/wallet/history" asChild>
+            <View className="flex-row items-center">
+              <History size={18} color="rgb(212, 175, 55)" />
+              <Text className="text-lg font-semibold text-foreground ml-2">
+                {t('recentTransactions')}
+              </Text>
+            </View>
+            <Link href={'/(app)/(tabs)/wallet/history' as any} asChild>
               <Pressable className="flex-row items-center" style={{ cursor: 'pointer' }}>
-                <History size={16} color="rgb(212, 175, 55)" />
-                <Text className="text-accent ml-1">{t('viewAll')}</Text>
+                <Text className="text-accent text-sm">{t('viewAll')}</Text>
               </Pressable>
             </Link>
           </View>
@@ -247,35 +305,40 @@ export default function WalletScreen() {
               <Text className="text-muted-foreground">{t('noTransactions')}</Text>
             </View>
           ) : (
-            <View style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: 12,
-            }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: txGap }}>
               {transactions.slice(0, 5).map((tx) => (
                 <View
                   key={tx.id}
-                  className="bg-card p-4 rounded-xl flex-row items-center justify-between"
+                  className="bg-card rounded-xl flex-row items-center"
                   style={{
                     width: txCardWidth,
                     minWidth: txCols === 1 ? undefined : 280,
+                    padding: 14,
                   }}
                 >
-                  <View className="flex-1">
-                    <Text className="font-semibold text-foreground" numberOfLines={1}>
+                  <StyledCategoryIcon category={tx.category || 'other'} size={18} />
+                  <View className="flex-1 ml-3">
+                    <Text className="font-semibold text-foreground text-sm" numberOfLines={1}>
                       {tx.description || tx.category || 'Transaction'}
                     </Text>
-                    <Text className="text-muted-foreground text-sm">
-                      {tx.category || t('uncategorized')}
+                    <Text className="text-muted-foreground" style={{ fontSize: 11, marginTop: 2 }}>
+                      {formatDate(tx.created_at, { month: 'short', day: 'numeric' })}
+                      {tx.category ? ` · ${tx.category}` : ''}
                     </Text>
                   </View>
-                  <Text
-                    className={`text-lg font-semibold ${
-                      tx.type === 'credit' ? 'text-success' : 'text-danger'
-                    }`}
-                  >
-                    {`${tx.type === 'credit' ? '+' : '-'}${formatCompactCurrency(tx.amount, tx.currency)}`}
-                  </Text>
+                  <View className="items-end">
+                    <Text
+                      className={`font-semibold ${
+                        tx.type === 'credit' ? 'text-success' : 'text-danger'
+                      }`}
+                      style={{ fontSize: 15 }}
+                    >
+                      {`${tx.type === 'credit' ? '+' : '-'}${formatCompactCurrency(tx.amount, tx.currency)}`}
+                    </Text>
+                    <Text className="text-muted-foreground" style={{ fontSize: 10, marginTop: 1 }}>
+                      {tx.currency}
+                    </Text>
+                  </View>
                 </View>
               ))}
             </View>
