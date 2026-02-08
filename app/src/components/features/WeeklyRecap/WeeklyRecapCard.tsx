@@ -15,52 +15,46 @@ export function WeeklyRecapCard({ compact = false }: WeeklyRecapCardProps) {
   const { t } = useLanguage();
   const router = useRouter();
 
-  // Fetch AI insights
+  // Fetch weekly recap data (ISO 8601 Monday–Sunday)
   const {
-    data: insights,
-    isPending: isLoadingInsights,
-    refetch: refetchInsights,
+    data: weeklyRecap,
+    isPending: isLoadingRecap,
+    refetch: refetchRecap,
     isRefetching,
   } = useQuery({
-    queryKey: ['reports', 'insights'],
-    queryFn: () => api.reports.insights(),
-    staleTime: 30 * 60 * 1000, // 30 minutes
+    queryKey: ['reports', 'weekly-recap'],
+    queryFn: () => api.reports.weeklyRecap(),
+    staleTime: 10 * 60 * 1000, // 10 minutes
     retry: 1,
   });
 
-  // Fetch monthly report for this month's data
-  const { data: monthlyReport } = useQuery({
-    queryKey: ['reports', 'monthly'],
-    queryFn: () => api.reports.monthly(),
-  });
-
-  // Fetch trends for week-over-week comparison
-  const { data: trends } = useQuery({
-    queryKey: ['reports', 'trends', 2],
-    queryFn: () => api.reports.trends(2),
-    staleTime: 10 * 60 * 1000,
+  // Fetch AI insights as secondary display
+  const { data: insights, isPending: isLoadingInsights } = useQuery({
+    queryKey: ['reports', 'insights'],
+    queryFn: () => api.reports.insights(),
+    staleTime: 30 * 60 * 1000,
+    retry: 1,
   });
 
   const handleRefresh = () => {
     haptics.light();
-    refetchInsights();
+    refetchRecap();
   };
 
   const handleAskAI = () => {
     haptics.medium();
-    // Navigate to chat with a pre-filled prompt
     router.push({
       pathname: '/(app)/(tabs)/wallet/chat',
       params: { prompt: 'Give me a detailed weekly spending recap and personalized advice.' },
     });
   };
 
-  // Calculate month-over-month change from trends
-  const weeklyChange = trends?.trends && trends.trends.length >= 2
-    ? ((trends.trends[0]?.expenses || 0) - (trends.trends[1]?.expenses || 0))
-    : 0;
+  const formatShortDate = (iso: string) => {
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
 
-  const isLoading = isLoadingInsights || isRefetching;
+  const isLoading = isLoadingRecap || isRefetching;
 
   if (compact) {
     return (
@@ -98,7 +92,9 @@ export function WeeklyRecapCard({ compact = false }: WeeklyRecapCardProps) {
               {t('weeklyRecap') || 'Weekly Recap'}
             </Text>
             <Text className="text-xs text-muted-foreground">
-              {t('aiPoweredInsights') || 'AI-powered insights'}
+              {weeklyRecap
+                ? `${formatShortDate(weeklyRecap.week_start)} – ${formatShortDate(weeklyRecap.week_end)}`
+                : t('aiPoweredInsights') || 'AI-powered insights'}
             </Text>
           </View>
         </View>
@@ -116,37 +112,37 @@ export function WeeklyRecapCard({ compact = false }: WeeklyRecapCardProps) {
         </Pressable>
       </View>
 
-      {/* Stats Row */}
-      {monthlyReport && (
+      {/* Weekly Stats Row */}
+      {weeklyRecap && (
         <View className="flex-row justify-between mb-4 bg-muted/50 p-3 rounded-lg">
           <View className="items-center flex-1">
             <Text className="text-xs text-muted-foreground mb-1">
-              {t('thisMonth') || 'This Month'}
+              {t('thisWeek') || 'This Week'}
             </Text>
             <View className="flex-row items-center">
               <TrendingDown size={14} color="#ef4444" />
               <Text className="text-sm font-semibold text-foreground ml-1">
-                {formatCompactCurrency(monthlyReport.expenses, monthlyReport.currency)}
+                {formatCompactCurrency(weeklyRecap.total_spent, weeklyRecap.currency)}
               </Text>
             </View>
           </View>
-          {trends?.trends && trends.trends.length >= 2 && (
+          {weeklyRecap.compared_to_last !== 0 && (
             <View className="items-center flex-1">
               <Text className="text-xs text-muted-foreground mb-1">
-                {t('vsLastMonth') || 'vs Last Month'}
+                {t('vsLastWeek') || 'vs Last Week'}
               </Text>
               <View className="flex-row items-center">
-                {weeklyChange <= 0 ? (
+                {weeklyRecap.compared_to_last <= 0 ? (
                   <TrendingDown size={14} color="#22c55e" />
                 ) : (
                   <TrendingUp size={14} color="#ef4444" />
                 )}
                 <Text
                   className={`text-sm font-semibold ml-1 ${
-                    weeklyChange <= 0 ? 'text-success' : 'text-danger'
+                    weeklyRecap.compared_to_last <= 0 ? 'text-success' : 'text-danger'
                   }`}
                 >
-                  {`${weeklyChange < 0 ? '-' : weeklyChange > 0 ? '+' : ''}${formatCompactCurrency(Math.abs(weeklyChange), monthlyReport.currency)}`}
+                  {`${weeklyRecap.compared_to_last < 0 ? '' : '+'}${Math.round(weeklyRecap.compared_to_last)}%`}
                 </Text>
               </View>
             </View>
@@ -156,8 +152,8 @@ export function WeeklyRecapCard({ compact = false }: WeeklyRecapCardProps) {
               {t('savingsRate') || 'Savings'}
             </Text>
             <Text className="text-sm font-semibold text-foreground">
-              {monthlyReport.income > 0
-                ? Math.round(((monthlyReport.income - monthlyReport.expenses) / monthlyReport.income) * 100)
+              {weeklyRecap.total_income > 0
+                ? Math.round(((weeklyRecap.total_income - weeklyRecap.total_spent) / weeklyRecap.total_income) * 100)
                 : 0}%
             </Text>
           </View>
@@ -165,7 +161,7 @@ export function WeeklyRecapCard({ compact = false }: WeeklyRecapCardProps) {
       )}
 
       {/* AI Insights */}
-      {isLoading ? (
+      {isLoadingInsights ? (
         <View className="items-center py-4">
           <ActivityIndicator color="rgb(212, 175, 55)" />
           <Text className="text-muted-foreground text-sm mt-2">

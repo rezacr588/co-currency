@@ -186,6 +186,7 @@ export default function TransactionHistoryScreen() {
     mutationFn: (id: string) => api.wallet.deleteTransaction(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
     },
     onError: (error) => {
       Alert.alert(
@@ -210,6 +211,7 @@ export default function TransactionHistoryScreen() {
       api.wallet.updateTransaction(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
       resetEditModalState();
     },
     onError: (err) => {

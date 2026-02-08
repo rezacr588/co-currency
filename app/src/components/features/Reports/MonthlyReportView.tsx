@@ -186,7 +186,7 @@ export function MonthlyReportView({
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: categoryReport, isPending: isLoadingCategory } = useQuery({
+  const { data: categoryReport, isPending: isLoadingCategory, isError: isCategoryError } = useQuery({
     queryKey: ['reports', 'category', fromDate, toDate, year, month],
     queryFn: () => {
       if (fromDate && toDate) {
@@ -340,6 +340,11 @@ export function MonthlyReportView({
       )}
 
       {/* Category Breakdown */}
+      {isCategoryError && (
+        <View className="bg-danger/10 border border-danger/30 p-4 rounded-xl mb-6">
+          <Text className="text-danger text-sm">{t('failedToLoadCategories') || 'Failed to load category breakdown'}</Text>
+        </View>
+      )}
       {categoryReport && categoryReport.categories.length > 0 && (
         <View className="bg-card p-6 rounded-xl">
           <View className="flex-row items-center mb-4">

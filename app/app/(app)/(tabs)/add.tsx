@@ -180,6 +180,7 @@ export default function AddTransactionScreen() {
     onSuccess: () => {
       setError('');
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
       // Check for new badges in background (non-blocking)
       api.badges.check().then(() => {
         queryClient.invalidateQueries({ queryKey: ['badges'] });

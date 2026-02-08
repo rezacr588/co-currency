@@ -136,6 +136,8 @@ type HealthScoreReport struct {
 
 // WeeklyRecapReport represents a weekly financial summary
 type WeeklyRecapReport struct {
+	WeekStart      string             `json:"week_start"`      // ISO 8601 date, e.g. "2026-02-02"
+	WeekEnd        string             `json:"week_end"`        // ISO 8601 date, e.g. "2026-02-08"
 	TotalSpent     float64            `json:"total_spent"`
 	TotalIncome    float64            `json:"total_income"`
 	NetChange      float64            `json:"net_change"`
@@ -669,14 +671,25 @@ func (s *ReportsService) GetHealthScore(ctx context.Context, userID uuid.UUID, c
 
 // GetWeeklyRecap generates a weekly financial summary with AI insights
 func (s *ReportsService) GetWeeklyRecap(ctx context.Context, userID uuid.UUID, currency string) (*WeeklyRecapReport, error) {
-	now := time.Now()
-	weekStart := now.AddDate(0, 0, -7)
+	now := time.Now().UTC()
+
+	// Calculate ISO 8601 week boundaries (Monday–Sunday)
+	weekday := now.Weekday()
+	if weekday == time.Sunday {
+		weekday = 7
+	}
+	daysSinceMonday := int(weekday) - 1
+	weekStart := time.Date(now.Year(), now.Month(), now.Day()-daysSinceMonday, 0, 0, 0, 0, time.UTC)
+	weekEnd := weekStart.AddDate(0, 0, 6)
+	weekEnd = time.Date(weekEnd.Year(), weekEnd.Month(), weekEnd.Day(), 23, 59, 59, 0, time.UTC)
+
 	prevWeekStart := weekStart.AddDate(0, 0, -7)
+	prevWeekEnd := weekStart.Add(-time.Second) // Sunday 23:59:59 of previous week
 
 	// Get transactions for both weeks
 	filter := &model.TransactionFilter{
 		FromDate: prevWeekStart.Format("2006-01-02"),
-		ToDate:   now.Format("2006-01-02"),
+		ToDate:   weekEnd.Format("2006-01-02"),
 	}
 	transactions, _, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, filter, 10000, 0)
 	if err != nil {
@@ -689,7 +702,7 @@ func (s *ReportsService) GetWeeklyRecap(ctx context.Context, userID uuid.UUID, c
 	categoryCounts := make(map[string]int)
 
 	for _, tx := range transactions {
-		if tx.CreatedAt.Before(weekStart) || tx.CreatedAt.After(now) {
+		if tx.CreatedAt.Before(weekStart) || tx.CreatedAt.After(weekEnd) {
 			continue
 		}
 
@@ -717,7 +730,7 @@ func (s *ReportsService) GetWeeklyRecap(ctx context.Context, userID uuid.UUID, c
 	// Calculate last week's totals for comparison
 	var lastWeekExpenses float64
 	for _, tx := range transactions {
-		if tx.CreatedAt.Before(prevWeekStart) || tx.CreatedAt.After(weekStart) {
+		if tx.CreatedAt.Before(prevWeekStart) || tx.CreatedAt.After(prevWeekEnd) {
 			continue
 		}
 
@@ -802,6 +815,8 @@ func (s *ReportsService) GetWeeklyRecap(ctx context.Context, userID uuid.UUID, c
 	}
 
 	return &WeeklyRecapReport{
+		WeekStart:      weekStart.Format("2006-01-02"),
+		WeekEnd:        weekEnd.Format("2006-01-02"),
 		TotalSpent:     thisWeekExpenses,
 		TotalIncome:    thisWeekIncome,
 		NetChange:      netChange,

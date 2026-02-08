@@ -69,10 +69,12 @@ export const reports = {
     }>(`/reports/health-score${buildQuery({ currency })}`),
   weeklyRecap: (currency?: string) =>
     fetchAPI<{
+      week_start: string;
+      week_end: string;
       total_spent: number;
       total_income: number;
       net_change: number;
-      top_categories: { category: string; amount: number }[];
+      top_categories: { category: string; amount: number; percentage: number; count: number }[];
       compared_to_last: number;
       insights: string[];
       action_items: string[];
