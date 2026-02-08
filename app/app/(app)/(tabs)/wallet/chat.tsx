@@ -173,8 +173,8 @@ export default function AIChatScreen() {
   const markdownStyles = useMemo(() => StyleSheet.create({
     body: {
       color: colors.foreground,
-      fontSize: 14,
-      lineHeight: 20,
+      fontSize: 15,
+      lineHeight: 22,
     },
     heading1: {
       color: colors.foreground,
@@ -199,8 +199,8 @@ export default function AIChatScreen() {
     },
     paragraph: {
       color: colors.foreground,
-      fontSize: 14,
-      lineHeight: 20,
+      fontSize: 15,
+      lineHeight: 22,
       marginTop: 0,
       marginBottom: 8,
     },
@@ -254,7 +254,8 @@ export default function AIChatScreen() {
     },
     list_item: {
       color: colors.foreground,
-      fontSize: 14,
+      fontSize: 15,
+      lineHeight: 22,
       marginBottom: 4,
     },
     bullet_list: {
@@ -1553,7 +1554,7 @@ export default function AIChatScreen() {
               }}
             >
               {msg.role === 'user' ? (
-                <Text style={{ color: colors.primaryForeground, fontSize: 15, lineHeight: 22 }}>
+                <Text style={{ color: colors.primaryForeground, fontSize: 16, lineHeight: 24 }}>
                   {msg.content}
                 </Text>
               ) : (
@@ -1665,7 +1666,7 @@ export default function AIChatScreen() {
             {/* Input */}
             <View
               className="p-4 border-t border-border bg-card"
-              style={[contentWidthStyle, { paddingBottom: Math.max(insets.bottom, 12) }]}
+              style={{ paddingBottom: Math.max(insets.bottom, 12) }}
             >
               {sendError && (
                 <View className="bg-danger-muted border border-danger/20 p-3 rounded-lg mb-3">

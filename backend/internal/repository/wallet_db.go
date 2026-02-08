@@ -285,8 +285,8 @@ func (r *WalletRepository) GetTransactions(ctx context.Context, userID uuid.UUID
 	if limit <= 0 {
 		limit = 50
 	}
-	if limit > 100 {
-		limit = 100
+	if limit > 500 {
+		limit = 500
 	}
 
 	query := `

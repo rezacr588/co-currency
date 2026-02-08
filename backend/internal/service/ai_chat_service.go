@@ -632,7 +632,7 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	startOfLastMonth := startOfMonth.AddDate(0, -1, 0)
 
-	transactions, err := s.walletRepo.GetTransactions(ctx, userID, 100, 0)
+	transactions, err := s.walletRepo.GetTransactions(ctx, userID, 500, 0)
 	if err == nil {
 		categoryTotals := make(map[string]float64)
 
@@ -657,8 +657,8 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 				}
 			}
 
-			// Add recent transactions to list (last 10)
-			if i < 10 {
+			// Add recent transactions to list (last 50)
+			if i < 50 {
 				fctx.RecentTransactionList = append(fctx.RecentTransactionList, model.TransactionSummary{
 					Date:        tx.CreatedAt.Format("Jan 2"),
 					Type:        tx.Type,
