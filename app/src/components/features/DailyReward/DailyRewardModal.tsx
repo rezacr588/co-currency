@@ -12,6 +12,7 @@ import { Gift, Star, Sparkles, X, ChevronUp } from 'lucide-react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useToast } from '../../ui/Toast';
 import { haptics } from '../../../utils/haptics';
 
 const LAST_REWARD_KEY = '@last_daily_reward_date';
@@ -22,6 +23,7 @@ interface DailyRewardModalProps {
 
 export function DailyRewardModal({ onClose }: DailyRewardModalProps) {
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [visible, setVisible] = useState(false);
   const [claimed, setClaimed] = useState(false);
@@ -89,6 +91,7 @@ export function DailyRewardModal({ onClose }: DailyRewardModalProps) {
     },
     onError: () => {
       haptics.error();
+      showToast(t('failedToClaimReward') || 'Failed to claim reward. Please try again.', 'error');
     },
   });
 

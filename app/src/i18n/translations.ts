@@ -544,6 +544,7 @@ export const translations = {
     featured: 'Featured',
     noNewBadges: 'No new badges to claim',
     failedToCheckBadges: 'Failed to check badges',
+    failedToClaimReward: 'Failed to claim reward. Please try again.',
     notificationsNotSetUp: 'Push notifications are not set up yet',
 
     // Landing Page - Hero Section
@@ -1277,6 +1278,7 @@ export const translations = {
     featured: 'ویژه',
     noNewBadges: 'نشان جدیدی برای دریافت نیست',
     failedToCheckBadges: 'بررسی نشان‌ها ناموفق بود',
+    failedToClaimReward: 'دریافت پاداش ناموفق بود. لطفاً دوباره تلاش کنید.',
     notificationsNotSetUp: 'اعلان‌های فشاری هنوز تنظیم نشده‌اند',
 
     // Landing Page - Hero Section
@@ -2010,6 +2012,7 @@ export const translations = {
     featured: 'مميز',
     noNewBadges: 'لا توجد شارات جديدة للمطالبة',
     failedToCheckBadges: 'فشل في التحقق من الشارات',
+    failedToClaimReward: 'فشل في المطالبة بالمكافأة. يرجى المحاولة مرة أخرى.',
     notificationsNotSetUp: 'لم يتم إعداد الإشعارات الفورية بعد',
 
     // Landing Page - Hero Section
@@ -2743,6 +2746,7 @@ export const translations = {
     featured: 'Öne Çıkan',
     noNewBadges: 'Talep edilecek yeni rozet yok',
     failedToCheckBadges: 'Rozetler kontrol edilemedi',
+    failedToClaimReward: 'Ödül talep edilemedi. Lütfen tekrar deneyin.',
     notificationsNotSetUp: 'Anlık bildirimler henüz kurulmadı',
 
     // Landing Page - Hero Section

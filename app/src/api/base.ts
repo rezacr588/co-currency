@@ -207,8 +207,8 @@ async function fetchWithRetry<T>(
           throw new Error(errorMessage);
         }
 
-        // Server error - will retry
-        throw new Error(errorMessage || `Server error: ${response.status}`);
+        // Server error - will retry (prefix with "Server error:" so retry logic detects it)
+        throw new Error(`Server error: ${errorMessage || `status ${response.status}`}`);
       }
 
       return response.json();

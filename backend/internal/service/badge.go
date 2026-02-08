@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -114,16 +113,14 @@ func (s *BadgeService) getUserStats(ctx context.Context, userID uuid.UUID) (*rep
 
 	// Get transaction count and calculate stats
 	if s.walletRepo != nil {
-		transactions, err := s.walletRepo.GetTransactions(ctx, userID, 0, 0)
+		count, err := s.walletRepo.CountTransactions(ctx, userID)
 		if err == nil {
-			stats.TransactionCount = len(transactions)
+			stats.TransactionCount = count
+		}
 
-			// Count unique currencies
-			currencies := make(map[string]bool)
-			for _, t := range transactions {
-				currencies[t.Currency] = true
-			}
-			stats.CurrencyCount = len(currencies)
+		currCount, err := s.walletRepo.CountDistinctCurrencies(ctx, userID)
+		if err == nil {
+			stats.CurrencyCount = currCount
 		}
 
 		// Use wallet balances for TotalSaved (already correctly calculated per currency)
@@ -191,27 +188,9 @@ func (s *BadgeService) calculateStreak(ctx context.Context, userID uuid.UUID) in
 		return 0
 	}
 
-	// Get all transactions (we need to check consecutive days)
-	transactions, err := s.walletRepo.GetTransactions(ctx, userID, 0, 0)
-	if err != nil || len(transactions) == 0 {
-		return 0
-	}
-
-	// Get unique days with transactions
-	daysMap := make(map[string]bool)
-	for _, t := range transactions {
-		day := t.CreatedAt.Format("2006-01-02")
-		daysMap[day] = true
-	}
-
-	// Convert to sorted slice
-	days := make([]string, 0, len(daysMap))
-	for day := range daysMap {
-		days = append(days, day)
-	}
-	sort.Strings(days)
-
-	if len(days) == 0 {
+	// Get all distinct transaction dates (sorted ascending)
+	days, err := s.walletRepo.GetTransactionDates(ctx, userID)
+	if err != nil || len(days) == 0 {
 		return 0
 	}
 

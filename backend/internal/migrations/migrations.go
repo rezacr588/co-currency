@@ -82,7 +82,20 @@ func isApplied(ctx context.Context, pool *pgxpool.Pool, table, version string) (
 	return true, nil
 }
 
+// stripGooseDown removes any -- +goose Down section and everything after it,
+// so only the Up migration is executed.
+func stripGooseDown(sql string) string {
+	lower := strings.ToLower(sql)
+	if idx := strings.Index(lower, "-- +goose down"); idx >= 0 {
+		return strings.TrimSpace(sql[:idx])
+	}
+	return sql
+}
+
 func applyOne(ctx context.Context, pool *pgxpool.Pool, table, version, sql string) error {
+	// Only execute the Up section — strip goose Down markers
+	sql = stripGooseDown(sql)
+
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("beginning migration %s: %w", version, err)

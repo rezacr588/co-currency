@@ -329,6 +329,40 @@ func (r *WalletRepository) CountTransactions(ctx context.Context, userID uuid.UU
 	return count, nil
 }
 
+// CountDistinctCurrencies returns the number of distinct currencies used in transactions
+func (r *WalletRepository) CountDistinctCurrencies(ctx context.Context, userID uuid.UUID) (int, error) {
+	var count int
+	err := r.pool.QueryRow(ctx, `SELECT COUNT(DISTINCT currency) FROM transactions WHERE user_id = $1`, userID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("counting currencies: %w", err)
+	}
+	return count, nil
+}
+
+// GetTransactionDates returns distinct dates (as YYYY-MM-DD strings) that have transactions, sorted ascending
+func (r *WalletRepository) GetTransactionDates(ctx context.Context, userID uuid.UUID) ([]string, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT DISTINCT DATE(created_at)::text AS tx_date
+		FROM transactions
+		WHERE user_id = $1
+		ORDER BY tx_date
+	`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("querying transaction dates: %w", err)
+	}
+	defer rows.Close()
+
+	var dates []string
+	for rows.Next() {
+		var d string
+		if err := rows.Scan(&d); err != nil {
+			continue
+		}
+		dates = append(dates, d)
+	}
+	return dates, nil
+}
+
 // GetTransactionsFiltered retrieves transactions for a user with filters
 func (r *WalletRepository) GetTransactionsFiltered(ctx context.Context, userID uuid.UUID, filter *model.TransactionFilter, limit, offset int) ([]model.Transaction, int, error) {
 	if limit <= 0 {
