@@ -40,19 +40,24 @@ import type { ConversionResult } from '../../../../src/types/currency';
 import type { Goal, RecurringTransaction } from '../../../../src/types/goal';
 import { formatNumber } from '../../../../src/utils/format';
 
-const suggestedQuestions = [
-  'How am I doing financially?',
-  'What are my top spending categories?',
-  'Am I on track with my savings goals?',
-  'How can I save more money?',
-  'How much did I spend this month?',
-];
-
-const suggestedActions = [
-  'Add $12 coffee',
-  'Convert 100 USD to EUR',
-  'Rate USD to EUR',
-];
+// These are populated with translations at render time via useSuggestedPrompts()
+function useSuggestedPrompts() {
+  const { t } = useLanguage();
+  return {
+    questions: [
+      t('suggestedQuestion1') || 'How am I doing financially?',
+      t('suggestedQuestion2') || 'What are my top spending categories?',
+      t('suggestedQuestion3') || 'Am I on track with my savings goals?',
+      t('suggestedQuestion4') || 'How can I save more money?',
+      t('suggestedQuestion5') || 'How much did I spend this month?',
+    ],
+    actions: [
+      t('suggestedAction1') || 'Add $12 coffee',
+      t('suggestedAction2') || 'Convert 100 USD to EUR',
+      t('suggestedAction3') || 'Rate USD to EUR',
+    ],
+  };
+}
 
 // Question patterns — messages asking ABOUT finances, NOT requesting to add transactions
 const QUESTION_PATTERNS = [
@@ -143,6 +148,7 @@ export default function AIChatScreen() {
   const colors = useColors();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { questions: suggestedQuestions, actions: suggestedActions } = useSuggestedPrompts();
   const { conversationId } = useLocalSearchParams<{ conversationId?: string }>();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -505,6 +511,18 @@ export default function AIChatScreen() {
           }
         );
       }
+
+      // Sort messages by created_at to ensure correct order
+      queryClient.setQueryData<ConversationWithMessages | null>(
+        ['ai-conversation', serverConversationId],
+        (old) => {
+          if (!old) return old;
+          const sorted = [...old.messages].sort(
+            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          );
+          return { ...old, messages: sorted };
+        }
+      );
 
       // Invalidate to get fresh data from server
       queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
@@ -1563,7 +1581,7 @@ export default function AIChatScreen() {
                 backgroundColor: msg.role === 'user' ? colors.accent : colors.muted,
                 borderBottomRightRadius: msg.role === 'user' ? 4 : 16,
                 borderBottomLeftRadius: msg.role === 'user' ? 16 : 4,
-                maxWidth: '90%',
+                maxWidth: '100%',
               }}
             >
               {msg.role === 'user' ? (

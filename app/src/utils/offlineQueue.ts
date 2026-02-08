@@ -5,6 +5,7 @@ import type { TransactionRequest } from '../types/wallet';
 
 const QUEUE_KEY = '@offline_transaction_queue';
 const MAX_RETRIES = 3;
+const MAX_QUEUE_SIZE = 100;
 
 export interface QueuedTransaction {
   id: string;
@@ -35,13 +36,18 @@ export async function getQueuedTransactions(): Promise<QueuedTransaction[]> {
     if (!data) return [];
     return JSON.parse(data);
   } catch (error) {
-    console.error('Failed to get queued transactions:', error);
+    if (__DEV__) console.error('Failed to get queued transactions:', error);
     return [];
   }
 }
 
 // Add a transaction to the queue
 export async function queueTransaction(transaction: TransactionRequest): Promise<string> {
+  const existing = await getQueuedTransactions();
+  if (existing.length >= MAX_QUEUE_SIZE) {
+    throw new Error('Offline queue is full. Please sync pending transactions first.');
+  }
+
   const queued: QueuedTransaction = {
     id: generateId(),
     data: transaction,
@@ -49,7 +55,6 @@ export async function queueTransaction(transaction: TransactionRequest): Promise
     retryCount: 0,
   };
 
-  const existing = await getQueuedTransactions();
   existing.push(queued);
 
   await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(existing));
@@ -117,6 +122,9 @@ export async function syncQueue(): Promise<{
 
       if (newRetryCount >= MAX_RETRIES) {
         // Remove from queue after max retries
+        if (__DEV__) {
+          console.warn(`[OfflineQueue] Dropping transaction after ${MAX_RETRIES} retries:`, item.data.description || item.id);
+        }
         await removeFromQueue(item.id);
         failed++;
       } else {
@@ -202,7 +210,7 @@ export function startAutoSync(): void {
   // Initial check
   Network.getNetworkStateAsync().then((state) => {
     lastNetworkState = state.isConnected ?? false;
-  });
+  }).catch(() => {});
 }
 
 export function stopAutoSync(): void {

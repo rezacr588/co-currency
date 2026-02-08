@@ -100,7 +100,7 @@ export default function GoalsScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ['goals'] });
+    await refetch();
     setRefreshing(false);
   };
 

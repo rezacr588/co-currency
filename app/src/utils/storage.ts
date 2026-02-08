@@ -13,7 +13,7 @@ export async function readSecure(key: string): Promise<string | null> {
     }
     return await AsyncStorage.getItem(key);
   } catch (error) {
-    console.error(`[Storage] Failed to read secure key "${key}":`, error);
+    if (__DEV__) console.error(`[Storage] Failed to read secure key "${key}":`, error);
     return null;
   }
 }
@@ -27,7 +27,7 @@ export async function writeSecure(key: string, value: string): Promise<boolean> 
     }
     return true;
   } catch (error) {
-    console.error(`[Storage] Failed to write secure key "${key}":`, error);
+    if (__DEV__) console.error(`[Storage] Failed to write secure key "${key}":`, error);
     return false;
   }
 }
@@ -41,7 +41,7 @@ export async function removeSecure(key: string): Promise<boolean> {
     }
     return true;
   } catch (error) {
-    console.error(`[Storage] Failed to remove secure key "${key}":`, error);
+    if (__DEV__) console.error(`[Storage] Failed to remove secure key "${key}":`, error);
     return false;
   }
 }
@@ -51,7 +51,7 @@ export async function readStorage(key: string): Promise<string | null> {
   try {
     return await AsyncStorage.getItem(key);
   } catch (error) {
-    console.error(`[Storage] Failed to read key "${key}":`, error);
+    if (__DEV__) console.error(`[Storage] Failed to read key "${key}":`, error);
     return null;
   }
 }
@@ -61,7 +61,7 @@ export async function writeStorage(key: string, value: string): Promise<boolean>
     await AsyncStorage.setItem(key, value);
     return true;
   } catch (error) {
-    console.error(`[Storage] Failed to write key "${key}":`, error);
+    if (__DEV__) console.error(`[Storage] Failed to write key "${key}":`, error);
     return false;
   }
 }
@@ -71,7 +71,7 @@ export async function removeStorage(key: string): Promise<boolean> {
     await AsyncStorage.removeItem(key);
     return true;
   } catch (error) {
-    console.error(`[Storage] Failed to remove key "${key}":`, error);
+    if (__DEV__) console.error(`[Storage] Failed to remove key "${key}":`, error);
     return false;
   }
 }
@@ -90,7 +90,7 @@ export async function writeJSON<T>(key: string, value: T): Promise<boolean> {
   try {
     return await writeStorage(key, JSON.stringify(value));
   } catch (error) {
-    console.error(`[Storage] Failed to write JSON key "${key}":`, error);
+    if (__DEV__) console.error(`[Storage] Failed to write JSON key "${key}":`, error);
     return false;
   }
 }
@@ -109,7 +109,7 @@ export async function writeSecureJSON<T>(key: string, value: T): Promise<boolean
   try {
     return await writeSecure(key, JSON.stringify(value));
   } catch (error) {
-    console.error(`[Storage] Failed to write secure JSON key "${key}":`, error);
+    if (__DEV__) console.error(`[Storage] Failed to write secure JSON key "${key}":`, error);
     return false;
   }
 }

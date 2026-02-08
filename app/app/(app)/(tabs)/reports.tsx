@@ -279,15 +279,17 @@ function RingChart({
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
-  // Calculate cumulative offsets for each segment
-  let cumulativePercent = 0;
-  const arcs = segments.map((segment) => {
-    const percent = segment.value / total;
-    const dashArray = percent * circumference;
-    const dashOffset = -cumulativePercent * circumference;
-    cumulativePercent += percent;
-    return { ...segment, dashArray, dashOffset, percent };
-  });
+  // Calculate cumulative offsets for each segment (memoized)
+  const arcs = useMemo(() => {
+    let cumulativePercent = 0;
+    return segments.map((segment) => {
+      const percent = segment.value / total;
+      const dashArray = percent * circumference;
+      const dashOffset = -cumulativePercent * circumference;
+      cumulativePercent += percent;
+      return { ...segment, dashArray, dashOffset, percent };
+    });
+  }, [segments, total, circumference]);
 
   return (
     <View className="items-center">

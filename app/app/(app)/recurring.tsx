@@ -55,7 +55,7 @@ export default function RecurringScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ['recurring'] });
+    await refetch();
     setRefreshing(false);
   };
 

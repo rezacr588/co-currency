@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { Link } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,22 +32,26 @@ export default function DashboardScreen() {
   const { data: summary, isPending, isError: isSummaryError } = useQuery({
     queryKey: ['wallet', 'summary'],
     queryFn: () => api.wallet.getSummary(),
+    staleTime: 2 * 60 * 1000,
   });
 
   const { data: monthlyReport, isError: isMonthlyError } = useQuery({
     queryKey: ['reports', 'monthly'],
     queryFn: () => api.reports.monthly(),
+    staleTime: 2 * 60 * 1000,
   });
 
   const { data: goalsData, isError: isGoalsError } = useQuery({
     queryKey: ['goals'],
     queryFn: () => api.goals.list(),
+    staleTime: 2 * 60 * 1000,
   });
   const goals: Goal[] | undefined = goalsData?.goals;
 
   const { data: budgetsData, isError: isBudgetsError } = useQuery({
     queryKey: ['budgets'],
     queryFn: () => api.budgets.list(),
+    staleTime: 2 * 60 * 1000,
   });
   const budgets: Budget[] = budgetsData?.budgets || [];
 
@@ -94,24 +99,26 @@ export default function DashboardScreen() {
     }
   }
 
-  if (summary?.recent_transactions?.length) {
+  const topCategory = useMemo(() => {
+    if (!summary?.recent_transactions?.length) return null;
     const categoryCounts = summary.recent_transactions
       .filter((tx: any) => tx?.type === 'debit' && tx?.category)
       .reduce((acc: Record<string, number>, tx: any) => {
         acc[tx.category] = (acc[tx.category] || 0) + 1;
         return acc;
       }, {});
-    const topCategory = Object.keys(categoryCounts).sort(
+    return Object.keys(categoryCounts).sort(
       (a, b) => categoryCounts[b] - categoryCounts[a]
-    )[0];
-    if (topCategory) {
-      const readable = topCategory.replace(/_/g, ' ');
-      insights.push({
-        title: `${t('topSpending') || 'Top spending'}: ${readable}`,
-        detail: t('considerWeeklyLimit') || 'Consider setting a small weekly limit to stay on track.',
-        tone: 'info',
-      });
-    }
+    )[0] || null;
+  }, [summary]);
+
+  if (topCategory) {
+    const readable = topCategory.replace(/_/g, ' ');
+    insights.push({
+      title: `${t('topSpending') || 'Top spending'}: ${readable}`,
+      detail: t('considerWeeklyLimit') || 'Consider setting a small weekly limit to stay on track.',
+      tone: 'info',
+    });
   }
 
   if (totalGoals === 0) {

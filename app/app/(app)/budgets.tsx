@@ -54,7 +54,7 @@ export default function BudgetsScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ['budgets'] });
+    await refetch();
     setRefreshing(false);
   };
 

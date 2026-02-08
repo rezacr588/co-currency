@@ -133,7 +133,7 @@ export default function LoginScreen() {
         await WebBrowser.openBrowserAsync(authUrl);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to open Google login');
+      setError(err instanceof Error ? err.message : t('failedToOpenGoogleLogin') || 'Failed to open Google login');
       setIsOAuthLoading(false);
     }
   };
@@ -149,7 +149,7 @@ export default function LoginScreen() {
         await WebBrowser.openBrowserAsync(authUrl);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to open LinkedIn login');
+      setError(err instanceof Error ? err.message : t('failedToOpenLinkedInLogin') || 'Failed to open LinkedIn login');
       setIsOAuthLoading(false);
     }
   };
@@ -193,7 +193,7 @@ export default function LoginScreen() {
               }`}
             >
               <GoogleIcon size={18} />
-              <Text className="text-background font-medium ml-3 text-sm">Continue with Google</Text>
+              <Text className="text-background font-medium ml-3 text-sm">{t('continueWithGoogle') || 'Continue with Google'}</Text>
             </Pressable>
 
             {/* LinkedIn OAuth Button */}
@@ -206,7 +206,7 @@ export default function LoginScreen() {
               }`}
             >
               <LinkedInIcon size={18} color={colors.secondaryForeground} />
-              <Text className="text-foreground font-medium ml-3 text-sm">Continue with LinkedIn</Text>
+              <Text className="text-foreground font-medium ml-3 text-sm">{t('continueWithLinkedIn') || 'Continue with LinkedIn'}</Text>
             </Pressable>
 
             {/* Divider */}

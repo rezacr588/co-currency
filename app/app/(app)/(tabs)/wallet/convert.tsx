@@ -59,6 +59,7 @@ export default function WalletConvertScreen() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['wallet', 'balances'] });
       showToast(t('conversionSuccess') || 'Conversion completed', 'success');
       router.back();
     },
@@ -134,7 +135,7 @@ export default function WalletConvertScreen() {
               {t('noWalletBalances') || 'No wallet balances yet'}
             </Text>
             <Text className="text-muted-foreground text-sm mb-3">
-              Add a transaction to create a wallet balance before converting.
+              {t('noWalletBalancesDescription') || 'Add a transaction to create a wallet balance before converting.'}
             </Text>
             <Link href="/(app)/(tabs)/add" asChild>
               <Pressable style={{ cursor: 'pointer' }} className="bg-accent px-4 py-2 rounded-lg self-start">

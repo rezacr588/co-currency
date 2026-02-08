@@ -34,6 +34,7 @@ const REFRESH_TOKEN_KEY = 'refresh_token';
 let authTokenCache: string | null = null;
 let refreshTokenCache: string | null = null;
 let tokensLoaded = false;
+let loadTokensPromise: Promise<void> | null = null;
 
 // Mutex for token refresh to prevent race conditions
 let isRefreshing = false;
@@ -57,21 +58,30 @@ function handleAuthError() {
 // Load tokens from storage into memory cache
 export async function loadTokens(): Promise<void> {
   if (tokensLoaded) return;
+  if (loadTokensPromise) return loadTokensPromise;
 
-  const [token, refresh] = await Promise.all([
-    readSecure(AUTH_TOKEN_KEY),
-    readSecure(REFRESH_TOKEN_KEY),
-  ]);
+  loadTokensPromise = (async () => {
+    const [token, refresh] = await Promise.all([
+      readSecure(AUTH_TOKEN_KEY),
+      readSecure(REFRESH_TOKEN_KEY),
+    ]);
 
-  authTokenCache = token;
-  refreshTokenCache = refresh;
-  tokensLoaded = true;
+    authTokenCache = token;
+    refreshTokenCache = refresh;
+    tokensLoaded = true;
+    loadTokensPromise = null;
+  })();
+
+  return loadTokensPromise;
 }
 
 export async function setAuthToken(token: string | null): Promise<void> {
   authTokenCache = token;
   if (token) {
-    await writeSecure(AUTH_TOKEN_KEY, token);
+    const persisted = await writeSecure(AUTH_TOKEN_KEY, token);
+    if (!persisted && __DEV__) {
+      console.warn('[Auth] Failed to persist auth token to secure storage');
+    }
   } else {
     await removeSecure(AUTH_TOKEN_KEY);
   }
@@ -80,7 +90,10 @@ export async function setAuthToken(token: string | null): Promise<void> {
 export async function setRefreshToken(token: string | null): Promise<void> {
   refreshTokenCache = token;
   if (token) {
-    await writeSecure(REFRESH_TOKEN_KEY, token);
+    const persisted = await writeSecure(REFRESH_TOKEN_KEY, token);
+    if (!persisted && __DEV__) {
+      console.warn('[Auth] Failed to persist refresh token to secure storage');
+    }
   } else {
     await removeSecure(REFRESH_TOKEN_KEY);
   }
@@ -126,11 +139,15 @@ async function refreshAuthToken(): Promise<boolean> {
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
       const response = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh_token: storedRefreshToken }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data: AuthResponse = await response.json();
@@ -163,21 +180,28 @@ async function fetchWithRetry<T>(
   options?: RequestInit,
   retryOptions: RetryOptions = {}
 ): Promise<T> {
-  const { maxRetries = 3, baseDelay = 1000, maxDelay = 10000 } = retryOptions;
+  const { maxRetries = 1, baseDelay = 1000, maxDelay = 10000 } = retryOptions;
+
+  // Ensure tokens are loaded before first request
+  await loadTokens();
 
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const token = getAuthToken();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       const response = await fetch(url, {
         ...options,
+        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...options?.headers,
         },
       });
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
@@ -220,9 +244,10 @@ async function fetchWithRetry<T>(
         break;
       }
 
-      // Check if it's a network error or server error (worth retrying)
+      // Check if it's a network error, timeout, or server error (worth retrying)
       const isRetryable =
         error instanceof TypeError || // Network error
+        (error instanceof DOMException && error.name === 'AbortError') || // Timeout
         (lastError.message && lastError.message.includes('Server error'));
 
       if (!isRetryable && lastError.message !== 'Session expired. Please log in again.') {

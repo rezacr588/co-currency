@@ -40,6 +40,8 @@ export function CollapsibleSection({
           opacity.value = isCollapsed ? 0 : 1;
         }
         setInitialized(true);
+      }).catch(() => {
+        setInitialized(true);
       });
     }
   }, [storageKey, rotation, opacity]);

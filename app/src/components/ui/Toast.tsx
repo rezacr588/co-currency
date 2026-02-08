@@ -101,28 +101,30 @@ interface ToastContextType {
 const ToastContext = createContext<ToastContextType | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toast, setToast] = useState<ToastData | null>(null);
+  const [toastQueue, setToastQueue] = useState<ToastData[]>([]);
 
   const showToast = useCallback((message: string, variant: ToastVariant = 'info') => {
-    setToast({
-      id: Date.now().toString(),
-      message,
-      variant,
-    });
+    setToastQueue((prev) => [
+      ...prev,
+      { id: Date.now().toString(), message, variant },
+    ]);
   }, []);
 
   const dismissToast = useCallback(() => {
-    setToast(null);
+    setToastQueue((prev) => prev.slice(1));
   }, []);
+
+  const currentToast = toastQueue[0] || null;
 
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      {toast && (
+      {currentToast && (
         <Toast
+          key={currentToast.id}
           visible={true}
-          message={toast.message}
-          variant={toast.variant}
+          message={currentToast.message}
+          variant={currentToast.variant}
           onDismiss={dismissToast}
         />
       )}

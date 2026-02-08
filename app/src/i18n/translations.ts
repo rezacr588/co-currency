@@ -748,6 +748,19 @@ export const translations = {
     googleLinkSuccess: 'Google account linked successfully',
     linkedinLinkSuccess: 'LinkedIn account linked successfully',
     oauthAuthError: 'OAuth authentication failed',
+
+    // Chat suggested questions & actions
+    suggestedQuestion1: 'How am I doing financially?',
+    suggestedQuestion2: 'What are my top spending categories?',
+    suggestedQuestion3: 'Am I on track with my savings goals?',
+    suggestedQuestion4: 'How can I save more money?',
+    suggestedQuestion5: 'How much did I spend this month?',
+    suggestedAction1: 'Add $12 coffee',
+    suggestedAction2: 'Convert 100 USD to EUR',
+    suggestedAction3: 'Rate USD to EUR',
+    failedToOpenGoogleLogin: 'Failed to open Google login',
+    failedToOpenLinkedInLogin: 'Failed to open LinkedIn login',
+    noWalletBalancesDescription: 'Add a transaction to create a wallet balance before converting.',
   },
   fa: {
     // Header
@@ -1496,6 +1509,19 @@ export const translations = {
     googleLinkSuccess: 'حساب گوگل با موفقیت متصل شد',
     linkedinLinkSuccess: 'حساب لینکدین با موفقیت متصل شد',
     oauthAuthError: 'احراز هویت ناموفق بود',
+
+    // Chat suggested questions & actions
+    suggestedQuestion1: 'وضعیت مالی من چطوره؟',
+    suggestedQuestion2: 'بیشترین هزینه‌هام تو چه دسته‌هایی بوده؟',
+    suggestedQuestion3: 'آیا در مسیر اهداف پس‌اندازم هستم؟',
+    suggestedQuestion4: 'چطور بیشتر پس‌انداز کنم؟',
+    suggestedQuestion5: 'این ماه چقدر خرج کردم؟',
+    suggestedAction1: 'قهوه ۱۲ دلاری اضافه کن',
+    suggestedAction2: '۱۰۰ دلار به یورو تبدیل کن',
+    suggestedAction3: 'نرخ دلار به یورو',
+    failedToOpenGoogleLogin: 'خطا در باز کردن ورود گوگل',
+    failedToOpenLinkedInLogin: 'خطا در باز کردن ورود لینکدین',
+    noWalletBalancesDescription: 'برای تبدیل ارز، ابتدا یک تراکنش اضافه کنید.',
   },
   ar: {
     // Header
@@ -2244,6 +2270,19 @@ export const translations = {
     googleLinkSuccess: 'تم ربط حساب Google بنجاح',
     linkedinLinkSuccess: 'تم ربط حساب LinkedIn بنجاح',
     oauthAuthError: 'فشلت المصادقة',
+
+    // Chat suggested questions & actions
+    suggestedQuestion1: 'كيف حالتي المالية؟',
+    suggestedQuestion2: 'ما هي أكثر فئات إنفاقي؟',
+    suggestedQuestion3: 'هل أسير على الطريق الصحيح لأهداف التوفير؟',
+    suggestedQuestion4: 'كيف يمكنني توفير المزيد؟',
+    suggestedQuestion5: 'كم أنفقت هذا الشهر؟',
+    suggestedAction1: 'أضف قهوة بـ 12 دولار',
+    suggestedAction2: 'حوّل 100 دولار إلى يورو',
+    suggestedAction3: 'سعر الدولار مقابل اليورو',
+    failedToOpenGoogleLogin: 'فشل فتح تسجيل الدخول بـ Google',
+    failedToOpenLinkedInLogin: 'فشل فتح تسجيل الدخول بـ LinkedIn',
+    noWalletBalancesDescription: 'أضف معاملة لإنشاء رصيد محفظة قبل التحويل.',
   },
   tr: {
     // Header
@@ -2992,6 +3031,23 @@ export const translations = {
     googleLinkSuccess: 'Google hesabı başarıyla bağlandı',
     linkedinLinkSuccess: 'LinkedIn hesabı başarıyla bağlandı',
     oauthAuthError: 'Kimlik doğrulaması başarısız',
+
+    // Chat suggested questions & actions
+    suggestedQuestion1: 'Mali durumum nasıl?',
+    suggestedQuestion2: 'En çok harcadığım kategoriler hangileri?',
+    suggestedQuestion3: 'Tasarruf hedeflerimde yolda mıyım?',
+    suggestedQuestion4: 'Nasıl daha fazla tasarruf edebilirim?',
+    suggestedQuestion5: 'Bu ay ne kadar harcadım?',
+    suggestedAction1: '12 dolarlık kahve ekle',
+    suggestedAction2: '100 USD\'yi EUR\'ya çevir',
+    suggestedAction3: 'USD/EUR kuru',
+
+    // OAuth error labels
+    failedToOpenGoogleLogin: 'Google girişi açılamadı',
+    failedToOpenLinkedInLogin: 'LinkedIn girişi açılamadı',
+
+    // Convert screen
+    noWalletBalancesDescription: 'Dönüştürmeden önce bir işlem ekleyerek cüzdan bakiyesi oluşturun.',
   },
 } as const;
 

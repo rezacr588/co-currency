@@ -54,11 +54,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const isDark = theme === 'dark';
   const colors = useMemo(() => (isDark ? darkColors : lightColors), [isDark]);
 
-  // Don't render until theme is loaded to prevent flash
-  if (!isInitialized) {
-    return null;
-  }
-
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, setTheme, isDark, colors }}>
       {children}

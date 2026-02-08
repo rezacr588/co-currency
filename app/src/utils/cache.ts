@@ -24,7 +24,7 @@ export async function getCache<T>(key: string): Promise<CacheEntry<T> | null> {
     const entry: CacheEntry<T> = JSON.parse(raw);
     return entry;
   } catch (error) {
-    console.error('Cache get error:', error);
+    if (__DEV__) console.error('Cache get error:', error);
     return null;
   }
 }
@@ -47,7 +47,7 @@ export async function setCache<T>(
   try {
     await AsyncStorage.setItem(`${CACHE_PREFIX}${key}`, JSON.stringify(entry));
   } catch (error) {
-    console.error('Cache set error:', error);
+    if (__DEV__) console.error('Cache set error:', error);
   }
 }
 
@@ -66,7 +66,7 @@ export async function removeCache(key: string): Promise<void> {
   try {
     await AsyncStorage.removeItem(`${CACHE_PREFIX}${key}`);
   } catch (error) {
-    console.error('Cache remove error:', error);
+    if (__DEV__) console.error('Cache remove error:', error);
   }
 }
 
@@ -77,7 +77,7 @@ export async function clearAllCache(): Promise<void> {
     const cacheKeys = keys.filter((k) => k.startsWith(CACHE_PREFIX));
     await AsyncStorage.multiRemove(cacheKeys);
   } catch (error) {
-    console.error('Cache clear error:', error);
+    if (__DEV__) console.error('Cache clear error:', error);
   }
 }
 

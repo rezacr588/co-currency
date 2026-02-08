@@ -76,7 +76,7 @@ export default function SubscriptionsScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+    await refetch();
     setRefreshing(false);
   };
 
