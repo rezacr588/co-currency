@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Heart, TrendingUp, TrendingDown, Minus, RefreshCw, Info } from 'lucide-react-native';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useColors } from '../../../context/ThemeContext';
 import { haptics } from '../../../utils/haptics';
 
 interface HealthScoreData {
@@ -23,13 +24,14 @@ interface HealthScoreCardProps {
 }
 
 function ScoreGauge({ score }: { score: number }) {
+  const colors = useColors();
   // Calculate color based on score
   const getColor = (score: number): string => {
-    if (score >= 80) return '#22c55e'; // Green
-    if (score >= 60) return '#84cc16'; // Lime
-    if (score >= 40) return '#f59e0b'; // Amber
-    if (score >= 20) return '#f97316'; // Orange
-    return '#ef4444'; // Red
+    if (score >= 80) return colors.success;
+    if (score >= 60) return '#84cc16'; // Lime (no direct mapping, keep as is)
+    if (score >= 40) return colors.warning;
+    if (score >= 20) return '#f97316'; // Orange (no direct mapping, keep as is)
+    return colors.danger;
   };
 
   const color = getColor(score);
@@ -89,6 +91,7 @@ function ComponentBar({ label, value, color }: { label: string; value: number; c
 
 export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
   const { t } = useLanguage();
+  const colors = useColors();
 
   const {
     data: healthScore,
@@ -110,11 +113,11 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
   const getTrendIcon = (trend: string) => {
     switch (trend) {
       case 'improving':
-        return <TrendingUp size={14} color="#22c55e" />;
+        return <TrendingUp size={14} color={colors.success} />;
       case 'declining':
-        return <TrendingDown size={14} color="#ef4444" />;
+        return <TrendingDown size={14} color={colors.danger} />;
       default:
-        return <Minus size={14} color="#71717a" />;
+        return <Minus size={14} color={colors.mutedForeground} />;
     }
   };
 
@@ -143,14 +146,14 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center">
             <View className="w-10 h-10 rounded-full bg-success/20 items-center justify-center mr-3">
-              <Heart size={20} color="#22c55e" />
+              <Heart size={20} color={colors.success} />
             </View>
             <View>
               <Text className="text-foreground font-semibold">
                 {t('financialHealth') || 'Financial Health'}
               </Text>
               {isPending ? (
-                <ActivityIndicator size="small" color="#71717a" />
+                <ActivityIndicator size="small" color={colors.mutedForeground} />
               ) : healthScore ? (
                 <View className="flex-row items-center">
                   <Text className="text-2xl font-bold text-foreground mr-2">
@@ -176,7 +179,7 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
       <View className="flex-row items-center justify-between mb-4">
         <View className="flex-row items-center">
           <View className="w-10 h-10 rounded-full bg-success/20 items-center justify-center mr-3">
-            <Heart size={20} color="#22c55e" />
+            <Heart size={20} color={colors.success} />
           </View>
           <View>
             <Text className="text-base font-semibold text-foreground">
@@ -195,7 +198,7 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
         >
           <RefreshCw
             size={18}
-            color="#71717a"
+            color={colors.mutedForeground}
             style={isRefetching ? { opacity: 0.5 } : undefined}
           />
         </Pressable>
@@ -203,7 +206,7 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
 
       {isPending || isRefetching ? (
         <View className="items-center py-8">
-          <ActivityIndicator color="rgb(212, 175, 55)" />
+          <ActivityIndicator color={colors.accent} />
           <Text className="text-muted-foreground text-sm mt-2">
             {t('calculatingScore') || 'Calculating your score...'}
           </Text>
@@ -234,12 +237,12 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
             <ComponentBar
               label={t('budgetAdherence') || 'Budget Adherence'}
               value={healthScore.components.budget_adherence}
-              color="#3b82f6"
+              color={colors.info}
             />
             <ComponentBar
               label={t('savingsRate') || 'Savings Rate'}
               value={healthScore.components.savings_rate}
-              color="#22c55e"
+              color={colors.success}
             />
             <ComponentBar
               label={t('goalProgress') || 'Goal Progress'}
@@ -249,7 +252,7 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
             <ComponentBar
               label={t('consistency') || 'Tracking Consistency'}
               value={healthScore.components.consistency}
-              color="#f59e0b"
+              color={colors.warning}
             />
             <ComponentBar
               label={t('billTiming') || 'Bill Payment Timing'}
@@ -262,7 +265,7 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
           {healthScore.tips && healthScore.tips.length > 0 && (
             <View>
               <View className="flex-row items-center mb-2">
-                <Info size={14} color="#71717a" />
+                <Info size={14} color={colors.mutedForeground} />
                 <Text className="text-xs text-muted-foreground ml-1 font-medium">
                   {t('tipsToImprove') || 'Tips to improve'}
                 </Text>
@@ -278,7 +281,7 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
         </>
       ) : (
         <View className="bg-muted/50 p-6 rounded-lg items-center">
-          <Heart size={32} color="#71717a" />
+          <Heart size={32} color={colors.mutedForeground} />
           <Text className="text-muted-foreground text-center mt-2">
             {t('addTransactionsForScore') || 'Add some transactions to calculate your financial health score'}
           </Text>

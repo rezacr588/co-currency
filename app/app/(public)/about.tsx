@@ -17,11 +17,13 @@ import {
   ChevronLeft,
 } from 'lucide-react-native';
 import { useLanguage } from '../../src/context/LanguageContext';
+import { useColors } from '../../src/context/ThemeContext';
 import { LinkedInIcon } from '../../src/constants/icons';
 import { getVersionInfo } from '../../src/utils/version';
 
 export default function AboutScreen() {
   const { t } = useLanguage();
+  const colors = useColors();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const versionInfo = getVersionInfo();
@@ -63,7 +65,7 @@ export default function AboutScreen() {
             style={{ cursor: 'pointer' }}
             className="p-2 mr-2"
           >
-            <ChevronLeft size={24} color="rgb(148, 163, 184)" />
+            <ChevronLeft size={24} color={colors.placeholder} />
           </Pressable>
           <Text className="text-2xl font-bold text-foreground">
             {t('aboutUs') || 'About Us'}
@@ -87,7 +89,7 @@ export default function AboutScreen() {
           <View className="flex-row justify-around mb-6">
             {quickFeatures.map((feature) => (
               <View key={feature.label} className="items-center p-4 bg-card rounded-xl border border-border flex-1 mx-1">
-                <feature.Icon size={24} color="rgb(212, 175, 55)" />
+                <feature.Icon size={24} color={colors.accent} />
                 <Text className="text-sm font-medium text-foreground mt-2">{feature.label}</Text>
               </View>
             ))}
@@ -101,7 +103,7 @@ export default function AboutScreen() {
                 <Image
                   source={{ uri: 'https://media.licdn.com/dms/image/v2/D4E03AQF3hRqdwxserA/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1718006654218?e=1741219200&v=beta&t=5WdFxbGJfEfF2X5lqSwJXrwf3Fn6z7l5o5rZbKFGbhk' }}
                   className="w-24 h-24 rounded-full"
-                  style={{ borderWidth: 4, borderColor: 'rgba(212, 175, 55, 0.3)' }}
+                  style={{ borderWidth: 4, borderColor: colors.accentMuted }}
                 />
               </View>
 
@@ -162,7 +164,7 @@ export default function AboutScreen() {
                   className="p-4 bg-card rounded-xl border border-border"
                 >
                   <View className="items-center">
-                    <feature.Icon size={24} color="rgb(212, 175, 55)" />
+                    <feature.Icon size={24} color={colors.accent} />
                     <Text className="text-sm font-semibold text-foreground mt-2 text-center">
                       {feature.label}
                     </Text>

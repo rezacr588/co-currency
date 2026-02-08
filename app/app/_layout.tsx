@@ -13,7 +13,7 @@ import {
 } from '@expo-google-fonts/inter';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
+import { ThemeProvider, useTheme, useColors } from '../src/context/ThemeContext';
 import { LanguageProvider } from '../src/context/LanguageContext';
 import { AuthProvider } from '../src/context/AuthContext';
 import { SettingsProvider } from '../src/context/SettingsContext';
@@ -40,6 +40,7 @@ const queryClient = new QueryClient({
 
 function RootLayoutNav() {
   const { isDark } = useTheme();
+  const colors = useColors();
   const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -73,7 +74,7 @@ function RootLayoutNav() {
         screenOptions={{
           headerShown: false,
           contentStyle: {
-            backgroundColor: isDark ? 'rgb(9, 9, 11)' : 'rgb(248, 250, 252)',
+            backgroundColor: colors.background,
           },
         }}
       >

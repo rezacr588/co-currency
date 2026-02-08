@@ -15,6 +15,7 @@ import { getCurrencyDisplay } from '../../utils/format';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ICON_SIZES, ICON_COLOR_MUTED } from '../../constants/icons';
 import { haptics } from '../../utils/haptics';
+import { useColors } from '../../context/ThemeContext';
 
 interface CurrencyPickerProps {
   visible: boolean;
@@ -31,6 +32,7 @@ export function CurrencyPicker({
   selectedCurrency,
   title = 'Select Currency',
 }: CurrencyPickerProps) {
+  const colors = useColors();
   const [search, setSearch] = useState('');
 
   const { data: currencies, isPending } = useQuery({
@@ -69,7 +71,7 @@ export function CurrencyPicker({
             <TextInput
               className="flex-1 py-3 px-3 text-foreground"
               placeholder="Search currency..."
-              placeholderTextColor="rgb(148, 163, 184)"
+              placeholderTextColor={colors.placeholder}
               value={search}
               onChangeText={setSearch}
               autoCapitalize="none"
@@ -123,7 +125,7 @@ export function CurrencyPicker({
                   >
                     {display.symbol}
                   </Text>
-                  {isSelected && <Check size={ICON_SIZES.md} color="rgb(15, 26, 42)" />}
+                  {isSelected && <Check size={ICON_SIZES.md} color={colors.primaryForeground} />}
                 </Pressable>
               );
             }}

@@ -6,9 +6,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
-import { useTheme } from '../../../../src/context/ThemeContext';
+import { useTheme, useColors } from '../../../../src/context/ThemeContext';
 import { CurrencyConverter } from '../../../../src/components/features/CurrencyConverter';
 import { useToast } from '../../../../src/components/ui/Toast';
+import { Button } from '../../../../src/components/ui/Button';
 
 export default function WalletConvertScreen() {
   const { t } = useLanguage();
@@ -17,11 +18,12 @@ export default function WalletConvertScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
+  const colors = useColors();
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
-  const iconColor = isDark ? 'rgb(248, 250, 252)' : 'rgb(51, 65, 85)';
+  const iconColor = colors.foreground;
 
   const [converterState, setConverterState] = useState({
     amount: '',
@@ -165,23 +167,16 @@ export default function WalletConvertScreen() {
         )}
 
         {/* Convert Button */}
-        <Pressable
+        <Button
+          variant="primary"
+          size="lg"
           onPress={handleConvert}
-          disabled={mutation.isPending || !parsedAmount || fromCurrency === toCurrency || hasInsufficientBalance || isLoadingBalances}
-          className={`bg-primary p-4 rounded-xl flex-row items-center justify-center ${
-            mutation.isPending || !parsedAmount || fromCurrency === toCurrency || hasInsufficientBalance || isLoadingBalances ? 'opacity-50' : ''
-          }`}
-          style={{ cursor: 'pointer' }}
+          disabled={!parsedAmount || fromCurrency === toCurrency || hasInsufficientBalance || isLoadingBalances}
+          isLoading={mutation.isPending}
+          leftIcon={<Check size={20} color={colors.primaryForeground} />}
         >
-          {mutation.isPending ? (
-            <ActivityIndicator color="#09090b" />
-          ) : (
-            <>
-              <Check size={20} color="#09090b" />
-              <Text className="text-primary-foreground font-semibold text-lg ml-2">{t('convert')}</Text>
-            </>
-          )}
-        </Pressable>
+          {t('convert')}
+        </Button>
       </ScrollView>
     </SafeAreaView>
   );

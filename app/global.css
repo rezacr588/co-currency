@@ -5,30 +5,38 @@
 /*
  * CoFinance App Global Styles
  *
- * MINIMAL DESIGN SYSTEM
- * 90% Black & White | Accent colors only when absolutely needed
+ * MINIMAL DESIGN SYSTEM — Light & Dark modes
  *
  * Typography System:
  * - Font: Inter (400 Regular, 500 Medium, 600 SemiBold, 700 Bold)
  * - Loaded via expo-font in _layout.tsx
  *
  * Color Philosophy:
- * - Backgrounds: True blacks (#09090b, #0f0f10, #141416)
- * - Text: Crisp whites and grays (#fafafa, #a1a1aa, #71717a)
- * - Borders: Subtle, barely visible (#27272a)
+ * - Dark mode: True blacks, crisp whites, gold accent
+ * - Light mode: Clean whites, slate grays, darker gold accent
  * - Accent (Gold): ONLY for primary CTAs
  * - Success/Danger: ONLY when semantic meaning is critical
- *
- * Usage:
- * - bg-background: Darkest background
- * - bg-card: Card surfaces
- * - text-foreground: Primary text (white)
- * - text-muted-foreground: Secondary text (gray)
- * - text-accent: Gold - use sparingly!
- * - border-border: Subtle borders
  */
 
 @layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 215 28% 11%;
+    --card: 210 40% 96%;
+    --border: 214 32% 91%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 43 86% 38%;
+  }
+
+  .dark {
+    --background: 240 6% 3%;
+    --foreground: 0 0% 98%;
+    --card: 240 4% 8%;
+    --border: 240 4% 16%;
+    --muted-foreground: 240 4% 46%;
+    --accent: 43 65% 52%;
+  }
+
   /* Ensure smooth font rendering */
   * {
     -webkit-font-smoothing: antialiased;
@@ -52,7 +60,7 @@
     @apply bg-transparent border border-border text-foreground hover:bg-secondary;
   }
 
-  /* Primary button - solid white */
+  /* Primary button - solid */
   .btn-primary {
     @apply bg-primary text-primary-foreground hover:bg-primary-hover;
   }

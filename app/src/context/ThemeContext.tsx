@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 import { readStorage, writeStorage } from '../utils/storage';
+import { darkColors, lightColors, type ColorPalette } from '../constants/colors';
 
 type Theme = 'light' | 'dark';
 
@@ -9,6 +10,7 @@ interface ThemeContextType {
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
   isDark: boolean;
+  colors: ColorPalette;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -50,6 +52,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   const isDark = theme === 'dark';
+  const colors = useMemo(() => (isDark ? darkColors : lightColors), [isDark]);
 
   // Don't render until theme is loaded to prevent flash
   if (!isInitialized) {
@@ -57,7 +60,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme, isDark }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme, isDark, colors }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -69,4 +72,10 @@ export function useTheme() {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
+}
+
+/** Convenience hook to get the current theme colors */
+export function useColors(): ColorPalette {
+  const { colors } = useTheme();
+  return colors;
 }

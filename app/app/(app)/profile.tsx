@@ -42,11 +42,12 @@ import {
   EyeOff,
 } from 'lucide-react-native';
 import { useAuth } from '../../src/context/AuthContext';
-import { useTheme } from '../../src/context/ThemeContext';
+import { useTheme, useColors } from '../../src/context/ThemeContext';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useSettings } from '../../src/context/SettingsContext';
 import { api } from '../../src/api';
 import { haptics } from '../../src/utils/haptics';
+import { Toggle } from '../../src/components/ui/Toggle';
 
 const LANGUAGES = [
   { code: 'en', name: 'English', flag: '' },
@@ -58,6 +59,7 @@ const LANGUAGES = [
 export default function ProfileScreen() {
   const { user, logout, isLoading, refreshProfile } = useAuth();
   const { toggleTheme, isDark } = useTheme();
+  const colors = useColors();
   const { t, language, setLanguage } = useLanguage();
   const { settings, updateSettings, isBiometricAvailable, biometricType } = useSettings();
   const router = useRouter();
@@ -108,7 +110,7 @@ export default function ProfileScreen() {
   if (isLoading) {
     return (
       <View className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -131,7 +133,7 @@ export default function ProfileScreen() {
     label,
     value,
     onPress,
-    iconColor = 'rgb(148, 163, 184)',
+    iconColor,
     showChevron = true,
   }: {
     icon: React.ReactNode;
@@ -153,7 +155,7 @@ export default function ProfileScreen() {
       </View>
       <View className="flex-row items-center">
         {value && <Text className="text-muted-foreground mr-2">{value}</Text>}
-        {showChevron && onPress && <ChevronRight size={20} color="rgb(148, 163, 184)" />}
+        {showChevron && onPress && <ChevronRight size={20} color={colors.placeholder} />}
       </View>
     </Pressable>
   );
@@ -174,10 +176,11 @@ export default function ProfileScreen() {
           {!isDesktop && (
             <Pressable
               onPress={() => router.back()}
+              hitSlop={8}
               style={{ cursor: 'pointer' }}
               className="p-2 mr-2"
             >
-              <ChevronLeft size={24} color="rgb(148, 163, 184)" />
+              <ChevronLeft size={24} color={colors.placeholder} />
             </Pressable>
           )}
           <Text className="text-3xl font-bold text-foreground">{t('profile')}</Text>
@@ -196,21 +199,22 @@ export default function ProfileScreen() {
             <View className="bg-card p-6 rounded-xl mb-6">
               <View className={`${isDesktop ? 'flex-row items-center' : 'items-center'}`}>
                 <View className="bg-primary/20 p-4 rounded-full">
-                  <User size={48} color="rgb(212, 175, 55)" />
+                  <User size={48} color={colors.accent} />
                 </View>
                 <View className={`${isDesktop ? 'ml-4 flex-1' : 'mt-4 items-center'}`}>
                   <View className="flex-row items-center">
                     <Text className="text-xl font-bold text-foreground">{user?.name}</Text>
                     <Pressable
                       onPress={openEditModal}
+                      hitSlop={12}
                       style={{ cursor: 'pointer' }}
                       className="ml-2 p-1"
                     >
-                      <Pencil size={16} color="rgb(148, 163, 184)" />
+                      <Pencil size={16} color={colors.placeholder} />
                     </Pressable>
                   </View>
                   <View className="flex-row items-center mt-2">
-                    <Mail size={16} color="rgb(148, 163, 184)" />
+                    <Mail size={16} color={colors.placeholder} />
                     <Text className="text-muted-foreground ml-2">{user?.email}</Text>
                   </View>
                 </View>
@@ -222,7 +226,7 @@ export default function ProfileScreen() {
                   style={{ cursor: 'pointer' }}
                   className="bg-secondary mt-4 p-3 rounded-lg flex-row items-center justify-center"
                 >
-                  <Pencil size={16} color="rgb(212, 175, 55)" />
+                  <Pencil size={16} color={colors.accent} />
                   <Text className="text-foreground font-medium ml-2">{t('editProfile')}</Text>
                 </Pressable>
               )}
@@ -233,9 +237,9 @@ export default function ProfileScreen() {
               <SettingsItem
                 icon={
                   isDark ? (
-                    <Moon size={20} color="rgb(148, 163, 184)" />
+                    <Moon size={20} color={colors.placeholder} />
                   ) : (
-                    <Sun size={20} color="rgb(212, 175, 55)" />
+                    <Sun size={20} color={colors.accent} />
                   )
                 }
                 label={t('theme')}
@@ -273,17 +277,17 @@ export default function ProfileScreen() {
             {/* Finance Management */}
             <SettingsSection title={t('financeManagement')}>
               <SettingsItem
-                icon={<Wallet size={20} color="rgb(212, 175, 55)" />}
+                icon={<Wallet size={20} color={colors.accent} />}
                 label={t('budgets')}
                 onPress={() => router.push('/budgets')}
               />
               <SettingsItem
-                icon={<Repeat size={20} color="rgb(212, 175, 55)" />}
+                icon={<Repeat size={20} color={colors.accent} />}
                 label={t('recurringTransactions')}
                 onPress={() => router.push('/recurring')}
               />
               <SettingsItem
-                icon={<CreditCard size={20} color="rgb(212, 175, 55)" />}
+                icon={<CreditCard size={20} color={colors.accent} />}
                 label={t('subscriptions')}
                 onPress={() => router.push('/subscriptions')}
               />
@@ -293,27 +297,27 @@ export default function ProfileScreen() {
             <View className="mt-4">
               <SettingsSection title={t('toolsAndFeatures') || 'Tools & Features'}>
                 <SettingsItem
-                  icon={<StickyNote size={20} color="rgb(212, 175, 55)" />}
+                  icon={<StickyNote size={20} color={colors.accent} />}
                   label={t('notes') || 'Notes'}
                   onPress={() => router.push('/notes')}
                 />
                 <SettingsItem
-                  icon={<Trophy size={20} color="rgb(212, 175, 55)" />}
+                  icon={<Trophy size={20} color={colors.accent} />}
                   label={t('badges') || 'Badges'}
                   onPress={() => router.push('/badges')}
                 />
                 <SettingsItem
-                  icon={<Target size={20} color="rgb(212, 175, 55)" />}
+                  icon={<Target size={20} color={colors.accent} />}
                   label={t('challenges') || 'Challenges'}
                   onPress={() => router.push('/challenges')}
                 />
                 <SettingsItem
-                  icon={<History size={20} color="rgb(212, 175, 55)" />}
+                  icon={<History size={20} color={colors.accent} />}
                   label={t('historicalRates') || 'Historical Rates'}
                   onPress={() => router.push('/historical')}
                 />
                 <SettingsItem
-                  icon={<Info size={20} color="rgb(148, 163, 184)" />}
+                  icon={<Info size={20} color={colors.placeholder} />}
                   label={t('aboutUs') || 'About Us'}
                   onPress={() => router.push('/(public)/about')}
                 />
@@ -325,16 +329,9 @@ export default function ProfileScreen() {
               <SettingsSection title={t('securityAndPrivacy') || 'Security & Privacy'}>
                 {/* Biometric Lock */}
                 {isBiometricAvailable && (
-                  <Pressable
-                    onPress={() => {
-                      haptics.light();
-                      updateSettings({ requireBiometricOnOpen: !settings.requireBiometricOnOpen });
-                    }}
-                    style={{ cursor: 'pointer' }}
-                    className="flex-row items-center justify-between p-4 active:bg-secondary/50"
-                  >
+                  <View className="flex-row items-center justify-between p-4">
                     <View className="flex-row items-center flex-1 mr-4">
-                      <Fingerprint size={20} color="rgb(212, 175, 55)" />
+                      <Fingerprint size={20} color={colors.accent} />
                       <View className="ml-3 flex-1">
                         <Text className="text-foreground">{biometricType || t('biometricLock') || 'Biometric Lock'}</Text>
                         <Text className="text-muted-foreground text-xs mt-0.5">
@@ -342,34 +339,20 @@ export default function ProfileScreen() {
                         </Text>
                       </View>
                     </View>
-                    <View
-                      className={`w-12 h-7 rounded-full justify-center ${
-                        settings.requireBiometricOnOpen ? 'bg-primary' : 'bg-muted'
-                      }`}
-                    >
-                      <View
-                        className={`w-5 h-5 bg-white rounded-full ${
-                          settings.requireBiometricOnOpen ? 'ml-6' : 'ml-1'
-                        }`}
-                      />
-                    </View>
-                  </Pressable>
+                    <Toggle
+                      value={settings.requireBiometricOnOpen}
+                      onValueChange={(val) => updateSettings({ requireBiometricOnOpen: val })}
+                    />
+                  </View>
                 )}
 
                 {/* Hide Balances */}
-                <Pressable
-                  onPress={() => {
-                    haptics.light();
-                    updateSettings({ hideBalances: !settings.hideBalances });
-                  }}
-                  style={{ cursor: 'pointer' }}
-                  className="flex-row items-center justify-between p-4 active:bg-secondary/50"
-                >
+                <View className="flex-row items-center justify-between p-4">
                   <View className="flex-row items-center flex-1 mr-4">
                     {settings.hideBalances ? (
-                      <EyeOff size={20} color="rgb(212, 175, 55)" />
+                      <EyeOff size={20} color={colors.accent} />
                     ) : (
-                      <Eye size={20} color="rgb(212, 175, 55)" />
+                      <Eye size={20} color={colors.accent} />
                     )}
                     <View className="ml-3 flex-1">
                       <Text className="text-foreground">{t('hideBalances') || 'Hide Balances'}</Text>
@@ -378,22 +361,15 @@ export default function ProfileScreen() {
                       </Text>
                     </View>
                   </View>
-                  <View
-                    className={`w-12 h-7 rounded-full justify-center ${
-                      settings.hideBalances ? 'bg-primary' : 'bg-muted'
-                    }`}
-                  >
-                    <View
-                      className={`w-5 h-5 bg-white rounded-full ${
-                        settings.hideBalances ? 'ml-6' : 'ml-1'
-                      }`}
-                    />
-                  </View>
-                </Pressable>
+                  <Toggle
+                    value={settings.hideBalances}
+                    onValueChange={(val) => updateSettings({ hideBalances: val })}
+                  />
+                </View>
 
                 {/* Change Password */}
                 <SettingsItem
-                  icon={<Lock size={20} color="rgb(212, 175, 55)" />}
+                  icon={<Lock size={20} color={colors.accent} />}
                   label={t('changePassword')}
                   onPress={() => router.push('/change-password')}
                 />
@@ -404,7 +380,7 @@ export default function ProfileScreen() {
             <View className="mt-4">
               <SettingsSection title={t('account')}>
                 <SettingsItem
-                  icon={<Bell size={20} color="rgb(212, 175, 55)" />}
+                  icon={<Bell size={20} color={colors.accent} />}
                   label={t('notifications')}
                   onPress={() => router.push('/notification-settings')}
                 />
@@ -415,7 +391,7 @@ export default function ProfileScreen() {
             <View className="mt-4">
               <SettingsSection title={t('aiFeatures')}>
                 <SettingsItem
-                  icon={<MessageCircle size={20} color="rgb(59, 130, 246)" />}
+                  icon={<MessageCircle size={20} color={colors.info} />}
                   label={t('aiAdvisor')}
                   onPress={() => router.push('/(app)/(tabs)/wallet/chat')}
                 />
@@ -428,7 +404,7 @@ export default function ProfileScreen() {
               style={{ cursor: 'pointer' }}
               className="bg-danger/10 p-4 rounded-xl flex-row items-center justify-center mt-4"
             >
-              <LogOut size={20} color="rgb(220, 38, 38)" />
+              <LogOut size={20} color={colors.danger} />
               <Text className="text-danger font-semibold ml-2">{t('logout')}</Text>
             </Pressable>
           </View>
@@ -458,8 +434,8 @@ export default function ProfileScreen() {
           >
             <View className="flex-row items-center justify-between mb-6">
               <Text className="text-xl font-bold text-foreground">{t('editProfile')}</Text>
-              <Pressable onPress={() => setShowEditModal(false)} style={{ cursor: 'pointer' }}>
-                <X size={24} color="rgb(148, 163, 184)" />
+              <Pressable onPress={() => setShowEditModal(false)} hitSlop={8} className="p-2" style={{ cursor: 'pointer' }}>
+                <X size={24} color={colors.placeholder} />
               </Pressable>
             </View>
 
@@ -470,17 +446,17 @@ export default function ProfileScreen() {
                 value={editName}
                 onChangeText={setEditName}
                 placeholder={t('enterName')}
-                placeholderTextColor="#71717a"
+                placeholderTextColor={colors.mutedForeground}
                 autoCapitalize="words"
-                selectionColor="rgb(212, 175, 55)"
-                cursorColor="rgb(212, 175, 55)"
+                selectionColor={colors.accent}
+                cursorColor={colors.accent}
                 style={{
-                  backgroundColor: '#27272a',
+                  backgroundColor: colors.secondary,
                   borderWidth: 1,
-                  borderColor: '#3f3f46',
+                  borderColor: colors.borderStrong,
                   borderRadius: 8,
                   padding: 14,
-                  color: '#ffffff',
+                  color: colors.foreground,
                   fontSize: 16,
                   outlineStyle: 'none',
                 } as any}
@@ -517,10 +493,10 @@ export default function ProfileScreen() {
                 }`}
               >
                 {updateProfileMutation.isPending ? (
-                  <ActivityIndicator color="#09090b" size="small" />
+                  <ActivityIndicator color={colors.primaryForeground} size="small" />
                 ) : (
                   <>
-                    <Check size={18} color="#09090b" />
+                    <Check size={18} color={colors.primaryForeground} />
                     <Text className="text-accent-foreground font-medium ml-2">
                       {t('saveChanges')}
                     </Text>

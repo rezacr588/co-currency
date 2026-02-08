@@ -6,6 +6,7 @@ import { Wallet, Calendar, ChevronLeft, ChevronRight } from 'lucide-react-native
 import Svg, { Circle } from 'react-native-svg';
 import { api } from '../../../src/api';
 import { useLanguage } from '../../../src/context/LanguageContext';
+import { useColors } from '../../../src/context/ThemeContext';
 import { formatCompactCurrency, formatNumber } from '../../../src/utils/format';
 import { CATEGORY_COLORS } from '../../../src/constants/icons';
 import {
@@ -59,6 +60,7 @@ function MonthYearPicker({
   nextYearLabel: string;
   t: (key: string) => string;
 }) {
+  const colors = useColors();
   const [viewYear, setViewYear] = useState(selectedYear);
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
@@ -87,7 +89,7 @@ function MonthYearPicker({
               accessibilityRole="button"
               accessibilityLabel={previousYearLabel}
             >
-              <ChevronLeft size={20} color="#a1a1aa" />
+              <ChevronLeft size={20} color={colors.secondaryForeground} />
             </Pressable>
             <Text className="text-foreground text-xl font-bold">{viewYear}</Text>
             <Pressable
@@ -97,7 +99,7 @@ function MonthYearPicker({
               accessibilityRole="button"
               accessibilityLabel={nextYearLabel}
             >
-              <ChevronRight size={20} color="#a1a1aa" />
+              <ChevronRight size={20} color={colors.secondaryForeground} />
             </Pressable>
           </View>
 
@@ -181,6 +183,7 @@ function DateRangeSelector({
   nextYearLabel: string;
   t: (key: string) => string;
 }) {
+  const colors = useColors();
   const [showPicker, setShowPicker] = useState(false);
 
   const presets: { key: DatePreset; labelKey: string }[] = [
@@ -202,9 +205,9 @@ function DateRangeSelector({
           accessibilityRole="button"
           accessibilityLabel={selectDateRangeLabel}
         >
-          <Calendar size={18} color="rgb(212, 175, 55)" />
+          <Calendar size={18} color={colors.accent} />
           <Text className="text-foreground font-semibold ml-2">{dateLabel}</Text>
-          <ChevronRight size={16} color="#71717a" className="ml-1" />
+          <ChevronRight size={16} color={colors.mutedForeground} className="ml-1" />
         </Pressable>
       </View>
 
@@ -267,6 +270,7 @@ function RingChart({
   centerLabel: string;
   centerValue: string;
 }) {
+  const colors = useColors();
   const total = segments.reduce((sum, s) => sum + s.value, 0);
   if (total === 0) return null;
 
@@ -294,7 +298,7 @@ function RingChart({
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke="#27272a"
+            stroke={colors.secondary}
             strokeWidth={strokeWidth}
             fill="none"
           />
@@ -340,6 +344,7 @@ function RingChart({
 
 export default function ReportsScreen() {
   const { t, language } = useLanguage();
+  const colors = useColors();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
@@ -457,7 +462,7 @@ export default function ReportsScreen() {
           <View className="bg-card p-6 rounded-xl mb-6">
             <View className="flex-row items-center mb-4">
               <View className="bg-accent/20 p-2 rounded-lg mr-3">
-                <Wallet size={20} color="rgb(212, 175, 55)" />
+                <Wallet size={20} color={colors.accent} />
               </View>
               <Text className="text-muted-foreground">{t('netWorth')}</Text>
             </View>
@@ -471,7 +476,7 @@ export default function ReportsScreen() {
                 <RingChart
                   segments={networth.balances.slice(0, 5).map((b) => ({
                     value: b.balance_in_base,
-                    color: CATEGORY_COLORS[b.currency.toLowerCase()] || '#d4af37',
+                    color: CATEGORY_COLORS[b.currency.toLowerCase()] || colors.accent,
                     label: b.currency,
                   }))}
                   centerLabel={t('total')}

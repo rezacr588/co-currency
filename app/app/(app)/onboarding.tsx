@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle, Wallet, Target, ArrowRight, ArrowLeft } from 'lucide-react-native';
 import { useLanguage } from '../../src/context/LanguageContext';
+import { useColors } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/context/AuthContext';
 import { useCurrencies } from '../../src/hooks';
 import { api } from '../../src/api';
@@ -30,6 +31,7 @@ export default function OnboardingScreen() {
   const { refreshProfile } = useAuth();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
+  const colors = useColors();
 
   const [step, setStep] = useState<Step>('welcome');
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
@@ -135,32 +137,24 @@ export default function OnboardingScreen() {
         }}
       >
         <View style={{ width: '100%', maxWidth: formMaxWidth }}>
-          {/* Progress Indicator */}
-          <View className="flex-row items-center justify-center mb-8">
-            {STEPS.map((s, i) => (
-              <View key={s} className="flex-row items-center">
+          {/* Progress Bar */}
+          <View className="mb-8">
+            <View style={{ flexDirection: 'row', gap: 4 }}>
+              {STEPS.map((s, i) => (
                 <View
-                  className={`w-8 h-8 rounded-full items-center justify-center ${
-                    i <= currentIndex ? 'bg-primary' : 'bg-muted'
-                  }`}
-                >
-                  <Text
-                    className={`text-sm font-medium ${
-                      i <= currentIndex ? 'text-primary-foreground' : 'text-muted-foreground'
-                    }`}
-                  >
-                    {i + 1}
-                  </Text>
-                </View>
-                {i < STEPS.length - 1 && (
-                  <View
-                    className={`w-12 h-1 mx-2 ${
-                      i < currentIndex ? 'bg-primary' : 'bg-muted'
-                    }`}
-                  />
-                )}
-              </View>
-            ))}
+                  key={s}
+                  style={{
+                    flex: 1,
+                    height: 3,
+                    borderRadius: 2,
+                    backgroundColor: i <= currentIndex ? colors.primary : colors.muted,
+                  }}
+                />
+              ))}
+            </View>
+            <Text className="text-muted-foreground text-xs text-center mt-2">
+              {currentIndex + 1} / {STEPS.length}
+            </Text>
           </View>
 
           <Card className="p-6">
@@ -168,14 +162,14 @@ export default function OnboardingScreen() {
             {step === 'welcome' && (
               <View className="items-center">
                 <View className="bg-primary/20 p-6 rounded-full mb-6">
-                  <Wallet size={48} color="rgb(212, 175, 55)" />
+                  <Wallet size={48} color={colors.accent} />
                 </View>
                 <Text className="text-2xl font-bold text-foreground mb-2 text-center">
                   {t('welcomeToCoFinance') || 'Welcome to CoFinance!'}
                 </Text>
-                <Text className="text-muted-foreground text-center mb-8">
+                <Text className="text-muted-foreground text-center mb-8 text-sm">
                   {t('onboardingWelcomeDesc') ||
-                    "Let's set up your wallet in a few quick steps."}
+                    "Set up your wallet in a few quick steps."}
                 </Text>
                 <View className="flex-row gap-4 w-full">
                   <Pressable
@@ -195,7 +189,7 @@ export default function OnboardingScreen() {
                     <Text className="text-primary-foreground font-semibold mr-2">
                       {t('getStarted') || 'Get Started'}
                     </Text>
-                    <ArrowRight size={20} color="#09090b" />
+                    <ArrowRight size={20} color={colors.primaryForeground} />
                   </Pressable>
                 </View>
               </View>
@@ -206,14 +200,14 @@ export default function OnboardingScreen() {
               <View>
                 <View className="items-center mb-6">
                   <View className="bg-primary/20 p-4 rounded-full mb-4">
-                    <Target size={32} color="rgb(212, 175, 55)" />
+                    <Target size={32} color={colors.accent} />
                   </View>
                   <Text className="text-xl font-bold text-foreground mb-2 text-center">
                     {t('selectPrimaryCurrency') || 'Select Your Primary Currency'}
                   </Text>
-                  <Text className="text-muted-foreground text-center">
+                  <Text className="text-muted-foreground text-center text-sm">
                     {t('currencySetupDesc') ||
-                      'Choose the currency you use most often.'}
+                      'Pick your most-used currency.'}
                   </Text>
                 </View>
 
@@ -232,7 +226,7 @@ export default function OnboardingScreen() {
                     style={{ cursor: 'pointer' }}
                     className="flex-1 p-4 rounded-xl border border-border flex-row items-center justify-center"
                   >
-                    <ArrowLeft size={20} color="rgb(148, 163, 184)" />
+                    <ArrowLeft size={20} color={colors.placeholder} />
                     <Text className="text-muted-foreground font-medium ml-2">
                       {t('back') || 'Back'}
                     </Text>
@@ -245,7 +239,7 @@ export default function OnboardingScreen() {
                     <Text className="text-primary-foreground font-semibold mr-2">
                       {t('next') || 'Next'}
                     </Text>
-                    <ArrowRight size={20} color="#09090b" />
+                    <ArrowRight size={20} color={colors.primaryForeground} />
                   </Pressable>
                 </View>
               </View>
@@ -256,14 +250,14 @@ export default function OnboardingScreen() {
               <View>
                 <View className="items-center mb-6">
                   <View className="bg-success/20 p-4 rounded-full mb-4">
-                    <Wallet size={32} color="rgb(16, 185, 129)" />
+                    <Wallet size={32} color={colors.success} />
                   </View>
                   <Text className="text-xl font-bold text-foreground mb-2 text-center">
                     {t('addInitialBalance') || 'Add Initial Balance'}
                   </Text>
-                  <Text className="text-muted-foreground text-center">
+                  <Text className="text-muted-foreground text-center text-sm">
                     {t('initialBalanceDesc') ||
-                      'Start tracking by adding your current balance (optional).'}
+                      'Add your current balance to get started (optional).'}
                   </Text>
                 </View>
 
@@ -277,7 +271,7 @@ export default function OnboardingScreen() {
                       className="flex-1 p-4 text-foreground text-lg"
                       style={{ outlineStyle: 'none' } as any}
                       placeholder="0.00"
-                      placeholderTextColor="rgb(148, 163, 184)"
+                      placeholderTextColor={colors.placeholder}
                       value={initialBalance}
                       onChangeText={setInitialBalance}
                       keyboardType="decimal-pad"
@@ -291,7 +285,7 @@ export default function OnboardingScreen() {
                     style={{ cursor: 'pointer' }}
                     className="flex-1 p-4 rounded-xl border border-border flex-row items-center justify-center"
                   >
-                    <ArrowLeft size={20} color="rgb(148, 163, 184)" />
+                    <ArrowLeft size={20} color={colors.placeholder} />
                     <Text className="text-muted-foreground font-medium ml-2">
                       {t('back') || 'Back'}
                     </Text>
@@ -305,13 +299,13 @@ export default function OnboardingScreen() {
                     }`}
                   >
                     {isSubmitting ? (
-                      <ActivityIndicator color="#09090b" />
+                      <ActivityIndicator color={colors.primaryForeground} />
                     ) : (
                       <>
                         <Text className="text-primary-foreground font-semibold mr-2">
                           {initialBalance ? t('addAndContinue') || 'Add & Continue' : t('skip') || 'Skip'}
                         </Text>
-                        <ArrowRight size={20} color="#09090b" />
+                        <ArrowRight size={20} color={colors.primaryForeground} />
                       </>
                     )}
                   </Pressable>
@@ -323,14 +317,14 @@ export default function OnboardingScreen() {
             {step === 'complete' && (
               <View className="items-center">
                 <View className="bg-success/20 p-6 rounded-full mb-6">
-                  <CheckCircle size={48} color="rgb(16, 185, 129)" />
+                  <CheckCircle size={48} color={colors.success} />
                 </View>
                 <Text className="text-2xl font-bold text-foreground mb-2 text-center">
                   {t('setupComplete') || "You're All Set!"}
                 </Text>
-                <Text className="text-muted-foreground text-center mb-8">
+                <Text className="text-muted-foreground text-center text-sm mb-8">
                   {t('setupCompleteDesc') ||
-                    'Your wallet is ready. Start tracking your finances!'}
+                    'Your wallet is ready — start tracking!'}
                 </Text>
                 <Pressable
                   onPress={handleComplete}
@@ -339,7 +333,7 @@ export default function OnboardingScreen() {
                   className={`bg-primary px-8 py-4 rounded-xl ${isSubmitting ? 'opacity-50' : ''}`}
                 >
                   {isSubmitting ? (
-                    <ActivityIndicator color="#09090b" />
+                    <ActivityIndicator color={colors.primaryForeground} />
                   ) : (
                     <Text className="text-primary-foreground font-semibold text-lg">
                       {t('goToWallet') || 'Go to Wallet'}

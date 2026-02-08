@@ -6,6 +6,7 @@ import { Trophy, Target, Lock, Award, ChevronLeft, RefreshCw, Gift, X } from 'lu
 import { useRouter } from 'expo-router';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
+import { useColors } from '../../src/context/ThemeContext';
 import { Card } from '../../src/components/ui';
 import { haptics } from '../../src/utils/haptics';
 import { useToast } from '../../src/components/ui/Toast';
@@ -103,6 +104,7 @@ export default function BadgesScreen() {
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
   const { showToast } = useToast();
+  const colors = useColors();
   const [showNewlyEarned, setShowNewlyEarned] = useState(false);
 
   const isLargeScreen = width > 768;
@@ -153,7 +155,7 @@ export default function BadgesScreen() {
               style={{ cursor: 'pointer' }}
               className="p-2 mr-2"
             >
-              <ChevronLeft size={24} color="rgb(148, 163, 184)" />
+              <ChevronLeft size={24} color={colors.placeholder} />
             </Pressable>
             <Text className="text-2xl font-bold text-foreground">
               {t('badges') || 'Badges'}
@@ -166,10 +168,10 @@ export default function BadgesScreen() {
             className="bg-primary px-4 py-2 rounded-xl flex-row items-center"
           >
             {checkBadgesMutation.isPending ? (
-              <ActivityIndicator size="small" color="#09090b" />
+              <ActivityIndicator size="small" color={colors.primaryForeground} />
             ) : (
               <>
-                <Gift size={18} color="#09090b" />
+                <Gift size={18} color={colors.primaryForeground} />
                 <Text className="text-primary-foreground font-semibold ml-2">
                   {t('claimRewards') || 'Claim Rewards'}
                 </Text>
@@ -186,7 +188,7 @@ export default function BadgesScreen() {
                 🎉 {t('newBadgesEarned') || 'New Badges Earned!'}
               </Text>
               <Pressable onPress={() => setShowNewlyEarned(false)} style={{ cursor: 'pointer' }} className="p-1">
-                <X size={18} color="rgb(34, 197, 94)" />
+                <X size={18} color={colors.success} />
               </Pressable>
             </View>
             <View className="flex-row flex-wrap justify-center gap-2">
@@ -203,7 +205,7 @@ export default function BadgesScreen() {
 
         {isPending ? (
           <View className="flex-1 items-center justify-center py-12">
-            <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
+            <ActivityIndicator size="large" color={colors.accent} />
           </View>
         ) : error ? (
           <View className="bg-danger/10 p-4 rounded-xl">
@@ -221,7 +223,7 @@ export default function BadgesScreen() {
             >
               <View style={{ flex: 1, minWidth: isLargeScreen ? 150 : '45%' }}>
                 <Card className="p-4 items-center">
-                  <Trophy size={24} color="rgb(212, 175, 55)" />
+                  <Trophy size={24} color={colors.accent} />
                   <Text className="text-2xl font-bold text-primary mt-2">
                     {data?.earned_count || 0}
                   </Text>
@@ -232,7 +234,7 @@ export default function BadgesScreen() {
               </View>
               <View style={{ flex: 1, minWidth: isLargeScreen ? 150 : '45%' }}>
                 <Card className="p-4 items-center">
-                  <Target size={24} color="rgb(251, 191, 36)" />
+                  <Target size={24} color={colors.warning} />
                   <Text className="text-2xl font-bold text-amber-500 mt-2">
                     {inProgress.length}
                   </Text>
@@ -243,7 +245,7 @@ export default function BadgesScreen() {
               </View>
               <View style={{ flex: 1, minWidth: isLargeScreen ? 150 : '45%' }}>
                 <Card className="p-4 items-center">
-                  <Lock size={24} color="rgb(148, 163, 184)" />
+                  <Lock size={24} color={colors.placeholder} />
                   <Text className="text-2xl font-bold text-muted-foreground mt-2">
                     {locked.length}
                   </Text>
@@ -254,7 +256,7 @@ export default function BadgesScreen() {
               </View>
               <View style={{ flex: 1, minWidth: isLargeScreen ? 150 : '45%' }}>
                 <Card className="p-4 items-center">
-                  <Award size={24} color="rgb(148, 163, 184)" />
+                  <Award size={24} color={colors.placeholder} />
                   <Text className="text-2xl font-bold text-foreground mt-2">
                     {data?.total_badges || 0}
                   </Text>

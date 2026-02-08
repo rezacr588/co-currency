@@ -8,7 +8,6 @@ import {
   RefreshControl,
   TextInput,
   Modal,
-  Switch,
   useWindowDimensions,
   Alert,
 } from 'react-native';
@@ -18,9 +17,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, ArrowLeft, X, RefreshCw, Play, Pause, TrendingUp, TrendingDown } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
+import { useColors } from '../../src/context/ThemeContext';
 import { formatCompactCurrency, formatDate } from '../../src/utils/format';
 import { FrequencyIcon, StyledCategoryIcon, CATEGORY_COLORS, getCategoryBackground, CategoryIcon } from '../../src/constants/icons';
 import { useToast } from '../../src/components/ui/Toast';
+import { Button } from '../../src/components/ui/Button';
+import { FormError } from '../../src/components/ui/FormError';
 import type { CreateRecurringRequest } from '../../src/types/goal';
 
 const CATEGORIES = ['income', 'bills', 'food', 'transportation', 'entertainment', 'other'];
@@ -28,6 +30,7 @@ const FREQUENCIES = ['daily', 'weekly', 'monthly', 'yearly'] as const;
 
 export default function RecurringScreen() {
   const { t } = useLanguage();
+  const colors = useColors();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
@@ -66,12 +69,12 @@ export default function RecurringScreen() {
       <View className="flex-row items-center justify-between p-4 border-b border-border" style={{ maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
         <View className="flex-row items-center">
           <Pressable onPress={() => router.back()} className="p-2 mr-2" style={{ cursor: 'pointer' }}>
-            <ArrowLeft size={24} color="rgb(248, 250, 252)" />
+            <ArrowLeft size={24} color={colors.foreground} />
           </Pressable>
           <Text className="text-xl font-bold text-foreground">{t('recurring')}</Text>
         </View>
         <Pressable onPress={() => setShowForm(true)} className="bg-primary p-2 rounded-full" style={{ cursor: 'pointer' }}>
-          <Plus size={24} color="#09090b" />
+          <Plus size={24} color={colors.primaryForeground} />
         </Pressable>
       </View>
 
@@ -97,10 +100,10 @@ export default function RecurringScreen() {
             </Pressable>
           </View>
         ) : isPending ? (
-          <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
+          <ActivityIndicator size="large" color={colors.accent} />
         ) : transactions.length === 0 ? (
           <View className="bg-card p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
-            <RefreshCw size={48} color="rgb(148, 163, 184)" />
+            <RefreshCw size={48} color={colors.placeholder} />
             <Text className="text-lg font-semibold text-foreground mt-4">{t('noRecurring')}</Text>
             <Text className="text-muted-foreground text-center mt-2">{t('noRecurringDescription')}</Text>
           </View>
@@ -160,6 +163,7 @@ export default function RecurringScreen() {
 
 function RecurringCard({ transaction }: { transaction: any }) {
   const { t } = useLanguage();
+  const colors = useColors();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
@@ -236,7 +240,7 @@ function RecurringCard({ transaction }: { transaction: any }) {
               {transaction.description || transaction.category || 'Recurring'}
             </Text>
             <View className="flex-row items-center">
-              <FrequencyIcon frequency={transaction.frequency} size={12} color="rgb(148, 163, 184)" />
+              <FrequencyIcon frequency={transaction.frequency} size={12} color={colors.placeholder} />
               <Text className="text-muted-foreground text-sm ml-1">{t(transaction.frequency)}</Text>
             </View>
           </View>
@@ -263,9 +267,9 @@ function RecurringCard({ transaction }: { transaction: any }) {
             style={{ cursor: 'pointer' }}
           >
             {executeMutation.isPending ? (
-              <ActivityIndicator size="small" color="rgb(15, 26, 42)" />
+              <ActivityIndicator size="small" color={colors.primaryForeground} />
             ) : (
-              <Play size={16} color="rgb(15, 26, 42)" />
+              <Play size={16} color={colors.primaryForeground} />
             )}
           </Pressable>
           <Pressable
@@ -277,9 +281,9 @@ function RecurringCard({ transaction }: { transaction: any }) {
             {toggleMutation.isPending ? (
               <ActivityIndicator size="small" />
             ) : transaction.is_active ? (
-              <Pause size={16} color="rgb(212, 175, 55)" />
+              <Pause size={16} color={colors.warning} />
             ) : (
-              <Play size={16} color="rgb(16, 185, 129)" />
+              <Play size={16} color={colors.success} />
             )}
           </Pressable>
         </View>
@@ -290,6 +294,7 @@ function RecurringCard({ transaction }: { transaction: any }) {
 
 function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useLanguage();
+  const colors = useColors();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { width } = useWindowDimensions();
@@ -353,7 +358,7 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
         <View className="flex-row items-center justify-between p-4 border-b border-border">
           <Text className="text-xl font-bold text-foreground">{t('createRecurring')}</Text>
           <Pressable onPress={onClose} style={{ cursor: 'pointer' }}>
-            <X size={24} color="rgb(148, 163, 184)" />
+            <X size={24} color={colors.placeholder} />
           </Pressable>
         </View>
 
@@ -366,11 +371,7 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
             alignSelf: 'center',
           }}
         >
-          {error ? (
-            <View className="bg-danger-light p-4 rounded-xl mb-4">
-              <Text className="text-danger">{error}</Text>
-            </View>
-          ) : null}
+          <FormError message={error} />
 
           <View className="mb-6">
             <Text className="text-muted-foreground mb-2">{t('type')}</Text>
@@ -380,7 +381,7 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
                 className={`flex-1 p-4 rounded-xl items-center ${type === 'debit' ? 'bg-danger' : 'bg-card'}`}
                 style={{ cursor: 'pointer' }}
               >
-                <TrendingDown size={20} color={type === 'debit' ? 'white' : 'rgb(220, 38, 38)'} />
+                <TrendingDown size={20} color={type === 'debit' ? colors.foreground : colors.danger} />
                 <Text className={`mt-1 ${type === 'debit' ? 'text-white font-semibold' : 'text-foreground'}`}>
                   {t('expense')}
                 </Text>
@@ -390,7 +391,7 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
                 className={`flex-1 p-4 rounded-xl items-center ${type === 'credit' ? 'bg-success' : 'bg-card'}`}
                 style={{ cursor: 'pointer' }}
               >
-                <TrendingUp size={20} color={type === 'credit' ? 'white' : 'rgb(16, 185, 129)'} />
+                <TrendingUp size={20} color={type === 'credit' ? colors.foreground : colors.success} />
                 <Text className={`mt-1 ${type === 'credit' ? 'text-white font-semibold' : 'text-foreground'}`}>
                   {t('income')}
                 </Text>
@@ -407,7 +408,7 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
               onChangeText={setAmount}
               keyboardType="decimal-pad"
               placeholder="0.00"
-              placeholderTextColor="rgb(148, 163, 184)"
+              placeholderTextColor={colors.placeholder}
             />
           </View>
 
@@ -434,7 +435,7 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
             <View className="flex-row flex-wrap gap-2">
               {CATEGORIES.map((cat) => {
                 const isSelected = category === cat;
-                const catColor = CATEGORY_COLORS[cat.toLowerCase()] || 'rgb(148, 163, 184)';
+                const catColor = CATEGORY_COLORS[cat.toLowerCase()] || colors.placeholder;
                 const bgColor = isSelected ? catColor : getCategoryBackground(cat, 0.12);
 
                 return (
@@ -476,22 +477,13 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
               value={description}
               onChangeText={setDescription}
               placeholder={t('descriptionPlaceholder')}
-              placeholderTextColor="rgb(148, 163, 184)"
+              placeholderTextColor={colors.placeholder}
             />
           </View>
 
-          <Pressable
-            onPress={handleSubmit}
-            disabled={mutation.isPending}
-            className={`bg-primary p-4 rounded-xl items-center ${mutation.isPending ? 'opacity-50' : ''}`}
-            style={{ cursor: 'pointer' }}
-          >
-            {mutation.isPending ? (
-              <ActivityIndicator color="#09090b" />
-            ) : (
-              <Text className="text-primary-foreground font-semibold text-lg">{t('createRecurring')}</Text>
-            )}
-          </Pressable>
+          <Button variant="primary" size="lg" onPress={handleSubmit} isLoading={mutation.isPending}>
+            {t('createRecurring')}
+          </Button>
         </ScrollView>
       </SafeAreaView>
     </Modal>

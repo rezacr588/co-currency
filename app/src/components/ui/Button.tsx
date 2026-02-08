@@ -1,8 +1,9 @@
 import { forwardRef, useCallback } from 'react';
 import { Pressable, Text, ActivityIndicator, PressableProps, View, GestureResponderEvent } from 'react-native';
 import { haptics } from '../../utils/haptics';
+import { useColors } from '../../context/ThemeContext';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'outline';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'outline' | 'accent';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends PressableProps {
@@ -24,6 +25,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   danger: 'bg-danger active:bg-danger/80',
   success: 'bg-success active:bg-success/80',
   outline: 'bg-transparent border border-border active:bg-secondary/50',
+  accent: 'bg-accent active:bg-accent-hover',
 };
 
 const variantTextStyles: Record<ButtonVariant, string> = {
@@ -33,6 +35,7 @@ const variantTextStyles: Record<ButtonVariant, string> = {
   danger: 'text-white',
   success: 'text-white',
   outline: 'text-foreground',
+  accent: 'text-accent-foreground',
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -66,6 +69,7 @@ export const Button = forwardRef<View, ButtonProps>(
     },
     ref
   ) => {
+    const colors = useColors();
     const isDisabled = disabled || isLoading;
 
     const handlePress = useCallback(
@@ -108,11 +112,9 @@ export const Button = forwardRef<View, ButtonProps>(
           <ActivityIndicator
             size="small"
             color={
-              variant === 'primary'
-                ? '#09090b'
-                : variant === 'ghost' || variant === 'outline'
-                  ? 'rgb(248, 250, 252)'
-                  : 'white'
+              variant === 'primary' || variant === 'accent'
+                ? colors.primaryForeground
+                : colors.foreground
             }
           />
         ) : (

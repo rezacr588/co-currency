@@ -5,7 +5,6 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator,
-  Switch,
   Alert,
   Platform,
 } from 'react-native';
@@ -23,9 +22,10 @@ import {
 } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { useTheme } from '../../src/context/ThemeContext';
+import { useTheme, useColors } from '../../src/context/ThemeContext';
 import { usePushNotifications, scheduleLocalNotification } from '../../src/hooks/usePushNotifications';
 import { haptics } from '../../src/utils/haptics';
+import { Toggle } from '../../src/components/ui/Toggle';
 import type { NotificationPreferences } from '../../src/api/notifications';
 
 export default function NotificationSettingsScreen() {
@@ -34,9 +34,10 @@ export default function NotificationSettingsScreen() {
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
+  const colors = useColors();
   const { expoPushToken, error: pushError, isLoading: isPushLoading, registerForPushNotifications } = usePushNotifications();
 
-  const iconColor = isDark ? 'rgb(248, 250, 252)' : 'rgb(51, 65, 85)';
+  const iconColor = isDark ? colors.foreground : 'rgb(51, 65, 85)';
 
   // Fetch current preferences
   const { data: prefsData, isPending } = useQuery({
@@ -124,13 +125,10 @@ export default function NotificationSettingsScreen() {
           <Text className="text-muted-foreground text-xs mt-0.5">{description}</Text>
         </View>
       </View>
-      <Switch
+      <Toggle
         value={value}
-        onValueChange={onToggle}
+        onValueChange={() => onToggle()}
         disabled={disabled}
-        trackColor={{ false: '#3f3f46', true: 'rgb(212, 175, 55)' }}
-        thumbColor="#ffffff"
-        ios_backgroundColor="#3f3f46"
       />
     </Pressable>
   );
@@ -158,7 +156,7 @@ export default function NotificationSettingsScreen() {
         {/* Push Token Status */}
         <View className="bg-card border border-border p-4 rounded-xl mb-6">
           <View className="flex-row items-center mb-2">
-            <Bell size={20} color="rgb(212, 175, 55)" />
+            <Bell size={20} color={colors.accent} />
             <Text className="text-foreground font-semibold ml-2">
               {t('pushNotifications') || 'Push Notifications'}
             </Text>
@@ -171,7 +169,7 @@ export default function NotificationSettingsScreen() {
             </View>
           ) : isPushLoading ? (
             <View className="items-center py-2">
-              <ActivityIndicator color="rgb(212, 175, 55)" />
+              <ActivityIndicator color={colors.accent} />
               <Text className="text-muted-foreground text-sm mt-2">
                 {t('checkingPermissions') || 'Checking permissions...'}
               </Text>
@@ -180,7 +178,7 @@ export default function NotificationSettingsScreen() {
             <View>
               <View className="bg-danger/10 border border-danger/20 p-3 rounded-lg mb-3">
                 <View className="flex-row items-center">
-                  <AlertCircle size={16} color="#ef4444" />
+                  <AlertCircle size={16} color={colors.danger} />
                   <Text className="text-danger text-sm ml-2">{pushError}</Text>
                 </View>
               </View>
@@ -215,7 +213,7 @@ export default function NotificationSettingsScreen() {
         {/* Notification Types */}
         {isPending ? (
           <View className="items-center py-8">
-            <ActivityIndicator color="rgb(212, 175, 55)" />
+            <ActivityIndicator color={colors.accent} />
           </View>
         ) : preferences ? (
           <View className="bg-card border border-border rounded-xl overflow-hidden mb-6">
@@ -224,7 +222,7 @@ export default function NotificationSettingsScreen() {
             </Text>
 
             <SettingRow
-              icon={<PiggyBank size={20} color="rgb(212, 175, 55)" />}
+              icon={<PiggyBank size={20} color={colors.accent} />}
               title={t('budgetAlerts') || 'Budget Alerts'}
               description={t('budgetAlertsDesc') || 'Get notified when approaching or exceeding budgets'}
               value={preferences.budget_alerts}
@@ -233,7 +231,7 @@ export default function NotificationSettingsScreen() {
             />
 
             <SettingRow
-              icon={<CreditCard size={20} color="rgb(212, 175, 55)" />}
+              icon={<CreditCard size={20} color={colors.accent} />}
               title={t('loanReminders') || 'Loan Reminders'}
               description={t('loanRemindersDesc') || 'Reminders for upcoming loan payments'}
               value={preferences.loan_reminders}
@@ -242,7 +240,7 @@ export default function NotificationSettingsScreen() {
             />
 
             <SettingRow
-              icon={<Target size={20} color="rgb(212, 175, 55)" />}
+              icon={<Target size={20} color={colors.accent} />}
               title={t('goalUpdates') || 'Goal Updates'}
               description={t('goalUpdatesDesc') || 'Celebrate when you reach savings milestones'}
               value={preferences.goal_updates}
@@ -251,7 +249,7 @@ export default function NotificationSettingsScreen() {
             />
 
             <SettingRow
-              icon={<Calendar size={20} color="rgb(212, 175, 55)" />}
+              icon={<Calendar size={20} color={colors.accent} />}
               title={t('weeklyRecap') || 'Weekly Recap'}
               description={t('weeklyRecapDesc') || 'Get a weekly summary of your finances'}
               value={preferences.weekly_recap}

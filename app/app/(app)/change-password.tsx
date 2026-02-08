@@ -15,10 +15,13 @@ import { ChevronLeft, Lock, Eye, EyeOff, Check } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useAuth } from '../../src/context/AuthContext';
+import { useColors } from '../../src/context/ThemeContext';
 import { useToast } from '../../src/components/ui/Toast';
+import { Button } from '../../src/components/ui/Button';
 
 export default function ChangePasswordScreen() {
   const { t } = useLanguage();
+  const colors = useColors();
   const router = useRouter();
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -108,7 +111,7 @@ export default function ChangePasswordScreen() {
             style={{ cursor: 'pointer' }}
             className="p-2 mr-2"
           >
-            <ChevronLeft size={24} color="rgb(148, 163, 184)" />
+            <ChevronLeft size={24} color={colors.placeholder} />
           </Pressable>
           <Text className="text-2xl font-bold text-foreground">{t('changePassword')}</Text>
         </View>
@@ -116,7 +119,7 @@ export default function ChangePasswordScreen() {
         {/* Form */}
         <View className="bg-card p-6 rounded-xl">
           <View className="w-16 h-16 bg-primary/20 rounded-full items-center justify-center self-center mb-6">
-            <Lock size={32} color="rgb(212, 175, 55)" />
+            <Lock size={32} color={colors.accent} />
           </View>
 
           <Text className="text-muted-foreground text-center mb-6">
@@ -132,7 +135,7 @@ export default function ChangePasswordScreen() {
                 {t('currentPassword')}
               </Text>
               <View className="bg-background rounded-xl flex-row items-center px-4">
-                <Lock size={20} color="rgb(148, 163, 184)" />
+                <Lock size={20} color={colors.placeholder} />
                 <TextInput
                   className="flex-1 py-4 ml-3 text-foreground"
                   value={currentPassword}
@@ -143,7 +146,7 @@ export default function ChangePasswordScreen() {
                     }
                   }}
                   placeholder={t('enterCurrentPassword')}
-                  placeholderTextColor="rgb(148, 163, 184)"
+                  placeholderTextColor={colors.placeholder}
                   secureTextEntry={!showCurrentPassword}
                   autoCapitalize="none"
                   style={{ outlineStyle: 'none' } as any}
@@ -153,9 +156,9 @@ export default function ChangePasswordScreen() {
                   style={{ cursor: 'pointer' }}
                 >
                   {showCurrentPassword ? (
-                    <EyeOff size={20} color="rgb(148, 163, 184)" />
+                    <EyeOff size={20} color={colors.placeholder} />
                   ) : (
-                    <Eye size={20} color="rgb(148, 163, 184)" />
+                    <Eye size={20} color={colors.placeholder} />
                   )}
                 </Pressable>
               </View>
@@ -169,7 +172,7 @@ export default function ChangePasswordScreen() {
           <View className="mb-4">
             <Text className="text-sm text-muted-foreground mb-2">{t('newPassword')}</Text>
             <View className="bg-background rounded-xl flex-row items-center px-4">
-              <Lock size={20} color="rgb(148, 163, 184)" />
+              <Lock size={20} color={colors.placeholder} />
               <TextInput
                 className="flex-1 py-4 ml-3 text-foreground"
                 value={newPassword}
@@ -180,7 +183,7 @@ export default function ChangePasswordScreen() {
                   }
                 }}
                 placeholder={t('enterNewPassword')}
-                placeholderTextColor="rgb(148, 163, 184)"
+                placeholderTextColor={colors.placeholder}
                 secureTextEntry={!showNewPassword}
                 autoCapitalize="none"
                 style={{ outlineStyle: 'none' } as any}
@@ -190,9 +193,9 @@ export default function ChangePasswordScreen() {
                 style={{ cursor: 'pointer' }}
               >
                 {showNewPassword ? (
-                  <EyeOff size={20} color="rgb(148, 163, 184)" />
+                  <EyeOff size={20} color={colors.placeholder} />
                 ) : (
-                  <Eye size={20} color="rgb(148, 163, 184)" />
+                  <Eye size={20} color={colors.placeholder} />
                 )}
               </Pressable>
             </View>
@@ -207,7 +210,7 @@ export default function ChangePasswordScreen() {
               {t('confirmPassword')}
             </Text>
             <View className="bg-background rounded-xl flex-row items-center px-4">
-              <Lock size={20} color="rgb(148, 163, 184)" />
+              <Lock size={20} color={colors.placeholder} />
               <TextInput
                 className="flex-1 py-4 ml-3 text-foreground"
                 value={confirmPassword}
@@ -218,7 +221,7 @@ export default function ChangePasswordScreen() {
                   }
                 }}
                 placeholder={t('confirmYourPassword')}
-                placeholderTextColor="rgb(148, 163, 184)"
+                placeholderTextColor={colors.placeholder}
                 secureTextEntry={!showConfirmPassword}
                 autoCapitalize="none"
                 style={{ outlineStyle: 'none' } as any}
@@ -228,9 +231,9 @@ export default function ChangePasswordScreen() {
                 style={{ cursor: 'pointer' }}
               >
                 {showConfirmPassword ? (
-                  <EyeOff size={20} color="rgb(148, 163, 184)" />
+                  <EyeOff size={20} color={colors.placeholder} />
                 ) : (
-                  <Eye size={20} color="rgb(148, 163, 184)" />
+                  <Eye size={20} color={colors.placeholder} />
                 )}
               </Pressable>
             </View>
@@ -240,25 +243,14 @@ export default function ChangePasswordScreen() {
           </View>
 
           {/* Submit Button */}
-          <Pressable
+          <Button
+            variant="primary"
             onPress={handleSubmit}
-            disabled={changePasswordMutation.isPending}
-            className={`bg-primary p-4 rounded-xl flex-row items-center justify-center ${
-              changePasswordMutation.isPending ? 'opacity-50' : ''
-            }`}
-            style={{ cursor: 'pointer' }}
+            isLoading={changePasswordMutation.isPending}
+            leftIcon={<Check size={20} color={colors.primaryForeground} />}
           >
-            {changePasswordMutation.isPending ? (
-              <ActivityIndicator color="#09090b" />
-            ) : (
-              <>
-                <Check size={20} color="#09090b" />
-                <Text className="text-primary-foreground font-semibold ml-2">
-                  {hasPassword ? t('changePassword') : t('setPassword')}
-                </Text>
-              </>
-            )}
-          </Pressable>
+            {hasPassword ? t('changePassword') : t('setPassword')}
+          </Button>
         </View>
 
         {/* Password Requirements */}

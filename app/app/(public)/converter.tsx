@@ -3,19 +3,19 @@ import { Link } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Moon, Sun } from 'lucide-react-native';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { useTheme } from '../../src/context/ThemeContext';
+import { useTheme, useColors } from '../../src/context/ThemeContext';
 import { CurrencyConverter } from '../../src/components/features/CurrencyConverter';
 
 export default function ConverterScreen() {
   const { t } = useLanguage();
   const { isDark, toggleTheme } = useTheme();
+  const colors = useColors();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 24;
-  const iconColor = isDark ? 'rgb(248, 250, 252)' : 'rgb(148, 163, 184)';
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
@@ -30,9 +30,9 @@ export default function ConverterScreen() {
           <View className="flex-row items-center gap-4">
             <Pressable onPress={toggleTheme} style={{ cursor: 'pointer' }} className="p-2">
               {isDark ? (
-                <Sun size={20} color="rgb(212, 175, 55)" />
+                <Sun size={20} color={colors.accent} />
               ) : (
-                <Moon size={20} color="rgb(148, 163, 184)" />
+                <Moon size={20} color={colors.mutedForeground} />
               )}
             </Pressable>
             <Link href="/login" asChild>
@@ -58,7 +58,7 @@ export default function ConverterScreen() {
           {!isTablet && (
             <Link href="/" asChild>
               <Pressable style={{ cursor: 'pointer' }} className="flex-row items-center mb-6" hitSlop={10}>
-                <ArrowLeft size={20} color={iconColor} />
+                <ArrowLeft size={20} color={colors.mutedForeground} />
                 <Text className="text-muted-foreground ml-2">{t('back') || 'Back'}</Text>
               </Pressable>
             </Link>

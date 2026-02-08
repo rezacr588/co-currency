@@ -34,8 +34,9 @@ import {
 } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { useTheme } from '../../src/context/ThemeContext';
+import { useTheme, useColors } from '../../src/context/ThemeContext';
 import { haptics } from '../../src/utils/haptics';
+import { Button } from '../../src/components/ui/Button';
 import type {
   Challenge,
   ChallengeWithUserStatus,
@@ -44,11 +45,14 @@ import type {
   ChallengeDifficulty,
 } from '../../src/types/challenge';
 
-const DIFFICULTY_COLORS: Record<ChallengeDifficulty, string> = {
-  easy: '#22c55e',
-  medium: '#f59e0b',
-  hard: '#ef4444',
-};
+function useDifficultyColors(): Record<ChallengeDifficulty, string> {
+  const colors = useColors();
+  return {
+    easy: colors.success,
+    medium: colors.warning,
+    hard: colors.danger,
+  };
+}
 
 const getChallengeIcon = (iconName: string, color: string, size: number = 24) => {
   const props = { size, color };
@@ -72,10 +76,12 @@ export default function ChallengesScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
+  const colors = useColors();
+  const DIFFICULTY_COLORS = useDifficultyColors();
 
   const isDesktop = width >= 1024;
   const bottomPadding = isDesktop ? insets.bottom : insets.bottom + 96;
-  const iconColor = isDark ? 'rgb(248, 250, 252)' : 'rgb(51, 65, 85)';
+  const iconColor = colors.foreground;
 
   const [refreshing, setRefreshing] = useState(false);
   const [selectedChallenge, setSelectedChallenge] = useState<ChallengeWithUserStatus | null>(null);
@@ -183,7 +189,7 @@ export default function ChallengesScreen() {
     if (browsePending) {
       return (
         <View className="items-center py-8">
-          <ActivityIndicator color="rgb(212, 175, 55)" />
+          <ActivityIndicator color={colors.accent} />
         </View>
       );
     }
@@ -192,7 +198,7 @@ export default function ChallengesScreen() {
     if (challenges.length === 0) {
       return (
         <View className="bg-card border border-border p-8 rounded-xl items-center">
-          <Trophy size={48} color="#71717a" />
+          <Trophy size={48} color={colors.mutedForeground} />
           <Text className="text-muted-foreground text-center mt-4">
             {t('noChallenges') || 'No challenges available'}
           </Text>
@@ -218,7 +224,7 @@ export default function ChallengesScreen() {
     if (activePending) {
       return (
         <View className="items-center py-8">
-          <ActivityIndicator color="rgb(212, 175, 55)" />
+          <ActivityIndicator color={colors.accent} />
         </View>
       );
     }
@@ -227,7 +233,7 @@ export default function ChallengesScreen() {
     if (challenges.length === 0) {
       return (
         <View className="bg-card border border-border p-8 rounded-xl items-center">
-          <Target size={48} color="#71717a" />
+          <Target size={48} color={colors.mutedForeground} />
           <Text className="text-muted-foreground text-center mt-4">
             {t('noActiveChallenges') || 'No active challenges'}
           </Text>
@@ -261,7 +267,7 @@ export default function ChallengesScreen() {
     if (historyPending) {
       return (
         <View className="items-center py-8">
-          <ActivityIndicator color="rgb(212, 175, 55)" />
+          <ActivityIndicator color={colors.accent} />
         </View>
       );
     }
@@ -270,7 +276,7 @@ export default function ChallengesScreen() {
     if (challenges.length === 0) {
       return (
         <View className="bg-card border border-border p-8 rounded-xl items-center">
-          <Clock size={48} color="#71717a" />
+          <Clock size={48} color={colors.mutedForeground} />
           <Text className="text-muted-foreground text-center mt-4">
             {t('noChallengeHistory') || 'No challenge history yet'}
           </Text>
@@ -316,7 +322,7 @@ export default function ChallengesScreen() {
         {stats && (
           <View className="bg-card border border-border p-5 rounded-xl mb-6">
             <View className="flex-row items-center mb-4">
-              <Award size={24} color="rgb(212, 175, 55)" />
+              <Award size={24} color={colors.accent} />
               <Text className="text-base font-semibold text-foreground ml-2">
                 {t('yourProgress') || 'Your Progress'}
               </Text>
@@ -336,7 +342,7 @@ export default function ChallengesScreen() {
               </View>
               <View className="items-center flex-1">
                 <View className="flex-row items-center">
-                  <Flame size={16} color="#f59e0b" />
+                  <Flame size={16} color={colors.warning} />
                   <Text className="text-2xl font-bold text-foreground ml-1">
                     {stats.current_streak}
                   </Text>
@@ -437,13 +443,13 @@ export default function ChallengesScreen() {
                       </Text>
                     </View>
                     <View className="flex-row items-center bg-muted px-2 py-1 rounded">
-                      <Clock size={12} color="#71717a" />
+                      <Clock size={12} color={colors.mutedForeground} />
                       <Text className="text-xs text-muted-foreground ml-1">
                         {selectedChallenge.duration_days} {t('days') || 'days'}
                       </Text>
                     </View>
                     <View className="flex-row items-center bg-accent/20 px-2 py-1 rounded">
-                      <Star size={12} color="rgb(212, 175, 55)" />
+                      <Star size={12} color={colors.accent} />
                       <Text className="text-xs text-accent ml-1">
                         {selectedChallenge.points_reward} {t('pts') || 'pts'}
                       </Text>
@@ -475,37 +481,27 @@ export default function ChallengesScreen() {
                 ) : null}
 
                 {selectedChallenge.user_status !== 'active' ? (
-                  <Pressable
+                  <Button
+                    variant="accent"
+                    size="lg"
                     onPress={handleJoin}
-                    disabled={joinMutation.isPending}
-                    className={`bg-accent p-4 rounded-lg flex-row items-center justify-center ${
-                      joinMutation.isPending ? 'opacity-50' : ''
-                    }`}
+                    isLoading={joinMutation.isPending}
+                    leftIcon={<Play size={20} color={colors.primaryForeground} />}
                   >
-                    {joinMutation.isPending ? (
-                      <ActivityIndicator color="#09090b" />
-                    ) : (
-                      <>
-                        <Play size={20} color="#09090b" />
-                        <Text className="text-accent-foreground font-semibold ml-2">
-                          {t('startChallenge') || 'Start Challenge'}
-                        </Text>
-                      </>
-                    )}
-                  </Pressable>
+                    {t('startChallenge') || 'Start Challenge'}
+                  </Button>
                 ) : (
-                  <Pressable
+                  <Button
+                    variant="danger"
+                    size="lg"
                     onPress={() => {
                       setShowDetailsModal(false);
                       handleAbandon(selectedChallenge.id);
                     }}
-                    className="border border-danger p-4 rounded-lg flex-row items-center justify-center"
+                    leftIcon={<XCircle size={20} color="white" />}
                   >
-                    <XCircle size={20} color="#ef4444" />
-                    <Text className="text-danger font-semibold ml-2">
-                      {t('abandonChallenge') || 'Abandon Challenge'}
-                    </Text>
-                  </Pressable>
+                    {t('abandonChallenge') || 'Abandon Challenge'}
+                  </Button>
                 )}
               </>
             )}
@@ -527,6 +523,8 @@ function ChallengeCard({
   isDark: boolean;
 }) {
   const { t } = useLanguage();
+  const colors = useColors();
+  const DIFFICULTY_COLORS = useDifficultyColors();
   const isActive = challenge.user_status === 'active';
 
   return (
@@ -572,13 +570,13 @@ function ChallengeCard({
               </Text>
             </View>
             <View className="flex-row items-center">
-              <Clock size={12} color="#71717a" />
+              <Clock size={12} color={colors.mutedForeground} />
               <Text className="text-xs text-muted-foreground ml-1">
                 {challenge.duration_days}d
               </Text>
             </View>
             <View className="flex-row items-center">
-              <Star size={12} color="rgb(212, 175, 55)" />
+              <Star size={12} color={colors.accent} />
               <Text className="text-xs text-accent ml-1">
                 +{challenge.points_reward}
               </Text>
@@ -587,7 +585,7 @@ function ChallengeCard({
         </View>
         {isActive && (
           <View className="bg-success/20 p-2 rounded-full ml-2">
-            <Play size={16} color="#22c55e" />
+            <Play size={16} color={colors.success} />
           </View>
         )}
       </View>
@@ -620,6 +618,8 @@ function ActiveChallengeCard({
   onAbandon: () => void;
   isDark: boolean;
 }) {
+  const colors = useColors();
+  const DIFFICULTY_COLORS = useDifficultyColors();
   const challenge = userChallenge.challenge;
   if (!challenge) return null;
 
@@ -646,13 +646,13 @@ function ActiveChallengeCard({
         <View className="flex-1">
           <Text className="text-foreground font-semibold">{challenge.name}</Text>
           <View className="flex-row items-center mt-1">
-            <Clock size={12} color="#71717a" />
+            <Clock size={12} color={colors.mutedForeground} />
             <Text className="text-muted-foreground text-xs ml-1">
               {daysLeft} days left
             </Text>
             {userChallenge.streak_days > 0 && (
               <>
-                <Flame size={12} color="#f59e0b" className="ml-3" />
+                <Flame size={12} color={colors.warning} className="ml-3" />
                 <Text className="text-xs text-warning ml-1">
                   {userChallenge.streak_days} day streak
                 </Text>
@@ -679,7 +679,7 @@ function ActiveChallengeCard({
 
       <View className="flex-row justify-between items-center">
         <View className="flex-row items-center bg-accent/20 px-2 py-1 rounded">
-          <Star size={12} color="rgb(212, 175, 55)" />
+          <Star size={12} color={colors.accent} />
           <Text className="text-xs text-accent ml-1">
             +{challenge.points_reward} pts on completion
           </Text>
@@ -689,7 +689,7 @@ function ActiveChallengeCard({
           className="p-2"
           hitSlop={8}
         >
-          <XCircle size={20} color="#ef4444" />
+          <XCircle size={20} color={colors.danger} />
         </Pressable>
       </View>
     </View>
@@ -704,11 +704,13 @@ function HistoryChallengeCard({
   userChallenge: UserChallenge;
   isDark: boolean;
 }) {
+  const colors = useColors();
+  const DIFFICULTY_COLORS = useDifficultyColors();
   const challenge = userChallenge.challenge;
   if (!challenge) return null;
 
   const isCompleted = userChallenge.status === 'completed';
-  const statusColor = isCompleted ? '#22c55e' : '#ef4444';
+  const statusColor = isCompleted ? colors.success : colors.danger;
   const StatusIcon = isCompleted ? CheckCircle : XCircle;
 
   return (
@@ -731,7 +733,7 @@ function HistoryChallengeCard({
             </Text>
             {isCompleted && (
               <View className="flex-row items-center ml-3">
-                <Star size={12} color="rgb(212, 175, 55)" />
+                <Star size={12} color={colors.accent} />
                 <Text className="text-xs text-accent ml-1">
                   +{challenge.points_reward} pts
                 </Text>

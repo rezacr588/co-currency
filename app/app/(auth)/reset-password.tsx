@@ -6,7 +6,6 @@ import {
   Pressable,
   KeyboardAvoidingView,
   ScrollView,
-  ActivityIndicator,
   Platform,
   useWindowDimensions,
 } from 'react-native';
@@ -14,10 +13,14 @@ import { Link, useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Lock, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react-native';
 import { useLanguage } from '../../src/context/LanguageContext';
+import { useColors } from '../../src/context/ThemeContext';
 import { api } from '../../src/api';
+import { Button } from '../../src/components/ui/Button';
+import { FormError } from '../../src/components/ui/FormError';
 
 export default function ResetPasswordScreen() {
   const { t } = useLanguage();
+  const colors = useColors();
   const router = useRouter();
   const params = useLocalSearchParams<{ token?: string }>();
   const { width } = useWindowDimensions();
@@ -85,7 +88,7 @@ export default function ResetPasswordScreen() {
             <View style={{ width: '100%', maxWidth: formMaxWidth }}>
             <View className="bg-card p-8 rounded-2xl items-center">
               <View className="bg-danger/20 p-4 rounded-full mb-4">
-                <XCircle size={40} color="rgb(220, 38, 38)" />
+                <XCircle size={40} color={colors.danger} />
               </View>
               <Text className="text-xl font-bold text-foreground mb-2 text-center">
                 Invalid Reset Link
@@ -131,7 +134,7 @@ export default function ResetPasswordScreen() {
             <View style={{ width: '100%', maxWidth: formMaxWidth }}>
             <View className="bg-card p-8 rounded-2xl items-center">
               <View className="bg-success/20 p-4 rounded-full mb-4">
-                <CheckCircle size={40} color="rgb(16, 185, 129)" />
+                <CheckCircle size={40} color={colors.success} />
               </View>
               <Text className="text-xl font-bold text-foreground mb-2 text-center">
                 Password Reset Successful
@@ -182,21 +185,17 @@ export default function ResetPasswordScreen() {
             </Text>
           </View>
 
-          {error ? (
-            <View className="bg-danger/10 p-4 rounded-xl mb-4">
-              <Text className="text-danger">{error}</Text>
-            </View>
-          ) : null}
+          <FormError message={error} />
 
           <View className="gap-4">
             {/* New Password Input */}
             <View className="bg-card rounded-xl flex-row items-center px-4 border border-border">
-              <Lock size={20} color="rgb(148, 163, 184)" />
+              <Lock size={20} color={colors.placeholder} />
               <TextInput
                 className="flex-1 p-4 text-foreground"
                 style={{ outlineStyle: 'none', fontSize: 16 } as any}
                 placeholder={t('newPassword') || 'New Password'}
-                placeholderTextColor="rgb(148, 163, 184)"
+                placeholderTextColor={colors.placeholder}
                 value={newPassword}
                 onChangeText={setNewPassword}
                 secureTextEntry={!showPassword}
@@ -208,21 +207,21 @@ export default function ResetPasswordScreen() {
                 style={{ cursor: 'pointer', padding: 4 }}
               >
                 {showPassword ? (
-                  <EyeOff size={20} color="rgb(148, 163, 184)" />
+                  <EyeOff size={20} color={colors.placeholder} />
                 ) : (
-                  <Eye size={20} color="rgb(148, 163, 184)" />
+                  <Eye size={20} color={colors.placeholder} />
                 )}
               </Pressable>
             </View>
 
             {/* Confirm Password Input */}
             <View className="bg-card rounded-xl flex-row items-center px-4 border border-border">
-              <Lock size={20} color="rgb(148, 163, 184)" />
+              <Lock size={20} color={colors.placeholder} />
               <TextInput
                 className="flex-1 p-4 text-foreground"
                 style={{ outlineStyle: 'none', fontSize: 16 } as any}
                 placeholder={t('confirmPassword') || 'Confirm Password'}
-                placeholderTextColor="rgb(148, 163, 184)"
+                placeholderTextColor={colors.placeholder}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry={!showPassword}
@@ -232,20 +231,9 @@ export default function ResetPasswordScreen() {
             </View>
 
             {/* Reset Button */}
-            <Pressable
-              onPress={handleReset}
-              disabled={isLoading}
-              style={{ cursor: 'pointer' }}
-              className={`bg-primary p-4 rounded-xl items-center ${isLoading ? 'opacity-50' : ''}`}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#09090b" />
-              ) : (
-                <Text className="text-primary-foreground font-semibold text-lg">
-                  {t('resetPassword') || 'Reset Password'}
-                </Text>
-              )}
-            </Pressable>
+            <Button variant="primary" size="lg" isLoading={isLoading} onPress={handleReset}>
+              {t('resetPassword') || 'Reset Password'}
+            </Button>
           </View>
 
           {/* Back to Login */}

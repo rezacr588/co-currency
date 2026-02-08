@@ -23,6 +23,7 @@ import {
 } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
+import { useColors } from '../../src/context/ThemeContext';
 import { NoteCard, NoteFormModal } from '../../src/components/features/Notes';
 import type { Note, CreateNoteRequest, UpdateNoteRequest } from '../../src/types/note';
 
@@ -31,6 +32,7 @@ export default function NotesScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
+  const colors = useColors();
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
@@ -174,7 +176,7 @@ export default function NotesScreen() {
             style={{ cursor: 'pointer' }}
             className="p-2 mr-2"
           >
-            <ChevronLeft size={24} color="rgb(148, 163, 184)" />
+            <ChevronLeft size={24} color={colors.placeholder} />
           </Pressable>
           <Text className="text-2xl font-bold text-foreground">
             {t('notes') || 'Notes'}
@@ -185,26 +187,26 @@ export default function NotesScreen() {
           style={{ cursor: 'pointer' }}
           className="bg-accent p-2 rounded-lg"
         >
-          <Plus size={24} color="#09090b" />
+          <Plus size={24} color={colors.primaryForeground} />
         </Pressable>
       </View>
 
       {/* Search Bar */}
       <View className="px-4 py-3">
         <View className="flex-row items-center bg-muted rounded-lg px-3">
-          <Search size={20} color="rgb(148, 163, 184)" />
+          <Search size={20} color={colors.placeholder} />
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholder={t('searchNotes') || 'Search notes...'}
-            placeholderTextColor="#71717a"
-            selectionColor="rgb(212, 175, 55)"
-            cursorColor="rgb(212, 175, 55)"
+            placeholderTextColor={colors.mutedForeground}
+            selectionColor={colors.accent}
+            cursorColor={colors.accent}
             style={{
               flex: 1,
               paddingVertical: 12,
               paddingHorizontal: 10,
-              color: '#ffffff',
+              color: colors.foreground,
               fontSize: 16,
               outlineStyle: 'none',
             } as any}
@@ -220,13 +222,13 @@ export default function NotesScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="rgb(212, 175, 55)"
+            tintColor={colors.accent}
           />
         }
       >
         {isPending ? (
           <View className="flex-1 items-center justify-center py-12">
-            <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
+            <ActivityIndicator size="large" color={colors.accent} />
           </View>
         ) : error ? (
           <View className="bg-danger/10 p-4 rounded-xl">
@@ -237,7 +239,7 @@ export default function NotesScreen() {
         ) : sortedNotes.length === 0 ? (
           <View className="items-center justify-center py-16">
             <View className="bg-muted/50 p-6 rounded-full mb-4">
-              <StickyNote size={48} color="rgb(148, 163, 184)" />
+              <StickyNote size={48} color={colors.placeholder} />
             </View>
             <Text className="text-lg font-medium text-foreground mb-2">
               {searchQuery
@@ -255,7 +257,7 @@ export default function NotesScreen() {
                 style={{ cursor: 'pointer' }}
                 className="bg-accent px-6 py-3 rounded-lg flex-row items-center"
               >
-                <Plus size={20} color="#09090b" />
+                <Plus size={20} color={colors.primaryForeground} />
                 <Text className="text-accent-foreground font-medium ml-2">
                   {t('addNote') || 'Add Note'}
                 </Text>

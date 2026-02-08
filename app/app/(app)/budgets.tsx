@@ -16,9 +16,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, ArrowLeft, X, PieChart, AlertTriangle } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
+import { useColors } from '../../src/context/ThemeContext';
 import { formatCompactCurrency, formatNumber } from '../../src/utils/format';
 import { StyledCategoryIcon, CATEGORY_COLORS, getCategoryBackground, CategoryIcon } from '../../src/constants/icons';
 import { useToast } from '../../src/components/ui/Toast';
+import { Button } from '../../src/components/ui/Button';
+import { FormError } from '../../src/components/ui/FormError';
 import type { CreateBudgetRequest } from '../../src/types/goal';
 
 const CATEGORIES = ['food', 'transportation', 'entertainment', 'shopping', 'bills', 'other'];
@@ -26,6 +29,7 @@ const PERIODS = ['monthly', 'yearly'] as const;
 
 export default function BudgetsScreen() {
   const { t } = useLanguage();
+  const colors = useColors();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
@@ -62,12 +66,12 @@ export default function BudgetsScreen() {
       <View className="flex-row items-center justify-between p-4 border-b border-border" style={{ maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
         <View className="flex-row items-center">
           <Pressable onPress={() => router.back()} className="p-2 mr-2" style={{ cursor: 'pointer' }}>
-            <ArrowLeft size={24} color="rgb(248, 250, 252)" />
+            <ArrowLeft size={24} color={colors.foreground} />
           </Pressable>
           <Text className="text-xl font-bold text-foreground">{t('budgets')}</Text>
         </View>
         <Pressable onPress={() => setShowForm(true)} className="bg-primary p-2 rounded-full" style={{ cursor: 'pointer' }}>
-          <Plus size={24} color="#09090b" />
+          <Plus size={24} color={colors.primaryForeground} />
         </Pressable>
       </View>
 
@@ -93,10 +97,10 @@ export default function BudgetsScreen() {
             </Pressable>
           </View>
         ) : isPending ? (
-          <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
+          <ActivityIndicator size="large" color={colors.accent} />
         ) : budgets.length === 0 ? (
           <View className="bg-card p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
-            <PieChart size={48} color="rgb(148, 163, 184)" />
+            <PieChart size={48} color={colors.placeholder} />
             <Text className="text-lg font-semibold text-foreground mt-4">{t('noBudgets')}</Text>
             <Text className="text-muted-foreground text-center mt-2">{t('noBudgetsDescription')}</Text>
           </View>
@@ -125,8 +129,9 @@ export default function BudgetsScreen() {
 
 function BudgetCard({ budget }: { budget: any }) {
   const { t } = useLanguage();
+  const colors = useColors();
   const progressPercent = Math.min(budget.progress, 100);
-  const categoryColor = CATEGORY_COLORS[budget.category.toLowerCase()] || 'rgb(212, 175, 55)';
+  const categoryColor = CATEGORY_COLORS[budget.category.toLowerCase()] || colors.accent;
 
   return (
     <View className="bg-card border border-border p-4 rounded-xl">
@@ -136,12 +141,12 @@ function BudgetCard({ budget }: { budget: any }) {
             <View
               className="p-2 rounded-lg mr-3"
               style={{
-                backgroundColor: budget.is_over_budget ? 'rgba(220, 38, 38, 0.15)' : 'rgba(212, 175, 55, 0.15)',
+                backgroundColor: budget.is_over_budget ? `${colors.danger}26` : `${colors.accent}26`,
               }}
             >
               <AlertTriangle
                 size={22}
-                color={budget.is_over_budget ? 'rgb(220, 38, 38)' : 'rgb(212, 175, 55)'}
+                color={budget.is_over_budget ? colors.danger : colors.accent}
               />
             </View>
           ) : (
@@ -174,9 +179,9 @@ function BudgetCard({ budget }: { budget: any }) {
           style={{
             width: `${Math.min(progressPercent, 100)}%`,
             backgroundColor: budget.is_over_budget
-              ? 'rgb(220, 38, 38)'
+              ? colors.danger
               : budget.is_near_limit
-              ? 'rgb(212, 175, 55)'
+              ? colors.accent
               : categoryColor,
           }}
         />
@@ -215,6 +220,7 @@ function BudgetCard({ budget }: { budget: any }) {
 
 function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useLanguage();
+  const colors = useColors();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { width } = useWindowDimensions();
@@ -266,7 +272,7 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
         <View className="flex-row items-center justify-between p-4 border-b border-border">
           <Text className="text-xl font-bold text-foreground">{t('createBudget')}</Text>
           <Pressable onPress={onClose} style={{ cursor: 'pointer' }}>
-            <X size={24} color="rgb(148, 163, 184)" />
+            <X size={24} color={colors.placeholder} />
           </Pressable>
         </View>
 
@@ -279,18 +285,14 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
             alignSelf: 'center',
           }}
         >
-          {error ? (
-            <View className="bg-danger-light p-4 rounded-xl mb-4">
-              <Text className="text-danger">{error}</Text>
-            </View>
-          ) : null}
+          <FormError message={error} />
 
           <View className="mb-6">
             <Text className="text-muted-foreground mb-2">{t('category')}</Text>
             <View className="flex-row flex-wrap gap-2">
               {CATEGORIES.map((cat) => {
                 const isSelected = category === cat;
-                const catColor = CATEGORY_COLORS[cat.toLowerCase()] || 'rgb(148, 163, 184)';
+                const catColor = CATEGORY_COLORS[cat.toLowerCase()] || colors.placeholder;
                 const bgColor = isSelected ? catColor : getCategoryBackground(cat, 0.12);
 
                 return (
@@ -333,7 +335,7 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
               onChangeText={setAmount}
               keyboardType="decimal-pad"
               placeholder="0.00"
-              placeholderTextColor="rgb(148, 163, 184)"
+              placeholderTextColor={colors.placeholder}
             />
           </View>
 
@@ -355,18 +357,9 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
             </View>
           </View>
 
-          <Pressable
-            onPress={handleSubmit}
-            disabled={mutation.isPending}
-            className={`bg-primary p-4 rounded-xl items-center ${mutation.isPending ? 'opacity-50' : ''}`}
-            style={{ cursor: 'pointer' }}
-          >
-            {mutation.isPending ? (
-              <ActivityIndicator color="#09090b" />
-            ) : (
-              <Text className="text-primary-foreground font-semibold text-lg">{t('createBudget')}</Text>
-            )}
-          </Pressable>
+          <Button variant="primary" size="lg" onPress={handleSubmit} isLoading={mutation.isPending}>
+            {t('createBudget')}
+          </Button>
         </ScrollView>
       </SafeAreaView>
     </Modal>

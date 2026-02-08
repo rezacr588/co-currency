@@ -17,10 +17,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { TrendingUp, TrendingDown, Check, Search, Plus, Trash2 } from 'lucide-react-native';
 import { api } from '../../../src/api';
 import { useLanguage } from '../../../src/context/LanguageContext';
+import { useColors } from '../../../src/context/ThemeContext';
 import { formatCompactCurrency, getCurrencyDisplay } from '../../../src/utils/format';
 import { CATEGORY_ICONS, CategoryIcon } from '../../../src/constants/icons';
 import { COMMON_CURRENCIES } from '../../../src/constants/currencies';
 import { useToast } from '../../../src/components/ui/Toast';
+import { Toggle } from '../../../src/components/ui/Toggle';
+import { FormError } from '../../../src/components/ui/FormError';
+import { Button } from '../../../src/components/ui/Button';
 import type { Category, TransactionRequest } from '../../../src/types/wallet';
 
 const FALLBACK_CATEGORIES = Object.keys(CATEGORY_ICONS);
@@ -28,6 +32,7 @@ const CURRENCIES = [...COMMON_CURRENCIES];
 
 export default function AddTransactionScreen() {
   const { t } = useLanguage();
+  const colors = useColors();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
@@ -41,8 +46,10 @@ export default function AddTransactionScreen() {
   const containerPadding = isDesktop ? 32 : 24;
   const categoryGap = 8;
   const availableWidth = width - containerPadding * 2;
-  const categoryCols = isDesktop ? 6 : isTablet ? 4 : 3;
+  const categoryCols = isDesktop ? 6 : isTablet ? 4 : 2;
   const categoryCardWidth = (availableWidth - categoryGap * (categoryCols - 1)) / categoryCols;
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  const CATEGORY_PREVIEW_COUNT = isDesktop ? 18 : 8;
 
   const [type, setType] = useState<'credit' | 'debit'>('debit');
   const [amount, setAmount] = useState('');
@@ -276,11 +283,7 @@ export default function AddTransactionScreen() {
             {t('addTransaction')}
           </Text>
 
-          {error ? (
-            <View className="bg-danger-muted border border-danger/20 p-3 rounded-lg mb-4">
-              <Text className="text-danger text-sm">{error}</Text>
-            </View>
-          ) : null}
+          <FormError message={error} />
 
           {/* Desktop: Two column layout for type and amount */}
           <View
@@ -302,7 +305,7 @@ export default function AddTransactionScreen() {
                 >
                   <TrendingDown
                     size={18}
-                    color={type === 'debit' ? '#09090b' : '#ef4444'}
+                    color={type === 'debit' ? colors.primaryForeground : colors.danger}
                   />
                   <Text
                     className={`font-medium ml-2 text-sm ${
@@ -321,7 +324,7 @@ export default function AddTransactionScreen() {
                 >
                   <TrendingUp
                     size={18}
-                    color={type === 'credit' ? '#09090b' : '#22c55e'}
+                    color={type === 'credit' ? colors.primaryForeground : colors.success}
                   />
                   <Text
                     className={`font-medium ml-2 text-sm ${
@@ -346,15 +349,15 @@ export default function AddTransactionScreen() {
                   onChangeText={setAmount}
                   keyboardType="decimal-pad"
                   placeholder="0.00"
-                  placeholderTextColor="#71717a"
-                  selectionColor="rgb(212, 175, 55)"
-                  cursorColor="rgb(212, 175, 55)"
+                  placeholderTextColor={colors.mutedForeground}
+                  selectionColor={colors.accent}
+                  cursorColor={colors.accent}
                   style={{
                     flex: 1,
                     padding: 14,
                     fontSize: 20,
                     fontWeight: '600',
-                    color: '#ffffff',
+                    color: colors.foreground,
                     outlineStyle: 'none',
                   } as any}
                 />
@@ -373,7 +376,7 @@ export default function AddTransactionScreen() {
                     <Pressable
                       key={code}
                       onPress={() => setCurrency(code)}
-                      style={{ cursor: 'pointer' }}
+                      style={{ cursor: 'pointer', minHeight: 44 }}
                       className={`px-3 py-2 rounded-md flex-row items-center border ${
                         currency === code ? 'bg-foreground border-foreground' : 'bg-secondary border-border'
                       }`}
@@ -401,7 +404,7 @@ export default function AddTransactionScreen() {
                       <Pressable
                         key={code}
                         onPress={() => setCurrency(code)}
-                        style={{ cursor: 'pointer' }}
+                        style={{ cursor: 'pointer', minHeight: 44 }}
                         className={`px-3 py-2 rounded-md flex-row items-center border ${
                           currency === code ? 'bg-foreground border-foreground' : 'bg-secondary border-border'
                         }`}
@@ -435,24 +438,10 @@ export default function AddTransactionScreen() {
                   {`${t('walletCurrency')} (${t('optional')})`}
                 </Text>
               </View>
-              <Pressable
-                onPress={() => setEnableTargetConversion((current) => !current)}
-                style={{ cursor: 'pointer' }}
-                className={`w-12 h-7 rounded-full border ${
-                  enableTargetConversion
-                    ? 'bg-accent border-accent'
-                    : 'bg-secondary border-border'
-                }`}
-                accessibilityRole="switch"
-                accessibilityState={{ checked: enableTargetConversion }}
-                accessibilityLabel={t('convertCurrency')}
-              >
-                <View
-                  className={`w-5 h-5 rounded-full mt-0.5 ${
-                    enableTargetConversion ? 'bg-background ml-6' : 'bg-muted-foreground ml-0.5'
-                  }`}
-                />
-              </Pressable>
+              <Toggle
+                value={enableTargetConversion}
+                onValueChange={setEnableTargetConversion}
+              />
             </View>
 
             {enableTargetConversion ? (
@@ -470,7 +459,7 @@ export default function AddTransactionScreen() {
                         <Pressable
                           key={code}
                           onPress={() => setWalletCurrency(code)}
-                          style={{ cursor: 'pointer' }}
+                          style={{ cursor: 'pointer', minHeight: 44 }}
                           className={`px-3 py-2 rounded-md flex-row items-center border ${
                             isSelected
                               ? 'bg-foreground border-foreground'
@@ -508,7 +497,7 @@ export default function AddTransactionScreen() {
                     </Text>
                     {isLoadingConversionPreview ? (
                       <View className="flex-row items-center">
-                        <ActivityIndicator size="small" color="rgb(212, 175, 55)" />
+                        <ActivityIndicator size="small" color={colors.accent} />
                         <Text className="text-muted-foreground text-xs ml-2">{t('converting')}</Text>
                       </View>
                     ) : isConversionPreviewError ? (
@@ -534,24 +523,24 @@ export default function AddTransactionScreen() {
             <View className="flex-row items-center justify-between mb-3">
               <Text className="text-muted-foreground text-sm">{t('category')}</Text>
               {isLoadingCategories ? (
-                <ActivityIndicator size="small" color="rgb(212, 175, 55)" />
+                <ActivityIndicator size="small" color={colors.accent} />
               ) : null}
             </View>
 
             <View className="bg-secondary border border-border rounded-lg px-3 flex-row items-center mb-3">
-              <Search size={15} color="#a1a1aa" />
+              <Search size={15} color={colors.secondaryForeground} />
               <TextInput
                 value={categorySearch}
                 onChangeText={setCategorySearch}
                 placeholder={t('searchCategories') || 'Search categories'}
-                placeholderTextColor="#71717a"
-                selectionColor="rgb(212, 175, 55)"
-                cursorColor="rgb(212, 175, 55)"
+                placeholderTextColor={colors.mutedForeground}
+                selectionColor={colors.accent}
+                cursorColor={colors.accent}
                 style={{
                   flex: 1,
                   paddingVertical: 10,
                   paddingHorizontal: 10,
-                  color: '#ffffff',
+                  color: colors.foreground,
                   fontSize: 14,
                   outlineStyle: 'none',
                 } as any}
@@ -564,12 +553,12 @@ export default function AddTransactionScreen() {
                   value={newCategoryName}
                   onChangeText={setNewCategoryName}
                   placeholder={t('newCategoryName') || 'New category name'}
-                  placeholderTextColor="#71717a"
-                  selectionColor="rgb(212, 175, 55)"
-                  cursorColor="rgb(212, 175, 55)"
+                  placeholderTextColor={colors.mutedForeground}
+                  selectionColor={colors.accent}
+                  cursorColor={colors.accent}
                   style={{
                     paddingVertical: 10,
-                    color: '#ffffff',
+                    color: colors.foreground,
                     fontSize: 14,
                     outlineStyle: 'none',
                   } as any}
@@ -578,16 +567,16 @@ export default function AddTransactionScreen() {
               <Pressable
                 onPress={handleCreateCategory}
                 disabled={createCategoryMutation.isPending}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'pointer', minHeight: 44 }}
                 className={`px-3 rounded-lg flex-row items-center justify-center ${
                   createCategoryMutation.isPending ? 'bg-secondary opacity-60' : 'bg-accent'
                 }`}
               >
                 {createCategoryMutation.isPending ? (
-                  <ActivityIndicator size="small" color="#09090b" />
+                  <ActivityIndicator size="small" color={colors.primaryForeground} />
                 ) : (
                   <>
-                    <Plus size={14} color="#09090b" />
+                    <Plus size={14} color={colors.primaryForeground} />
                     <Text className="text-accent-foreground font-semibold ml-1 text-xs">
                       {t('addCategory') || 'Add'}
                     </Text>
@@ -603,57 +592,77 @@ export default function AddTransactionScreen() {
                 </Text>
               </View>
             ) : (
-              <View
-                style={{
-                  flexDirection: 'row',
-                  flexWrap: 'wrap',
-                  gap: 8,
-                }}
-              >
-                {filteredCategoryOptions.map((item) => {
-                  const isSelected = category === item.name;
-                  const canDelete = !item.is_default && !!item.id;
+              <>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    gap: 8,
+                  }}
+                >
+                  {(showAllCategories || categorySearch.trim()
+                    ? filteredCategoryOptions
+                    : filteredCategoryOptions.slice(0, CATEGORY_PREVIEW_COUNT)
+                  ).map((item) => {
+                    const isSelected = category === item.name;
+                    const canDelete = !item.is_default && !!item.id;
 
-                  return (
-                    <Pressable
-                      key={`${item.id || 'default'}-${item.name}`}
-                      onPress={() => setCategory(item.name)}
-                      style={{
-                        cursor: 'pointer',
-                        width: categoryCardWidth,
-                      }}
-                      className={`relative px-2 py-2.5 rounded-md items-center justify-center border ${
-                        isSelected ? 'bg-foreground border-foreground' : 'bg-secondary border-border'
-                      }`}
-                    >
-                      <CategoryIcon
-                        category={item.name}
-                        size={16}
-                        color={isSelected ? '#09090b' : '#a1a1aa'}
-                      />
-                      <Text
-                        className={`text-xs mt-1 ${isSelected ? 'text-background font-medium' : 'text-foreground'}`}
-                        numberOfLines={1}
+                    return (
+                      <Pressable
+                        key={`${item.id || 'default'}-${item.name}`}
+                        onPress={() => setCategory(item.name)}
+                        style={{
+                          cursor: 'pointer',
+                          width: categoryCardWidth,
+                          minHeight: 44,
+                        }}
+                        className={`relative px-2 py-2.5 rounded-md items-center justify-center border ${
+                          isSelected ? 'bg-foreground border-foreground' : 'bg-secondary border-border'
+                        }`}
                       >
-                        {resolveCategoryLabel(item.name)}
-                      </Text>
-
-                      {canDelete ? (
-                        <Pressable
-                          onPress={(event) => {
-                            event.stopPropagation();
-                            handleDeleteCategory(item);
-                          }}
-                          style={{ cursor: 'pointer' }}
-                          className="absolute top-1 right-1 p-1"
+                        <CategoryIcon
+                          category={item.name}
+                          size={16}
+                          color={isSelected ? colors.primaryForeground : colors.secondaryForeground}
+                        />
+                        <Text
+                          className={`text-xs mt-1 ${isSelected ? 'text-background font-medium' : 'text-foreground'}`}
+                          numberOfLines={1}
                         >
-                          <Trash2 size={10} color={isSelected ? '#09090b' : '#ef4444'} />
-                        </Pressable>
-                      ) : null}
-                    </Pressable>
-                  );
-                })}
-              </View>
+                          {resolveCategoryLabel(item.name)}
+                        </Text>
+
+                        {canDelete ? (
+                          <Pressable
+                            onPress={(event) => {
+                              event.stopPropagation();
+                              handleDeleteCategory(item);
+                            }}
+                            style={{ cursor: 'pointer' }}
+                            className="absolute top-1 right-1 p-1"
+                            hitSlop={8}
+                          >
+                            <Trash2 size={10} color={isSelected ? colors.primaryForeground : colors.danger} />
+                          </Pressable>
+                        ) : null}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                {!categorySearch.trim() && filteredCategoryOptions.length > CATEGORY_PREVIEW_COUNT && (
+                  <Pressable
+                    onPress={() => setShowAllCategories(!showAllCategories)}
+                    style={{ cursor: 'pointer', minHeight: 44, justifyContent: 'center' }}
+                    className="items-center mt-2"
+                  >
+                    <Text className="text-accent text-sm font-medium">
+                      {showAllCategories
+                        ? (t('showLess') || 'Show less')
+                        : (t('showAllCategories') || `Show all (${filteredCategoryOptions.length})`)}
+                    </Text>
+                  </Pressable>
+                )}
+              </>
             )}
           </View>
 
@@ -664,17 +673,17 @@ export default function AddTransactionScreen() {
               value={description}
               onChangeText={setDescription}
               placeholder={t('descriptionPlaceholder')}
-              placeholderTextColor="#71717a"
-              selectionColor="rgb(212, 175, 55)"
-              cursorColor="rgb(212, 175, 55)"
+              placeholderTextColor={colors.mutedForeground}
+              selectionColor={colors.accent}
+              cursorColor={colors.accent}
               multiline
               style={{
-                backgroundColor: '#27272a',
+                backgroundColor: colors.secondary,
                 borderWidth: 1,
-                borderColor: '#3f3f46',
+                borderColor: colors.borderStrong,
                 borderRadius: 8,
                 padding: 14,
-                color: '#ffffff',
+                color: colors.foreground,
                 fontSize: 16,
                 minHeight: isDesktop ? 80 : 48,
                 textAlignVertical: 'top',
@@ -684,25 +693,14 @@ export default function AddTransactionScreen() {
           </View>
 
           {/* Submit Button */}
-          <Pressable
+          <Button
+            variant="accent"
             onPress={handleSubmit}
-            disabled={mutation.isPending}
-            style={{ cursor: 'pointer' }}
-            className={`bg-accent p-3.5 rounded-lg flex-row items-center justify-center ${
-              mutation.isPending ? 'opacity-50' : ''
-            }`}
+            isLoading={mutation.isPending}
+            leftIcon={<Check size={18} color={colors.primaryForeground} />}
           >
-            {mutation.isPending ? (
-              <ActivityIndicator color="#09090b" />
-            ) : (
-              <>
-                <Check size={18} color="#09090b" />
-                <Text className="text-accent-foreground font-semibold ml-2">
-                  {t('saveTransaction')}
-                </Text>
-              </>
-            )}
-          </Pressable>
+            {t('saveTransaction')}
+          </Button>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

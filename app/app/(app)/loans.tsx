@@ -32,11 +32,12 @@ import {
 } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { useTheme } from '../../src/context/ThemeContext';
+import { useTheme, useColors } from '../../src/context/ThemeContext';
 import { formatCompactCurrency, formatDate } from '../../src/utils/format';
 import { getCurrencyDisplay } from '../../src/utils/format';
 import { haptics } from '../../src/utils/haptics';
 import { COMMON_CURRENCIES } from '../../src/constants/currencies';
+import { Button } from '../../src/components/ui/Button';
 import type { Loan, CreateLoanRequest, LoanType, CreatePaymentRequest } from '../../src/types/loan';
 
 const CURRENCIES = [...COMMON_CURRENCIES];
@@ -48,10 +49,11 @@ export default function LoansScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
+  const colors = useColors();
 
   const isDesktop = width >= 1024;
   const bottomPadding = isDesktop ? insets.bottom : insets.bottom + 96;
-  const iconColor = isDark ? 'rgb(248, 250, 252)' : 'rgb(51, 65, 85)';
+  const iconColor = colors.foreground;
 
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -221,7 +223,7 @@ export default function LoansScreen() {
           }}
           className="p-2"
         >
-          <Plus size={24} color="rgb(212, 175, 55)" />
+          <Plus size={24} color={colors.accent} />
         </Pressable>
       </View>
 
@@ -242,7 +244,7 @@ export default function LoansScreen() {
             <View className="flex-row justify-between mb-3">
               <View className="flex-1 items-center">
                 <View className="flex-row items-center mb-1">
-                  <TrendingDown size={16} color="#ef4444" />
+                  <TrendingDown size={16} color={colors.danger} />
                   <Text className="text-xs text-muted-foreground ml-1">
                     {t('youOwe') || 'You Owe'}
                   </Text>
@@ -253,7 +255,7 @@ export default function LoansScreen() {
               </View>
               <View className="flex-1 items-center">
                 <View className="flex-row items-center mb-1">
-                  <TrendingUp size={16} color="#22c55e" />
+                  <TrendingUp size={16} color={colors.success} />
                   <Text className="text-xs text-muted-foreground ml-1">
                     {t('owedToYou') || 'Owed to You'}
                   </Text>
@@ -314,11 +316,11 @@ export default function LoansScreen() {
         {/* Loans List */}
         {isPending ? (
           <View className="items-center py-8">
-            <ActivityIndicator color="rgb(212, 175, 55)" />
+            <ActivityIndicator color={colors.accent} />
           </View>
         ) : loans.length === 0 ? (
           <View className="bg-card border border-border p-8 rounded-xl items-center">
-            <CreditCard size={48} color="#71717a" />
+            <CreditCard size={48} color={colors.mutedForeground} />
             <Text className="text-muted-foreground text-center mt-4">
               {t('noLoans') || 'No loans or debts yet'}
             </Text>
@@ -353,9 +355,9 @@ export default function LoansScreen() {
                         }`}
                       >
                         {isBorrowed ? (
-                          <CreditCard size={20} color="#ef4444" />
+                          <CreditCard size={20} color={colors.danger} />
                         ) : (
-                          <HandCoins size={20} color="#22c55e" />
+                          <HandCoins size={20} color={colors.success} />
                         )}
                       </View>
                       <View className="flex-1">
@@ -364,7 +366,7 @@ export default function LoansScreen() {
                         </Text>
                         {loan.counterparty && (
                           <View className="flex-row items-center mt-0.5">
-                            <User size={12} color="#71717a" />
+                            <User size={12} color={colors.mutedForeground} />
                             <Text className="text-muted-foreground text-xs ml-1">
                               {isBorrowed ? t('from') || 'From' : t('to') || 'To'}: {loan.counterparty}
                             </Text>
@@ -374,7 +376,7 @@ export default function LoansScreen() {
                     </View>
                     {isOverdue && (
                       <View className="bg-danger/20 px-2 py-1 rounded flex-row items-center">
-                        <AlertCircle size={12} color="#ef4444" />
+                        <AlertCircle size={12} color={colors.danger} />
                         <Text className="text-danger text-xs ml-1">{t('overdue') || 'Overdue'}</Text>
                       </View>
                     )}
@@ -405,7 +407,7 @@ export default function LoansScreen() {
                     </Text>
                     {loan.due_date && (
                       <View className="flex-row items-center">
-                        <Calendar size={12} color="#71717a" />
+                        <Calendar size={12} color={colors.mutedForeground} />
                         <Text className="text-muted-foreground text-xs ml-1">
                           {t('due') || 'Due'}: {formatDate(loan.due_date)}
                         </Text>
@@ -444,7 +446,7 @@ export default function LoansScreen() {
                   {t('newLoan') || 'New Loan'}
                 </Text>
                 <Pressable onPress={() => setShowCreateModal(false)}>
-                  <X size={24} color="rgb(148, 163, 184)" />
+                  <X size={24} color={colors.placeholder} />
                 </Pressable>
               </View>
 
@@ -461,7 +463,7 @@ export default function LoansScreen() {
                           : 'bg-card border-border'
                       }`}
                     >
-                      <CreditCard size={20} color={formType === 'borrowed' ? '#ef4444' : '#71717a'} />
+                      <CreditCard size={20} color={formType === 'borrowed' ? colors.danger : colors.mutedForeground} />
                       <Text
                         className={`ml-2 font-medium ${
                           formType === 'borrowed' ? 'text-danger' : 'text-foreground'
@@ -478,7 +480,7 @@ export default function LoansScreen() {
                           : 'bg-card border-border'
                       }`}
                     >
-                      <HandCoins size={20} color={formType === 'lent' ? '#22c55e' : '#71717a'} />
+                      <HandCoins size={20} color={formType === 'lent' ? colors.success : colors.mutedForeground} />
                       <Text
                         className={`ml-2 font-medium ${
                           formType === 'lent' ? 'text-success' : 'text-foreground'
@@ -499,7 +501,7 @@ export default function LoansScreen() {
                     value={formName}
                     onChangeText={setFormName}
                     placeholder={t('loanNamePlaceholder') || 'e.g., Car loan, Personal loan'}
-                    placeholderTextColor="#71717a"
+                    placeholderTextColor={colors.mutedForeground}
                   />
                 </View>
 
@@ -517,7 +519,7 @@ export default function LoansScreen() {
                       onChangeText={setFormAmount}
                       keyboardType="decimal-pad"
                       placeholder="0.00"
-                      placeholderTextColor="#52525b"
+                      placeholderTextColor={colors.subtleForeground}
                     />
                   </View>
                 </View>
@@ -562,14 +564,14 @@ export default function LoansScreen() {
                     {formType === 'borrowed' ? t('lender') || 'Lender' : t('borrower') || 'Borrower'}
                   </Text>
                   <View className="flex-row items-center bg-muted border border-border rounded-lg px-3">
-                    <User size={18} color="#71717a" />
+                    <User size={18} color={colors.mutedForeground} />
                     <TextInput
                       className="flex-1 p-3.5 text-foreground"
                       style={{ outlineStyle: 'none' } as any}
                       value={formCounterparty}
                       onChangeText={setFormCounterparty}
                       placeholder={t('personOrCompany') || 'Person or company name'}
-                      placeholderTextColor="#71717a"
+                      placeholderTextColor={colors.mutedForeground}
                     />
                   </View>
                 </View>
@@ -586,7 +588,7 @@ export default function LoansScreen() {
                     onChangeText={setFormInterestRate}
                     keyboardType="decimal-pad"
                     placeholder="0"
-                    placeholderTextColor="#71717a"
+                    placeholderTextColor={colors.mutedForeground}
                   />
                 </View>
 
@@ -601,31 +603,22 @@ export default function LoansScreen() {
                     value={formDescription}
                     onChangeText={setFormDescription}
                     placeholder={t('loanDescriptionPlaceholder') || 'Additional notes...'}
-                    placeholderTextColor="#71717a"
+                    placeholderTextColor={colors.mutedForeground}
                     multiline
                     textAlignVertical="top"
                   />
                 </View>
 
                 {/* Create Button */}
-                <Pressable
+                <Button
+                  variant="accent"
+                  size="lg"
                   onPress={handleCreate}
-                  disabled={createMutation.isPending}
-                  className={`bg-accent p-4 rounded-lg flex-row items-center justify-center ${
-                    createMutation.isPending ? 'opacity-50' : ''
-                  }`}
+                  isLoading={createMutation.isPending}
+                  leftIcon={<Check size={20} color={colors.primaryForeground} />}
                 >
-                  {createMutation.isPending ? (
-                    <ActivityIndicator color="#09090b" />
-                  ) : (
-                    <>
-                      <Check size={20} color="#09090b" />
-                      <Text className="text-accent-foreground font-semibold ml-2">
-                        {t('createLoan') || 'Create Loan'}
-                      </Text>
-                    </>
-                  )}
-                </Pressable>
+                  {t('createLoan') || 'Create Loan'}
+                </Button>
               </ScrollView>
             </Pressable>
           </Pressable>
@@ -656,7 +649,7 @@ export default function LoansScreen() {
                   {t('makePayment') || 'Make Payment'}
                 </Text>
                 <Pressable onPress={() => setShowPaymentModal(false)}>
-                  <X size={24} color="rgb(148, 163, 184)" />
+                  <X size={24} color={colors.placeholder} />
                 </Pressable>
               </View>
 
@@ -685,7 +678,7 @@ export default function LoansScreen() {
                         onChangeText={setPaymentAmount}
                         keyboardType="decimal-pad"
                         placeholder="0.00"
-                        placeholderTextColor="#52525b"
+                        placeholderTextColor={colors.subtleForeground}
                       />
                     </View>
                   </View>
@@ -700,28 +693,19 @@ export default function LoansScreen() {
                       value={paymentNotes}
                       onChangeText={setPaymentNotes}
                       placeholder={t('paymentNotes') || 'Payment notes (optional)'}
-                      placeholderTextColor="#71717a"
+                      placeholderTextColor={colors.mutedForeground}
                     />
                   </View>
 
-                  <Pressable
+                  <Button
+                    variant="accent"
+                    size="lg"
                     onPress={handlePayment}
-                    disabled={paymentMutation.isPending}
-                    className={`bg-accent p-4 rounded-lg flex-row items-center justify-center ${
-                      paymentMutation.isPending ? 'opacity-50' : ''
-                    }`}
+                    isLoading={paymentMutation.isPending}
+                    leftIcon={<DollarSign size={20} color={colors.primaryForeground} />}
                   >
-                    {paymentMutation.isPending ? (
-                      <ActivityIndicator color="#09090b" />
-                    ) : (
-                      <>
-                        <DollarSign size={20} color="#09090b" />
-                        <Text className="text-accent-foreground font-semibold ml-2">
-                          {t('recordPayment') || 'Record Payment'}
-                        </Text>
-                      </>
-                    )}
-                  </Pressable>
+                    {t('recordPayment') || 'Record Payment'}
+                  </Button>
                 </>
               )}
             </Pressable>

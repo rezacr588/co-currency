@@ -6,7 +6,6 @@ import {
   Pressable,
   KeyboardAvoidingView,
   ScrollView,
-  ActivityIndicator,
   Platform,
   Linking,
   useWindowDimensions,
@@ -17,11 +16,15 @@ import * as WebBrowser from 'expo-web-browser';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '../../src/context/AuthContext';
 import { useLanguage } from '../../src/context/LanguageContext';
+import { useColors } from '../../src/context/ThemeContext';
 import { api } from '../../src/api';
 import { LinkedInIcon, GoogleIcon } from '../../src/constants/icons';
+import { Button } from '../../src/components/ui/Button';
+import { FormError } from '../../src/components/ui/FormError';
 
 export default function LoginScreen() {
   const { t } = useLanguage();
+  const colors = useColors();
   const { login, handleOAuthCallback } = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams<{ error?: string }>();
@@ -177,11 +180,7 @@ export default function LoginScreen() {
             <Text className="text-muted-foreground text-center text-sm">{t('loginSubtitle')}</Text>
           </View>
 
-          {error ? (
-            <View className="bg-danger-muted border border-danger/20 p-3 rounded-lg mb-4">
-              <Text className="text-danger text-sm">{error}</Text>
-            </View>
-          ) : null}
+          <FormError message={error} />
 
           <View className="gap-4">
             {/* Google OAuth Button */}
@@ -206,7 +205,7 @@ export default function LoginScreen() {
                 isSubmitting ? 'opacity-50' : ''
               }`}
             >
-              <LinkedInIcon size={18} color="#a1a1aa" />
+              <LinkedInIcon size={18} color={colors.secondaryForeground} />
               <Text className="text-foreground font-medium ml-3 text-sm">Continue with LinkedIn</Text>
             </Pressable>
 
@@ -220,10 +219,10 @@ export default function LoginScreen() {
             {/* Email Input */}
             <Text className="text-xs text-muted-foreground">{t('email')}</Text>
             <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
-              <Mail size={18} color="#71717a" />
+              <Mail size={18} color={colors.mutedForeground} />
               <TextInput
                 placeholder={t('email')}
-                placeholderTextColor="#71717a"
+                placeholderTextColor={colors.placeholder}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -233,12 +232,12 @@ export default function LoginScreen() {
                 autoCorrect={false}
                 editable={!isSubmitting}
                 returnKeyType="next"
-                selectionColor="rgb(212, 175, 55)"
-                cursorColor="rgb(212, 175, 55)"
+                selectionColor={colors.accent}
+                cursorColor={colors.accent}
                 style={{
                   flex: 1,
                   padding: 14,
-                  color: '#ffffff',
+                  color: colors.foreground,
                   fontSize: 15,
                   outlineStyle: 'none',
                 } as any}
@@ -248,10 +247,10 @@ export default function LoginScreen() {
             {/* Password Input */}
             <Text className="text-xs text-muted-foreground">{t('password')}</Text>
             <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
-              <Lock size={18} color="#71717a" />
+              <Lock size={18} color={colors.mutedForeground} />
               <TextInput
                 placeholder={t('password')}
-                placeholderTextColor="#71717a"
+                placeholderTextColor={colors.placeholder}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -260,12 +259,12 @@ export default function LoginScreen() {
                 autoCapitalize="none"
                 editable={!isSubmitting}
                 returnKeyType="done"
-                selectionColor="rgb(212, 175, 55)"
-                cursorColor="rgb(212, 175, 55)"
+                selectionColor={colors.accent}
+                cursorColor={colors.accent}
                 style={{
                   flex: 1,
                   padding: 14,
-                  color: '#ffffff',
+                  color: colors.foreground,
                   fontSize: 15,
                   outlineStyle: 'none',
                 } as any}
@@ -275,9 +274,9 @@ export default function LoginScreen() {
                 style={{ cursor: 'pointer', padding: 4 }}
               >
                 {showPassword ? (
-                  <EyeOff size={18} color="#71717a" />
+                  <EyeOff size={18} color={colors.mutedForeground} />
                 ) : (
-                  <Eye size={18} color="#71717a" />
+                  <Eye size={18} color={colors.mutedForeground} />
                 )}
               </Pressable>
             </View>
@@ -290,18 +289,9 @@ export default function LoginScreen() {
             </Link>
 
             {/* Login Button */}
-            <Pressable
-              onPress={handleLogin}
-              disabled={isSubmitting}
-              style={{ cursor: 'pointer' }}
-              className={`bg-accent p-3.5 rounded-lg items-center mt-2 ${isSubmitting ? 'opacity-50' : ''}`}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#09090b" />
-              ) : (
-                <Text className="text-accent-foreground font-semibold">{t('login')}</Text>
-              )}
-            </Pressable>
+            <Button variant="accent" isLoading={isLoading} onPress={handleLogin} disabled={isSubmitting} className="mt-2">
+              {t('login')}
+            </Button>
           </View>
 
           {/* Register Link */}

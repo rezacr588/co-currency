@@ -3,11 +3,12 @@ import { Link, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeftRight, Wallet, Target, BarChart3, Menu, Moon, Sun, User } from 'lucide-react-native';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { useTheme } from '../../src/context/ThemeContext';
+import { useTheme, useColors } from '../../src/context/ThemeContext';
 
 export default function HomeScreen() {
   const { t } = useLanguage();
   const { isDark, toggleTheme } = useTheme();
+  const colors = useColors();
   const { width } = useWindowDimensions();
   const router = useRouter();
 
@@ -28,9 +29,9 @@ export default function HomeScreen() {
             </Link>
             <Pressable onPress={toggleTheme} style={{ cursor: 'pointer' }} className="p-2 hover:bg-secondary rounded-md border border-border">
               {isDark ? (
-                <Sun size={18} color="#a1a1aa" />
+                <Sun size={18} color={colors.secondaryForeground} />
               ) : (
-                <Moon size={18} color="#71717a" />
+                <Moon size={18} color={colors.mutedForeground} />
               )}
             </Pressable>
             <Link href="/login" asChild>
@@ -62,9 +63,9 @@ export default function HomeScreen() {
             <Text className="text-xl font-semibold text-foreground">CoFinance</Text>
             <Pressable onPress={toggleTheme} style={{ cursor: 'pointer' }} className="p-2 border border-border rounded-md">
               {isDark ? (
-                <Sun size={18} color="#a1a1aa" />
+                <Sun size={18} color={colors.secondaryForeground} />
               ) : (
-                <Moon size={18} color="#71717a" />
+                <Moon size={18} color={colors.mutedForeground} />
               )}
             </Pressable>
           </View>
@@ -145,25 +146,25 @@ export default function HomeScreen() {
             }}
           >
             <FeatureCard
-              icon={<ArrowLeftRight size={isDesktop ? 28 : 24} color="#a1a1aa" />}
+              icon={<ArrowLeftRight size={isDesktop ? 28 : 24} color={colors.secondaryForeground} />}
               title={t('converterTitle')}
               description={t('converterDescription')}
               isDesktop={isDesktop}
             />
             <FeatureCard
-              icon={<Wallet size={isDesktop ? 28 : 24} color="#a1a1aa" />}
+              icon={<Wallet size={isDesktop ? 28 : 24} color={colors.secondaryForeground} />}
               title={t('wallet')}
               description={t('walletDescription')}
               isDesktop={isDesktop}
             />
             <FeatureCard
-              icon={<Target size={isDesktop ? 28 : 24} color="#a1a1aa" />}
+              icon={<Target size={isDesktop ? 28 : 24} color={colors.secondaryForeground} />}
               title={t('financialGoals')}
               description={t('goalsDescription')}
               isDesktop={isDesktop}
             />
             <FeatureCard
-              icon={<BarChart3 size={isDesktop ? 28 : 24} color="#a1a1aa" />}
+              icon={<BarChart3 size={isDesktop ? 28 : 24} color={colors.secondaryForeground} />}
               title={t('reportsAndStats')}
               description={t('reportsDescription')}
               isDesktop={isDesktop}

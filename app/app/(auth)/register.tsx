@@ -6,7 +6,6 @@ import {
   Pressable,
   KeyboardAvoidingView,
   ScrollView,
-  ActivityIndicator,
   Platform,
   Linking,
   useWindowDimensions,
@@ -17,11 +16,15 @@ import * as WebBrowser from 'expo-web-browser';
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '../../src/context/AuthContext';
 import { useLanguage } from '../../src/context/LanguageContext';
+import { useColors } from '../../src/context/ThemeContext';
 import { api } from '../../src/api';
 import { LinkedInIcon, GoogleIcon } from '../../src/constants/icons';
+import { Button } from '../../src/components/ui/Button';
+import { FormError } from '../../src/components/ui/FormError';
 
 export default function RegisterScreen() {
   const { t } = useLanguage();
+  const colors = useColors();
   const { register, handleOAuthCallback } = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams<{ error?: string }>();
@@ -188,11 +191,7 @@ export default function RegisterScreen() {
             <Text className="text-muted-foreground text-center text-sm">{t('registerSubtitle')}</Text>
           </View>
 
-          {error ? (
-            <View className="bg-danger-muted border border-danger/20 p-3 rounded-lg mb-4">
-              <Text className="text-danger text-sm">{error}</Text>
-            </View>
-          ) : null}
+          <FormError message={error} />
 
           <View className="gap-4">
             {/* Google OAuth Button */}
@@ -217,7 +216,7 @@ export default function RegisterScreen() {
                 isSubmitting ? 'opacity-50' : ''
               }`}
             >
-              <LinkedInIcon size={18} color="#a1a1aa" />
+              <LinkedInIcon size={18} color={colors.secondaryForeground} />
               <Text className="text-foreground font-medium ml-3 text-sm">Sign up with LinkedIn</Text>
             </Pressable>
 
@@ -231,12 +230,12 @@ export default function RegisterScreen() {
             {/* Name Input */}
             <Text className="text-xs text-muted-foreground">{t('name')}</Text>
             <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
-              <User size={18} color="#71717a" />
+              <User size={18} color={colors.mutedForeground} />
               <TextInput
                 className="flex-1 p-3.5 text-foreground"
                 style={{ outlineStyle: 'none', fontSize: 15 } as any}
                 placeholder={t('name')}
-                placeholderTextColor="#52525b"
+                placeholderTextColor={colors.placeholder}
                 value={name}
                 onChangeText={setName}
                 autoComplete="name"
@@ -250,12 +249,12 @@ export default function RegisterScreen() {
             {/* Email Input */}
             <Text className="text-xs text-muted-foreground">{t('email')}</Text>
             <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
-              <Mail size={18} color="#71717a" />
+              <Mail size={18} color={colors.mutedForeground} />
               <TextInput
                 className="flex-1 p-3.5 text-foreground"
                 style={{ outlineStyle: 'none', fontSize: 15 } as any}
                 placeholder={t('email')}
-                placeholderTextColor="#52525b"
+                placeholderTextColor={colors.placeholder}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -271,12 +270,12 @@ export default function RegisterScreen() {
             {/* Password Input */}
             <Text className="text-xs text-muted-foreground">{t('password')}</Text>
             <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
-              <Lock size={18} color="#71717a" />
+              <Lock size={18} color={colors.mutedForeground} />
               <TextInput
                 className="flex-1 p-3.5 text-foreground"
                 style={{ outlineStyle: 'none', fontSize: 15 } as any}
                 placeholder={t('password')}
-                placeholderTextColor="#52525b"
+                placeholderTextColor={colors.placeholder}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -291,9 +290,9 @@ export default function RegisterScreen() {
                 style={{ cursor: 'pointer', padding: 4 }}
               >
                 {showPassword ? (
-                  <EyeOff size={18} color="#71717a" />
+                  <EyeOff size={18} color={colors.mutedForeground} />
                 ) : (
-                  <Eye size={18} color="#71717a" />
+                  <Eye size={18} color={colors.mutedForeground} />
                 )}
               </Pressable>
             </View>
@@ -301,12 +300,12 @@ export default function RegisterScreen() {
             {/* Confirm Password Input */}
             <Text className="text-xs text-muted-foreground">{t('confirmPassword')}</Text>
             <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
-              <Lock size={18} color="#71717a" />
+              <Lock size={18} color={colors.mutedForeground} />
               <TextInput
                 className="flex-1 p-3.5 text-foreground"
                 style={{ outlineStyle: 'none', fontSize: 15 } as any}
                 placeholder={t('confirmPassword')}
-                placeholderTextColor="#52525b"
+                placeholderTextColor={colors.placeholder}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry={!showPassword}
@@ -319,18 +318,9 @@ export default function RegisterScreen() {
             </View>
 
             {/* Register Button */}
-            <Pressable
-              onPress={handleRegister}
-              disabled={isSubmitting}
-              style={{ cursor: 'pointer' }}
-              className={`bg-accent p-3.5 rounded-lg items-center mt-2 ${isSubmitting ? 'opacity-50' : ''}`}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#09090b" />
-              ) : (
-                <Text className="text-accent-foreground font-semibold">{t('register')}</Text>
-              )}
-            </Pressable>
+            <Button variant="accent" isLoading={isLoading} onPress={handleRegister} disabled={isSubmitting}>
+              {t('register')}
+            </Button>
           </View>
 
           {/* Login Link */}

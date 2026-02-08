@@ -17,7 +17,7 @@ import {
   LogOut,
   ChevronRight,
 } from 'lucide-react-native';
-import { useTheme } from '../../../src/context/ThemeContext';
+import { useTheme, useColors } from '../../../src/context/ThemeContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
 import { useAuth } from '../../../src/context/AuthContext';
 
@@ -63,20 +63,21 @@ function DesktopSidebar({
 }) {
   const { t } = useLanguage();
   const { user, logout } = useAuth();
+  const colors = useColors();
   const router = useRouter();
   const pathname = usePathname();
 
   const mainNavItems = [
-    { icon: <LayoutDashboard size={20} color="#a1a1aa" />, label: t('dashboard'), href: '/(app)/(tabs)' },
-    { icon: <Wallet size={20} color="#a1a1aa" />, label: t('wallet'), href: '/(app)/(tabs)/wallet' },
-    { icon: <Plus size={20} color="#a1a1aa" />, label: t('addTransaction') || 'Add', href: '/(app)/(tabs)/add' },
-    { icon: <MessageCircle size={20} color="#a1a1aa" />, label: t('aiAdvisor') || 'Chatbot', href: '/(app)/(tabs)/chat' },
-    { icon: <BarChart3 size={20} color="#a1a1aa" />, label: t('reports'), href: '/(app)/(tabs)/reports' },
+    { icon: <LayoutDashboard size={20} color={colors.secondaryForeground} />, label: t('dashboard'), href: '/(app)/(tabs)' },
+    { icon: <Wallet size={20} color={colors.secondaryForeground} />, label: t('wallet'), href: '/(app)/(tabs)/wallet' },
+    { icon: <Plus size={20} color={colors.secondaryForeground} />, label: t('addTransaction') || 'Add', href: '/(app)/(tabs)/add' },
+    { icon: <MessageCircle size={20} color={colors.secondaryForeground} />, label: t('aiAdvisor') || 'Chatbot', href: '/(app)/(tabs)/chat' },
+    { icon: <BarChart3 size={20} color={colors.secondaryForeground} />, label: t('reports'), href: '/(app)/(tabs)/reports' },
   ];
 
   const toolsNavItems = [
-    { icon: <Trophy size={20} color="#a1a1aa" />, label: t('badges') || 'Badges', href: '/(app)/badges' },
-    { icon: <History size={20} color="#a1a1aa" />, label: t('historicalRates') || 'Historical', href: '/(app)/historical' },
+    { icon: <Trophy size={20} color={colors.secondaryForeground} />, label: t('badges') || 'Badges', href: '/(app)/badges' },
+    { icon: <History size={20} color={colors.secondaryForeground} />, label: t('historicalRates') || 'Historical', href: '/(app)/historical' },
   ];
 
   const isActiveRoute = (href: string) => {
@@ -96,11 +97,11 @@ function DesktopSidebar({
         {!isCollapsed && (
           <Text className="text-lg font-semibold text-foreground">CoFinance</Text>
         )}
-        <Pressable onPress={onToggle} style={{ cursor: 'pointer' }} className="p-2 hover:bg-secondary rounded-md">
+        <Pressable onPress={onToggle} hitSlop={8} style={{ cursor: 'pointer' }} className="p-2 hover:bg-secondary rounded-md">
           {isCollapsed ? (
-            <Menu size={18} color="#71717a" />
+            <Menu size={18} color={colors.mutedForeground} />
           ) : (
-            <X size={18} color="#71717a" />
+            <X size={18} color={colors.mutedForeground} />
           )}
         </Pressable>
       </View>
@@ -156,7 +157,7 @@ function DesktopSidebar({
           className="flex-row items-center p-2.5 rounded-lg hover:bg-secondary"
         >
           <View className="bg-secondary p-2 rounded-full">
-            <User size={18} color="#a1a1aa" />
+            <User size={18} color={colors.secondaryForeground} />
           </View>
           {!isCollapsed && (
             <View className="flex-1 ml-3">
@@ -168,7 +169,7 @@ function DesktopSidebar({
               </Text>
             </View>
           )}
-          {!isCollapsed && <ChevronRight size={14} color="#71717a" />}
+          {!isCollapsed && <ChevronRight size={14} color={colors.mutedForeground} />}
         </Pressable>
 
         <Pressable
@@ -176,7 +177,7 @@ function DesktopSidebar({
           style={{ cursor: 'pointer' }}
           className="flex-row items-center p-2.5 rounded-lg hover:bg-secondary mt-1"
         >
-          <LogOut size={18} color="#71717a" />
+          <LogOut size={18} color={colors.mutedForeground} />
           {!isCollapsed && (
             <Text className="ml-3 text-muted-foreground text-sm">{t('logout')}</Text>
           )}
@@ -190,6 +191,7 @@ function DesktopNavbar() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+  const colors = useColors();
   const router = useRouter();
 
   return (
@@ -202,14 +204,11 @@ function DesktopNavbar() {
       <View className="flex-row items-center gap-3">
         <Pressable
           onPress={toggleTheme}
+          hitSlop={6}
           style={{ cursor: 'pointer' }}
           className="p-2 rounded-md hover:bg-secondary border border-border"
         >
-          {isDark ? (
-            <LayoutDashboard size={18} color="#a1a1aa" />
-          ) : (
-            <LayoutDashboard size={18} color="#71717a" />
-          )}
+          <LayoutDashboard size={18} color={colors.secondaryForeground} />
         </Pressable>
         <Pressable
           onPress={() => router.push('/(app)/profile')}
@@ -217,7 +216,7 @@ function DesktopNavbar() {
           className="flex-row items-center gap-2 bg-secondary border border-border px-3 py-2 rounded-lg"
         >
           <View className="bg-muted p-1.5 rounded-full">
-            <User size={14} color="#a1a1aa" />
+            <User size={14} color={colors.secondaryForeground} />
           </View>
           <Text className="font-medium text-foreground text-sm">{user?.name?.split(' ')[0]}</Text>
         </Pressable>
@@ -228,6 +227,7 @@ function DesktopNavbar() {
 
 export default function TabsLayout() {
   const { isDark } = useTheme();
+  const colors = useColors();
   const { t } = useLanguage();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -237,11 +237,6 @@ export default function TabsLayout() {
 
   // Sidebar collapsed by default on tablet, expanded on desktop
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(!isDesktop);
-
-  // Minimal color palette for tab bar
-  const tabBarActiveTintColor = '#fafafa';
-  const tabBarInactiveTintColor = '#71717a';
-  const tabBarBackgroundColor = '#09090b';
 
   // Desktop layout with sidebar
   if (isDesktop) {
@@ -313,17 +308,22 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor,
-        tabBarInactiveTintColor,
-        tabBarShowLabel: false,
+        tabBarActiveTintColor: colors.tabBarActive,
+        tabBarInactiveTintColor: colors.tabBarInactive,
+        tabBarShowLabel: true,
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontFamily: 'Inter_500Medium',
+          marginTop: -2,
+        },
         tabBarStyle: {
-          backgroundColor: tabBarBackgroundColor,
+          backgroundColor: colors.tabBarBackground,
           borderTopWidth: 1,
-          borderTopColor: '#27272a',
+          borderTopColor: colors.tabBarBorder,
           elevation: 0,
-          height: 60 + insets.bottom,
+          height: 70 + insets.bottom,
           paddingBottom: insets.bottom,
-          paddingTop: 10,
+          paddingTop: 8,
         },
       }}
     >
@@ -346,9 +346,17 @@ export default function TabsLayout() {
         name="add"
         options={{
           title: '',
+          tabBarShowLabel: false,
           tabBarIcon: ({ focused }) => (
-            <View className="bg-foreground rounded-full p-3.5" style={{ marginTop: -24 }}>
-              <Plus size={22} color="#09090b" />
+            <View
+              style={{
+                backgroundColor: colors.foreground,
+                borderRadius: 50,
+                padding: 14,
+                marginTop: -24,
+              }}
+            >
+              <Plus size={22} color={colors.background} />
             </View>
           ),
         }}
@@ -356,7 +364,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="chat"
         options={{
-          title: t('aiAdvisor') || 'Chatbot',
+          title: t('aiAdvisor') || 'Chat',
           tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={color} />,
         }}
       />

@@ -26,8 +26,11 @@ import {
 } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
+import { useColors } from '../../src/context/ThemeContext';
 import { formatCompactCurrency, formatDate } from '../../src/utils/format';
 import { useToast } from '../../src/components/ui/Toast';
+import { Button } from '../../src/components/ui/Button';
+import { FormError } from '../../src/components/ui/FormError';
 import type { CreateSubscriptionRequest, Subscription } from '../../src/types/goal';
 
 const BILLING_CYCLES = ['weekly', 'monthly', 'quarterly', 'yearly'] as const;
@@ -43,6 +46,7 @@ const CATEGORIES = [
 
 export default function SubscriptionsScreen() {
   const { t } = useLanguage();
+  const colors = useColors();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
@@ -86,12 +90,12 @@ export default function SubscriptionsScreen() {
       <View className="flex-row items-center justify-between p-4 border-b border-border" style={{ maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
         <View className="flex-row items-center">
           <Pressable onPress={() => router.back()} className="p-2 mr-2" style={{ cursor: 'pointer' }}>
-            <ArrowLeft size={24} color="rgb(248, 250, 252)" />
+            <ArrowLeft size={24} color={colors.foreground} />
           </Pressable>
           <Text className="text-xl font-bold text-foreground">{t('subscriptions')}</Text>
         </View>
         <Pressable onPress={() => setShowForm(true)} className="bg-primary p-2 rounded-full" style={{ cursor: 'pointer' }}>
-          <Plus size={24} color="#09090b" />
+          <Plus size={24} color={colors.primaryForeground} />
         </Pressable>
       </View>
 
@@ -143,10 +147,10 @@ export default function SubscriptionsScreen() {
             </Pressable>
           </View>
         ) : isPending ? (
-          <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
+          <ActivityIndicator size="large" color={colors.accent} />
         ) : subscriptions.length === 0 ? (
           <View className="bg-card p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
-            <CreditCard size={48} color="rgb(148, 163, 184)" />
+            <CreditCard size={48} color={colors.placeholder} />
             <Text className="text-lg font-semibold text-foreground mt-4">
               {t('noSubscriptions')}
             </Text>
@@ -210,6 +214,7 @@ export default function SubscriptionsScreen() {
 
 function SubscriptionCard({ subscription }: { subscription: Subscription }) {
   const { t } = useLanguage();
+  const colors = useColors();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
@@ -249,7 +254,7 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
       <View className="flex-row items-center justify-between mb-3">
         <View className="flex-row items-center flex-1">
           <View className="bg-accent/20 p-2 rounded-lg mr-3">
-            <CreditCard size={24} color="rgb(212, 175, 55)" />
+            <CreditCard size={24} color={colors.accent} />
           </View>
           <View className="flex-1">
             <Text className="font-semibold text-foreground" numberOfLines={1}>
@@ -268,7 +273,7 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
 
       <View className="flex-row items-center justify-between pt-3 border-t border-border">
         <View className="flex-row items-center">
-          <Calendar size={14} color="rgb(148, 163, 184)" />
+          <Calendar size={14} color={colors.placeholder} />
           <Text className="text-muted-foreground text-sm ml-1">
             {t('nextBilling')}: {formatDate(subscription.next_billing_date)}
           </Text>
@@ -283,9 +288,9 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
             {updateMutation.isPending ? (
               <ActivityIndicator size="small" />
             ) : isPaused ? (
-              <Play size={16} color="rgb(16, 185, 129)" />
+              <Play size={16} color={colors.success} />
             ) : (
-              <Pause size={16} color="rgb(212, 175, 55)" />
+              <Pause size={16} color={colors.warning} />
             )}
           </Pressable>
         </View>
@@ -296,6 +301,7 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
 
 function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useLanguage();
+  const colors = useColors();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { width } = useWindowDimensions();
@@ -362,7 +368,7 @@ function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose
         <View className="flex-row items-center justify-between p-4 border-b border-border">
           <Text className="text-xl font-bold text-foreground">{t('addSubscription')}</Text>
           <Pressable onPress={onClose} style={{ cursor: 'pointer' }}>
-            <X size={24} color="rgb(148, 163, 184)" />
+            <X size={24} color={colors.placeholder} />
           </Pressable>
         </View>
 
@@ -375,11 +381,7 @@ function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose
             alignSelf: 'center',
           }}
         >
-          {error ? (
-            <View className="bg-danger-light p-4 rounded-xl mb-4">
-              <Text className="text-danger">{error}</Text>
-            </View>
-          ) : null}
+          <FormError message={error} />
 
           <View className="mb-6">
             <Text className="text-muted-foreground mb-2">{t('name')}</Text>
@@ -389,7 +391,7 @@ function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose
               value={name}
               onChangeText={setName}
               placeholder="Netflix, Spotify, etc."
-              placeholderTextColor="rgb(148, 163, 184)"
+              placeholderTextColor={colors.placeholder}
             />
           </View>
 
@@ -402,7 +404,7 @@ function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose
               onChangeText={setAmount}
               keyboardType="decimal-pad"
               placeholder="0.00"
-              placeholderTextColor="rgb(148, 163, 184)"
+              placeholderTextColor={colors.placeholder}
             />
           </View>
 
@@ -454,18 +456,9 @@ function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose
             </View>
           </View>
 
-          <Pressable
-            onPress={handleSubmit}
-            disabled={mutation.isPending}
-            className={`bg-primary p-4 rounded-xl items-center ${mutation.isPending ? 'opacity-50' : ''}`}
-            style={{ cursor: 'pointer' }}
-          >
-            {mutation.isPending ? (
-              <ActivityIndicator color="#09090b" />
-            ) : (
-              <Text className="text-primary-foreground font-semibold text-lg">{t('addSubscription')}</Text>
-            )}
-          </Pressable>
+          <Button variant="primary" size="lg" onPress={handleSubmit} isLoading={mutation.isPending}>
+            {t('addSubscription')}
+          </Button>
         </ScrollView>
       </SafeAreaView>
     </Modal>

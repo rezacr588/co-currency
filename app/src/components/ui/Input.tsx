@@ -1,5 +1,6 @@
 import { forwardRef, useId } from 'react';
 import { View, Text, TextInput, TextInputProps, AccessibilityInfo } from 'react-native';
+import { useColors } from '../../context/ThemeContext';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -27,6 +28,7 @@ export const Input = forwardRef<TextInput, InputProps>(
     },
     ref
   ) => {
+    const colors = useColors();
     const id = useId();
 
     // Build accessibility label
@@ -64,7 +66,7 @@ export const Input = forwardRef<TextInput, InputProps>(
           <TextInput
             ref={ref}
             className={`flex-1 py-4 text-foreground ${className}`}
-            placeholderTextColor="rgb(148, 163, 184)"
+            placeholderTextColor={colors.placeholder}
             accessibilityLabel={accessibilityLabel}
             accessibilityHint={accessibilityHint || hint}
             accessibilityState={{

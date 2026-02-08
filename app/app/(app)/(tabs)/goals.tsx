@@ -10,12 +10,14 @@ import {
   Modal,
   useWindowDimensions,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Target, CheckCircle, X, DollarSign, Calendar, Pencil, Trash2 } from 'lucide-react-native';
 import { api } from '../../../src/api';
 import { useLanguage } from '../../../src/context/LanguageContext';
+import { useColors } from '../../../src/context/ThemeContext';
 import { formatCompactCurrency, formatDate } from '../../../src/utils/format';
 import { trackPositiveAction, maybeRequestReview } from '../../../src/utils/review';
 import { haptics } from '../../../src/utils/haptics';
@@ -24,6 +26,8 @@ import { CurrencyPicker } from '../../../src/components/ui/CurrencyPicker';
 import { SkeletonGoalCard, SkeletonList } from '../../../src/components/ui/Skeleton';
 import { SwipeableRow, type SwipeAction } from '../../../src/components/ui';
 import { useToast } from '../../../src/components/ui/Toast';
+import { Button } from '../../../src/components/ui/Button';
+import { FormError } from '../../../src/components/ui/FormError';
 import type { CreateGoalRequest, UpdateGoalRequest, Goal } from '../../../src/types/goal';
 
 const GOAL_CATEGORIES = [
@@ -41,6 +45,7 @@ const GOAL_CATEGORIES = [
 
 export default function GoalsScreen() {
   const { t } = useLanguage();
+  const colors = useColors();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -139,9 +144,10 @@ export default function GoalsScreen() {
           <Pressable
             onPress={() => setShowForm(true)}
             className="bg-foreground p-2.5 rounded-lg"
+            hitSlop={4}
             style={{ cursor: 'pointer' }}
           >
-            <Plus size={20} color="#09090b" />
+            <Plus size={20} color={colors.primaryForeground} />
           </Pressable>
         </View>
 
@@ -160,7 +166,7 @@ export default function GoalsScreen() {
           <SkeletonList count={3} ItemComponent={SkeletonGoalCard} />
         ) : goals.length === 0 ? (
           <View className="bg-card border border-border p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 500 : '100%', alignSelf: 'center', width: '100%' }}>
-            <Target size={40} color="#52525b" />
+            <Target size={40} color={colors.subtleForeground} />
             <Text className="text-base font-medium text-foreground mt-4">{t('noGoals')}</Text>
             <Text className="text-muted-foreground text-center mt-2 text-sm">
               {t('noGoalsDescription')}
@@ -249,6 +255,7 @@ interface GoalCardProps {
 
 function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
   const { t } = useLanguage();
+  const colors = useColors();
   const queryClient = useQueryClient();
   const [showContribute, setShowContribute] = useState(false);
   const [amount, setAmount] = useState('');
@@ -299,14 +306,14 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
   const rightActions: SwipeAction[] = [
     {
       icon: 'edit',
-      color: '#ffffff',
-      backgroundColor: '#3b82f6',
+      color: colors.foreground,
+      backgroundColor: colors.info,
       onPress: () => onEdit(goal),
     },
     {
       icon: 'delete',
-      color: '#ffffff',
-      backgroundColor: '#ef4444',
+      color: colors.foreground,
+      backgroundColor: colors.danger,
       onPress: () => onDelete(goal),
     },
   ];
@@ -316,9 +323,9 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
       <View className="flex-row items-center mb-3">
         <View className="bg-secondary p-2 rounded-md mr-3">
           {goal.is_completed ? (
-            <CheckCircle size={20} color="#22c55e" />
+            <CheckCircle size={20} color={colors.success} />
           ) : (
-            <GoalIcon category={goal.category || 'other'} size={20} color="#a1a1aa" />
+            <GoalIcon category={goal.category || 'other'} size={20} color={colors.secondaryForeground} />
           )}
         </View>
         <View className="flex-1">
@@ -338,7 +345,7 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
               hitSlop={10}
               style={{ cursor: 'pointer' }}
             >
-              <Pencil size={16} color="#71717a" />
+              <Pencil size={16} color={colors.mutedForeground} />
             </Pressable>
             <Pressable
               onPress={() => onDelete(goal)}
@@ -346,7 +353,7 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
               hitSlop={10}
               style={{ cursor: 'pointer' }}
             >
-              <Trash2 size={16} color="#71717a" />
+              <Trash2 size={16} color={colors.mutedForeground} />
             </Pressable>
           </View>
         )}
@@ -397,7 +404,7 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
                   }}
                   keyboardType="decimal-pad"
                   placeholder="0.00"
-                  placeholderTextColor="#52525b"
+                  placeholderTextColor={colors.subtleForeground}
                 />
                 <Pressable
                   onPress={handleContribute}
@@ -406,13 +413,13 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
                   style={{ cursor: 'pointer' }}
                 >
                   {contributeMutation.isPending ? (
-                    <ActivityIndicator size="small" color="#09090b" />
+                    <ActivityIndicator size="small" color={colors.primaryForeground} />
                   ) : (
-                    <Plus size={18} color="#09090b" />
+                    <Plus size={18} color={colors.primaryForeground} />
                   )}
                 </Pressable>
-                <Pressable onPress={() => { setShowContribute(false); setContributeError(''); }} className="bg-secondary p-2.5 rounded-md" style={{ cursor: 'pointer' }}>
-                  <X size={18} color="#71717a" />
+                <Pressable onPress={() => { setShowContribute(false); setContributeError(''); }} className="bg-secondary p-2.5 rounded-md" hitSlop={6} style={{ cursor: 'pointer' }}>
+                  <X size={18} color={colors.mutedForeground} />
                 </Pressable>
               </View>
             </View>
@@ -433,7 +440,7 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
   return (
     <SwipeableRow
       rightActions={rightActions}
-      enabled={!isDesktop}
+      enabled={Platform.OS !== 'web'}
     >
       {cardContent}
     </SwipeableRow>
@@ -442,6 +449,7 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
 
 function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useLanguage();
+  const colors = useColors();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
@@ -514,8 +522,8 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
       <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
         <View className="flex-row items-center justify-between p-4 border-b border-border">
           <Text className="text-lg font-semibold text-foreground">{t('createGoal')}</Text>
-          <Pressable onPress={onClose} style={{ cursor: 'pointer' }} className="p-2 bg-secondary rounded-full">
-            <X size={18} color="#a1a1aa" />
+          <Pressable onPress={onClose} hitSlop={8} style={{ cursor: 'pointer' }} className="p-2 bg-secondary rounded-full">
+            <X size={18} color={colors.secondaryForeground} />
           </Pressable>
         </View>
 
@@ -528,11 +536,7 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
             alignSelf: 'center',
           }}
         >
-          {error ? (
-            <View className="bg-danger-muted border border-danger/20 p-3 rounded-lg mb-4">
-              <Text className="text-danger text-sm">{error}</Text>
-            </View>
-          ) : null}
+          <FormError message={error} />
 
           <View className="mb-5">
             <Text className="text-muted-foreground text-sm mb-2">{t('goalName')}</Text>
@@ -542,7 +546,7 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
               value={name}
               onChangeText={setName}
               placeholder="Emergency Fund, Vacation, etc."
-              placeholderTextColor="#52525b"
+              placeholderTextColor={colors.subtleForeground}
             />
           </View>
 
@@ -556,7 +560,7 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
                 onChangeText={setTargetAmount}
                 keyboardType="decimal-pad"
                 placeholder="0.00"
-                placeholderTextColor="#52525b"
+                placeholderTextColor={colors.subtleForeground}
               />
               <Pressable
                 onPress={() => setShowCurrencyPicker(true)}
@@ -578,12 +582,12 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
                   className={`px-3 py-2 rounded-md flex-row items-center border ${
                     category === cat ? 'bg-foreground border-foreground' : 'bg-secondary border-border'
                   }`}
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: 'pointer', minHeight: 44 }}
                 >
                   <GoalIcon
                     category={cat}
                     size={14}
-                    color={category === cat ? '#09090b' : '#a1a1aa'}
+                    color={category === cat ? colors.primaryForeground : colors.secondaryForeground}
                   />
                   <Text
                     className={`ml-2 text-sm ${
@@ -605,22 +609,13 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
               value={deadline}
               onChangeText={setDeadline}
               placeholder="YYYY-MM-DD"
-              placeholderTextColor="#52525b"
+              placeholderTextColor={colors.subtleForeground}
             />
           </View>
 
-          <Pressable
-            onPress={handleSubmit}
-            disabled={mutation.isPending}
-            className={`bg-accent p-3.5 rounded-lg items-center ${mutation.isPending ? 'opacity-50' : ''}`}
-            style={{ cursor: 'pointer' }}
-          >
-            {mutation.isPending ? (
-              <ActivityIndicator color="#09090b" />
-            ) : (
-              <Text className="text-accent-foreground font-semibold">{t('createGoal')}</Text>
-            )}
-          </Pressable>
+          <Button variant="accent" onPress={handleSubmit} isLoading={mutation.isPending}>
+            {t('createGoal')}
+          </Button>
         </ScrollView>
 
         <CurrencyPicker
@@ -637,6 +632,7 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
 
 function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goal; onClose: () => void }) {
   const { t } = useLanguage();
+  const colors = useColors();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
@@ -700,8 +696,8 @@ function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goa
       <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
         <View className="flex-row items-center justify-between p-4 border-b border-border">
           <Text className="text-lg font-semibold text-foreground">{t('editGoal') || 'Edit Goal'}</Text>
-          <Pressable onPress={onClose} style={{ cursor: 'pointer' }} className="p-2 bg-secondary rounded-full">
-            <X size={18} color="#a1a1aa" />
+          <Pressable onPress={onClose} hitSlop={8} style={{ cursor: 'pointer' }} className="p-2 bg-secondary rounded-full">
+            <X size={18} color={colors.secondaryForeground} />
           </Pressable>
         </View>
 
@@ -714,11 +710,7 @@ function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goa
             alignSelf: 'center',
           }}
         >
-          {error ? (
-            <View className="bg-danger-muted border border-danger/20 p-3 rounded-lg mb-4">
-              <Text className="text-danger text-sm">{error}</Text>
-            </View>
-          ) : null}
+          <FormError message={error} />
 
           <View className="mb-5">
             <Text className="text-muted-foreground text-sm mb-2">{t('goalName')}</Text>
@@ -728,7 +720,7 @@ function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goa
               value={name}
               onChangeText={setName}
               placeholder="Emergency Fund, Vacation, etc."
-              placeholderTextColor="#52525b"
+              placeholderTextColor={colors.subtleForeground}
             />
           </View>
 
@@ -742,7 +734,7 @@ function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goa
                 onChangeText={setTargetAmount}
                 keyboardType="decimal-pad"
                 placeholder="0.00"
-                placeholderTextColor="#52525b"
+                placeholderTextColor={colors.subtleForeground}
               />
               <View className="bg-secondary border border-border px-4 rounded-lg items-center justify-center">
                 <Text className="text-muted-foreground font-medium">{goal.currency}</Text>
@@ -763,12 +755,12 @@ function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goa
                   className={`px-3 py-2 rounded-md flex-row items-center border ${
                     category === cat ? 'bg-foreground border-foreground' : 'bg-secondary border-border'
                   }`}
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: 'pointer', minHeight: 44 }}
                 >
                   <GoalIcon
                     category={cat}
                     size={14}
-                    color={category === cat ? '#09090b' : '#a1a1aa'}
+                    color={category === cat ? colors.primaryForeground : colors.secondaryForeground}
                   />
                   <Text
                     className={`ml-2 text-sm ${
@@ -790,22 +782,13 @@ function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goa
               value={deadline}
               onChangeText={setDeadline}
               placeholder="YYYY-MM-DD"
-              placeholderTextColor="#52525b"
+              placeholderTextColor={colors.subtleForeground}
             />
           </View>
 
-          <Pressable
-            onPress={handleSubmit}
-            disabled={mutation.isPending}
-            className={`bg-accent p-3.5 rounded-lg items-center ${mutation.isPending ? 'opacity-50' : ''}`}
-            style={{ cursor: 'pointer' }}
-          >
-            {mutation.isPending ? (
-              <ActivityIndicator color="#09090b" />
-            ) : (
-              <Text className="text-accent-foreground font-semibold">{t('saveChanges') || 'Save Changes'}</Text>
-            )}
-          </Pressable>
+          <Button variant="accent" onPress={handleSubmit} isLoading={mutation.isPending}>
+            {t('saveChanges') || 'Save Changes'}
+          </Button>
         </ScrollView>
       </SafeAreaView>
     </Modal>

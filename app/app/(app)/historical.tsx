@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, ArrowRight, AlertTriangle } from 'lucide-react-native';
 import { useLanguage } from '../../src/context/LanguageContext';
+import { useColors } from '../../src/context/ThemeContext';
 import { useCurrencies, useHistorical } from '../../src/hooks';
 import { formatRate, formatDate } from '../../src/utils/format';
 import { CURRENCY_FLAGS } from '../../src/utils/constants';
@@ -23,6 +24,7 @@ interface HistoricalCardProps {
 }
 
 function HistoricalCard({ date, baseCurrency, targetCurrency }: HistoricalCardProps) {
+  const colors = useColors();
   const { data, isPending, error } = useHistorical(date, baseCurrency);
 
   const rate = data?.rates?.find((r: { code: string; rate: number }) => r.code === targetCurrency);
@@ -50,7 +52,7 @@ function HistoricalCard({ date, baseCurrency, targetCurrency }: HistoricalCardPr
           <Text className="font-medium text-foreground">{targetCurrency}</Text>
         </View>
         {isPending ? (
-          <ActivityIndicator size="small" color="rgb(212, 175, 55)" />
+          <ActivityIndicator size="small" color={colors.accent} />
         ) : (
           <Text className="font-mono text-lg font-semibold text-primary">
             {rate ? formatRate(rate.rate) : 'N/A'}
@@ -68,6 +70,7 @@ export default function HistoricalScreen() {
   const { t } = useLanguage();
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const colors = useColors();
 
   const [baseCurrency, setBaseCurrency] = useState('USD');
   const [targetCurrency, setTargetCurrency] = useState('EUR');
@@ -111,7 +114,7 @@ export default function HistoricalScreen() {
             style={{ cursor: 'pointer' }}
             className="p-2 mr-2"
           >
-            <ChevronLeft size={24} color="rgb(148, 163, 184)" />
+            <ChevronLeft size={24} color={colors.placeholder} />
           </Pressable>
           <Text className="text-2xl font-bold text-foreground">
             {t('historicalRates') || 'Historical Rates'}
@@ -137,7 +140,7 @@ export default function HistoricalScreen() {
                   placeholder="From"
                 />
               </View>
-              <ArrowRight size={20} color="rgb(148, 163, 184)" />
+              <ArrowRight size={20} color={colors.placeholder} />
               <View style={{ minWidth: 100 }}>
                 <Select
                   value={targetCurrency}
@@ -153,7 +156,7 @@ export default function HistoricalScreen() {
         {/* Same Currency Warning */}
         {isSameCurrency ? (
           <View className="bg-amber-500/10 p-4 rounded-xl border border-amber-500/20 flex-row items-center gap-3">
-            <AlertTriangle size={20} color="rgb(251, 191, 36)" />
+            <AlertTriangle size={20} color={colors.warning} />
             <Text className="text-amber-600 flex-1">
               {t('sameCurrency') || 'Please select different currencies to compare rates'}
             </Text>

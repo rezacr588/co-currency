@@ -13,6 +13,9 @@ import { X, Pin, Check } from 'lucide-react-native';
 import type { Note, CreateNoteRequest, UpdateNoteRequest, NoteColor } from '../../../types/note';
 import { NOTE_COLORS } from '../../../types/note';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useColors } from '../../../context/ThemeContext';
+import { Button } from '../../ui/Button';
+import { Toggle } from '../../ui/Toggle';
 
 // Color display mapping
 const COLOR_DISPLAY: Record<string, { bg: string; name: string }> = {
@@ -42,6 +45,7 @@ export function NoteFormModal({
   isLoading = false,
 }: NoteFormModalProps) {
   const { t } = useLanguage();
+  const colors = useColors();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
@@ -116,7 +120,7 @@ export function NoteFormModal({
                 style={{ cursor: 'pointer' }}
                 className="p-2"
               >
-                <X size={24} color="rgb(148, 163, 184)" />
+                <X size={24} color={colors.placeholder} />
               </Pressable>
             </View>
 
@@ -129,17 +133,17 @@ export function NoteFormModal({
                 value={title}
                 onChangeText={setTitle}
                 placeholder={t('enterTitle') || 'Enter title...'}
-                placeholderTextColor="#71717a"
+                placeholderTextColor={colors.mutedForeground}
                 maxLength={200}
-                selectionColor="rgb(212, 175, 55)"
-                cursorColor="rgb(212, 175, 55)"
+                selectionColor={colors.accent}
+                cursorColor={colors.accent}
                 style={{
-                  backgroundColor: '#27272a',
+                  backgroundColor: colors.secondary,
                   borderWidth: 1,
-                  borderColor: '#3f3f46',
+                  borderColor: colors.borderStrong,
                   borderRadius: 8,
                   padding: 14,
-                  color: '#ffffff',
+                  color: colors.foreground,
                   fontSize: 16,
                   outlineStyle: 'none',
                 } as any}
@@ -155,19 +159,19 @@ export function NoteFormModal({
                 value={content}
                 onChangeText={setContent}
                 placeholder={t('enterContent') || 'Write your note...'}
-                placeholderTextColor="#71717a"
+                placeholderTextColor={colors.mutedForeground}
                 multiline
                 numberOfLines={6}
                 textAlignVertical="top"
-                selectionColor="rgb(212, 175, 55)"
-                cursorColor="rgb(212, 175, 55)"
+                selectionColor={colors.accent}
+                cursorColor={colors.accent}
                 style={{
-                  backgroundColor: '#27272a',
+                  backgroundColor: colors.secondary,
                   borderWidth: 1,
-                  borderColor: '#3f3f46',
+                  borderColor: colors.borderStrong,
                   borderRadius: 8,
                   padding: 14,
-                  color: '#ffffff',
+                  color: colors.foreground,
                   fontSize: 16,
                   minHeight: 120,
                   outlineStyle: 'none',
@@ -192,7 +196,7 @@ export function NoteFormModal({
                       borderRadius: 20,
                       backgroundColor: COLOR_DISPLAY[c].bg,
                       borderWidth: color === c ? 3 : 1,
-                      borderColor: color === c ? 'rgb(212, 175, 55)' : '#3f3f46',
+                      borderColor: color === c ? colors.accent : colors.borderStrong,
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
@@ -206,9 +210,7 @@ export function NoteFormModal({
             </View>
 
             {/* Pin Toggle */}
-            <Pressable
-              onPress={() => setIsPinned(!isPinned)}
-              style={{ cursor: 'pointer' }}
+            <View
               className={`flex-row items-center justify-between p-4 rounded-lg mb-6 ${
                 isPinned ? 'bg-primary/20' : 'bg-muted'
               }`}
@@ -216,56 +218,35 @@ export function NoteFormModal({
               <View className="flex-row items-center">
                 <Pin
                   size={20}
-                  color={isPinned ? 'rgb(212, 175, 55)' : 'rgb(148, 163, 184)'}
-                  fill={isPinned ? 'rgb(212, 175, 55)' : 'transparent'}
+                  color={isPinned ? colors.accent : colors.placeholder}
+                  fill={isPinned ? colors.accent : 'transparent'}
                 />
                 <Text className="text-foreground ml-3">
                   {t('pinNote') || 'Pin this note'}
                 </Text>
               </View>
-              <View
-                className={`w-12 h-7 rounded-full ${
-                  isPinned ? 'bg-primary' : 'bg-muted-foreground/30'
-                }`}
-              >
-                <View
-                  className={`w-5 h-5 bg-white rounded-full mt-1 ${
-                    isPinned ? 'ml-6' : 'ml-1'
-                  }`}
-                />
-              </View>
-            </Pressable>
+              <Toggle value={isPinned} onValueChange={setIsPinned} />
+            </View>
 
             {/* Action Buttons */}
             <View className="flex-row gap-3">
-              <Pressable
+              <Button
+                variant="outline"
+                className="flex-1"
                 onPress={onClose}
                 disabled={isLoading}
-                style={{ cursor: 'pointer' }}
-                className={`flex-1 p-4 rounded-lg border border-border items-center ${
-                  isLoading ? 'opacity-50' : ''
-                }`}
               >
-                <Text className="text-foreground font-medium">
-                  {t('cancel') || 'Cancel'}
-                </Text>
-              </Pressable>
-              <Pressable
+                {t('cancel') || 'Cancel'}
+              </Button>
+              <Button
+                variant="accent"
+                className="flex-1"
                 onPress={handleSave}
-                disabled={isLoading || !title.trim()}
-                style={{ cursor: 'pointer' }}
-                className={`flex-1 bg-accent p-4 rounded-lg flex-row items-center justify-center ${
-                  isLoading || !title.trim() ? 'opacity-50' : ''
-                }`}
+                disabled={!title.trim()}
+                isLoading={isLoading}
               >
-                {isLoading ? (
-                  <ActivityIndicator color="#09090b" size="small" />
-                ) : (
-                  <Text className="text-accent-foreground font-medium">
-                    {isEditing ? (t('saveChanges') || 'Save') : (t('create') || 'Create')}
-                  </Text>
-                )}
-              </Pressable>
+                {isEditing ? (t('saveChanges') || 'Save') : (t('create') || 'Create')}
+              </Button>
             </View>
           </ScrollView>
         </Pressable>

@@ -61,7 +61,10 @@ export const translations = {
     updatedAt: 'Updated at',
     failedToLoadRates: 'Failed to load rates. Please try again.',
     showLess: 'Show Less',
+    showMore: 'Show More',
     showAll: 'Show All',
+    recentCategories: 'Recent',
+    showAllCategories: 'Show All Categories',
     currencies: 'currencies',
 
     // Quick Convert
@@ -528,6 +531,11 @@ export const translations = {
     navigation: 'Navigation',
     converter: 'Converter',
 
+    // Dashboard - Collapsible Sections
+    financialHealth: 'Financial Health',
+    dailyTip: 'Daily Tip',
+    weeklyRecap: 'Weekly Recap',
+
     // Dashboard - Forecast & Insights
     spendingForecast: 'Spending Forecast',
     basedOnLast30Days: 'Based on last 30 days',
@@ -803,7 +811,10 @@ export const translations = {
     updatedAt: 'بروزرسانی در',
     failedToLoadRates: 'بارگذاری نرخ‌ها ناموفق بود. لطفاً دوباره تلاش کنید.',
     showLess: 'نمایش کمتر',
+    showMore: 'نمایش بیشتر',
     showAll: 'نمایش همه',
+    recentCategories: 'اخیر',
+    showAllCategories: 'نمایش همه دسته‌بندی‌ها',
     currencies: 'ارز',
 
     // Quick Convert
@@ -1268,6 +1279,11 @@ export const translations = {
     navigation: 'ناوبری',
     converter: 'مبدل',
 
+    // Dashboard - Collapsible Sections
+    financialHealth: 'سلامت مالی',
+    dailyTip: 'نکته روزانه',
+    weeklyRecap: 'خلاصه هفتگی',
+
     // Dashboard - Forecast & Insights
     spendingForecast: 'پیش‌بینی هزینه',
     basedOnLast30Days: 'بر اساس ۳۰ روز گذشته',
@@ -1543,7 +1559,10 @@ export const translations = {
     updatedAt: 'تم التحديث في',
     failedToLoadRates: 'فشل تحميل الأسعار. يرجى المحاولة مرة أخرى.',
     showLess: 'عرض أقل',
+    showMore: 'عرض المزيد',
     showAll: 'عرض الكل',
+    recentCategories: 'الأخيرة',
+    showAllCategories: 'عرض جميع الفئات',
     currencies: 'عملات',
 
     // Quick Convert
@@ -2008,6 +2027,11 @@ export const translations = {
     navigation: 'التنقل',
     converter: 'المحول',
 
+    // Dashboard - Collapsible Sections
+    financialHealth: 'الصحة المالية',
+    dailyTip: 'نصيحة اليوم',
+    weeklyRecap: 'ملخص الأسبوع',
+
     // Dashboard - Forecast & Insights
     spendingForecast: 'توقعات الإنفاق',
     basedOnLast30Days: 'بناءً على آخر 30 يومًا',
@@ -2283,7 +2307,10 @@ export const translations = {
     updatedAt: 'Güncellendi',
     failedToLoadRates: 'Kurlar yüklenemedi. Lütfen tekrar deneyin.',
     showLess: 'Daha Az Göster',
+    showMore: 'Daha Fazla Göster',
     showAll: 'Tümünü Göster',
+    recentCategories: 'Son Kullanılan',
+    showAllCategories: 'Tüm Kategorileri Göster',
     currencies: 'para birimi',
 
     // Quick Convert
@@ -2747,6 +2774,11 @@ export const translations = {
     ctaDescription: 'Çok para birimli cüzdan, tasarruf hedefleri, bütçeler ve AI destekli fiş ayrıştırmaya erişmek için bir hesap oluşturun.',
     navigation: 'Navigasyon',
     converter: 'Çevirici',
+
+    // Dashboard - Collapsible Sections
+    financialHealth: 'Finansal Sağlık',
+    dailyTip: 'Günün İpucu',
+    weeklyRecap: 'Haftalık Özet',
 
     // Dashboard - Forecast & Insights
     spendingForecast: 'Harcama Tahmini',

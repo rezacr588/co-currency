@@ -6,7 +6,6 @@ import {
   Pressable,
   KeyboardAvoidingView,
   ScrollView,
-  ActivityIndicator,
   Platform,
   useWindowDimensions,
 } from 'react-native';
@@ -15,9 +14,13 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Mail, ArrowLeft } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
+import { useColors } from '../../src/context/ThemeContext';
+import { Button } from '../../src/components/ui/Button';
+import { FormError } from '../../src/components/ui/FormError';
 
 export default function ForgotPasswordScreen() {
   const { t } = useLanguage();
+  const colors = useColors();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -93,7 +96,7 @@ export default function ForgotPasswordScreen() {
           <View style={{ width: '100%', maxWidth: 400 }}>
           <Link href="/login" asChild>
             <Pressable style={{ cursor: 'pointer' }} className="flex-row items-center mb-8">
-              <ArrowLeft size={18} color="#71717a" />
+              <ArrowLeft size={18} color={colors.mutedForeground} />
               <Text className="text-muted-foreground ml-2 text-sm">{t('backToLogin')}</Text>
             </Pressable>
           </Link>
@@ -107,22 +110,18 @@ export default function ForgotPasswordScreen() {
             </Text>
           </View>
 
-          {error ? (
-            <View className="bg-danger-muted border border-danger/20 p-3 rounded-lg mb-4">
-              <Text className="text-danger text-sm">{error}</Text>
-            </View>
-          ) : null}
+          <FormError message={error} />
 
           <View className="gap-4">
             {/* Email Input */}
             <Text className="text-xs text-muted-foreground">{t('email')}</Text>
             <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
-              <Mail size={18} color="#71717a" />
+              <Mail size={18} color={colors.mutedForeground} />
               <TextInput
                 className="flex-1 p-3.5 text-foreground"
                 style={{ outlineStyle: 'none', fontSize: 15 } as any}
                 placeholder={t('email')}
-                placeholderTextColor="#52525b"
+                placeholderTextColor={colors.placeholder}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -135,18 +134,9 @@ export default function ForgotPasswordScreen() {
             </View>
 
             {/* Submit Button */}
-            <Pressable
-              onPress={handleSubmit}
-              disabled={isLoading}
-              style={{ cursor: 'pointer' }}
-              className={`bg-accent p-3.5 rounded-lg items-center ${isLoading ? 'opacity-50' : ''}`}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#09090b" />
-              ) : (
-                <Text className="text-accent-foreground font-semibold">{t('sendResetLink')}</Text>
-              )}
-            </Pressable>
+            <Button variant="accent" isLoading={isLoading} onPress={handleSubmit}>
+              {t('sendResetLink')}
+            </Button>
           </View>
           </View>
         </ScrollView>

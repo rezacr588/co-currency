@@ -489,20 +489,12 @@ func (s *ReportsService) GetForecast(ctx context.Context, userID uuid.UUID, curr
 		}
 	}
 
-	// 3. Calculate averages using actual elapsed days in range
+	// 3. Calculate averages using full elapsed days in range
 	activeDays := int(endDate.Sub(startDate).Hours()/24) + 1
 	if activeDays < 1 {
 		activeDays = 1
 	}
-	// Count unique days with transactions; use that if fewer than the window
-	uniqueDays := make(map[string]bool)
-	for _, tx := range transactions {
-		uniqueDays[tx.CreatedAt.Format("2006-01-02")] = true
-	}
 	daysDivisor := float64(activeDays)
-	if len(uniqueDays) > 0 && len(uniqueDays) < activeDays {
-		daysDivisor = float64(len(uniqueDays))
-	}
 	avgDailySpend := totalExpenses / daysDivisor
 	avgDailyIncome := totalIncome / daysDivisor
 	netDailyFlow := avgDailyIncome - avgDailySpend

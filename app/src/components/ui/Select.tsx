@@ -3,6 +3,7 @@ import { View, Text, Pressable, Modal, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronDown, X, Check } from 'lucide-react-native';
 import { ICON_SIZES, ICON_COLOR_MUTED } from '../../constants/icons';
+import { useColors } from '../../context/ThemeContext';
 
 interface SelectOption {
   value: string;
@@ -30,6 +31,7 @@ export function Select({
   disabled = false,
   className = '',
 }: SelectProps) {
+  const colors = useColors();
   const [isOpen, setIsOpen] = useState(false);
 
   const selectedOption = options.find((opt) => opt.value === value);
@@ -91,7 +93,7 @@ export function Select({
                   >
                     {item.label}
                   </Text>
-                  {isSelected && <Check size={ICON_SIZES.md} color="rgb(15, 26, 42)" />}
+                  {isSelected && <Check size={ICON_SIZES.md} color={colors.primaryForeground} />}
                 </Pressable>
               );
             }}

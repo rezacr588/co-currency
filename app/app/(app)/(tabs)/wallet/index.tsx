@@ -3,15 +3,17 @@ import { Link } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, ArrowLeftRight, Bot, History, MessageCircle, Target, PiggyBank, RefreshCw, CreditCard, BarChart3, Award, HandCoins, Wallet } from 'lucide-react-native';
+import { Plus, ArrowLeftRight, Bot, History, MessageCircle, Target, PiggyBank, BarChart3, Wallet } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
+import { useColors } from '../../../../src/context/ThemeContext';
 import { formatCurrency, formatCompactCurrency, getCurrencyDisplay, formatDate } from '../../../../src/utils/format';
 import { StyledCategoryIcon } from '../../../../src/constants/icons';
 import { Skeleton, SkeletonList, SkeletonTransaction, SkeletonBalance } from '../../../../src/components/ui/Skeleton';
 
 export default function WalletScreen() {
   const { t } = useLanguage();
+  const colors = useColors();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
@@ -62,23 +64,15 @@ export default function WalletScreen() {
   const displayedBalances = isDesktop ? balances : balances.slice(0, mobileBalanceLimit);
 
   const quickActions = [
-    { label: t('aiReceiptParser') || 'AI Parser', href: '/(app)/(tabs)/wallet/ai', icon: Bot },
-    { label: t('aiAdvisor') || 'AI Advisor', href: '/(app)/(tabs)/wallet/chat', icon: MessageCircle },
     { label: t('history') || 'History', href: '/(app)/(tabs)/wallet/history', icon: History },
     { label: t('goals') || 'Goals', href: '/(app)/(tabs)/goals', icon: Target },
-  ];
-
-  const featureActions = [
     { label: t('budgets') || 'Budgets', href: '/(app)/budgets', icon: PiggyBank },
-    { label: t('loans') || 'Loans', href: '/(app)/loans', icon: HandCoins },
-    { label: t('recurring') || 'Recurring', href: '/(app)/recurring', icon: RefreshCw },
-    { label: t('subscriptions') || 'Subs', href: '/(app)/subscriptions', icon: CreditCard },
+    { label: t('aiAdvisor') || 'AI Advisor', href: '/(app)/(tabs)/wallet/chat', icon: MessageCircle },
+    { label: t('aiReceiptParser') || 'AI Parser', href: '/(app)/(tabs)/wallet/ai', icon: Bot },
     { label: t('reports') || 'Reports', href: '/(app)/(tabs)/reports', icon: BarChart3 },
-    { label: t('badges') || 'Badges', href: '/(app)/badges', icon: Award },
   ];
 
-  // Feature grid: 7 cols on desktop (single row), 4 cols on tablet/mobile
-  const featureCols = isDesktop ? 7 : 4;
+  const featureCols = isDesktop ? 6 : 3;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
@@ -111,7 +105,7 @@ export default function WalletScreen() {
           ) : (
             <>
               <View className="flex-row items-center mb-2">
-                <Wallet size={16} color="rgb(161, 161, 170)" />
+                <Wallet size={16} color={colors.secondaryForeground} />
                 <Text className="text-muted-foreground text-sm ml-2 font-medium">
                   {t('totalBalance') || 'Total Balance'}
                 </Text>
@@ -125,7 +119,7 @@ export default function WalletScreen() {
                     className="flex-1 bg-primary rounded-xl flex-row items-center justify-center"
                     style={{ height: 44, cursor: 'pointer' }}
                   >
-                    <Plus size={18} color="#09090b" />
+                    <Plus size={18} color={colors.primaryForeground} />
                     <Text className="text-primary-foreground font-semibold ml-2 text-sm">
                       {t('addTransaction')}
                     </Text>
@@ -136,7 +130,7 @@ export default function WalletScreen() {
                     className="flex-1 bg-secondary rounded-xl flex-row items-center justify-center"
                     style={{ height: 44, cursor: 'pointer' }}
                   >
-                    <ArrowLeftRight size={18} color="rgb(161, 161, 170)" />
+                    <ArrowLeftRight size={18} color={colors.secondaryForeground} />
                     <Text className="text-foreground font-semibold ml-2 text-sm">
                       {t('convertCurrency') || t('convert') || 'Convert'}
                     </Text>
@@ -147,49 +141,18 @@ export default function WalletScreen() {
           )}
         </View>
 
-        {/* 2. Quick Actions - Single Horizontal Row */}
-        <View
-          className="mb-6"
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-around',
-          }}
-        >
-          {quickActions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <Link key={action.href} href={action.href as any} asChild>
-                <Pressable className="items-center" style={{ cursor: 'pointer' }}>
-                  <View
-                    className="bg-card border border-border items-center justify-center"
-                    style={{ width: 48, height: 48, borderRadius: 24 }}
-                  >
-                    <Icon size={20} color="rgb(212, 175, 55)" />
-                  </View>
-                  <Text className="text-foreground text-xs mt-2 text-center" numberOfLines={1}>
-                    {action.label}
-                  </Text>
-                </Pressable>
-              </Link>
-            );
-          })}
-        </View>
-
-        {/* 3. Features Grid - Compact Circular Icons */}
+        {/* 2. Quick Actions Grid */}
         <View className="mb-6">
           <View
             style={{
               flexDirection: 'row',
               flexWrap: 'wrap',
-              justifyContent: isDesktop ? 'flex-start' : 'flex-start',
               gap: 16,
             }}
           >
-            {featureActions.map((action) => {
+            {quickActions.map((action) => {
               const Icon = action.icon;
-              const itemWidth = isDesktop
-                ? (availableWidth - 16 * (featureCols - 1)) / featureCols
-                : (availableWidth - 16 * (featureCols - 1)) / featureCols;
+              const itemWidth = (availableWidth - 16 * (featureCols - 1)) / featureCols;
               return (
                 <Link key={action.href} href={action.href as any} asChild>
                   <Pressable
@@ -197,10 +160,10 @@ export default function WalletScreen() {
                     style={{ width: itemWidth, cursor: 'pointer' }}
                   >
                     <View
-                      className="bg-secondary items-center justify-center"
+                      className="bg-card border border-border items-center justify-center"
                       style={{ width: 48, height: 48, borderRadius: 24 }}
                     >
-                      <Icon size={20} color="rgb(212, 175, 55)" />
+                      <Icon size={20} color={colors.accent} />
                     </View>
                     <Text
                       className="text-foreground mt-2 text-center"
@@ -248,7 +211,7 @@ export default function WalletScreen() {
                           top: 0,
                           bottom: 0,
                           width: 3,
-                          backgroundColor: 'rgba(212, 175, 55, 0.5)',
+                          backgroundColor: colors.accent + '80',
                           borderTopLeftRadius: 12,
                           borderBottomLeftRadius: 12,
                         }}
@@ -287,7 +250,7 @@ export default function WalletScreen() {
         <View>
           <View className="flex-row items-center justify-between mb-4">
             <View className="flex-row items-center">
-              <History size={18} color="rgb(212, 175, 55)" />
+              <History size={18} color={colors.accent} />
               <Text className="text-lg font-semibold text-foreground ml-2">
                 {t('recentTransactions')}
               </Text>

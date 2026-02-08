@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Calendar, BarChart3, PieChart, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react-native';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useColors } from '../../../context/ThemeContext';
 import { formatCompactCurrency, formatNumber } from '../../../utils/format';
 import { safeMax } from '../../../utils/dateRange';
 import { CATEGORY_COLORS, StyledCategoryIcon } from '../../../constants/icons';
@@ -21,6 +22,7 @@ export function ComparisonBarChart({
   currency: string;
   t: (key: string) => string;
 }) {
+  const colors = useColors();
   const maxValue = Math.max(income, expenses);
   const incomePercent = maxValue > 0 ? (income / maxValue) * 100 : 0;
   const expensePercent = maxValue > 0 ? (expenses / maxValue) * 100 : 0;
@@ -30,7 +32,7 @@ export function ComparisonBarChart({
       <View>
         <View className="flex-row items-center justify-between mb-1">
           <View className="flex-row items-center">
-            <TrendingUp size={14} color="rgb(16, 185, 129)" />
+            <TrendingUp size={14} color={colors.success} />
             <Text className="text-foreground text-sm ml-1">{t('income')}</Text>
           </View>
           <Text className="text-success text-sm font-medium">
@@ -47,7 +49,7 @@ export function ComparisonBarChart({
       <View>
         <View className="flex-row items-center justify-between mb-1">
           <View className="flex-row items-center">
-            <TrendingUp size={14} color="rgb(220, 38, 38)" style={{ transform: [{ rotate: '180deg' }] }} />
+            <TrendingUp size={14} color={colors.danger} style={{ transform: [{ rotate: '180deg' }] }} />
             <Text className="text-foreground text-sm ml-1">{t('expenses')}</Text>
           </View>
           <Text className="text-danger text-sm font-medium">
@@ -78,12 +80,13 @@ export function HorizontalBarChart({
   valueKey: string;
   formatValue?: (value: number) => string;
 }) {
+  const colors = useColors();
   return (
     <View className="gap-3">
       {data.map((item, index) => {
         const value = item[valueKey];
         const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
-        const color = CATEGORY_COLORS[item[labelKey]?.toLowerCase()] || 'rgb(212, 175, 55)';
+        const color = CATEGORY_COLORS[item[labelKey]?.toLowerCase()] || colors.accent;
 
         return (
           <View key={index}>
@@ -180,6 +183,7 @@ export function MonthlyReportView({
   categoryCols,
 }: MonthlyReportViewProps) {
   const { t } = useLanguage();
+  const colors = useColors();
 
   // Previous month for comparison
   const prevMonth = useMemo(() => {
@@ -238,7 +242,7 @@ export function MonthlyReportView({
   if (isPending) {
     return (
       <View className="items-center justify-center py-8">
-        <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -246,7 +250,7 @@ export function MonthlyReportView({
   if (isMonthlyError) {
     return (
       <View className="bg-card p-6 rounded-xl items-center">
-        <AlertCircle size={48} color="rgb(220, 38, 38)" />
+        <AlertCircle size={48} color={colors.danger} />
         <Text className="text-foreground font-semibold mt-4 text-lg">{t('failedToLoadReport')}</Text>
         <Text className="text-muted-foreground mt-2 text-center">{t('checkConnection')}</Text>
       </View>
@@ -260,7 +264,7 @@ export function MonthlyReportView({
         <View className="bg-card p-6 rounded-xl mb-6">
           <View className="flex-row items-center mb-4">
             <View className="bg-secondary p-2 rounded-lg mr-3">
-              <Calendar size={20} color="rgb(148, 163, 184)" />
+              <Calendar size={20} color={colors.placeholder} />
             </View>
             <Text className="text-foreground font-semibold">{t('monthlySummary')}</Text>
           </View>
@@ -281,9 +285,9 @@ export function MonthlyReportView({
                 }`}
               >
                 {expenseChange <= 0 ? (
-                  <TrendingDown size={14} color="rgb(16, 185, 129)" />
+                  <TrendingDown size={14} color={colors.success} />
                 ) : (
-                  <TrendingUp size={14} color="rgb(220, 38, 38)" />
+                  <TrendingUp size={14} color={colors.danger} />
                 )}
                 <Text
                   className={`text-sm font-semibold ml-1 ${
@@ -326,7 +330,7 @@ export function MonthlyReportView({
         <View className="bg-card p-6 rounded-xl mb-6">
           <View className="flex-row items-center mb-4">
             <View className="bg-accent/20 p-2 rounded-lg mr-3">
-              <TrendingUp size={20} color="rgb(212, 175, 55)" />
+              <TrendingUp size={20} color={colors.accent} />
             </View>
             <Text className="text-foreground font-semibold">{t('forecast')}</Text>
           </View>
@@ -350,7 +354,7 @@ export function MonthlyReportView({
 
               {forecast.net_daily_flow < 0 && (
                 <View className="bg-danger/10 border border-danger/30 p-4 rounded-xl flex-row items-center">
-                  <AlertCircle size={20} color="rgb(220, 38, 38)" />
+                  <AlertCircle size={20} color={colors.danger} />
                   <View className="ml-3 flex-1">
                     <Text className="text-foreground font-medium">{t('daysUntilZero')}</Text>
                     <Text className="text-danger text-xl font-bold">
@@ -371,7 +375,7 @@ export function MonthlyReportView({
         <View className="bg-card p-6 rounded-xl mb-6">
           <View className="flex-row items-center mb-4">
             <View className="bg-secondary p-2 rounded-lg mr-3">
-              <BarChart3 size={20} color="rgb(148, 163, 184)" />
+              <BarChart3 size={20} color={colors.placeholder} />
             </View>
             <Text className="text-foreground font-semibold">{t('incomeVsExpenses')}</Text>
             <Text className="text-muted-foreground text-sm ml-2">
@@ -392,7 +396,7 @@ export function MonthlyReportView({
         <View className="bg-card p-6 rounded-xl">
           <View className="flex-row items-center mb-4">
             <View className="bg-secondary p-2 rounded-lg mr-3">
-              <PieChart size={20} color="rgb(148, 163, 184)" />
+              <PieChart size={20} color={colors.placeholder} />
             </View>
             <Text className="text-foreground font-semibold">{t('spendingByCategory')}</Text>
           </View>
@@ -414,7 +418,7 @@ export function MonthlyReportView({
             marginTop: 16,
           }}>
             {categoryReport.categories.slice(0, 6).map((cat) => {
-              const categoryColor = CATEGORY_COLORS[cat.category.toLowerCase()] || 'rgb(212, 175, 55)';
+              const categoryColor = CATEGORY_COLORS[cat.category.toLowerCase()] || colors.accent;
               return (
                 <View
                   key={cat.category}
@@ -468,7 +472,7 @@ export function MonthlyReportView({
       {/* Empty State */}
       {!monthlyReport && !categoryReport && (
         <View className="bg-card p-8 rounded-xl items-center">
-          <BarChart3 size={48} color="rgb(71, 71, 71)" />
+          <BarChart3 size={48} color={colors.mutedForeground} />
           <Text className="text-foreground font-semibold mt-4 text-lg">{t('noDataAvailable')}</Text>
           <Text className="text-muted-foreground mt-2 text-center">
             {t('addTransaction')}

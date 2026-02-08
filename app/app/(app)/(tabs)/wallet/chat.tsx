@@ -33,6 +33,7 @@ import {
 } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
+import { useColors } from '../../../../src/context/ThemeContext';
 import type { ChatMessage, Conversation, ConversationWithMessages } from '../../../../src/api/chat';
 import type { SmartParseResponse } from '../../../../src/types/wallet';
 import type { ConversionResult } from '../../../../src/types/currency';
@@ -130,6 +131,7 @@ type PendingAction =
 
 export default function AIChatScreen() {
   const { t } = useLanguage();
+  const colors = useColors();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { conversationId } = useLocalSearchParams<{ conversationId?: string }>();
@@ -170,61 +172,61 @@ export default function AIChatScreen() {
   // Markdown styles for AI responses
   const markdownStyles = useMemo(() => StyleSheet.create({
     body: {
-      color: '#fafafa',
+      color: colors.foreground,
       fontSize: 14,
       lineHeight: 20,
     },
     heading1: {
-      color: '#fafafa',
+      color: colors.foreground,
       fontSize: 20,
       fontWeight: '700',
       marginTop: 12,
       marginBottom: 8,
     },
     heading2: {
-      color: '#fafafa',
+      color: colors.foreground,
       fontSize: 18,
       fontWeight: '600',
       marginTop: 10,
       marginBottom: 6,
     },
     heading3: {
-      color: '#fafafa',
+      color: colors.foreground,
       fontSize: 16,
       fontWeight: '600',
       marginTop: 8,
       marginBottom: 4,
     },
     paragraph: {
-      color: '#fafafa',
+      color: colors.foreground,
       fontSize: 14,
       lineHeight: 20,
       marginTop: 0,
       marginBottom: 8,
     },
     strong: {
-      color: '#fafafa',
+      color: colors.foreground,
       fontWeight: '700',
     },
     em: {
-      color: '#fafafa',
+      color: colors.foreground,
       fontStyle: 'italic',
     },
     link: {
-      color: 'rgb(212, 175, 55)',
+      color: colors.accent,
       textDecorationLine: 'underline',
     },
     blockquote: {
-      backgroundColor: 'rgba(39, 39, 42, 0.5)',
-      borderLeftColor: 'rgb(212, 175, 55)',
+      backgroundColor: colors.overlay,
+      borderLeftColor: colors.accent,
       borderLeftWidth: 3,
       paddingLeft: 12,
       paddingVertical: 4,
       marginVertical: 8,
     },
     code_inline: {
-      backgroundColor: '#27272a',
-      color: 'rgb(212, 175, 55)',
+      backgroundColor: colors.secondary,
+      color: colors.accent,
       fontSize: 13,
       fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
       paddingHorizontal: 6,
@@ -232,8 +234,8 @@ export default function AIChatScreen() {
       borderRadius: 4,
     },
     code_block: {
-      backgroundColor: '#18181b',
-      color: '#fafafa',
+      backgroundColor: colors.muted,
+      color: colors.foreground,
       fontSize: 13,
       fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
       padding: 12,
@@ -242,8 +244,8 @@ export default function AIChatScreen() {
       overflow: 'hidden',
     },
     fence: {
-      backgroundColor: '#18181b',
-      color: '#fafafa',
+      backgroundColor: colors.muted,
+      color: colors.foreground,
       fontSize: 13,
       fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
       padding: 12,
@@ -251,7 +253,7 @@ export default function AIChatScreen() {
       marginVertical: 8,
     },
     list_item: {
-      color: '#fafafa',
+      color: colors.foreground,
       fontSize: 14,
       marginBottom: 4,
     },
@@ -262,43 +264,43 @@ export default function AIChatScreen() {
       marginVertical: 4,
     },
     bullet_list_icon: {
-      color: 'rgb(212, 175, 55)',
+      color: colors.accent,
       fontSize: 14,
       marginRight: 8,
     },
     ordered_list_icon: {
-      color: 'rgb(212, 175, 55)',
+      color: colors.accent,
       fontSize: 14,
       marginRight: 8,
     },
     hr: {
-      backgroundColor: '#27272a',
+      backgroundColor: colors.secondary,
       height: 1,
       marginVertical: 12,
     },
     table: {
-      borderColor: '#27272a',
+      borderColor: colors.secondary,
       borderWidth: 1,
       marginVertical: 8,
     },
     thead: {
-      backgroundColor: '#27272a',
+      backgroundColor: colors.secondary,
     },
     th: {
-      color: '#fafafa',
+      color: colors.foreground,
       fontWeight: '600',
       padding: 8,
-      borderColor: '#27272a',
+      borderColor: colors.secondary,
     },
     td: {
-      color: '#fafafa',
+      color: colors.foreground,
       padding: 8,
-      borderColor: '#27272a',
+      borderColor: colors.secondary,
     },
     tr: {
-      borderColor: '#27272a',
+      borderColor: colors.secondary,
     },
-  }), []);
+  }), [colors]);
 
   const { data: aiStatus } = useQuery({
     queryKey: ['ai-status'],
@@ -944,7 +946,7 @@ export default function AIChatScreen() {
           className="bg-primary p-3 rounded-xl flex-row items-center justify-center"
           style={{ cursor: 'pointer' }}
         >
-          <Plus size={20} color="#09090b" />
+          <Plus size={20} color={colors.primaryForeground} />
           <Text className="text-primary-foreground font-semibold ml-2">{t('newConversation')}</Text>
         </Pressable>
       </View>
@@ -964,8 +966,8 @@ export default function AIChatScreen() {
               size={16}
               color={
                 conv.id === activeConversationId
-                  ? 'rgb(212, 175, 55)'
-                  : 'rgb(148, 163, 184)'
+                  ? colors.accent
+                  : colors.placeholder
               }
             />
             <Text
@@ -998,7 +1000,7 @@ export default function AIChatScreen() {
               hitSlop={10}
               style={{ cursor: 'pointer' }}
             >
-              <Trash2 size={16} color="rgb(220, 38, 38)" />
+              <Trash2 size={16} color={colors.danger} />
             </Pressable>
           </Pressable>
         ))}
@@ -1009,7 +1011,7 @@ export default function AIChatScreen() {
   const renderWelcome = () => (
     <View className="flex-1 items-center justify-center p-6">
       <View className="w-16 h-16 rounded-2xl bg-primary items-center justify-center mb-4">
-        <Sparkles size={32} color="#09090b" />
+        <Sparkles size={32} color={colors.primaryForeground} />
       </View>
       <Text className="text-xl font-bold text-foreground text-center mb-2">
         {t('aiWelcome')}
@@ -1052,14 +1054,14 @@ export default function AIChatScreen() {
       if (loadingMessages && activeConversationId) {
         return (
           <View className="items-center py-8">
-            <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
+            <ActivityIndicator size="large" color={colors.accent} />
           </View>
         );
       }
       if (!aiConfigured) {
         return (
           <View className="bg-card border border-border rounded-2xl p-6 items-center">
-            <Sparkles size={24} color="rgb(212, 175, 55)" />
+            <Sparkles size={24} color={colors.accent} />
             <Text className="text-foreground font-semibold mt-3">AI assistant is offline</Text>
             <Text className="text-muted-foreground text-sm text-center mt-2">
               The server is missing an AI configuration. Please add an AI_API_KEY and redeploy.
@@ -1100,16 +1102,16 @@ export default function AIChatScreen() {
                             : 'Live FX rate'}
                   </Text>
                   {pendingAction.status === 'done' && (
-                    <CheckCircle2 size={16} color="#22c55e" />
+                    <CheckCircle2 size={16} color={colors.success} />
                   )}
                   {pendingAction.status === 'error' && (
-                    <AlertTriangle size={16} color="#ef4444" />
+                    <AlertTriangle size={16} color={colors.danger} />
                   )}
                 </View>
 
                 {pendingAction.status === 'loading' && (
                   <View className="flex-row items-center">
-                    <ActivityIndicator size="small" color="rgb(212, 175, 55)" />
+                    <ActivityIndicator size="small" color={colors.accent} />
                     <Text className="text-sm text-muted-foreground ml-2">
                       {pendingAction.kind === 'transaction' || pendingAction.kind === 'recurring' || pendingAction.kind === 'goal_contribution'
                         ? 'Analyzing…'
@@ -1224,7 +1226,7 @@ export default function AIChatScreen() {
                               keyboardType="decimal-pad"
                               className="bg-muted border border-border rounded-lg px-3 py-2 text-foreground text-sm"
                               style={{ outlineStyle: 'none' } as any}
-                              placeholderTextColor="#71717a"
+                              placeholderTextColor={colors.mutedForeground}
                             />
                           </View>
                           <View style={{ flex: 1 }}>
@@ -1235,7 +1237,7 @@ export default function AIChatScreen() {
                               maxLength={3}
                               className="bg-muted border border-border rounded-lg px-3 py-2 text-foreground text-sm"
                               style={{ outlineStyle: 'none' } as any}
-                              placeholderTextColor="#71717a"
+                              placeholderTextColor={colors.mutedForeground}
                             />
                           </View>
                         </View>
@@ -1246,7 +1248,7 @@ export default function AIChatScreen() {
                             onChangeText={setEditDescription}
                             className="bg-muted border border-border rounded-lg px-3 py-2 text-foreground text-sm"
                             style={{ outlineStyle: 'none' } as any}
-                            placeholderTextColor="#71717a"
+                            placeholderTextColor={colors.mutedForeground}
                           />
                         </View>
                         <View className="flex-row flex-wrap" style={{ gap: 8 }}>
@@ -1544,14 +1546,14 @@ export default function AIChatScreen() {
                 paddingHorizontal: 16,
                 paddingVertical: 12,
                 borderRadius: 16,
-                backgroundColor: msg.role === 'user' ? '#d4af37' : '#18181b',
+                backgroundColor: msg.role === 'user' ? colors.accent : colors.muted,
                 borderBottomRightRadius: msg.role === 'user' ? 4 : 16,
                 borderBottomLeftRadius: msg.role === 'user' ? 16 : 4,
                 maxWidth: '90%',
               }}
             >
               {msg.role === 'user' ? (
-                <Text style={{ color: '#09090b', fontSize: 15, lineHeight: 22 }}>
+                <Text style={{ color: colors.primaryForeground, fontSize: 15, lineHeight: 22 }}>
                   {msg.content}
                 </Text>
               ) : (
@@ -1601,7 +1603,7 @@ export default function AIChatScreen() {
             >
               <View className="flex-row items-center">
                 <View className="w-8 h-8 rounded-full bg-primary items-center justify-center">
-                  <Bot size={16} color="#09090b" />
+                  <Bot size={16} color={colors.primaryForeground} />
                 </View>
                 <Text className="font-semibold text-foreground ml-3">{t('aiAdvisor')}</Text>
               </View>
@@ -1627,7 +1629,7 @@ export default function AIChatScreen() {
                     className="bg-primary px-4 py-2 rounded-full flex-row items-center"
                     style={{ cursor: 'pointer' }}
                   >
-                    <Plus size={16} color="#09090b" />
+                    <Plus size={16} color={colors.primaryForeground} />
                     <Text className="text-primary-foreground text-sm ml-1">{t('newConversation')}</Text>
                   </Pressable>
                   {conversations.map((conv) => (
@@ -1678,9 +1680,9 @@ export default function AIChatScreen() {
                   disabled={sendMessageMutation.isPending}
                   style={{
                     flex: 1,
-                    backgroundColor: '#18181b',
+                    backgroundColor: colors.muted,
                     borderWidth: 1,
-                    borderColor: '#3f3f46',
+                    borderColor: colors.borderStrong,
                     borderRadius: 12,
                     paddingHorizontal: 16,
                     paddingVertical: 14,
@@ -1688,7 +1690,7 @@ export default function AIChatScreen() {
                     justifyContent: 'center',
                   }}
                 >
-                  <Text style={{ color: message ? '#ffffff' : '#71717a', fontSize: 16 }} numberOfLines={1}>
+                  <Text style={{ color: message ? colors.foreground : colors.mutedForeground, fontSize: 16 }} numberOfLines={1}>
                     {message || t('typeMessage')}
                   </Text>
                 </Pressable>
@@ -1701,9 +1703,9 @@ export default function AIChatScreen() {
                   style={{ cursor: 'pointer' }}
                 >
                   {sendMessageMutation.isPending ? (
-                    <ActivityIndicator size="small" color="#09090b" />
+                    <ActivityIndicator size="small" color={colors.primaryForeground} />
                   ) : (
-                    <Send size={20} color="#09090b" />
+                    <Send size={20} color={colors.primaryForeground} />
                   )}
                 </Pressable>
               </View>
@@ -1716,7 +1718,7 @@ export default function AIChatScreen() {
               presentationStyle="pageSheet"
               onRequestClose={() => setShowInputModal(false)}
             >
-              <SafeAreaView style={{ flex: 1, backgroundColor: '#09090b' }}>
+              <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
                 <KeyboardAvoidingView
                   style={{ flex: 1 }}
                   behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -1729,15 +1731,15 @@ export default function AIChatScreen() {
                     paddingHorizontal: 16,
                     paddingVertical: 12,
                     borderBottomWidth: 1,
-                    borderBottomColor: '#27272a',
+                    borderBottomColor: colors.secondary,
                   }}>
                     <Pressable
                       onPress={() => setShowInputModal(false)}
                       style={{ padding: 8 }}
                     >
-                      <X size={24} color="#a1a1aa" />
+                      <X size={24} color={colors.secondaryForeground} />
                     </Pressable>
-                    <Text style={{ color: '#fafafa', fontSize: 17, fontWeight: '600' }}>
+                    <Text style={{ color: colors.foreground, fontSize: 17, fontWeight: '600' }}>
                       {t('typeMessage')}
                     </Text>
                     <Pressable
@@ -1749,14 +1751,14 @@ export default function AIChatScreen() {
                       }}
                       disabled={!message.trim() || sendMessageMutation.isPending}
                       style={{
-                        backgroundColor: message.trim() ? '#d4af37' : '#27272a',
+                        backgroundColor: message.trim() ? colors.accent : colors.secondary,
                         paddingHorizontal: 16,
                         paddingVertical: 8,
                         borderRadius: 8,
                       }}
                     >
                       <Text style={{
-                        color: message.trim() ? '#09090b' : '#71717a',
+                        color: message.trim() ? colors.primaryForeground : colors.mutedForeground,
                         fontWeight: '600',
                       }}>
                         {t('send') || 'Send'}
@@ -1770,19 +1772,19 @@ export default function AIChatScreen() {
                       value={message}
                       onChangeText={setMessage}
                       placeholder={t('typeMessage')}
-                      placeholderTextColor="#71717a"
+                      placeholderTextColor={colors.mutedForeground}
                       multiline
                       autoFocus
-                      selectionColor="rgb(212, 175, 55)"
-                      cursorColor="rgb(212, 175, 55)"
+                      selectionColor={colors.accent}
+                      cursorColor={colors.accent}
                       style={{
                         flex: 1,
-                        backgroundColor: '#18181b',
+                        backgroundColor: colors.muted,
                         borderWidth: 1,
-                        borderColor: '#3f3f46',
+                        borderColor: colors.borderStrong,
                         borderRadius: 12,
                         padding: 16,
-                        color: '#ffffff',
+                        color: colors.foreground,
                         fontSize: 18,
                         textAlignVertical: 'top',
                       }}
@@ -1790,8 +1792,8 @@ export default function AIChatScreen() {
                   </View>
 
                   {/* Suggested prompts */}
-                  <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: '#27272a' }}>
-                    <Text style={{ color: '#71717a', fontSize: 12, marginBottom: 8 }}>
+                  <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: colors.secondary }}>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 8 }}>
                       {t('suggestions') || 'Suggestions'}
                     </Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -1801,13 +1803,13 @@ export default function AIChatScreen() {
                             key={i}
                             onPress={() => setMessage(q)}
                             style={{
-                              backgroundColor: '#27272a',
+                              backgroundColor: colors.secondary,
                               paddingHorizontal: 12,
                               paddingVertical: 8,
                               borderRadius: 8,
                             }}
                           >
-                            <Text style={{ color: '#fafafa', fontSize: 13 }}>{q}</Text>
+                            <Text style={{ color: colors.foreground, fontSize: 13 }}>{q}</Text>
                           </Pressable>
                         ))}
                       </View>
