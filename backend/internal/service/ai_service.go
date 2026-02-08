@@ -365,20 +365,119 @@ func (s *AIService) GetProvider() string {
 	return s.provider
 }
 
-const smartParsePromptTemplate = `Analyze this user message about a financial transaction. Extract the following information and return ONLY a valid JSON object (no markdown, no explanation):
+const detectIntentPromptTemplate = `Classify the user's intent. Return ONLY a JSON object with one field "intent".
 
-{
-  "amount": <number - the amount as a decimal number>,
-  "currency": "<3-letter ISO currency code, e.g., USD, EUR, GBP>",
-  "type": "<'credit' for income/receiving money or 'debit' for expense/spending>",
-  "description": "<brief description of the transaction, max 100 characters>",
-  "category": "<one of: food, transportation, entertainment, shopping, bills, income, transfer, other>",
-  "action_type": "<'transaction' for one-time, 'recurring' for repeated, or 'goal_contribution' for saving toward a goal>",
-  "frequency": "<only if recurring: 'daily', 'weekly', 'monthly', or 'yearly'>",
-  "goal_name": "<only if goal_contribution: the name of the savings goal>"
+Possible intents:
+- "transaction": User wants to ADD/RECORD a one-time financial transaction (must include or imply a specific amount)
+- "recurring": User wants to ADD/RECORD a recurring/repeated transaction (keywords: every, monthly, weekly, daily, yearly, subscription, rent, salary)
+- "goal_contribution": User wants to SAVE or CONTRIBUTE money toward a financial goal
+- "convert": User wants to CONVERT one currency to another (e.g. "convert 100 USD to EUR")
+- "rate": User wants to CHECK an exchange rate between currencies (e.g. "rate USD to EUR")
+- "none": User is asking a question, making conversation, seeking advice, or anything else that is NOT a request to add/record a financial event
+
+IMPORTANT:
+- Questions about past spending (e.g. "how much did I spend?", "what did I buy?") are "none" — they are queries, not requests to record
+- Vague statements without specific amounts (e.g. "I spend a lot on food") are "none"
+- Only classify as "transaction"/"recurring"/"goal_contribution" when the user clearly intends to ADD or RECORD something
+
+Return ONLY: {"intent": "<one of the above>"}
+
+User message: %s`
+
+// DetectIntent uses a lightweight AI call to classify user intent
+func (s *AIService) DetectIntent(ctx context.Context, text string) (*model.IntentResult, error) {
+	if text == "" {
+		return &model.IntentResult{Intent: "none"}, nil
+	}
+
+	llm, err := s.getLLM(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting LLM: %w", err)
+	}
+
+	prompt := fmt.Sprintf(detectIntentPromptTemplate, text)
+
+	response, err := llm.GenerateContent(ctx, []llms.MessageContent{
+		{
+			Parts: []llms.ContentPart{llms.TextPart(prompt)},
+			Role:  llms.ChatMessageTypeHuman,
+		},
+	})
+
+	if err != nil {
+		log.Error().Err(err).Str("provider", s.provider).Msg("AI intent detection failed")
+		return nil, fmt.Errorf("calling AI service (detect-intent, %s): %w", s.provider, err)
+	}
+
+	if len(response.Choices) == 0 {
+		return &model.IntentResult{Intent: "none"}, nil
+	}
+
+	responseText := strings.TrimSpace(response.Choices[0].Content)
+	responseText = strings.TrimPrefix(responseText, "```json")
+	responseText = strings.TrimPrefix(responseText, "```")
+	responseText = strings.TrimSuffix(responseText, "```")
+	responseText = strings.TrimSpace(responseText)
+
+	// Extract JSON
+	jsonStart := strings.Index(responseText, "{")
+	jsonEnd := strings.LastIndex(responseText, "}")
+	if jsonStart != -1 && jsonEnd != -1 && jsonEnd > jsonStart {
+		responseText = responseText[jsonStart : jsonEnd+1]
+	}
+
+	var result model.IntentResult
+	if err := json.Unmarshal([]byte(responseText), &result); err != nil {
+		return &model.IntentResult{Intent: "none"}, nil
+	}
+
+	// Validate intent value
+	validIntents := map[string]bool{
+		"transaction":       true,
+		"recurring":         true,
+		"goal_contribution": true,
+		"convert":           true,
+		"rate":              true,
+		"none":              true,
+	}
+	if !validIntents[result.Intent] {
+		result.Intent = "none"
+	}
+
+	return &result, nil
 }
 
-Category inference rules:
+const smartParsePromptTemplate = `Analyze this user message and determine the user's financial intent. Extract the following information and return ONLY a valid JSON object (no markdown, no explanation):
+
+{
+  "amount": <number - the amount as a decimal number, or 0 if not specified>,
+  "currency": "<3-letter ISO currency code, e.g., USD, EUR, GBP>",
+  "type": "<'credit' for income/receiving money or 'debit' for expense/spending>",
+  "description": "<brief description, max 100 characters>",
+  "category": "<one of: food, transportation, entertainment, shopping, bills, income, transfer, other>",
+  "action_type": "<one of: 'transaction', 'recurring', 'goal_contribution', 'convert', 'rate', 'none'>",
+  "frequency": "<only if recurring: 'daily', 'weekly', 'monthly', or 'yearly'>",
+  "goal_name": "<only if goal_contribution: the name of the savings goal>",
+  "from_currency": "<only if convert/rate: source currency code>",
+  "to_currency": "<only if convert/rate: target currency code>"
+}
+
+Action type rules:
+- "transaction": User wants to ADD/RECORD a one-time financial event with a specific amount (e.g., "spent $50 on coffee", "add $12 lunch")
+- "recurring": User wants to ADD/RECORD a repeated transaction (keywords: every, each, monthly, weekly, daily, yearly, subscription, rent, salary)
+- "goal_contribution": User wants to SAVE or CONTRIBUTE money toward a financial goal (keywords: put toward, save for, contribute to, goal, fund)
+- "convert": User wants to CONVERT a specific amount from one currency to another (e.g., "convert 100 USD to EUR", "exchange 50 dollars to euros")
+- "rate": User wants to CHECK the exchange rate between two currencies without converting (e.g., "rate USD to EUR", "what is EUR in GBP", "how much is 1 dollar in yen")
+- "none": ANYTHING ELSE — questions about finances, advice requests, conversation, vague statements without amounts, greetings
+
+CRITICAL rules for "none":
+- Questions about past spending (e.g., "how much did I spend?", "what did I buy?") → "none"
+- Vague statements without a specific amount (e.g., "I spend a lot on food") → "none"
+- Advice requests (e.g., "how can I save more?") → "none"
+- Greetings and conversation (e.g., "hello", "thanks", "tell me about my budget") → "none"
+- ONLY use transaction/recurring/goal_contribution when the user clearly intends to ADD or RECORD something with a specific amount
+
+Category inference:
 - coffee, lunch, dinner, restaurant, grocery → food
 - uber, lyft, gas, parking, flight → transportation
 - netflix, spotify, movie, game → entertainment
@@ -387,20 +486,9 @@ Category inference rules:
 - salary, paycheck, income, bonus → income
 - transfer, send, venmo, paypal → transfer
 
-Action type rules:
-- Keywords like "every", "each", "monthly", "weekly", "yearly", "daily" → recurring
-- Keywords like "rent", "salary", "subscription" often indicate recurring
-- Keywords like "put toward", "save for", "contribute to", "goal", "fund" → goal_contribution
-- Default to "transaction" for one-time events
+Transaction type: "spent"/"paid"/"bought" → debit; "received"/"earned"/"salary" → credit
 
-Transaction type rules:
-- "spent", "paid", "bought", "cost", "dropped" → debit
-- "received", "got", "earned", "made", "deposited", "salary" → credit
-
-Currency rules:
-- If $ or no symbol, assume USD
-- If € assume EUR, if £ assume GBP
-- If IRR, toman, or rial mentioned, use IRR
+Currency: $ or no symbol → USD, € → EUR, £ → GBP, toman/rial → IRR
 
 Return ONLY the JSON object, nothing else.
 
@@ -481,13 +569,29 @@ func (s *AIService) parseSmartResponse(responseText, originalText string) (*mode
 		result.Type = "debit"
 	}
 
-	if result.ActionType == "" || (result.ActionType != "transaction" && result.ActionType != "recurring" && result.ActionType != "goal_contribution") {
-		result.ActionType = "transaction"
+	validActions := map[string]bool{
+		"transaction":       true,
+		"recurring":         true,
+		"goal_contribution": true,
+		"convert":           true,
+		"rate":              true,
+		"none":              true,
+	}
+	if !validActions[result.ActionType] {
+		result.ActionType = "none"
 	}
 
 	// Infer category if not set or is "other"
 	if result.Category == "" || result.Category == "other" {
 		result.Category = inferCategory(result.Description)
+	}
+
+	// Normalize from/to currencies for convert/rate
+	if result.FromCurrency != "" {
+		result.FromCurrency = strings.ToUpper(result.FromCurrency)
+	}
+	if result.ToCurrency != "" {
+		result.ToCurrency = strings.ToUpper(result.ToCurrency)
 	}
 
 	// Validate frequency for recurring
@@ -506,7 +610,7 @@ func (s *AIService) extractSmartFieldsManually(text, originalText string) model.
 	result := model.SmartParseResult{
 		Type:       "debit",
 		Currency:   "USD",
-		ActionType: "transaction",
+		ActionType: "none",
 	}
 
 	// Try to find amount
@@ -557,6 +661,18 @@ func (s *AIService) extractSmartFieldsManually(text, originalText string) model.
 	goalPattern := regexp.MustCompile(`"goal_name"\s*:\s*"([^"]*)"`)
 	if matches := goalPattern.FindStringSubmatch(text); len(matches) > 1 {
 		result.GoalName = matches[1]
+	}
+
+	// Try to find from_currency
+	fromCurrPattern := regexp.MustCompile(`"from_currency"\s*:\s*"([A-Za-z]{3})"`)
+	if matches := fromCurrPattern.FindStringSubmatch(text); len(matches) > 1 {
+		result.FromCurrency = strings.ToUpper(matches[1])
+	}
+
+	// Try to find to_currency
+	toCurrPattern := regexp.MustCompile(`"to_currency"\s*:\s*"([A-Za-z]{3})"`)
+	if matches := toCurrPattern.FindStringSubmatch(text); len(matches) > 1 {
+		result.ToCurrency = strings.ToUpper(matches[1])
 	}
 
 	// Fallback: infer from original text

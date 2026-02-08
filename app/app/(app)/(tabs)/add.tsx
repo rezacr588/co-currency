@@ -43,7 +43,7 @@ export default function AddTransactionScreen() {
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
   // Calculate category card widths
-  const containerPadding = isDesktop ? 32 : 24;
+  const containerPadding = isDesktop ? 32 : 16;
   const categoryGap = 8;
   const availableWidth = width - containerPadding * 2;
   const categoryCols = isDesktop ? 6 : isTablet ? 4 : 2;
@@ -269,7 +269,7 @@ export default function AddTransactionScreen() {
           className="flex-1"
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{
-            padding: isDesktop ? 32 : 24,
+            padding: isDesktop ? 32 : 16,
             maxWidth: isDesktop ? 800 : undefined,
             alignSelf: isDesktop ? 'center' : undefined,
             width: '100%',

@@ -50,10 +50,10 @@ import { haptics } from '../../src/utils/haptics';
 import { Toggle } from '../../src/components/ui/Toggle';
 
 const LANGUAGES = [
-  { code: 'en', name: 'English', flag: '' },
-  { code: 'fa', name: 'Persian', flag: '' },
-  { code: 'ar', name: 'Arabic', flag: '' },
-  { code: 'tr', name: 'Turkish', flag: '' },
+  { code: 'en', name: 'English', flag: '🇺🇸' },
+  { code: 'fa', name: 'Persian', flag: '🇮🇷' },
+  { code: 'ar', name: 'Arabic', flag: '🇸🇦' },
+  { code: 'tr', name: 'Turkish', flag: '🇹🇷' },
 ] as const;
 
 export default function ProfileScreen() {
@@ -135,6 +135,7 @@ export default function ProfileScreen() {
     onPress,
     iconColor,
     showChevron = true,
+    isLast = false,
   }: {
     icon: React.ReactNode;
     label: string;
@@ -142,12 +143,13 @@ export default function ProfileScreen() {
     onPress?: () => void;
     iconColor?: string;
     showChevron?: boolean;
+    isLast?: boolean;
   }) => (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
       style={{ cursor: onPress ? 'pointer' : undefined } as any}
-      className="flex-row items-center justify-between p-4 active:bg-secondary/50"
+      className={`flex-row items-center justify-between p-4 active:bg-secondary/50 ${!isLast ? 'border-b border-border' : ''}`}
     >
       <View className="flex-row items-center">
         {icon}
@@ -183,7 +185,7 @@ export default function ProfileScreen() {
               <ChevronLeft size={24} color={colors.placeholder} />
             </Pressable>
           )}
-          <Text className="text-3xl font-bold text-foreground">{t('profile')}</Text>
+          <Text className="text-2xl font-bold text-foreground">{t('profile')}</Text>
         </View>
 
         {/* Desktop: Two column layout, Mobile: Single column */}
@@ -246,6 +248,7 @@ export default function ProfileScreen() {
                 value={isDark ? t('dark') : t('light')}
                 onPress={toggleTheme}
                 showChevron={false}
+                isLast
               />
             </SettingsSection>
 
@@ -290,6 +293,7 @@ export default function ProfileScreen() {
                 icon={<CreditCard size={20} color={colors.accent} />}
                 label={t('subscriptions')}
                 onPress={() => router.push('/subscriptions')}
+                isLast
               />
             </SettingsSection>
 
@@ -320,6 +324,7 @@ export default function ProfileScreen() {
                   icon={<Info size={20} color={colors.placeholder} />}
                   label={t('aboutUs') || 'About Us'}
                   onPress={() => router.push('/(public)/about')}
+                  isLast
                 />
               </SettingsSection>
             </View>
@@ -329,7 +334,7 @@ export default function ProfileScreen() {
               <SettingsSection title={t('securityAndPrivacy') || 'Security & Privacy'}>
                 {/* Biometric Lock */}
                 {isBiometricAvailable && (
-                  <View className="flex-row items-center justify-between p-4">
+                  <View className="flex-row items-center justify-between p-4 border-b border-border">
                     <View className="flex-row items-center flex-1 mr-4">
                       <Fingerprint size={20} color={colors.accent} />
                       <View className="ml-3 flex-1">
@@ -347,7 +352,7 @@ export default function ProfileScreen() {
                 )}
 
                 {/* Hide Balances */}
-                <View className="flex-row items-center justify-between p-4">
+                <View className="flex-row items-center justify-between p-4 border-b border-border">
                   <View className="flex-row items-center flex-1 mr-4">
                     {settings.hideBalances ? (
                       <EyeOff size={20} color={colors.accent} />
@@ -372,6 +377,7 @@ export default function ProfileScreen() {
                   icon={<Lock size={20} color={colors.accent} />}
                   label={t('changePassword')}
                   onPress={() => router.push('/change-password')}
+                  isLast
                 />
               </SettingsSection>
             </View>
@@ -383,6 +389,7 @@ export default function ProfileScreen() {
                   icon={<Bell size={20} color={colors.accent} />}
                   label={t('notifications')}
                   onPress={() => router.push('/notification-settings')}
+                  isLast
                 />
               </SettingsSection>
             </View>
@@ -394,6 +401,7 @@ export default function ProfileScreen() {
                   icon={<MessageCircle size={20} color={colors.info} />}
                   label={t('aiAdvisor')}
                   onPress={() => router.push('/(app)/(tabs)/wallet/chat')}
+                  isLast
                 />
               </SettingsSection>
             </View>

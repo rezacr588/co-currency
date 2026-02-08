@@ -38,6 +38,7 @@ import { getCurrencyDisplay } from '../../src/utils/format';
 import { haptics } from '../../src/utils/haptics';
 import { COMMON_CURRENCIES } from '../../src/constants/currencies';
 import { Button } from '../../src/components/ui/Button';
+import { SkeletonCard, SkeletonList } from '../../src/components/ui/Skeleton';
 import type { Loan, CreateLoanRequest, LoanType, CreatePaymentRequest } from '../../src/types/loan';
 
 const CURRENCIES = [...COMMON_CURRENCIES];
@@ -213,7 +214,7 @@ export default function LoansScreen() {
         <Pressable onPress={() => router.back()} className="p-2" hitSlop={12}>
           <ArrowLeft size={24} color={iconColor} />
         </Pressable>
-        <Text className="text-xl font-bold text-foreground">
+        <Text className="text-2xl font-bold text-foreground">
           {t('loansAndDebts') || 'Loans & Debts'}
         </Text>
         <Pressable
@@ -315,9 +316,7 @@ export default function LoansScreen() {
 
         {/* Loans List */}
         {isPending ? (
-          <View className="items-center py-8">
-            <ActivityIndicator color={colors.accent} />
-          </View>
+          <SkeletonList count={3} ItemComponent={SkeletonCard} />
         ) : loans.length === 0 ? (
           <View className="bg-card border border-border p-8 rounded-xl items-center">
             <CreditCard size={48} color={colors.mutedForeground} />

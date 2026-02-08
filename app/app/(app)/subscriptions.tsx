@@ -31,6 +31,7 @@ import { formatCompactCurrency, formatDate } from '../../src/utils/format';
 import { useToast } from '../../src/components/ui/Toast';
 import { Button } from '../../src/components/ui/Button';
 import { FormError } from '../../src/components/ui/FormError';
+import { SkeletonCard, SkeletonList } from '../../src/components/ui/Skeleton';
 import type { CreateSubscriptionRequest, Subscription } from '../../src/types/goal';
 
 const BILLING_CYCLES = ['weekly', 'monthly', 'quarterly', 'yearly'] as const;
@@ -92,7 +93,7 @@ export default function SubscriptionsScreen() {
           <Pressable onPress={() => router.back()} className="p-2 mr-2" style={{ cursor: 'pointer' }}>
             <ArrowLeft size={24} color={colors.foreground} />
           </Pressable>
-          <Text className="text-xl font-bold text-foreground">{t('subscriptions')}</Text>
+          <Text className="text-2xl font-bold text-foreground">{t('subscriptions')}</Text>
         </View>
         <Pressable onPress={() => setShowForm(true)} className="bg-primary p-2 rounded-full" style={{ cursor: 'pointer' }}>
           <Plus size={24} color={colors.primaryForeground} />
@@ -111,7 +112,7 @@ export default function SubscriptionsScreen() {
       >
         {/* Summary Card */}
         {summary && (
-          <View className="bg-card p-4 rounded-xl mb-6" style={{ maxWidth: isDesktop ? 500 : '100%' }}>
+          <View className="bg-card border border-border p-5 rounded-xl mb-6" style={{ maxWidth: isDesktop ? 500 : '100%' }}>
             <Text className="text-muted-foreground mb-2">{t('monthlyCost')}</Text>
             <Text className="text-3xl font-bold text-accent">
               {formatCompactCurrency(summary.total_monthly, summary.currency)}
@@ -147,9 +148,9 @@ export default function SubscriptionsScreen() {
             </Pressable>
           </View>
         ) : isPending ? (
-          <ActivityIndicator size="large" color={colors.accent} />
+          <SkeletonList count={3} ItemComponent={SkeletonCard} />
         ) : subscriptions.length === 0 ? (
-          <View className="bg-card p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
+          <View className="bg-card border border-border p-6 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
             <CreditCard size={48} color={colors.placeholder} />
             <Text className="text-lg font-semibold text-foreground mt-4">
               {t('noSubscriptions')}
@@ -250,7 +251,7 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
   };
 
   return (
-    <View className={`bg-card p-4 rounded-xl ${isPaused ? 'opacity-60' : ''}`}>
+    <View className={`bg-card border border-border p-4 rounded-xl ${isPaused ? 'opacity-60' : ''}`}>
       <View className="flex-row items-center justify-between mb-3">
         <View className="flex-row items-center flex-1">
           <View className="bg-accent/20 p-2 rounded-lg mr-3">

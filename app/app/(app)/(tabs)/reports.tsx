@@ -272,7 +272,6 @@ function RingChart({
 }) {
   const colors = useColors();
   const total = segments.reduce((sum, s) => sum + s.value, 0);
-  if (total === 0) return null;
 
   const size = 160;
   const strokeWidth = 20;
@@ -290,6 +289,8 @@ function RingChart({
       return { ...segment, dashArray, dashOffset, percent };
     });
   }, [segments, total, circumference]);
+
+  if (total === 0) return null;
 
   return (
     <View className="items-center">
@@ -457,7 +458,7 @@ export default function ReportsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <Text className="text-3xl font-bold text-foreground mb-4">{t('reportsAndStats')}</Text>
+        <Text className="text-2xl font-bold text-foreground mb-4">{t('reportsAndStats')}</Text>
 
         {/* Net Worth Card (always visible) */}
         {networth && !networthError && (

@@ -22,6 +22,7 @@ import { StyledCategoryIcon, CATEGORY_COLORS, getCategoryBackground, CategoryIco
 import { useToast } from '../../src/components/ui/Toast';
 import { Button } from '../../src/components/ui/Button';
 import { FormError } from '../../src/components/ui/FormError';
+import { SkeletonCard, SkeletonList } from '../../src/components/ui/Skeleton';
 import type { CreateBudgetRequest } from '../../src/types/goal';
 
 const CATEGORIES = ['food', 'transportation', 'entertainment', 'shopping', 'bills', 'other'];
@@ -68,7 +69,7 @@ export default function BudgetsScreen() {
           <Pressable onPress={() => router.back()} className="p-2 mr-2" style={{ cursor: 'pointer' }}>
             <ArrowLeft size={24} color={colors.foreground} />
           </Pressable>
-          <Text className="text-xl font-bold text-foreground">{t('budgets')}</Text>
+          <Text className="text-2xl font-bold text-foreground">{t('budgets')}</Text>
         </View>
         <Pressable onPress={() => setShowForm(true)} className="bg-primary p-2 rounded-full" style={{ cursor: 'pointer' }}>
           <Plus size={24} color={colors.primaryForeground} />
@@ -97,9 +98,9 @@ export default function BudgetsScreen() {
             </Pressable>
           </View>
         ) : isPending ? (
-          <ActivityIndicator size="large" color={colors.accent} />
+          <SkeletonList count={3} ItemComponent={SkeletonCard} />
         ) : budgets.length === 0 ? (
-          <View className="bg-card p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
+          <View className="bg-card border border-border p-6 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
             <PieChart size={48} color={colors.placeholder} />
             <Text className="text-lg font-semibold text-foreground mt-4">{t('noBudgets')}</Text>
             <Text className="text-muted-foreground text-center mt-2">{t('noBudgetsDescription')}</Text>

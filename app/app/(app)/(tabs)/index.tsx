@@ -29,26 +29,26 @@ export default function DashboardScreen() {
   const isTablet = width >= 768;
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
-  const { data: summary, isPending, isError: isSummaryError } = useQuery({
+  const { data: summary, isPending, isError: isSummaryError, refetch: refetchSummary } = useQuery({
     queryKey: ['wallet', 'summary'],
     queryFn: () => api.wallet.getSummary(),
     staleTime: 2 * 60 * 1000,
   });
 
-  const { data: monthlyReport, isError: isMonthlyError } = useQuery({
+  const { data: monthlyReport, isError: isMonthlyError, refetch: refetchMonthly } = useQuery({
     queryKey: ['reports', 'monthly'],
     queryFn: () => api.reports.monthly(),
     staleTime: 2 * 60 * 1000,
   });
 
-  const { data: goalsData, isError: isGoalsError } = useQuery({
+  const { data: goalsData, isError: isGoalsError, refetch: refetchGoals } = useQuery({
     queryKey: ['goals'],
     queryFn: () => api.goals.list(),
     staleTime: 2 * 60 * 1000,
   });
   const goals: Goal[] | undefined = goalsData?.goals;
 
-  const { data: budgetsData, isError: isBudgetsError } = useQuery({
+  const { data: budgetsData, isError: isBudgetsError, refetch: refetchBudgets } = useQuery({
     queryKey: ['budgets'],
     queryFn: () => api.budgets.list(),
     staleTime: 2 * 60 * 1000,
@@ -149,6 +149,18 @@ export default function DashboardScreen() {
             <Text className="text-danger/70 text-sm mt-1">
               {t('checkConnection') || 'Please check your connection and try again.'}
             </Text>
+            <Pressable
+              onPress={() => {
+                if (isSummaryError) refetchSummary();
+                if (isMonthlyError) refetchMonthly();
+                if (isGoalsError) refetchGoals();
+                if (isBudgetsError) refetchBudgets();
+              }}
+              className="bg-danger/20 px-4 py-2 rounded-lg mt-3 self-start"
+              style={{ cursor: 'pointer' }}
+            >
+              <Text className="text-danger font-medium">{t('retry') || 'Retry'}</Text>
+            </Pressable>
           </View>
         )}
 
@@ -159,7 +171,7 @@ export default function DashboardScreen() {
             <View className="flex-row items-center justify-between mb-4">
               <Text className="text-2xl font-bold text-primary">CoFinance</Text>
               <Link href="/(app)/profile" asChild>
-                <Pressable hitSlop={4} style={{ cursor: 'pointer' }} className="bg-secondary border border-border p-2.5 rounded-full">
+                <Pressable hitSlop={8} style={{ cursor: 'pointer', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }} className="bg-secondary border border-border p-3 rounded-full">
                   <User size={20} color={colors.secondaryForeground} />
                 </Pressable>
               </Link>
@@ -182,7 +194,7 @@ export default function DashboardScreen() {
           }}
         >
           {/* Total Balance */}
-          <View style={{ flex: isDesktop ? 1 : isTablet ? '48%' as any : 1, minWidth: isDesktop ? 200 : undefined }}>
+          <View style={{ flex: isDesktop ? 1 : isTablet ? undefined : 1, width: isTablet && !isDesktop ? '48%' : undefined, minWidth: isDesktop ? 200 : undefined }}>
             <View className="bg-card border border-border p-5 rounded-xl h-full">
               <View className="flex-row items-center justify-between mb-3">
                 <Text className="text-muted-foreground text-sm">{t('totalBalance')}</Text>
@@ -200,7 +212,7 @@ export default function DashboardScreen() {
 
           {/* Income */}
           {monthlyReport && (
-            <View style={{ flex: isDesktop ? 1 : isTablet ? '48%' as any : 1, minWidth: isDesktop ? 200 : undefined }}>
+            <View style={{ flex: isDesktop ? 1 : isTablet ? undefined : 1, width: isTablet && !isDesktop ? '48%' : undefined, minWidth: isDesktop ? 200 : undefined }}>
               <View className="bg-card border border-border p-5 rounded-xl h-full">
                 <View className="flex-row items-center justify-between mb-3">
                   <Text className="text-muted-foreground text-sm">{t('income')}</Text>
@@ -216,7 +228,7 @@ export default function DashboardScreen() {
 
           {/* Expenses */}
           {monthlyReport && (
-            <View style={{ flex: isDesktop ? 1 : isTablet ? '48%' as any : 1, minWidth: isDesktop ? 200 : undefined }}>
+            <View style={{ flex: isDesktop ? 1 : isTablet ? undefined : 1, width: isTablet && !isDesktop ? '48%' : undefined, minWidth: isDesktop ? 200 : undefined }}>
               <View className="bg-card border border-border p-5 rounded-xl h-full">
                 <View className="flex-row items-center justify-between mb-3">
                   <Text className="text-muted-foreground text-sm">{t('expenses')}</Text>
@@ -231,7 +243,7 @@ export default function DashboardScreen() {
           )}
 
           {/* Goals Progress */}
-          <View style={{ flex: isDesktop ? 1 : isTablet ? '48%' as any : 1, minWidth: isDesktop ? 200 : undefined }}>
+          <View style={{ flex: isDesktop ? 1 : isTablet ? undefined : 1, width: isTablet && !isDesktop ? '48%' : undefined, minWidth: isDesktop ? 200 : undefined }}>
             <View className="bg-card border border-border p-5 rounded-xl h-full">
               <View className="flex-row items-center justify-between mb-3">
                 <Text className="text-muted-foreground text-sm">{t('financialGoals')}</Text>
@@ -246,7 +258,7 @@ export default function DashboardScreen() {
 
           {/* Budget Status */}
           {budgets.length > 0 && (
-            <View style={{ flex: isDesktop ? 1 : isTablet ? '48%' as any : 1, minWidth: isDesktop ? 200 : undefined }}>
+            <View style={{ flex: isDesktop ? 1 : isTablet ? undefined : 1, width: isTablet && !isDesktop ? '48%' : undefined, minWidth: isDesktop ? 200 : undefined }}>
               <View className="bg-card border border-border p-5 rounded-xl h-full">
                 <View className="flex-row items-center justify-between mb-3">
                   <Text className="text-muted-foreground text-sm">{t('budgetStatus') || 'Budget'}</Text>

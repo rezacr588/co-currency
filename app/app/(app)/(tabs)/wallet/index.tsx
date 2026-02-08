@@ -2,7 +2,7 @@ import { View, Text, ScrollView, Pressable, RefreshControl, useWindowDimensions 
 import { Link } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Plus, ArrowLeftRight, Bot, History, MessageCircle, Target, PiggyBank, BarChart3, Wallet } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
@@ -14,7 +14,6 @@ import { Skeleton, SkeletonList, SkeletonTransaction, SkeletonBalance } from '..
 export default function WalletScreen() {
   const { t } = useLanguage();
   const colors = useColors();
-  const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -23,7 +22,7 @@ export default function WalletScreen() {
   const isTablet = width >= 768;
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
-  const containerPadding = isDesktop ? 32 : 24;
+  const containerPadding = isDesktop ? 32 : 16;
   const availableWidth = width - containerPadding * 2;
 
   // Balance cards: 3 cols on desktop, 2 cols on tablet/mobile
@@ -36,26 +35,26 @@ export default function WalletScreen() {
   const txGap = 12;
   const txCardWidth = txCols === 1 ? availableWidth : (availableWidth - txGap * (txCols - 1)) / txCols;
 
-  const { data: summary, isPending: isLoadingSummary } = useQuery({
+  const { data: summary, isPending: isLoadingSummary, refetch: refetchSummary } = useQuery({
     queryKey: ['wallet', 'summary'],
     queryFn: () => api.wallet.getSummary(),
   });
 
-  const { data: balancesData, isPending: isLoadingBalances } = useQuery({
+  const { data: balancesData, isPending: isLoadingBalances, refetch: refetchBalances } = useQuery({
     queryKey: ['wallet', 'balances'],
     queryFn: () => api.wallet.getBalances(),
   });
 
-  const { data: transactionsData, isPending: isLoadingTransactions } = useQuery({
+  const { data: transactionsData, isPending: isLoadingTransactions, refetch: refetchTransactions } = useQuery({
     queryKey: ['wallet', 'transactions'],
     queryFn: () => api.wallet.getTransactions(10),
   });
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ['wallet'] });
+    await Promise.all([refetchSummary(), refetchBalances(), refetchTransactions()]);
     setRefreshing(false);
-  }, [queryClient]);
+  }, [refetchSummary, refetchBalances, refetchTransactions]);
 
   const balances = balancesData?.balances || [];
   const transactions = transactionsData?.transactions || [];
@@ -79,7 +78,7 @@ export default function WalletScreen() {
       <ScrollView
         className="flex-1"
         contentContainerStyle={{
-          padding: isDesktop ? 32 : 24,
+          padding: isDesktop ? 32 : 16,
           maxWidth: 1400,
           width: '100%',
           alignSelf: 'center',
@@ -90,7 +89,7 @@ export default function WalletScreen() {
         }
       >
         {/* 1. Hero Balance Card */}
-        <View className="bg-card border border-border rounded-2xl p-6 mb-6" style={{ overflow: 'hidden' }}>
+        <View className="bg-card border border-border rounded-2xl p-5 mb-6" style={{ overflow: 'hidden' }}>
           {isLoadingSummary ? (
             <View>
               <Skeleton width={120} height={14} borderRadius={4} />
@@ -157,7 +156,7 @@ export default function WalletScreen() {
                 <Link key={action.href} href={action.href as any} asChild>
                   <Pressable
                     className="items-center"
-                    style={{ width: itemWidth, cursor: 'pointer' }}
+                    style={{ width: itemWidth, minHeight: 44, cursor: 'pointer' }}
                   >
                     <View
                       className="bg-card border border-border items-center justify-center"

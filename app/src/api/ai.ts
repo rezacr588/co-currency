@@ -4,6 +4,7 @@ import type {
   AIApplyRequest,
   AIApplyResponse,
   SmartParseResponse,
+  IntentResponse,
   ApplyRecurringRequest,
   ApplyGoalContributionRequest,
   Transaction,
@@ -20,7 +21,14 @@ export const ai = {
       body: JSON.stringify(data),
     }),
 
-  // Enhanced smart parse with action type detection
+  // Lightweight intent detection — AI model classifies user intent
+  detectIntent: (data: AIParseRequest) =>
+    fetchAPI<IntentResponse>('/ai/detect-intent', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // Full smart parse with transaction details extraction
   smartParse: (data: AIParseRequest) =>
     fetchAPI<SmartParseResponse>('/ai/smart-parse', {
       method: 'POST',

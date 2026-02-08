@@ -761,6 +761,11 @@ export const translations = {
     failedToOpenGoogleLogin: 'Failed to open Google login',
     failedToOpenLinkedInLogin: 'Failed to open LinkedIn login',
     noWalletBalancesDescription: 'Add a transaction to create a wallet balance before converting.',
+    transactionAdded: 'Transaction added.',
+    recurringCreated: 'Recurring transaction created.',
+    contributionAdded: 'Contribution added to goal.',
+    conversionCompleted: 'Conversion completed.',
+    rateUpdated: 'Rate updated.',
   },
   fa: {
     // Header
@@ -1522,6 +1527,11 @@ export const translations = {
     failedToOpenGoogleLogin: 'خطا در باز کردن ورود گوگل',
     failedToOpenLinkedInLogin: 'خطا در باز کردن ورود لینکدین',
     noWalletBalancesDescription: 'برای تبدیل ارز، ابتدا یک تراکنش اضافه کنید.',
+    transactionAdded: 'تراکنش اضافه شد.',
+    recurringCreated: 'تراکنش تکرارشونده ایجاد شد.',
+    contributionAdded: 'مشارکت به هدف اضافه شد.',
+    conversionCompleted: 'تبدیل ارز انجام شد.',
+    rateUpdated: 'نرخ به‌روزرسانی شد.',
   },
   ar: {
     // Header
@@ -2283,6 +2293,11 @@ export const translations = {
     failedToOpenGoogleLogin: 'فشل فتح تسجيل الدخول بـ Google',
     failedToOpenLinkedInLogin: 'فشل فتح تسجيل الدخول بـ LinkedIn',
     noWalletBalancesDescription: 'أضف معاملة لإنشاء رصيد محفظة قبل التحويل.',
+    transactionAdded: 'تمت إضافة المعاملة.',
+    recurringCreated: 'تم إنشاء المعاملة المتكررة.',
+    contributionAdded: 'تمت إضافة المساهمة للهدف.',
+    conversionCompleted: 'تم إتمام التحويل.',
+    rateUpdated: 'تم تحديث السعر.',
   },
   tr: {
     // Header
@@ -3048,6 +3063,11 @@ export const translations = {
 
     // Convert screen
     noWalletBalancesDescription: 'Dönüştürmeden önce bir işlem ekleyerek cüzdan bakiyesi oluşturun.',
+    transactionAdded: 'İşlem eklendi.',
+    recurringCreated: 'Tekrarlayan işlem oluşturuldu.',
+    contributionAdded: 'Hedefe katkı eklendi.',
+    conversionCompleted: 'Dönüşüm tamamlandı.',
+    rateUpdated: 'Kur güncellendi.',
   },
 } as const;
 

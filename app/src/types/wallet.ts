@@ -187,6 +187,11 @@ export interface AIApplyRequest {
 // AIApplyResponse - backend returns single Transaction directly
 export type AIApplyResponse = Transaction;
 
+// IntentResponse - lightweight AI intent classification
+export interface IntentResponse {
+  intent: 'transaction' | 'recurring' | 'goal_contribution' | 'convert' | 'rate' | 'none';
+}
+
 // SmartParseResponse - enhanced AI parsing with action type detection
 export interface SmartParseResponse {
   amount: number;
@@ -194,9 +199,11 @@ export interface SmartParseResponse {
   type: 'credit' | 'debit';
   description: string;
   category: string;
-  action_type: 'transaction' | 'recurring' | 'goal_contribution';
+  action_type: 'transaction' | 'recurring' | 'goal_contribution' | 'convert' | 'rate' | 'none';
   frequency?: string;
   goal_name?: string;
+  from_currency?: string;
+  to_currency?: string;
   confidence: number;
   raw_text?: string;
 }

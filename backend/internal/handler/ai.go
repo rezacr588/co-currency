@@ -120,6 +120,35 @@ func (h *AIHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, status)
 }
 
+// DetectIntent handles POST /api/v1/ai/detect-intent
+func (h *AIHandler) DetectIntent(w http.ResponseWriter, r *http.Request) {
+	if h.aiService == nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "AI service not configured", nil)
+		return
+	}
+
+	var req struct {
+		Text string `json:"text"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
+		return
+	}
+
+	if req.Text == "" {
+		httputil.BadRequestWithContext(r.Context(), w, "text is required", nil)
+		return
+	}
+
+	result, err := h.aiService.DetectIntent(r.Context(), req.Text)
+	if err != nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to detect intent", err)
+		return
+	}
+
+	httputil.Success(w, result)
+}
+
 // SmartParse handles POST /api/v1/ai/smart-parse
 func (h *AIHandler) SmartParse(w http.ResponseWriter, r *http.Request) {
 	if h.aiService == nil {

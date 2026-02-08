@@ -166,7 +166,7 @@ export default function GoalsScreen() {
           <SkeletonList count={3} ItemComponent={SkeletonGoalCard} />
         ) : goals.length === 0 ? (
           <View className="bg-card border border-border p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 500 : '100%', alignSelf: 'center', width: '100%' }}>
-            <Target size={40} color={colors.subtleForeground} />
+            <Target size={48} color={colors.subtleForeground} />
             <Text className="text-base font-medium text-foreground mt-4">{t('noGoals')}</Text>
             <Text className="text-muted-foreground text-center mt-2 text-sm">
               {t('noGoalsDescription')}

@@ -195,30 +195,25 @@ export default function RegisterScreen() {
 
           <View className="gap-4">
             {/* Google OAuth Button */}
-            <Pressable
+            <Button
+              variant="primary"
               onPress={handleGoogleLogin}
               disabled={isSubmitting}
-              style={{ cursor: 'pointer' }}
-              className={`bg-foreground p-3.5 rounded-lg flex-row items-center justify-center ${
-                isSubmitting ? 'opacity-50' : ''
-              }`}
+              isLoading={isOAuthLoading}
+              leftIcon={<GoogleIcon size={18} />}
             >
-              <GoogleIcon size={18} />
-              <Text className="text-background font-medium ml-3 text-sm">{t('signUpWithGoogle') || 'Sign up with Google'}</Text>
-            </Pressable>
+              {t('signUpWithGoogle') || 'Sign up with Google'}
+            </Button>
 
             {/* LinkedIn OAuth Button */}
-            <Pressable
+            <Button
+              variant="outline"
               onPress={handleLinkedInLogin}
               disabled={isSubmitting}
-              style={{ cursor: 'pointer' }}
-              className={`bg-secondary border border-border p-3.5 rounded-lg flex-row items-center justify-center ${
-                isSubmitting ? 'opacity-50' : ''
-              }`}
+              leftIcon={<LinkedInIcon size={18} color={colors.secondaryForeground} />}
             >
-              <LinkedInIcon size={18} color={colors.secondaryForeground} />
-              <Text className="text-foreground font-medium ml-3 text-sm">{t('signUpWithLinkedIn') || 'Sign up with LinkedIn'}</Text>
-            </Pressable>
+              {t('signUpWithLinkedIn') || 'Sign up with LinkedIn'}
+            </Button>
 
             {/* Divider */}
             <View className="flex-row items-center my-3">

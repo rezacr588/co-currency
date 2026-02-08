@@ -59,42 +59,6 @@ function useSuggestedPrompts() {
   };
 }
 
-// Question patterns — messages asking ABOUT finances, NOT requesting to add transactions
-const QUESTION_PATTERNS = [
-  /^(?:how\s+much|what|when|where|why|which|who|show|list|tell|display|give\s+me|can\s+you)/i,
-  /\?$/,  // Ends with question mark
-  /(?:total|average|summary|report|trend|score|health|forecast|analysis|breakdown|overview)/i,
-  /(?:did\s+i|have\s+i|do\s+i|am\s+i|was\s+i|were\s+my)/i,
-  /(?:last\s+\d+|past\s+\d+|this\s+month|this\s+week|this\s+year|last\s+month)/i,
-];
-
-// Comprehensive transaction intent patterns
-const TRANSACTION_PATTERNS = [
-  /(?:spent|paid|bought|buy|purchase|pay|cost|dropped|blew)/i,
-  /(?:income|received|earned|got|made|collected|deposited)/i,
-  /(?:add|log|record|track)\s+(?:\$|€|£|[\d,]+)/i,
-  /(?:\$|€|£)[\d,]+\s+(?:for|on|at)/i,  // "$50 for coffee"
-];
-
-const RECURRING_PATTERNS = [
-  /(?:every|each)\s+(?:day|week|month|year)/i,
-  /(?:daily|weekly|monthly|yearly)\s+(?:expense|income|bill|payment)/i,
-  /(?:rent|salary|subscription)\s+(?:of\s+)?(?:\$|€|£)?[\d,]+/i,
-  /(?:\$|€|£)?[\d,]+\s+(?:rent|salary|subscription)/i,
-];
-
-const GOAL_PATTERNS = [
-  /(?:put|add|contribute|save)\s+(?:\$|€|£)?[\d,]+\s+(?:to|toward|towards|into)\s+(?:goal|saving|fund|vacation|house|car)/i,
-  /(?:save\s+for|saving\s+for|put\s+towards?)\s+\w+/i,
-];
-
-// Frequency keywords for recurring detection
-const FREQUENCY_KEYWORDS = {
-  daily: ['daily', 'every day', 'each day'],
-  weekly: ['weekly', 'every week', 'each week'],
-  monthly: ['monthly', 'every month', 'each month', 'rent', 'salary'],
-  yearly: ['yearly', 'annually', 'every year', 'each year'],
-};
 
 type PendingAction =
   | {
@@ -771,126 +735,107 @@ export default function AIChatScreen() {
     isNearBottomRef.current = true;
   };
 
-  const parseConvertIntent = (text: string) => {
-    const match = text.match(
-      /(?:convert|exchange)\s+([\d.,]+)\s*([A-Za-z]{3})\s*(?:to|into|in)\s*([A-Za-z]{3})/i
-    );
-    if (!match) return null;
-    const amount = parseFloat(match[1].replace(/,/g, ''));
-    const from = match[2].toUpperCase();
-    const to = match[3].toUpperCase();
-    if (!amount || !from || !to) return null;
-    return { amount, from, to };
-  };
-
-  const parseRateIntent = (text: string) => {
-    const match = text.match(
-      /(?:rate|fx|price)\s+([A-Za-z]{3})\s*(?:to|\/|in)\s*([A-Za-z]{3})/i
-    );
-    if (!match) return null;
-    return { from: match[1].toUpperCase(), to: match[2].toUpperCase() };
-  };
-
-  // Check if text looks like a question about finances rather than a transaction request
-  const looksLikeQuestion = (text: string) =>
-    QUESTION_PATTERNS.some(pattern => pattern.test(text.trim()));
-
-  // Check if text looks like any kind of financial transaction (but not a question)
-  const looksLikeTransaction = (text: string) =>
-    !looksLikeQuestion(text) && TRANSACTION_PATTERNS.some(pattern => pattern.test(text));
-
-  const looksLikeRecurring = (text: string) =>
-    !looksLikeQuestion(text) && RECURRING_PATTERNS.some(pattern => pattern.test(text));
-
-  const looksLikeGoalContribution = (text: string) =>
-    !looksLikeQuestion(text) && GOAL_PATTERNS.some(pattern => pattern.test(text));
-
-  // Detect frequency from text
-  const detectFrequency = (text: string): string => {
-    const lowerText = text.toLowerCase();
-    for (const [freq, keywords] of Object.entries(FREQUENCY_KEYWORDS)) {
-      if (keywords.some(kw => lowerText.includes(kw))) {
-        return freq;
-      }
-    }
-    return 'monthly'; // Default
-  };
-
   const maybeStartAction = async (text: string) => {
-    const convert = parseConvertIntent(text);
-    if (convert) {
-      setPendingAction({
-        kind: 'convert',
-        status: 'loading',
-        original: text,
-        ...convert,
-      });
-      try {
-        const result = await api.convert({
-          from: convert.from,
-          to: convert.to,
-          amount: convert.amount,
-        });
-        setPendingAction({
-          kind: 'convert',
-          status: 'ready',
-          original: text,
-          ...convert,
-          result,
-        });
-      } catch (error) {
-        setPendingAction({
-          kind: 'convert',
-          status: 'error',
-          original: text,
-          ...convert,
-          error: error instanceof Error ? error.message : 'Could not fetch conversion',
-        });
-      }
+    // Step 1: Lightweight AI intent detection — fast model decides if this is actionable
+    let intent: string;
+    try {
+      const intentResult = await api.ai.detectIntent({ text });
+      intent = intentResult.intent;
+    } catch {
+      // If intent detection fails, skip action (let the chat response handle it)
       return;
     }
 
-    const rate = parseRateIntent(text);
-    if (rate) {
-      setPendingAction({
-        kind: 'rate',
-        status: 'loading',
-        original: text,
-        ...rate,
-      });
-      try {
-        const result = await api.convert({ from: rate.from, to: rate.to, amount: 1 });
-        setPendingAction({
-          kind: 'rate',
-          status: 'ready',
-          original: text,
-          ...rate,
-          result,
-        });
-      } catch (error) {
-        setPendingAction({
-          kind: 'rate',
-          status: 'error',
-          original: text,
-          ...rate,
-          error: error instanceof Error ? error.message : 'Could not fetch rate',
-        });
-      }
-      return;
-    }
+    // Not an actionable request — just a conversation/question
+    if (intent === 'none') return;
 
-    // Check for goal contribution first (more specific)
-    if (looksLikeGoalContribution(text)) {
-      setPendingAction({
-        kind: 'goal_contribution',
-        status: 'loading',
-        original: text,
-      });
-      try {
-        const [parsed, goalsResponse] = await Promise.all([
-          api.ai.smartParse({ text }),
-          api.goals.list(),
-        ]);
+    // Step 2: Full AI parsing to extract details (amount, currencies, etc.)
+    setPendingAction({
+      kind: intent === 'convert' ? 'convert'
+        : intent === 'rate' ? 'rate'
+        : 'transaction',
+      status: 'loading',
+      original: text,
+      ...(intent === 'convert' ? { from: '', to: '', amount: 0 } : {}),
+      ...(intent === 'rate' ? { from: '', to: '' } : {}),
+    } as PendingAction);
+
+    try {
+      const parsed = await api.ai.smartParse({ text });
+
+      // Model decided this is not actionable after full analysis
+      if (parsed.action_type === 'none') {
+        setPendingAction(null);
+        return;
+      }
+
+      // Route to the appropriate UI based on the model's decision
+      if (parsed.action_type === 'convert') {
+        const from = parsed.from_currency || parsed.currency || 'USD';
+        const to = parsed.to_currency || 'EUR';
+        const amount = parsed.amount || 1;
+        setPendingAction({
+          kind: 'convert',
+          status: 'loading',
+          original: text,
+          from,
+          to,
+          amount,
+        });
+        try {
+          const result = await api.convert({ from, to, amount });
+          setPendingAction({
+            kind: 'convert',
+            status: 'ready',
+            original: text,
+            from,
+            to,
+            amount,
+            result,
+          });
+        } catch (err) {
+          setPendingAction({
+            kind: 'convert',
+            status: 'error',
+            original: text,
+            from,
+            to,
+            amount,
+            error: err instanceof Error ? err.message : 'Could not fetch conversion',
+          });
+        }
+      } else if (parsed.action_type === 'rate') {
+        const from = parsed.from_currency || parsed.currency || 'USD';
+        const to = parsed.to_currency || 'EUR';
+        setPendingAction({
+          kind: 'rate',
+          status: 'loading',
+          original: text,
+          from,
+          to,
+        });
+        try {
+          const result = await api.convert({ from, to, amount: 1 });
+          setPendingAction({
+            kind: 'rate',
+            status: 'ready',
+            original: text,
+            from,
+            to,
+            result,
+          });
+        } catch (err) {
+          setPendingAction({
+            kind: 'rate',
+            status: 'error',
+            original: text,
+            from,
+            to,
+            error: err instanceof Error ? err.message : 'Could not fetch rate',
+          });
+        }
+      } else if (parsed.action_type === 'goal_contribution') {
+        const goalsResponse = await api.goals.list();
         setPendingAction({
           kind: 'goal_contribution',
           status: 'ready',
@@ -899,68 +844,34 @@ export default function AIChatScreen() {
           goals: goalsResponse.goals || [],
           selectedGoalId: undefined,
         });
-      } catch (error) {
-        setPendingAction({
-          kind: 'goal_contribution',
-          status: 'error',
-          original: text,
-          error: error instanceof Error ? error.message : 'Could not parse goal contribution',
-        });
-      }
-      return;
-    }
-
-    // Check for recurring transaction
-    if (looksLikeRecurring(text)) {
-      setPendingAction({
-        kind: 'recurring',
-        status: 'loading',
-        original: text,
-      });
-      try {
-        const parsed = await api.ai.smartParse({ text });
-        const detectedFrequency = parsed.frequency || detectFrequency(text);
+      } else if (parsed.action_type === 'recurring') {
         setPendingAction({
           kind: 'recurring',
           status: 'ready',
           original: text,
           parsed,
-          selectedFrequency: detectedFrequency,
+          selectedFrequency: parsed.frequency || 'monthly',
         });
-      } catch (error) {
+      } else {
+        // transaction
+        if (parsed.amount === 0) {
+          setPendingAction(null);
+          return;
+        }
         setPendingAction({
-          kind: 'recurring',
-          status: 'error',
+          kind: 'transaction',
+          status: 'ready',
           original: text,
-          error: error instanceof Error ? error.message : 'Could not parse recurring transaction',
+          parsed,
         });
       }
-      return;
-    }
-
-    // Regular transaction
-    if (looksLikeTransaction(text)) {
+    } catch (error) {
       setPendingAction({
         kind: 'transaction',
-        status: 'loading',
+        status: 'error',
         original: text,
+        error: error instanceof Error ? error.message : 'Could not parse message',
       });
-      try {
-        const parsed = await api.ai.smartParse({ text });
-        setPendingAction({
-          kind: 'transaction',
-          status: 'ready',
-          original: text,
-          parsed,
-        });
-      } catch (error) {
-        setPendingAction({
-          kind: 'transaction',
-          status: 'error',
-          original: text,
-          error: error instanceof Error ? error.message : 'Could not parse transaction',
-        });
-      }
     }
   };
 
@@ -1544,14 +1455,14 @@ export default function AIChatScreen() {
                 {pendingAction.status === 'done' && (
                   <Text className="text-sm text-success">
                     {pendingAction.kind === 'transaction'
-                      ? 'Transaction added.'
+                      ? t('transactionAdded') || 'Transaction added.'
                       : pendingAction.kind === 'recurring'
-                        ? 'Recurring transaction created.'
+                        ? t('recurringCreated') || 'Recurring transaction created.'
                         : pendingAction.kind === 'goal_contribution'
-                          ? 'Contribution added to goal.'
+                          ? t('contributionAdded') || 'Contribution added to goal.'
                           : pendingAction.kind === 'convert'
-                            ? 'Conversion completed.'
-                            : 'Rate updated.'}
+                            ? t('conversionCompleted') || 'Conversion completed.'
+                            : t('rateUpdated') || 'Rate updated.'}
                   </Text>
                 )}
               </View>
