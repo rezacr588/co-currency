@@ -28,6 +28,11 @@ type AIChatService struct {
 	memoryRepo      *repository.MemoryRepository
 	memoryService   *MemoryService // Semantic memory with Qdrant
 	loanRepo        *repository.LoanRepository
+	categoryRepo     *repository.CategoryRepository
+	reportsService   *ReportsService
+	subscriptionRepo *repository.SubscriptionRepository
+	noteRepo         *repository.NoteRepository
+	toolExecutor     *AIToolExecutor
 }
 
 var (
@@ -48,19 +53,29 @@ func NewAIChatService(
 	memoryRepo *repository.MemoryRepository,
 	memoryService *MemoryService,
 	loanRepo *repository.LoanRepository,
+	categoryRepo *repository.CategoryRepository,
+	reportsService *ReportsService,
+	subscriptionRepo *repository.SubscriptionRepository,
+	noteRepo *repository.NoteRepository,
 ) *AIChatService {
+	toolExecutor := NewAIToolExecutor(walletRepo, categoryRepo, reportsService, subscriptionRepo, noteRepo, loanRepo, budgetRepo)
 	return &AIChatService{
-		aiService:       aiService,
-		exchangeService: exchangeService,
-		chatRepo:        chatRepo,
-		walletRepo:      walletRepo,
-		goalRepo:        goalRepo,
-		budgetRepo:      budgetRepo,
-		userRepo:        userRepo,
-		recurringRepo:   recurringRepo,
-		memoryRepo:      memoryRepo,
-		memoryService:   memoryService,
-		loanRepo:        loanRepo,
+		aiService:        aiService,
+		exchangeService:  exchangeService,
+		chatRepo:         chatRepo,
+		walletRepo:       walletRepo,
+		goalRepo:         goalRepo,
+		budgetRepo:       budgetRepo,
+		userRepo:         userRepo,
+		recurringRepo:    recurringRepo,
+		memoryRepo:       memoryRepo,
+		memoryService:    memoryService,
+		loanRepo:         loanRepo,
+		categoryRepo:     categoryRepo,
+		reportsService:   reportsService,
+		subscriptionRepo: subscriptionRepo,
+		noteRepo:         noteRepo,
+		toolExecutor:     toolExecutor,
 	}
 }
 
@@ -151,22 +166,16 @@ func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName str
 	// Build message history for the LLM
 	messages := s.buildLLMMessages(systemPrompt, history, *userMsg)
 
-	// Call the AI
+	// Call the AI with tool resolution loop
 	llm, err := s.aiService.getLLM(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting LLM: %w", err)
 	}
 
-	response, err := llm.GenerateContent(ctx, messages)
+	aiResponse, err := s.resolveToolCalls(ctx, llm, messages, userID, baseCurrency)
 	if err != nil {
 		return nil, fmt.Errorf("calling AI: %w", err)
 	}
-
-	if len(response.Choices) == 0 {
-		return nil, fmt.Errorf("no response from AI")
-	}
-
-	aiResponse := response.Choices[0].Content
 
 	// Save AI response
 	aiMsg, err := s.chatRepo.AddMessage(ctx, convID, "assistant", aiResponse, 0)
@@ -280,54 +289,142 @@ func (s *AIChatService) ChatStream(
 	// Build message history for the LLM
 	messages := s.buildLLMMessages(systemPrompt, history, *userMsg)
 
-	// Call the AI (streaming)
+	// Call the AI (with tool resolution, then stream final response)
 	llm, err := s.aiService.getLLM(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting LLM: %w", err)
 	}
 
-	var sb strings.Builder
-	streamedAny := false
-	streamingFunc := func(ctx context.Context, chunk []byte) error {
-		if len(chunk) == 0 {
-			return nil
-		}
-		streamedAny = true
-		text := string(chunk)
-		sb.WriteString(text)
-		if onChunk != nil {
-			if err := onChunk(text); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
-	response, err := llm.GenerateContent(ctx, messages, llms.WithStreamingFunc(streamingFunc))
+	// First call: non-streaming to check for tool calls
+	firstResponse, err := llm.GenerateContent(ctx, messages)
 	if err != nil {
-		if streamedAny {
-			return nil, fmt.Errorf("calling ai: streaming failed: %w", err)
-		}
-		sb.Reset()
-		// Fallback to non-streaming if the provider doesn't support streaming.
-		response, err = llm.GenerateContent(ctx, messages)
-		if err != nil {
-			return nil, fmt.Errorf("calling ai: %w", err)
-		}
+		return nil, fmt.Errorf("calling ai: %w", err)
 	}
-
-	if len(response.Choices) == 0 {
+	if len(firstResponse.Choices) == 0 {
 		return nil, fmt.Errorf("no response from AI")
 	}
 
-	aiResponse := strings.TrimSpace(sb.String())
-	if aiResponse == "" {
-		aiResponse = response.Choices[0].Content
+	firstText := firstResponse.Choices[0].Content
+	tc := parseToolCall(firstText)
+
+	var aiResponse string
+
+	if tc != nil {
+		// Tool call detected — resolve non-streaming, then stream final answer
+		// Append AI's tool call + tool result to messages
+		messages = append(messages, llms.MessageContent{
+			Parts: []llms.ContentPart{llms.TextPart(firstText)},
+			Role:  llms.ChatMessageTypeAI,
+		})
+
+		result, execErr := s.toolExecutor.Execute(ctx, userID, baseCurrency, tc)
+		if execErr != nil {
+			log.Warn().Err(execErr).Str("tool", tc.Name).Msg("Tool execution failed")
+			result = fmt.Sprintf("Tool error: %v. Please answer based on the available context.", execErr)
+		}
+
+		messages = append(messages, llms.MessageContent{
+			Parts: []llms.ContentPart{llms.TextPart(fmt.Sprintf("Tool '%s' returned:\n%s\n\nNow provide your final answer to the user based on this data.", tc.Name, result))},
+			Role:  llms.ChatMessageTypeHuman,
+		})
+
+		// Allow up to 2 more iterations for chained tool calls
+		for i := 0; i < 2; i++ {
+			nextResp, err := llm.GenerateContent(ctx, messages)
+			if err != nil {
+				return nil, fmt.Errorf("calling ai (tool loop): %w", err)
+			}
+			if len(nextResp.Choices) == 0 {
+				return nil, fmt.Errorf("no response from AI")
+			}
+			nextText := nextResp.Choices[0].Content
+			nextTC := parseToolCall(nextText)
+			if nextTC == nil {
+				// No more tool calls — stream this final response
+				aiResponse = stripToolCallMarkers(nextText)
+				break
+			}
+			// Another tool call
+			messages = append(messages, llms.MessageContent{
+				Parts: []llms.ContentPart{llms.TextPart(nextText)},
+				Role:  llms.ChatMessageTypeAI,
+			})
+			result, execErr = s.toolExecutor.Execute(ctx, userID, baseCurrency, nextTC)
+			if execErr != nil {
+				log.Warn().Err(execErr).Str("tool", nextTC.Name).Msg("Tool execution failed")
+				result = fmt.Sprintf("Tool error: %v. Please answer based on the available context.", execErr)
+			}
+			messages = append(messages, llms.MessageContent{
+				Parts: []llms.ContentPart{llms.TextPart(fmt.Sprintf("Tool '%s' returned:\n%s\n\nNow provide your final answer to the user based on this data.", nextTC.Name, result))},
+				Role:  llms.ChatMessageTypeHuman,
+			})
+		}
+
+		// If we exhausted iterations without a final answer, force one
+		if aiResponse == "" {
+			finalResp, err := llm.GenerateContent(ctx, messages)
+			if err != nil {
+				return nil, fmt.Errorf("calling ai (final): %w", err)
+			}
+			if len(finalResp.Choices) > 0 {
+				aiResponse = stripToolCallMarkers(finalResp.Choices[0].Content)
+			}
+		}
+
+		// Stream the final response to the client
 		if onChunk != nil && aiResponse != "" {
 			if err := onChunk(aiResponse); err != nil {
 				return nil, err
 			}
 		}
+	} else {
+		// No tool call — redo with streaming for better UX
+		var sb strings.Builder
+		streamedAny := false
+		streamingFunc := func(ctx context.Context, chunk []byte) error {
+			if len(chunk) == 0 {
+				return nil
+			}
+			streamedAny = true
+			text := string(chunk)
+			sb.WriteString(text)
+			if onChunk != nil {
+				if err := onChunk(text); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+
+		response, err := llm.GenerateContent(ctx, messages, llms.WithStreamingFunc(streamingFunc))
+		if err != nil {
+			if streamedAny {
+				return nil, fmt.Errorf("calling ai: streaming failed: %w", err)
+			}
+			sb.Reset()
+			// Fallback to non-streaming
+			response, err = llm.GenerateContent(ctx, messages)
+			if err != nil {
+				return nil, fmt.Errorf("calling ai: %w", err)
+			}
+		}
+
+		if len(response.Choices) == 0 {
+			return nil, fmt.Errorf("no response from AI")
+		}
+
+		aiResponse = strings.TrimSpace(sb.String())
+		if aiResponse == "" {
+			aiResponse = response.Choices[0].Content
+			if onChunk != nil && aiResponse != "" {
+				if err := onChunk(aiResponse); err != nil {
+					return nil, err
+				}
+			}
+		}
+
+		// Strip any accidental tool call markers
+		aiResponse = stripToolCallMarkers(aiResponse)
 	}
 
 	// Save AI response
@@ -526,6 +623,19 @@ func (s *AIChatService) buildSystemPrompt(userName string, fctx *model.Financial
 		sb.WriteString("\n")
 	}
 
+	// Available categories
+	if len(fctx.Categories) > 0 {
+		sb.WriteString("## AVAILABLE CATEGORIES\n")
+		for _, cat := range fctx.Categories {
+			label := cat.Name
+			if cat.Icon != "" {
+				label = cat.Icon + " " + label
+			}
+			sb.WriteString(fmt.Sprintf("- %s\n", label))
+		}
+		sb.WriteString("\n")
+	}
+
 	sb.WriteString(`## YOUR ROLE
 
 1. **Use Real Data**: Always reference specific numbers from their financial data
@@ -548,7 +658,61 @@ You can help with:
 Remember: Be friendly, professional, and always use the user's actual data when giving advice.
 `)
 
+	// Append tool definitions
+	sb.WriteString("\n")
+	sb.WriteString(buildToolDefinitionsPrompt())
+
 	return sb.String()
+}
+
+// resolveToolCalls runs the LLM and resolves any tool calls (max 3 iterations)
+func (s *AIChatService) resolveToolCalls(ctx context.Context, llm llms.Model, messages []llms.MessageContent, userID uuid.UUID, currency string) (string, error) {
+	const maxIterations = 3
+
+	for i := 0; i < maxIterations; i++ {
+		response, err := llm.GenerateContent(ctx, messages)
+		if err != nil {
+			return "", fmt.Errorf("generating content: %w", err)
+		}
+		if len(response.Choices) == 0 {
+			return "", fmt.Errorf("no response from AI")
+		}
+
+		text := response.Choices[0].Content
+		tc := parseToolCall(text)
+
+		if tc == nil {
+			// No tool call — return the final response
+			return stripToolCallMarkers(text), nil
+		}
+
+		// Execute the tool
+		result, execErr := s.toolExecutor.Execute(ctx, userID, currency, tc)
+		if execErr != nil {
+			log.Warn().Err(execErr).Str("tool", tc.Name).Msg("Tool execution failed")
+			result = fmt.Sprintf("Tool error: %v. Please answer based on the available context.", execErr)
+		}
+
+		// Append the AI response and tool result to messages for the next iteration
+		messages = append(messages, llms.MessageContent{
+			Parts: []llms.ContentPart{llms.TextPart(text)},
+			Role:  llms.ChatMessageTypeAI,
+		})
+		messages = append(messages, llms.MessageContent{
+			Parts: []llms.ContentPart{llms.TextPart(fmt.Sprintf("Tool '%s' returned:\n%s\n\nNow provide your final answer to the user based on this data.", tc.Name, result))},
+			Role:  llms.ChatMessageTypeHuman,
+		})
+	}
+
+	// If we exhausted iterations, make one final call
+	response, err := llm.GenerateContent(ctx, messages)
+	if err != nil {
+		return "", fmt.Errorf("generating final content: %w", err)
+	}
+	if len(response.Choices) == 0 {
+		return "", fmt.Errorf("no response from AI")
+	}
+	return stripToolCallMarkers(response.Choices[0].Content), nil
 }
 
 // buildLLMMessages builds the message array for the LLM with full history
@@ -753,6 +917,20 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 						Type:        recType,
 					})
 				}
+			}
+		}
+	}
+
+	// Get categories
+	if s.categoryRepo != nil {
+		categories, err := s.categoryRepo.GetCategories(ctx, userID)
+		if err == nil {
+			for _, cat := range categories {
+				fctx.Categories = append(fctx.Categories, model.CategoryInfo{
+					Name:      cat.Name,
+					Icon:      cat.Icon,
+					IsDefault: cat.IsDefault,
+				})
 			}
 		}
 	}

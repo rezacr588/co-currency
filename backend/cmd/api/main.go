@@ -410,6 +410,10 @@ func main() {
 				memoryRepo,
 				memoryService,
 				loanRepo,
+				categoryRepo,
+				reportsService,
+				subscriptionRepo,
+				noteRepo,
 			)
 			log.Info().Msg("AI Chat service initialized with full context")
 		}

@@ -79,9 +79,19 @@ type FinancialContext struct {
 	TotalReceivable    float64            `json:"total_receivable"`   // Money owed to user
 	NetDebtPosition    float64            `json:"net_debt_position"`  // Positive = net debtor
 
+	// Categories
+	Categories         []CategoryInfo `json:"categories"`
+
 	// Context
 	TodayDate          string `json:"today_date"`
 	DaysUntilMonthEnd  int    `json:"days_until_month_end"`
+}
+
+// CategoryInfo represents a category for AI context
+type CategoryInfo struct {
+	Name      string `json:"name"`
+	Icon      string `json:"icon"`
+	IsDefault bool   `json:"is_default"`
 }
 
 // LoanSummaryForAI provides loan context for AI

@@ -54,6 +54,15 @@ const suggestedActions = [
   'Rate USD to EUR',
 ];
 
+// Question patterns — messages asking ABOUT finances, NOT requesting to add transactions
+const QUESTION_PATTERNS = [
+  /^(?:how\s+much|what|when|where|why|which|who|show|list|tell|display|give\s+me|can\s+you)/i,
+  /\?$/,  // Ends with question mark
+  /(?:total|average|summary|report|trend|score|health|forecast|analysis|breakdown|overview)/i,
+  /(?:did\s+i|have\s+i|do\s+i|am\s+i|was\s+i|were\s+my)/i,
+  /(?:last\s+\d+|past\s+\d+|this\s+month|this\s+week|this\s+year|last\s+month)/i,
+];
+
 // Comprehensive transaction intent patterns
 const TRANSACTION_PATTERNS = [
   /(?:spent|paid|bought|buy|purchase|pay|cost|dropped|blew)/i,
@@ -764,15 +773,19 @@ export default function AIChatScreen() {
     return { from: match[1].toUpperCase(), to: match[2].toUpperCase() };
   };
 
-  // Check if text looks like any kind of financial transaction
+  // Check if text looks like a question about finances rather than a transaction request
+  const looksLikeQuestion = (text: string) =>
+    QUESTION_PATTERNS.some(pattern => pattern.test(text.trim()));
+
+  // Check if text looks like any kind of financial transaction (but not a question)
   const looksLikeTransaction = (text: string) =>
-    TRANSACTION_PATTERNS.some(pattern => pattern.test(text));
+    !looksLikeQuestion(text) && TRANSACTION_PATTERNS.some(pattern => pattern.test(text));
 
   const looksLikeRecurring = (text: string) =>
-    RECURRING_PATTERNS.some(pattern => pattern.test(text));
+    !looksLikeQuestion(text) && RECURRING_PATTERNS.some(pattern => pattern.test(text));
 
   const looksLikeGoalContribution = (text: string) =>
-    GOAL_PATTERNS.some(pattern => pattern.test(text));
+    !looksLikeQuestion(text) && GOAL_PATTERNS.some(pattern => pattern.test(text));
 
   // Detect frequency from text
   const detectFrequency = (text: string): string => {
