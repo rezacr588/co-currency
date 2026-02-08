@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -214,6 +215,11 @@ func (s *ReportsService) GetMonthlyReport(ctx context.Context, userID uuid.UUID,
 		})
 	}
 
+	// Sort categories by amount descending
+	sort.Slice(categories, func(i, j int) bool {
+		return categories[i].Amount > categories[j].Amount
+	})
+
 	return &MonthlyReport{
 		Year:       year,
 		Month:      month,
@@ -319,6 +325,11 @@ func (s *ReportsService) GetCategoryReport(ctx context.Context, userID uuid.UUID
 		})
 	}
 
+	// Sort categories by amount descending
+	sort.Slice(categories, func(i, j int) bool {
+		return categories[i].Amount > categories[j].Amount
+	})
+
 	return &CategoryReport{
 		FromDate:   fromDate,
 		ToDate:     toDate,
@@ -405,7 +416,7 @@ func (s *ReportsService) GetNetWorthReport(ctx context.Context, userID uuid.UUID
 	balanceBreakdowns := make([]BalanceBreakdown, 0, len(balances))
 
 	for _, b := range balances {
-		if b.Balance <= 0 {
+		if b.Balance == 0 {
 			continue
 		}
 
@@ -478,9 +489,22 @@ func (s *ReportsService) GetForecast(ctx context.Context, userID uuid.UUID, curr
 		}
 	}
 
-	// 3. Calculate averages
-	avgDailySpend := totalExpenses / 30.0
-	avgDailyIncome := totalIncome / 30.0
+	// 3. Calculate averages using actual elapsed days in range
+	activeDays := int(endDate.Sub(startDate).Hours()/24) + 1
+	if activeDays < 1 {
+		activeDays = 1
+	}
+	// Count unique days with transactions; use that if fewer than the window
+	uniqueDays := make(map[string]bool)
+	for _, tx := range transactions {
+		uniqueDays[tx.CreatedAt.Format("2006-01-02")] = true
+	}
+	daysDivisor := float64(activeDays)
+	if len(uniqueDays) > 0 && len(uniqueDays) < activeDays {
+		daysDivisor = float64(len(uniqueDays))
+	}
+	avgDailySpend := totalExpenses / daysDivisor
+	avgDailyIncome := totalIncome / daysDivisor
 	netDailyFlow := avgDailyIncome - avgDailySpend
 
 	daysUntilZero := -1

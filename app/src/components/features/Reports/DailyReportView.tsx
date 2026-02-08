@@ -1,6 +1,9 @@
 import { useMemo } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
-import { AlertCircle, TrendingDown, TrendingUp } from 'lucide-react-native';
+import { useQuery } from '@tanstack/react-query';
+import { AlertCircle, TrendingDown, TrendingUp, PieChart } from 'lucide-react-native';
+import { api } from '../../../api';
+import { StyledCategoryIcon } from '../../../constants/icons';
 import { useLanguage } from '../../../context/LanguageContext';
 import { formatCompactCurrency } from '../../../utils/format';
 import { DailyReportHeader } from './daily/DailyReportHeader';
@@ -23,7 +26,22 @@ function formatBucketRange(bucket: ChartBucket, formatter: Intl.DateTimeFormat):
 
 export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
   const { t, language } = useLanguage();
-  const report = useDailyReportData(language);
+
+  // Derive primary currency from wallet balances (highest balance)
+  const { data: balancesData } = useQuery({
+    queryKey: ['wallet', 'balances'],
+    queryFn: () => api.wallet.getBalances(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const primaryCurrency = useMemo(() => {
+    const balances = balancesData?.balances;
+    if (!balances || balances.length === 0) return 'USD';
+    const sorted = [...balances].sort((a, b) => b.balance - a.balance);
+    return sorted[0].currency;
+  }, [balancesData]);
+
+  const report = useDailyReportData(language, primaryCurrency);
 
   const timelineLabel = t(report.timelineTranslationKey);
 
@@ -105,6 +123,61 @@ export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
           </Text>
         </View>
       </View>
+
+      {/* Period Comparison & Top Categories */}
+      {(report.comparedToLast !== 0 || report.topCategories.length > 0) && (
+        <View className="bg-card border border-border p-5 rounded-xl mb-6">
+          {report.comparedToLast !== 0 && (
+            <View className="flex-row items-center mb-3">
+              {report.comparedToLast <= 0 ? (
+                <TrendingDown size={16} color="#22c55e" />
+              ) : (
+                <TrendingUp size={16} color="#ef4444" />
+              )}
+              <Text
+                className={`text-sm font-semibold ml-2 ${
+                  report.comparedToLast <= 0 ? 'text-success' : 'text-danger'
+                }`}
+              >
+                {`${report.comparedToLast < 0 ? '' : '+'}${Math.round(report.comparedToLast)}% ${t('vsPreviousPeriod') || 'vs previous period'}`}
+              </Text>
+            </View>
+          )}
+
+          {report.topCategories.length > 0 && (
+            <View>
+              <View className="flex-row items-center mb-3">
+                <PieChart size={14} color="#a1a1aa" />
+                <Text className="text-muted-foreground text-xs font-medium ml-2">
+                  {t('topCategories') || 'Top Categories'}
+                </Text>
+              </View>
+              {report.topCategories.map((cat) => (
+                <View key={cat.category} className="flex-row items-center justify-between mb-2">
+                  <View className="flex-row items-center flex-1">
+                    <StyledCategoryIcon
+                      category={cat.category}
+                      size={12}
+                      backgroundOpacity={0.1}
+                      borderRadius={4}
+                      padding={4}
+                    />
+                    <Text className="text-foreground text-sm ml-2 capitalize">{cat.category}</Text>
+                  </View>
+                  <View className="flex-row items-center">
+                    <Text className="text-foreground text-sm font-semibold mr-2">
+                      {formatCompactCurrency(cat.amount, report.reportCurrency)}
+                    </Text>
+                    <Text className="text-muted-foreground text-xs">
+                      {Math.round(cat.percentage)}%
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+      )}
 
       <DailyTimelineChart
         t={t}

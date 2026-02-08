@@ -30,6 +30,12 @@ import type {
   TimelinePreset,
 } from './types';
 
+export interface CategoryTotal {
+  category: string;
+  amount: number;
+  percentage: number;
+}
+
 export interface UseDailyReportDataResult {
   timelinePreset: TimelinePreset;
   setTimelinePreset: (preset: TimelinePreset) => void;
@@ -48,6 +54,8 @@ export interface UseDailyReportDataResult {
   selectedTransactions: NormalizedTransaction[];
   totals: { income: number; expenses: number; net: number };
   averageDailyNet: number;
+  comparedToLast: number; // percentage change in expenses vs previous window
+  topCategories: CategoryTotal[];
   maxBucketValue: number;
   reportCurrency: string;
   excludedTransactionCount: number;
@@ -58,7 +66,7 @@ export interface UseDailyReportDataResult {
   isError: boolean;
 }
 
-async function fetchTransactionsForRange(fromTimestamp: string, toTimestamp: string): Promise<ReportFetchResult> {
+async function fetchTransactionsForRange(fromTimestamp: string, toTimestamp: string, targetCurrency: string): Promise<ReportFetchResult> {
   let offset = 0;
   let total = Number.POSITIVE_INFINITY;
   const allTransactions: Transaction[] = [];
@@ -89,7 +97,7 @@ async function fetchTransactionsForRange(fromTimestamp: string, toTimestamp: str
   const truncated = Number.isFinite(total) && total > FETCH_CAP;
 
   const conversionRates: Record<string, number> = {
-    [REPORT_CURRENCY]: 1,
+    [targetCurrency]: 1,
   };
 
   const distinctCurrencies = Array.from(
@@ -98,7 +106,7 @@ async function fetchTransactionsForRange(fromTimestamp: string, toTimestamp: str
         .map((tx) => tx.currency)
         .filter(
           (currency): currency is string =>
-            Boolean(currency) && currency !== REPORT_CURRENCY
+            Boolean(currency) && currency !== targetCurrency
         )
     )
   );
@@ -110,7 +118,7 @@ async function fetchTransactionsForRange(fromTimestamp: string, toTimestamp: str
       try {
         const conversion = await api.convert({
           from: currency,
-          to: REPORT_CURRENCY,
+          to: targetCurrency,
           amount: 1,
         });
 
@@ -134,7 +142,7 @@ async function fetchTransactionsForRange(fromTimestamp: string, toTimestamp: str
   };
 }
 
-export function useDailyReportData(language: string): UseDailyReportDataResult {
+export function useDailyReportData(language: string, reportCurrency = REPORT_CURRENCY): UseDailyReportDataResult {
   const [timelinePreset, setTimelinePresetState] = useState<TimelinePreset>('30D');
   const [windowIndex, setWindowIndex] = useState(0);
   const [selectedBucketIndex, setSelectedBucketIndexState] = useState(0);
@@ -150,8 +158,8 @@ export function useDailyReportData(language: string): UseDailyReportDataResult {
   const toTimestamp = toRFC3339RangeEnd(windowEnd);
 
   const { data: reportData, isPending, isError } = useQuery({
-    queryKey: ['transactions', 'daily-history', timelinePreset, fromTimestamp, toTimestamp],
-    queryFn: () => fetchTransactionsForRange(fromTimestamp, toTimestamp),
+    queryKey: ['transactions', 'daily-history', timelinePreset, fromTimestamp, toTimestamp, reportCurrency],
+    queryFn: () => fetchTransactionsForRange(fromTimestamp, toTimestamp, reportCurrency),
     staleTime: 2 * 60 * 1000,
   });
 
@@ -174,8 +182,8 @@ export function useDailyReportData(language: string): UseDailyReportDataResult {
         windowStart,
         timelineConfig.windowDays,
         reportData?.transactions || [],
-        reportData?.conversionRates || { [REPORT_CURRENCY]: 1 },
-        REPORT_CURRENCY
+        reportData?.conversionRates || { [reportCurrency]: 1 },
+        reportCurrency
       ),
     [reportData?.conversionRates, reportData?.transactions, timelineConfig.windowDays, windowStart]
   );
@@ -210,6 +218,63 @@ export function useDailyReportData(language: string): UseDailyReportDataResult {
       ? totals.net / aggregation.daySummaries.length
       : 0;
 
+  // Previous window for comparison
+  const { start: prevWindowStart, end: prevWindowEnd } = useMemo(
+    () => getWindowRange(timelineConfig.windowDays, windowIndex + 1),
+    [timelineConfig.windowDays, windowIndex]
+  );
+
+  const prevFromTimestamp = toRFC3339RangeStart(prevWindowStart);
+  const prevToTimestamp = toRFC3339RangeEnd(prevWindowEnd);
+
+  const { data: prevReportData } = useQuery({
+    queryKey: ['transactions', 'daily-history', timelinePreset, prevFromTimestamp, prevToTimestamp, reportCurrency],
+    queryFn: () => fetchTransactionsForRange(prevFromTimestamp, prevToTimestamp, reportCurrency),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const prevAggregation = useMemo(
+    () =>
+      buildDailyAggregation(
+        prevWindowStart,
+        timelineConfig.windowDays,
+        prevReportData?.transactions || [],
+        prevReportData?.conversionRates || { [reportCurrency]: 1 },
+        reportCurrency
+      ),
+    [prevReportData?.conversionRates, prevReportData?.transactions, timelineConfig.windowDays, prevWindowStart, reportCurrency]
+  );
+
+  const prevTotals = useMemo(() => sumTotals(prevAggregation.daySummaries), [prevAggregation.daySummaries]);
+
+  const comparedToLast = useMemo(() => {
+    if (prevTotals.expenses <= 0) return 0;
+    return ((totals.expenses - prevTotals.expenses) / prevTotals.expenses) * 100;
+  }, [totals.expenses, prevTotals.expenses]);
+
+  // Top spending categories
+  const topCategories = useMemo((): CategoryTotal[] => {
+    const categoryMap = new Map<string, number>();
+    for (const day of aggregation.daySummaries) {
+      for (const item of day.transactions) {
+        const tx = item.transaction;
+        if (tx.type === 'debit' && item.amountInReportCurrency !== null) {
+          const cat = tx.category || 'other';
+          categoryMap.set(cat, (categoryMap.get(cat) || 0) + item.amountInReportCurrency);
+        }
+      }
+    }
+    const totalExpenses = totals.expenses || 1;
+    return Array.from(categoryMap.entries())
+      .map(([category, amount]) => ({
+        category,
+        amount,
+        percentage: (amount / totalExpenses) * 100,
+      }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 3);
+  }, [aggregation.daySummaries, totals.expenses]);
+
   const maxBucketValue = useMemo(
     () => getMaxBucketValue(chartBuckets),
     [chartBuckets]
@@ -239,8 +304,10 @@ export function useDailyReportData(language: string): UseDailyReportDataResult {
     selectedTransactions,
     totals,
     averageDailyNet,
+    comparedToLast,
+    topCategories,
     maxBucketValue,
-    reportCurrency: REPORT_CURRENCY,
+    reportCurrency,
     excludedTransactionCount: aggregation.excludedTransactionCount,
     excludedCurrencies: aggregation.excludedCurrencies,
     truncated: reportData?.truncated || false,
