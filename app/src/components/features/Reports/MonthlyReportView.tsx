@@ -1,6 +1,7 @@
+import { useMemo } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, BarChart3, PieChart, TrendingUp, AlertCircle } from 'lucide-react-native';
+import { Calendar, BarChart3, PieChart, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react-native';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { formatCompactCurrency, formatNumber } from '../../../utils/format';
@@ -180,11 +181,29 @@ export function MonthlyReportView({
 }: MonthlyReportViewProps) {
   const { t } = useLanguage();
 
+  // Previous month for comparison
+  const prevMonth = useMemo(() => {
+    if (month === 1) return { year: year - 1, month: 12 };
+    return { year, month: month - 1 };
+  }, [year, month]);
+
   const { data: monthlyReport, isPending: isLoadingMonthly, isError: isMonthlyError } = useQuery({
     queryKey: ['reports', 'monthly', year, month],
     queryFn: () => api.reports.monthly(year, month),
     staleTime: 5 * 60 * 1000,
   });
+
+  const { data: prevMonthReport } = useQuery({
+    queryKey: ['reports', 'monthly', prevMonth.year, prevMonth.month],
+    queryFn: () => api.reports.monthly(prevMonth.year, prevMonth.month),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Month-over-month expense comparison
+  const expenseChange = useMemo(() => {
+    if (!monthlyReport || !prevMonthReport || prevMonthReport.expenses <= 0) return null;
+    return ((monthlyReport.expenses - prevMonthReport.expenses) / prevMonthReport.expenses) * 100;
+  }, [monthlyReport, prevMonthReport]);
 
   const { data: categoryReport, isPending: isLoadingCategory, isError: isCategoryError } = useQuery({
     queryKey: ['reports', 'category', fromDate, toDate, year, month],
@@ -252,6 +271,30 @@ export function MonthlyReportView({
             currency={monthlyReport.currency}
             t={t}
           />
+
+          {/* Month-over-Month Comparison */}
+          {expenseChange !== null && (
+            <View className="flex-row items-center mt-4">
+              <View
+                className={`px-3 py-1.5 rounded-full flex-row items-center ${
+                  expenseChange <= 0 ? 'bg-success/20' : 'bg-danger/20'
+                }`}
+              >
+                {expenseChange <= 0 ? (
+                  <TrendingDown size={14} color="rgb(16, 185, 129)" />
+                ) : (
+                  <TrendingUp size={14} color="rgb(220, 38, 38)" />
+                )}
+                <Text
+                  className={`text-sm font-semibold ml-1 ${
+                    expenseChange <= 0 ? 'text-success' : 'text-danger'
+                  }`}
+                >
+                  {expenseChange > 0 ? '+' : ''}{formatNumber(expenseChange, 1)}% {t('vsLastMonth')}
+                </Text>
+              </View>
+            </View>
+          )}
 
           <View className="flex-row gap-4 mt-6">
             <View className="flex-1 bg-secondary/50 p-3 rounded-lg">

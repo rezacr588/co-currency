@@ -1,12 +1,11 @@
-import { View, Text, ActivityIndicator } from 'react-native';
+import { useState, useMemo } from 'react';
+import { View, Text, ActivityIndicator, Pressable } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, TrendingUp, TrendingDown, Lightbulb, CheckCircle, AlertCircle } from 'lucide-react-native';
+import { Calendar, TrendingUp, TrendingDown, Lightbulb, CheckCircle, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { formatCompactCurrency, formatNumber } from '../../../utils/format';
-import { safeMax } from '../../../utils/dateRange';
 import { CATEGORY_COLORS, StyledCategoryIcon } from '../../../constants/icons';
-import type { WeeklyRecapReport } from '../../../types/goal';
 
 interface WeeklyReportViewProps {
   isTablet?: boolean;
@@ -14,10 +13,18 @@ interface WeeklyReportViewProps {
 
 export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
   const { t } = useLanguage();
+  const [weekOffset, setWeekOffset] = useState(0);
+
+  const referenceDate = useMemo(() => {
+    if (weekOffset === 0) return undefined;
+    const d = new Date();
+    d.setDate(d.getDate() - weekOffset * 7);
+    return d.toISOString().split('T')[0];
+  }, [weekOffset]);
 
   const { data: weeklyRecap, isPending, isError } = useQuery({
-    queryKey: ['reports', 'weekly-recap'],
-    queryFn: () => api.reports.weeklyRecap(),
+    queryKey: ['reports', 'weekly-recap', weekOffset],
+    queryFn: () => api.reports.weeklyRecap(undefined, referenceDate),
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
   });
@@ -55,8 +62,37 @@ export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
   const comparePercent = weeklyRecap.compared_to_last;
   const isPositiveCompare = comparePercent < 0; // Spending less is positive
 
+  // Format week range label
+  const weekLabel = weekOffset === 0
+    ? t('currentWeek')
+    : `${weeklyRecap.week_start} — ${weeklyRecap.week_end}`;
+
   return (
     <View>
+      {/* Week Navigation */}
+      <View className="flex-row items-center justify-between mb-4 bg-card px-4 py-3 rounded-xl">
+        <Pressable
+          onPress={() => setWeekOffset(weekOffset + 1)}
+          className="p-2 rounded-lg bg-secondary"
+          accessibilityLabel={t('previousWeek')}
+        >
+          <ChevronLeft size={20} color="#a1a1aa" />
+        </Pressable>
+        <View className="items-center flex-1 mx-3">
+          <Text className="text-foreground font-semibold text-sm" numberOfLines={1}>
+            {weekLabel}
+          </Text>
+        </View>
+        <Pressable
+          onPress={() => weekOffset > 0 && setWeekOffset(weekOffset - 1)}
+          className={`p-2 rounded-lg ${weekOffset === 0 ? 'opacity-30' : 'bg-secondary'}`}
+          disabled={weekOffset === 0}
+          accessibilityLabel={t('nextWeek')}
+        >
+          <ChevronRight size={20} color="#a1a1aa" />
+        </Pressable>
+      </View>
+
       {/* Weekly Summary Card */}
       <View className="bg-card p-6 rounded-xl mb-6">
         <View className="flex-row items-center justify-between mb-4">

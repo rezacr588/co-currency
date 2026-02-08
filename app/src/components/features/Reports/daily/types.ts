@@ -1,6 +1,6 @@
 import type { Transaction } from '../../../../types/wallet';
 
-export type TimelinePreset = '7D' | '30D' | '3M' | '6M' | '1Y';
+export type TimelinePreset = '7D' | '30D';
 
 export type BucketGranularity = 'day' | 'week' | 'month';
 

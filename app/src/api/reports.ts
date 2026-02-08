@@ -67,7 +67,7 @@ export const reports = {
       };
       tips: string[];
     }>(`/reports/health-score${buildQuery({ currency })}`),
-  weeklyRecap: (currency?: string) =>
+  weeklyRecap: (currency?: string, date?: string) =>
     fetchAPI<{
       week_start: string;
       week_end: string;
@@ -80,5 +80,5 @@ export const reports = {
       action_items: string[];
       currency: string;
       generated_at: string;
-    }>(`/reports/weekly-recap${buildQuery({ currency })}`),
+    }>(`/reports/weekly-recap${buildQuery({ currency, date })}`),
 };

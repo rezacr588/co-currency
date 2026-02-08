@@ -242,7 +242,15 @@ func (h *ReportsHandler) GetWeeklyRecap(w http.ResponseWriter, r *http.Request) 
 		currency = "USD"
 	}
 
-	recap, err := h.reportsService.GetWeeklyRecap(r.Context(), userID, currency)
+	// Parse optional date parameter for week navigation
+	var referenceDate *time.Time
+	if dateStr := r.URL.Query().Get("date"); dateStr != "" {
+		if parsed, err := time.Parse("2006-01-02", dateStr); err == nil {
+			referenceDate = &parsed
+		}
+	}
+
+	recap, err := h.reportsService.GetWeeklyRecap(r.Context(), userID, currency, referenceDate)
 	if err != nil {
 		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate weekly recap")
 		return

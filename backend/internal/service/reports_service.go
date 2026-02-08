@@ -694,8 +694,11 @@ func (s *ReportsService) GetHealthScore(ctx context.Context, userID uuid.UUID, c
 }
 
 // GetWeeklyRecap generates a weekly financial summary with AI insights
-func (s *ReportsService) GetWeeklyRecap(ctx context.Context, userID uuid.UUID, currency string) (*WeeklyRecapReport, error) {
+func (s *ReportsService) GetWeeklyRecap(ctx context.Context, userID uuid.UUID, currency string, referenceDate *time.Time) (*WeeklyRecapReport, error) {
 	now := time.Now().UTC()
+	if referenceDate != nil {
+		now = referenceDate.UTC()
+	}
 
 	// Calculate ISO 8601 week boundaries (Monday–Sunday)
 	weekday := now.Weekday()

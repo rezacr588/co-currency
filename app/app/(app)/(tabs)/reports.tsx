@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, RefreshControl, useWindowDimensions,
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Wallet, Calendar, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { api } from '../../../src/api';
 import { useLanguage } from '../../../src/context/LanguageContext';
 import { formatCompactCurrency, formatNumber } from '../../../src/utils/format';
@@ -256,7 +257,7 @@ function DateRangeSelector({
   );
 }
 
-// Ring chart for net worth display
+// SVG donut chart for net worth currency breakdown
 function RingChart({
   segments,
   centerLabel,
@@ -269,22 +270,52 @@ function RingChart({
   const total = segments.reduce((sum, s) => sum + s.value, 0);
   if (total === 0) return null;
 
+  const size = 160;
+  const strokeWidth = 20;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  // Calculate cumulative offsets for each segment
+  let cumulativePercent = 0;
+  const arcs = segments.map((segment) => {
+    const percent = segment.value / total;
+    const dashArray = percent * circumference;
+    const dashOffset = -cumulativePercent * circumference;
+    cumulativePercent += percent;
+    return { ...segment, dashArray, dashOffset, percent };
+  });
+
   return (
     <View className="items-center">
-      <View
-        style={{ width: 160, height: 160 }}
-        className="relative items-center justify-center"
-      >
-        <View
-          style={{
-            width: 160,
-            height: 160,
-            borderRadius: 80,
-            borderWidth: 20,
-            borderColor: '#27272a',
-            position: 'absolute',
-          }}
-        />
+      <View style={{ width: size, height: size }} className="items-center justify-center">
+        <Svg width={size} height={size}>
+          {/* Background ring */}
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke="#27272a"
+            strokeWidth={strokeWidth}
+            fill="none"
+          />
+          {/* Colored segments */}
+          {arcs.map((arc, index) => (
+            <Circle
+              key={index}
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              stroke={arc.color}
+              strokeWidth={strokeWidth}
+              fill="none"
+              strokeDasharray={`${arc.dashArray} ${circumference - arc.dashArray}`}
+              strokeDashoffset={arc.dashOffset}
+              strokeLinecap="butt"
+              rotation={-90}
+              origin={`${size / 2}, ${size / 2}`}
+            />
+          ))}
+        </Svg>
         <View className="absolute items-center justify-center">
           <Text className="text-muted-foreground text-xs">{centerLabel}</Text>
           <Text className="text-foreground text-lg font-bold">{centerValue}</Text>
@@ -390,11 +421,10 @@ export default function ReportsScreen() {
     setSelectedPreset('custom');
   };
 
-  // Only fetch networth for monthly view (shown as header)
+  // Fetch networth for all views (shown above tabs)
   const { data: networth, isError: networthError } = useQuery({
     queryKey: ['reports', 'networth'],
     queryFn: () => api.reports.networth(),
-    enabled: period === 'monthly',
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -421,6 +451,36 @@ export default function ReportsScreen() {
         }
       >
         <Text className="text-3xl font-bold text-foreground mb-4">{t('reportsAndStats')}</Text>
+
+        {/* Net Worth Card (always visible) */}
+        {networth && !networthError && (
+          <View className="bg-card p-6 rounded-xl mb-6">
+            <View className="flex-row items-center mb-4">
+              <View className="bg-accent/20 p-2 rounded-lg mr-3">
+                <Wallet size={20} color="rgb(212, 175, 55)" />
+              </View>
+              <Text className="text-muted-foreground">{t('netWorth')}</Text>
+            </View>
+            <Text className="text-4xl font-bold text-accent mb-4">
+              {formatCompactCurrency(networth.total_balance, networth.currency)}
+            </Text>
+
+            {networth.balances && networth.balances.length > 0 && (
+              <View className="mt-2">
+                <Text className="text-muted-foreground text-sm mb-3">{t('balanceDistribution')}</Text>
+                <RingChart
+                  segments={networth.balances.slice(0, 5).map((b) => ({
+                    value: b.balance_in_base,
+                    color: CATEGORY_COLORS[b.currency.toLowerCase()] || '#d4af37',
+                    label: b.currency,
+                  }))}
+                  centerLabel={t('total')}
+                  centerValue={formatCompactCurrency(networth.total_balance, networth.currency)}
+                />
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Report Period Tabs */}
         <ReportPeriodTabs selected={period} onSelect={setPeriod} />
@@ -450,36 +510,6 @@ export default function ReportsScreen() {
               nextYearLabel={t('nextYear')}
               t={t}
             />
-
-            {/* Net Worth Card (stays at top for monthly) */}
-            {networth && !networthError && (
-              <View className="bg-card p-6 rounded-xl mb-6">
-                <View className="flex-row items-center mb-4">
-                  <View className="bg-accent/20 p-2 rounded-lg mr-3">
-                    <Wallet size={20} color="rgb(212, 175, 55)" />
-                  </View>
-                  <Text className="text-muted-foreground">{t('netWorth')}</Text>
-                </View>
-                <Text className="text-4xl font-bold text-accent mb-4">
-                  {formatCompactCurrency(networth.total_balance, networth.currency)}
-                </Text>
-
-                {networth.balances && networth.balances.length > 0 && (
-                  <View className="mt-2">
-                    <Text className="text-muted-foreground text-sm mb-3">{t('balanceDistribution')}</Text>
-                    <RingChart
-                      segments={networth.balances.slice(0, 5).map((b) => ({
-                        value: b.balance_in_base,
-                        color: CATEGORY_COLORS[b.currency.toLowerCase()] || '#d4af37',
-                        label: b.currency,
-                      }))}
-                      centerLabel={t('total')}
-                      centerValue={formatCompactCurrency(networth.total_balance, networth.currency)}
-                    />
-                  </View>
-                )}
-              </View>
-            )}
 
             {/* Monthly Report View */}
             <MonthlyReportView
