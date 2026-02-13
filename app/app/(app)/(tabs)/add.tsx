@@ -53,9 +53,9 @@ export default function AddTransactionScreen() {
 
   const [type, setType] = useState<'credit' | 'debit'>('debit');
   const [amount, setAmount] = useState('');
-  const [currency, setCurrency] = useState('USD');
-  const [enableTargetConversion, setEnableTargetConversion] = useState(false);
-  const [walletCurrency, setWalletCurrency] = useState('EUR');
+  const [currency, setCurrency] = useState('TRY');
+  const [enableTargetConversion, setEnableTargetConversion] = useState(true);
+  const [walletCurrency, setWalletCurrency] = useState('USD');
   const [category, setCategory] = useState('other');
   const [categorySearch, setCategorySearch] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
