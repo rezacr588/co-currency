@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native';
 import { StyledCategoryIcon } from '../../../../constants/icons';
-import { formatCompactCurrency } from '../../../../utils/format';
+import { formatCompactCurrency, getTransactionCurrency } from '../../../../utils/format';
 import { formatDateKey } from '../../../../utils/dateRange';
 import type { ChartBucket, NormalizedTransaction } from './types';
 
@@ -22,7 +22,7 @@ function renderTransactionAmount(
     return formatCompactCurrency(amountInReportCurrency, reportCurrency);
   }
 
-  return formatCompactCurrency(tx.to_amount ?? tx.amount, tx.to_currency ?? tx.currency);
+  return formatCompactCurrency(tx.to_amount ?? tx.amount, getTransactionCurrency(tx));
 }
 
 export function DailySelectedRangeCard({

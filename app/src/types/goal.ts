@@ -226,6 +226,62 @@ export interface ForecastReport {
   estimated_zero_date?: string;
 }
 
+// Cash Flow Projection types
+export interface CashFlowEvent {
+  type: 'recurring' | 'subscription' | 'loan' | 'historical_avg';
+  description: string;
+  amount: number;
+  category?: string;
+}
+
+export interface CashFlowProjection {
+  date: string;
+  balance: number;
+  income: number;
+  expense: number;
+  events?: CashFlowEvent[];
+}
+
+export interface CashFlowSummary {
+  expected_income: number;
+  expected_expenses: number;
+  net_projected: number;
+  recurring_income: number;
+  recurring_expense: number;
+  subscription_cost: number;
+}
+
+export interface CashFlowReport {
+  currency: string;
+  current_balance: number;
+  projections: CashFlowProjection[];
+  days_projected: number;
+  lowest_balance: number;
+  lowest_date: string;
+  danger_zone: boolean;
+  danger_date?: string;
+  summary: CashFlowSummary;
+}
+
+// Spending Anomaly types
+export interface SpendingAnomaly {
+  transaction_id: string;
+  description: string;
+  amount: number;
+  currency: string;
+  category: string;
+  date: string;
+  average_amount: number;
+  deviation: number;
+  message: string;
+}
+
+export interface AnomalyReport {
+  anomalies: SpendingAnomaly[];
+  period: string;
+  currency: string;
+}
+
 // Subscription types
 export interface Subscription {
   id: string;

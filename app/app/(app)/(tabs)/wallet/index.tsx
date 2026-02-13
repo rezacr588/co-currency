@@ -7,7 +7,7 @@ import { Plus, ArrowLeftRight, Bot, History, MessageCircle, Target, PiggyBank, B
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
 import { useColors } from '../../../../src/context/ThemeContext';
-import { formatCurrency, formatCompactCurrency, getCurrencyDisplay, formatDate } from '../../../../src/utils/format';
+import { formatCurrency, formatCompactCurrency, getCurrencyDisplay, formatDate, formatTransactionAmount, getTransactionCurrency } from '../../../../src/utils/format';
 import { StyledCategoryIcon } from '../../../../src/constants/icons';
 import { Skeleton, SkeletonList, SkeletonTransaction, SkeletonBalance } from '../../../../src/components/ui/Skeleton';
 
@@ -301,10 +301,10 @@ export default function WalletScreen() {
                       }`}
                       style={{ fontSize: 15 }}
                     >
-                      {`${tx.type === 'credit' ? '+' : '-'}${formatCompactCurrency(tx.to_amount ?? tx.amount, tx.to_currency ?? tx.currency)}`}
+                      {formatTransactionAmount(tx)}
                     </Text>
                     <Text className="text-muted-foreground" style={{ fontSize: 10, marginTop: 1 }} numberOfLines={1}>
-                      {tx.to_currency ?? tx.currency}
+                      {getTransactionCurrency(tx)}
                     </Text>
                   </View>
                 </View>

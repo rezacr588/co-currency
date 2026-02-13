@@ -18,7 +18,7 @@ import { Plus, ArrowLeft, X, RefreshCw, Play, Pause, TrendingUp, TrendingDown } 
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useColors } from '../../src/context/ThemeContext';
-import { formatCompactCurrency, formatDate } from '../../src/utils/format';
+import { formatDate, formatTransactionAmount } from '../../src/utils/format';
 import { FrequencyIcon, StyledCategoryIcon, CATEGORY_COLORS, getCategoryBackground, CategoryIcon } from '../../src/constants/icons';
 import { useToast } from '../../src/components/ui/Toast';
 import { Button } from '../../src/components/ui/Button';
@@ -252,7 +252,7 @@ function RecurringCard({ transaction }: { transaction: any }) {
             transaction.type === 'credit' ? 'text-success' : 'text-danger'
           }`}
         >
-          {`${transaction.type === 'credit' ? '+' : '-'}${formatCompactCurrency(transaction.amount, transaction.currency)}`}
+          {formatTransactionAmount(transaction)}
         </Text>
       </View>
 

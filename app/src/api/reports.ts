@@ -5,6 +5,8 @@ import type {
   TrendsReport,
   NetWorthReport,
   InsightResponse,
+  CashFlowReport,
+  AnomalyReport,
 } from '../types/goal';
 import { fetchAPI } from './base';
 import { buildQuery } from './utils';
@@ -81,4 +83,10 @@ export const reports = {
       currency: string;
       generated_at: string;
     }>(`/reports/weekly-recap${buildQuery({ currency, date })}`),
+  cashflow: (days?: number, currency?: string) =>
+    fetchAPI<CashFlowReport>(
+      `/reports/cashflow${buildQuery({ days: days || undefined, currency })}`
+    ),
+  anomalies: (currency?: string) =>
+    fetchAPI<AnomalyReport>(`/reports/anomalies${buildQuery({ currency })}`),
 };

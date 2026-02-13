@@ -8,11 +8,12 @@ import { api } from '../../../src/api';
 import { useAuth } from '../../../src/context/AuthContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
 import { useColors } from '../../../src/context/ThemeContext';
-import { formatCompactCurrency, formatDate } from '../../../src/utils/format';
+import { formatCompactCurrency, formatDate, formatTransactionAmount } from '../../../src/utils/format';
 import { StyledCategoryIcon } from '../../../src/constants/icons';
 import { Skeleton } from '../../../src/components/ui/Skeleton';
 import { CurrencyConverter } from '../../../src/components/features/CurrencyConverter';
 import { WeeklyRecapCard } from '../../../src/components/features/WeeklyRecap';
+import { SpendingAnomalyCard } from '../../../src/components/features/Reports/SpendingAnomalyCard';
 import { DailyTipCard } from '../../../src/components/features/DailyTip';
 import { HealthScoreCard } from '../../../src/components/features/HealthScore';
 import { CollapsibleSection } from '../../../src/components/ui/CollapsibleSection';
@@ -189,6 +190,9 @@ export default function DashboardScreen() {
             </View>
           </View>
         )}
+
+        {/* Spending Anomaly Alert */}
+        <SpendingAnomalyCard compact />
 
         {/* Stats Grid - Desktop: 4 columns, Tablet: 2 columns, Mobile: 1 column */}
         <View
@@ -529,7 +533,7 @@ export default function DashboardScreen() {
                         tx.type === 'credit' ? 'text-success' : 'text-danger'
                       }`}
                     >
-                      {`${tx.type === 'credit' ? '+' : '-'}${formatCompactCurrency(tx.to_amount ?? tx.amount, tx.to_currency ?? tx.currency)}`}
+                      {formatTransactionAmount(tx)}
                     </Text>
                   </View>
                 ))}

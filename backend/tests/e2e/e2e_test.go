@@ -72,7 +72,7 @@ func SetupTestServer(t *testing.T) *TestServer {
 	}
 
 	// Initialize Reports service
-	reportsService := service.NewReportsService(walletRepo, exchangeService, aiService)
+	reportsService := service.NewReportsService(walletRepo, exchangeService, aiService, nil, nil)
 
 	// Initialize handlers
 	exchangeHandler := handler.New(exchangeService)

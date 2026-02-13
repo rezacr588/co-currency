@@ -34,7 +34,7 @@ import {
 import { api, getAuthToken, API_BASE } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
 import { useTheme, useColors } from '../../../../src/context/ThemeContext';
-import { formatCompactCurrency, formatDate, getCurrencyDisplay } from '../../../../src/utils/format';
+import { formatDate, getCurrencyDisplay, formatTransactionAmount } from '../../../../src/utils/format';
 import { StyledCategoryIcon, CATEGORY_ICONS, CategoryIcon } from '../../../../src/constants/icons';
 import { SkeletonTransaction, SkeletonList } from '../../../../src/components/ui/Skeleton';
 import { SwipeableRow, type SwipeAction } from '../../../../src/components/ui';
@@ -505,7 +505,7 @@ export default function TransactionHistoryScreen() {
                   }`}
                   numberOfLines={1}
                 >
-                  {`${tx.type === 'credit' ? '+' : '-'}${formatCompactCurrency(tx.to_amount ?? tx.amount, tx.to_currency ?? tx.currency)}`}
+                  {formatTransactionAmount(tx)}
                 </Text>
                 {/* Desktop: Show buttons inline */}
                 {isDesktop && (

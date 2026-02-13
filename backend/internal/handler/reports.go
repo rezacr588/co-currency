@@ -230,6 +230,55 @@ func (h *ReportsHandler) GetHealthScore(w http.ResponseWriter, r *http.Request) 
 	httputil.Success(w, healthScore)
 }
 
+// GetCashFlowProjection handles GET /api/v1/reports/cashflow
+func (h *ReportsHandler) GetCashFlowProjection(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	currency := r.URL.Query().Get("currency")
+	if currency == "" {
+		currency = "USD"
+	}
+
+	days := 30
+	if d := r.URL.Query().Get("days"); d != "" {
+		if parsed, err := strconv.Atoi(d); err == nil && parsed > 0 && parsed <= 90 {
+			days = parsed
+		}
+	}
+
+	report, err := h.reportsService.GetCashFlowProjection(r.Context(), userID, currency, days)
+	if err != nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate cash flow projection")
+		return
+	}
+
+	httputil.Success(w, report)
+}
+
+// GetSpendingAnomalies handles GET /api/v1/reports/anomalies
+func (h *ReportsHandler) GetSpendingAnomalies(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	currency := r.URL.Query().Get("currency")
+	if currency == "" {
+		currency = "USD"
+	}
+
+	report, err := h.reportsService.GetSpendingAnomalies(r.Context(), userID, currency)
+	if err != nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to detect spending anomalies")
+		return
+	}
+
+	httputil.Success(w, report)
+}
+
 // GetWeeklyRecap handles GET /api/v1/reports/weekly-recap
 func (h *ReportsHandler) GetWeeklyRecap(w http.ResponseWriter, r *http.Request) {
 	userID, ok := requireUserID(w, r)

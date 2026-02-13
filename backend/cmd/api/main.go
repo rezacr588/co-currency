@@ -297,15 +297,15 @@ func main() {
 		recurringService = service.NewRecurringService(recurringRepo)
 		log.Info().Msg("Recurring transaction service initialized")
 
-		if walletRepo != nil {
-			reportsService = service.NewReportsService(walletRepo, exchangeService, aiService)
-			log.Info().Msg("Reports service initialized")
-		}
-
 		// Initialize subscription service
 		subscriptionRepo := repository.NewSubscriptionRepository(mainDB)
 		subscriptionService = service.NewSubscriptionService(subscriptionRepo)
 		log.Info().Msg("Subscription service initialized")
+
+		if walletRepo != nil {
+			reportsService = service.NewReportsService(walletRepo, exchangeService, aiService, recurringRepo, subscriptionRepo)
+			log.Info().Msg("Reports service initialized")
+		}
 
 		// Initialize badge service
 		badgeRepo := repository.NewBadgeRepository(mainDB)

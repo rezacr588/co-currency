@@ -8,6 +8,8 @@ import { useColors } from '../../../context/ThemeContext';
 import { formatCompactCurrency, formatNumber } from '../../../utils/format';
 import { safeMax } from '../../../utils/dateRange';
 import { CATEGORY_COLORS, StyledCategoryIcon } from '../../../constants/icons';
+import { CashFlowProjectionCard } from './CashFlowProjectionCard';
+import { SpendingAnomalyCard } from './SpendingAnomalyCard';
 import type { MonthlyReport, CategoryReport, TrendsReport, ForecastReport } from '../../../types/goal';
 
 // Shared chart components
@@ -369,6 +371,12 @@ export function MonthlyReportView({
           )}
         </View>
       )}
+
+      {/* Cash Flow Projection */}
+      <CashFlowProjectionCard />
+
+      {/* Spending Anomalies */}
+      <SpendingAnomalyCard />
 
       {/* Trends Chart */}
       {trendsReport && trendsReport.trends && trendsReport.trends.length > 0 && (

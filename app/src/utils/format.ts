@@ -112,6 +112,34 @@ export function formatCompactCurrency(
   }
 }
 
+/**
+ * Format a transaction amount with sign prefix (+ for credit, - for debit).
+ * For cross-currency transactions, displays the wallet (converted) amount.
+ */
+export function formatTransactionAmount(tx: {
+  type: string;
+  amount: number;
+  currency: string;
+  to_amount?: number | null;
+  to_currency?: string | null;
+}): string {
+  const amount = tx.to_amount ?? tx.amount;
+  const currency = tx.to_currency ?? tx.currency;
+  const sign = tx.type === 'credit' ? '+' : '-';
+  return `${sign}${formatCompactCurrency(amount, currency)}`;
+}
+
+/**
+ * Get the effective display currency for a transaction.
+ * Returns wallet currency for cross-currency transactions, otherwise the original.
+ */
+export function getTransactionCurrency(tx: {
+  currency: string;
+  to_currency?: string | null;
+}): string {
+  return tx.to_currency ?? tx.currency;
+}
+
 export function formatDate(
   date: string,
   options: Intl.DateTimeFormatOptions = {
