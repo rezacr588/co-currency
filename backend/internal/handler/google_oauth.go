@@ -33,7 +33,7 @@ func (h *GoogleOAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 
 	authURL, _, err := h.googleService.GetAuthURL()
 	if err != nil {
-		redirectURL := fmt.Sprintf("%s/login?error=%s", h.frontendURL, url.QueryEscape(err.Error()))
+		redirectURL := fmt.Sprintf("%s/login?error=%s", h.frontendURL, url.QueryEscape("authentication_failed"))
 		http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 		return
 	}
@@ -57,8 +57,7 @@ func (h *GoogleOAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 
 	// Handle OAuth errors from Google
 	if errorParam != "" {
-		errorDesc := r.URL.Query().Get("error_description")
-		redirectURL := fmt.Sprintf("%s/login?error=%s", h.frontendURL, url.QueryEscape(errorDesc))
+		redirectURL := fmt.Sprintf("%s/login?error=%s", h.frontendURL, url.QueryEscape("authentication_failed"))
 		http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 		return
 	}
@@ -72,13 +71,14 @@ func (h *GoogleOAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	// Handle the callback
 	response, err := h.googleService.HandleCallback(r.Context(), code, state)
 	if err != nil {
-		redirectURL := fmt.Sprintf("%s/login?error=%s", h.frontendURL, url.QueryEscape(err.Error()))
+		redirectURL := fmt.Sprintf("%s/login?error=%s", h.frontendURL, url.QueryEscape("authentication_failed"))
 		http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 		return
 	}
 
-	// Redirect to frontend with token
-	redirectURL := fmt.Sprintf("%s/auth/google/callback?token=%s", h.frontendURL, url.QueryEscape(response.Token))
+	// Redirect to frontend with token in URL fragment (#) instead of query params (?)
+	// Fragments are not sent to servers in Referer headers, reducing token leakage risk.
+	redirectURL := fmt.Sprintf("%s/auth/google/callback#token=%s", h.frontendURL, url.QueryEscape(response.Token))
 	if response.RefreshToken != "" {
 		redirectURL += fmt.Sprintf("&refresh_token=%s", url.QueryEscape(response.RefreshToken))
 	}

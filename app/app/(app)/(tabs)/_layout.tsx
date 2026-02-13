@@ -20,6 +20,7 @@ import {
 import { useTheme, useColors } from '../../../src/context/ThemeContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
 import { useAuth } from '../../../src/context/AuthContext';
+import { ErrorBoundary } from '../../../src/components/ui/ErrorBoundary';
 
 const SIDEBAR_WIDTH = 280;
 const SIDEBAR_COLLAPSED_WIDTH = 80;
@@ -225,7 +226,7 @@ function DesktopNavbar() {
   );
 }
 
-export default function TabsLayout() {
+function TabsLayoutInner() {
   const { isDark } = useTheme();
   const colors = useColors();
   const { t } = useLanguage();
@@ -377,5 +378,13 @@ export default function TabsLayout() {
       />
       <Tabs.Screen name="goals" options={{ href: null }} />
     </Tabs>
+  );
+}
+
+export default function TabsLayout() {
+  return (
+    <ErrorBoundary>
+      <TabsLayoutInner />
+    </ErrorBoundary>
   );
 }

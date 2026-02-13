@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
+	"github.com/rs/zerolog/log"
 )
 
 type ChallengeService struct {
@@ -132,7 +133,9 @@ func (s *ChallengeService) CheckAndUpdateProgress(ctx context.Context, userID st
 				streakDays = daysPassed
 			} else {
 				// Failed - user spent money
-				_ = s.repo.FailUserChallenge(ctx, uuid.MustParse(uc.ID))
+				if err := s.repo.FailUserChallenge(ctx, uuid.MustParse(uc.ID)); err != nil {
+					log.Error().Err(err).Str("challenge_id", uc.ID).Msg("Failed to mark challenge as failed")
+				}
 				continue
 			}
 
@@ -213,12 +216,16 @@ func (s *ChallengeService) CheckAndUpdateProgress(ctx context.Context, userID st
 
 		// Check for completion
 		if progress >= 100 {
-			_ = s.repo.CompleteUserChallenge(ctx, uuid.MustParse(uc.ID))
+			if err := s.repo.CompleteUserChallenge(ctx, uuid.MustParse(uc.ID)); err != nil {
+				log.Error().Err(err).Str("challenge_id", uc.ID).Msg("Failed to mark challenge as completed")
+			}
 		}
 	}
 
 	// Also check for expired challenges
-	_, _ = s.repo.CheckExpiredChallenges(ctx)
+	if _, err := s.repo.CheckExpiredChallenges(ctx); err != nil {
+		log.Error().Err(err).Msg("Failed to check expired challenges")
+	}
 
 	return nil
 }

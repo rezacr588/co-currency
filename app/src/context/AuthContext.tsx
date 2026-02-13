@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback } from 'react';
 import { useRouter, useSegments } from 'expo-router';
 import {
   api,
@@ -10,6 +10,7 @@ import {
   loadTokens,
 } from '../api';
 import type { User, LoginRequest, RegisterRequest } from '../types/wallet';
+import { isValidJWT } from '../utils/validation';
 
 interface AuthContextType {
   user: User | null;
@@ -53,18 +54,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Protect routes based on auth state
   useProtectedRoute(user, isLoading);
 
+  // Use a ref for the auth error callback to avoid stale closures
+  const authErrorRef = useRef(() => {
+    setUser(null);
+    router.replace('/login');
+  });
+  useEffect(() => {
+    authErrorRef.current = () => {
+      setUser(null);
+      router.replace('/login');
+    };
+  }, [router]);
+
   // Handle auth errors (401) - redirect to login
   useEffect(() => {
     setOnAuthError(() => {
-      setUser(null);
-      router.replace('/login');
+      authErrorRef.current();
     });
 
     // Cleanup on unmount
     return () => {
       setOnAuthError(null);
     };
-  }, [router]);
+  }, []);
 
   const refreshProfile = useCallback(async () => {
     try {
@@ -85,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await loadTokens();
 
         const token = getAuthToken();
-        if (token) {
+        if (token && isValidJWT(token)) {
           // Retry profile fetch up to 3 times for transient network errors
           const maxRetries = 3;
           let lastError: Error | null = null;

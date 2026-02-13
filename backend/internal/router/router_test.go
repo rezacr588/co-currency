@@ -360,12 +360,13 @@ func TestRouter_CORSHeaders(t *testing.T) {
 	r := New(handlers, rateLimiter, authMiddleware, nil)
 
 	req := httptest.NewRequest("GET", "/health", nil)
+	req.Header.Set("Origin", "http://localhost:5173")
 	rr := httptest.NewRecorder()
 
 	r.ServeHTTP(rr, req)
 
-	if rr.Header().Get("Access-Control-Allow-Origin") != "*" {
-		t.Error("Expected CORS header Access-Control-Allow-Origin to be *")
+	if got := rr.Header().Get("Access-Control-Allow-Origin"); got != "http://localhost:5173" {
+		t.Errorf("Expected CORS header Access-Control-Allow-Origin to be http://localhost:5173, got %q", got)
 	}
 }
 

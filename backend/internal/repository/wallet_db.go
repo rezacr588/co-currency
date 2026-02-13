@@ -493,7 +493,11 @@ func (r *WalletRepository) AddTransactionAtomic(ctx context.Context, userID uuid
 	if err != nil {
 		return nil, fmt.Errorf("beginning transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if rbErr := tx.Rollback(ctx); rbErr != nil && !errors.Is(rbErr, pgx.ErrTxClosed) {
+			log.Error().Err(rbErr).Msg("Failed to rollback AddTransactionAtomic")
+		}
+	}()
 
 	now := time.Now()
 
@@ -584,7 +588,11 @@ func (r *WalletRepository) AddCrossCurrencyTransactionAtomic(ctx context.Context
 	if err != nil {
 		return nil, fmt.Errorf("beginning transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if rbErr := tx.Rollback(ctx); rbErr != nil && !errors.Is(rbErr, pgx.ErrTxClosed) {
+			log.Error().Err(rbErr).Msg("Failed to rollback AddCrossCurrencyTransactionAtomic")
+		}
+	}()
 
 	now := time.Now()
 
@@ -658,7 +666,11 @@ func (r *WalletRepository) ExecuteConversion(ctx context.Context, userID uuid.UU
 	if err != nil {
 		return nil, fmt.Errorf("beginning transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if rbErr := tx.Rollback(ctx); rbErr != nil && !errors.Is(rbErr, pgx.ErrTxClosed) {
+			log.Error().Err(rbErr).Msg("Failed to rollback ExecuteConversion")
+		}
+	}()
 
 	now := time.Now()
 
@@ -718,7 +730,11 @@ func (r *WalletRepository) DeleteTransactionAtomic(ctx context.Context, userID, 
 	if err != nil {
 		return fmt.Errorf("beginning transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if rbErr := tx.Rollback(ctx); rbErr != nil && !errors.Is(rbErr, pgx.ErrTxClosed) {
+			log.Error().Err(rbErr).Msg("Failed to rollback DeleteTransactionAtomic")
+		}
+	}()
 
 	// Get the transaction to reverse
 	var txType, currency string
@@ -823,7 +839,11 @@ func (r *WalletRepository) UpdateTransactionAtomic(ctx context.Context, userID, 
 	if err != nil {
 		return nil, fmt.Errorf("beginning transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if rbErr := tx.Rollback(ctx); rbErr != nil && !errors.Is(rbErr, pgx.ErrTxClosed) {
+			log.Error().Err(rbErr).Msg("Failed to rollback UpdateTransactionAtomic")
+		}
+	}()
 
 	// Get the current transaction
 	var oldTx model.Transaction

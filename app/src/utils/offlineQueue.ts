@@ -1,5 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Network from 'expo-network';
+import { readSecure, writeSecure, removeSecure } from './storage';
 import { api } from '../api';
 import type { TransactionRequest } from '../types/wallet';
 
@@ -32,7 +32,7 @@ function generateId(): string {
 // Get all queued transactions
 export async function getQueuedTransactions(): Promise<QueuedTransaction[]> {
   try {
-    const data = await AsyncStorage.getItem(QUEUE_KEY);
+    const data = await readSecure(QUEUE_KEY);
     if (!data) return [];
     return JSON.parse(data);
   } catch (error) {
@@ -57,7 +57,7 @@ export async function queueTransaction(transaction: TransactionRequest): Promise
 
   existing.push(queued);
 
-  await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(existing));
+  await writeSecure(QUEUE_KEY, JSON.stringify(existing));
   notifyListeners();
 
   return queued.id;
@@ -67,7 +67,7 @@ export async function queueTransaction(transaction: TransactionRequest): Promise
 export async function removeFromQueue(id: string): Promise<void> {
   const existing = await getQueuedTransactions();
   const filtered = existing.filter((tx) => tx.id !== id);
-  await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(filtered));
+  await writeSecure(QUEUE_KEY, JSON.stringify(filtered));
   notifyListeners();
 }
 
@@ -81,7 +81,7 @@ async function updateQueuedTransaction(
 
   if (index !== -1) {
     existing[index] = { ...existing[index], ...updates };
-    await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(existing));
+    await writeSecure(QUEUE_KEY, JSON.stringify(existing));
   }
 }
 
@@ -110,6 +110,12 @@ export async function syncQueue(): Promise<{
 
   for (const item of queue) {
     try {
+      // Exponential backoff based on retry count
+      if (item.retryCount > 0) {
+        const delay = Math.min(1000 * Math.pow(2, item.retryCount), 30000);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+
       // Attempt to sync
       await api.wallet.addTransaction(item.data);
 
@@ -175,7 +181,7 @@ async function notifyListeners() {
 
 // Clear the entire queue
 export async function clearQueue(): Promise<void> {
-  await AsyncStorage.removeItem(QUEUE_KEY);
+  await removeSecure(QUEUE_KEY);
   notifyListeners();
 }
 

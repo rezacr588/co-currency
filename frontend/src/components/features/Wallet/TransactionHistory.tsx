@@ -8,6 +8,7 @@ import { ErrorMessage } from '../../ui/ErrorMessage';
 import { api } from '../../../api';
 import { useCurrencies, useMutationAction } from '../../../hooks';
 import type { Transaction, UpdateTransactionRequest } from '../../../types/wallet';
+import type { Currency } from '../../../types/currency';
 import { TRANSACTION_ICONS } from '../../../constants/icons';
 import type { LucideIcon } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../../utils/format';
@@ -279,7 +280,7 @@ function EditTransactionModal({ transaction, onClose, onSuccess }: EditTransacti
   };
 
   const currencyOptions = useMemo(() => {
-    return (currencies as any)?.map((c: any) => ({
+    return currencies?.map((c: Currency) => ({
       code: c.code,
       name: c.name,
     })) || [{ code: 'USD', name: 'US Dollar' }];

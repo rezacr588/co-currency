@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/caarlos0/env/v9"
@@ -65,5 +66,11 @@ func Load() (*Config, error) {
 	if err := env.Parse(cfg); err != nil {
 		return nil, err
 	}
+
+	// Validate MaxMemoryResults
+	if cfg.MaxMemoryResults < 1 || cfg.MaxMemoryResults > 100 {
+		return nil, fmt.Errorf("MAX_MEMORY_RESULTS must be between 1 and 100, got %d", cfg.MaxMemoryResults)
+	}
+
 	return cfg, nil
 }

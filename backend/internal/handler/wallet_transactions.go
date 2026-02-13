@@ -14,6 +14,7 @@ import (
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/pkg/httputil"
+	"github.com/rs/zerolog/log"
 )
 
 // GetTransactions handles GET /api/v1/wallet/transactions.
@@ -121,7 +122,9 @@ func (h *WalletHandler) ExportTransactions(w http.ResponseWriter, r *http.Reques
 		csvBuilder.WriteString("\n")
 	}
 
-	_, _ = w.Write([]byte(csvBuilder.String()))
+	if _, err := w.Write([]byte(csvBuilder.String())); err != nil {
+		log.Error().Err(err).Msg("Failed to write CSV export response")
+	}
 }
 
 // GetTransaction handles GET /api/v1/wallet/transactions/{id}.
@@ -262,11 +265,19 @@ func (h *WalletHandler) ImportTransactions(w http.ResponseWriter, r *http.Reques
 	})
 }
 
+// escapeCSVField prevents CSV injection by neutralizing formula-triggering characters
+// and properly quoting fields that contain special CSV characters.
 func escapeCSVField(field string) string {
 	if len(field) > 0 {
 		firstChar := field[0]
-		if firstChar == '=' || firstChar == '+' || firstChar == '-' || firstChar == '@' || firstChar == '\t' || firstChar == '\r' || firstChar == '\n' {
-			field = "'" + field
+		// Characters that can trigger formula execution in spreadsheet applications
+		if firstChar == '=' || firstChar == '+' || firstChar == '-' || firstChar == '@' ||
+			firstChar == '\t' || firstChar == '\r' || firstChar == '\n' ||
+			firstChar == '|' || firstChar == '\\' {
+			// Wrap in quotes with a leading tab to neutralize formula injection.
+			// The tab prevents spreadsheet apps from interpreting the content as a formula.
+			field = strings.ReplaceAll(field, "\"", "\"\"")
+			return "\"\t" + field + "\""
 		}
 	}
 
@@ -321,6 +332,26 @@ func parseTransactionFilter(r *http.Request) (*model.TransactionFilter, error) {
 		Currency: strings.TrimSpace(query.Get("currency")),
 		FromDate: strings.TrimSpace(query.Get("from_date")),
 		ToDate:   strings.TrimSpace(query.Get("to_date")),
+	}
+
+	// Input length validation
+	if len(filter.Search) > 500 {
+		return nil, errors.New("search query too long (max 500 characters)")
+	}
+	if len(filter.Category) > 100 {
+		return nil, errors.New("category too long (max 100 characters)")
+	}
+	if len(filter.Currency) > 10 {
+		return nil, errors.New("currency code too long (max 10 characters)")
+	}
+	// Whitelist transaction types
+	if filter.Type != "" {
+		switch filter.Type {
+		case "credit", "debit", "convert":
+			// valid
+		default:
+			return nil, errors.New("invalid transaction type: must be credit, debit, or convert")
+		}
 	}
 
 	var fromTS time.Time

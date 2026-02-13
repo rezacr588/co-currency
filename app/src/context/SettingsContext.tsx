@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback } from 'react';
 import { Platform, AppState, AppStateStatus } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { readJSON, writeJSON } from '../utils/storage';
@@ -96,25 +96,34 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     checkBiometric();
   }, []);
 
-  // Lock app when going to background (if enabled)
+  // Keep a ref to settings so the AppState listener always sees current values
+  const settingsRef = useRef(settings);
   useEffect(() => {
-    if (!settings.requireBiometricOnOpen) return;
+    settingsRef.current = settings;
+  }, [settings]);
 
+  // Lock app when going to background (if enabled)
+  // Single listener that reads from ref to avoid stale closures
+  useEffect(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
-      if (nextAppState === 'background' || nextAppState === 'inactive') {
-        setIsLocked(true);
+      if (settingsRef.current.requireBiometricOnOpen) {
+        if (nextAppState === 'background' || nextAppState === 'inactive') {
+          setIsLocked(true);
+        }
       }
     };
 
     const subscription = AppState.addEventListener('change', handleAppStateChange);
     return () => subscription.remove();
-  }, [settings.requireBiometricOnOpen]);
+  }, []);
 
   const updateSettings = useCallback(async (updates: Partial<AppSettings>) => {
-    const newSettings = { ...settings, ...updates };
-    setSettings(newSettings);
-    await writeJSON(SETTINGS_KEY, newSettings);
-  }, [settings]);
+    setSettings((prev) => {
+      const newSettings = { ...prev, ...updates };
+      writeJSON(SETTINGS_KEY, newSettings);
+      return newSettings;
+    });
+  }, []);
 
   const unlock = useCallback(async (): Promise<boolean> => {
     if (Platform.OS === 'web') {
@@ -148,10 +157,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [settings.requireBiometricOnOpen]);
 
   const toggleHideBalances = useCallback(async () => {
-    const newSettings = { ...settings, hideBalances: !settings.hideBalances };
-    setSettings(newSettings);
-    await writeJSON(SETTINGS_KEY, newSettings);
-  }, [settings]);
+    setSettings((prev) => {
+      const newSettings = { ...prev, hideBalances: !prev.hideBalances };
+      writeJSON(SETTINGS_KEY, newSettings);
+      return newSettings;
+    });
+  }, []);
 
   // Don't render children until settings are loaded
   if (!isLoaded) {

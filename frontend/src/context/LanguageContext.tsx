@@ -102,12 +102,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function initLanguage() {
       // Priority 1: Check localStorage for saved preference
       const savedLanguage = readStorage(STORAGE_KEY);
       if (isValidLanguage(savedLanguage)) {
-        setLanguageState(savedLanguage);
-        setIsInitialized(true);
+        if (isMounted) {
+          setLanguageState(savedLanguage);
+          setIsInitialized(true);
+        }
         return;
       }
 
@@ -115,33 +119,50 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       const urlParams = new URLSearchParams(window.location.search);
       const langParam = urlParams.get('lang');
       if (isValidLanguage(langParam)) {
-        setLanguageState(langParam);
-        writeStorage(STORAGE_KEY, langParam);
-        setIsInitialized(true);
+        if (isMounted) {
+          setLanguageState(langParam);
+          writeStorage(STORAGE_KEY, langParam);
+          setIsInitialized(true);
+        }
         return;
       }
 
       // Priority 3: Detect from browser locale (instant, no API call)
       const browserLang = detectBrowserLanguage();
       if (browserLang) {
-        setLanguageState(browserLang);
-        // Don't save to localStorage - let user explicitly choose to persist
-        setIsInitialized(true);
+        if (isMounted) {
+          setLanguageState(browserLang);
+          // Don't save to localStorage - let user explicitly choose to persist
+          setIsInitialized(true);
+        }
         return;
       }
 
       // Priority 4: Detect from user's country via IP (fallback, requires API call)
-      const countryCode = await detectCountry();
-      if (countryCode && countryCode in COUNTRY_LANGUAGE_MAP) {
-        const detectedLang = COUNTRY_LANGUAGE_MAP[countryCode];
-        setLanguageState(detectedLang);
-        // Don't save to localStorage - let user explicitly choose to persist
+      // Check cache first to avoid repeated API calls
+      const cachedCountry = readStorage('detected-country');
+      const countryCode = cachedCountry || await detectCountry();
+      if (!isMounted) return;
+
+      if (countryCode) {
+        if (!cachedCountry) {
+          writeStorage('detected-country', countryCode);
+        }
+        if (countryCode in COUNTRY_LANGUAGE_MAP) {
+          const detectedLang = COUNTRY_LANGUAGE_MAP[countryCode];
+          setLanguageState(detectedLang);
+          // Don't save to localStorage - let user explicitly choose to persist
+        }
       }
 
       setIsInitialized(true);
     }
 
     initLanguage();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const setLanguage = (lang: Language) => {

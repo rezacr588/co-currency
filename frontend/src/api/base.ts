@@ -73,7 +73,11 @@ async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function refreshAuthToken(): Promise<boolean> {
+// Single-flight pattern: prevent parallel token refreshes
+let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
+
+async function doRefreshAuthToken(): Promise<boolean> {
   const storedRefreshToken = getRefreshToken();
   if (!storedRefreshToken) return false;
 
@@ -99,6 +103,20 @@ async function refreshAuthToken(): Promise<boolean> {
   // If refresh failed, clear tokens and logout
   handleAuthError();
   return false;
+}
+
+async function refreshAuthToken(): Promise<boolean> {
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
+  isRefreshing = true;
+  refreshPromise = doRefreshAuthToken().finally(() => {
+    isRefreshing = false;
+    refreshPromise = null;
+  });
+
+  return refreshPromise;
 }
 
 async function fetchWithRetry<T>(

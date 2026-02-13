@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Toast as ToastType, ToastType as ToastVariant } from '../../context/ToastContext';
 
 interface ToastProps {
@@ -46,16 +46,22 @@ const iconStylesByType: Record<ToastVariant, string> = {
 export function Toast({ toast, onDismiss }: ToastProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Trigger enter animation
     const enterTimer = setTimeout(() => setIsVisible(true), 10);
-    return () => clearTimeout(enterTimer);
+    return () => {
+      clearTimeout(enterTimer);
+      if (dismissTimerRef.current) {
+        clearTimeout(dismissTimerRef.current);
+      }
+    };
   }, []);
 
   const handleDismiss = () => {
     setIsLeaving(true);
-    setTimeout(() => {
+    dismissTimerRef.current = setTimeout(() => {
       onDismiss(toast.id);
     }, 200);
   };

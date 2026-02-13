@@ -4,15 +4,34 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 
 // Types for expo-notifications (inline to avoid requiring the package for TypeScript)
+interface NotificationChannelConfig {
+  name: string;
+  description?: string;
+  importance: number;
+  vibrationPattern?: number[];
+  lightColor?: string;
+}
+
+interface NotificationContent {
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+  sound?: boolean;
+}
+
+interface NotificationTrigger {
+  seconds: number;
+}
+
 interface NotificationModule {
   setNotificationHandler: (config: { handleNotification: () => Promise<{ shouldShowAlert: boolean; shouldPlaySound: boolean; shouldSetBadge: boolean }> }) => void;
   getPermissionsAsync: () => Promise<{ status: string }>;
   requestPermissionsAsync: () => Promise<{ status: string }>;
   getExpoPushTokenAsync: (config: { projectId: string }) => Promise<{ data: string }>;
-  setNotificationChannelAsync: (id: string, config: any) => Promise<void>;
+  setNotificationChannelAsync: (id: string, config: NotificationChannelConfig) => Promise<void>;
   addNotificationReceivedListener: (cb: (notif: unknown) => void) => { remove: () => void };
   addNotificationResponseReceivedListener: (cb: (response: unknown) => void) => { remove: () => void };
-  scheduleNotificationAsync: (config: { content: any; trigger: any }) => Promise<void>;
+  scheduleNotificationAsync: (config: { content: NotificationContent; trigger: NotificationTrigger }) => Promise<void>;
   AndroidImportance: { MAX: number; HIGH: number };
 }
 
@@ -21,10 +40,15 @@ interface DeviceModule {
   modelName: string;
 }
 
+interface ExpoConstants {
+  expoConfig?: { extra?: { eas?: { projectId?: string } } };
+  easConfig?: { projectId?: string };
+}
+
 // Lazy import notifications module to handle missing dependency gracefully
 let Notifications: NotificationModule | null = null;
 let Device: DeviceModule | null = null;
-let Constants: any = null;
+let Constants: ExpoConstants | null = null;
 
 try {
   Notifications = require('expo-notifications');
@@ -63,11 +87,13 @@ export function usePushNotifications() {
 
   const registerForPushNotifications = useCallback(async () => {
     if (!Notifications || !Device) {
+      console.warn('[PushNotifications] Push notifications not available (missing dependencies)');
       setError('Push notifications not available');
       return null;
     }
 
     if (!Device.isDevice) {
+      console.warn('[PushNotifications] Push notifications require a physical device');
       setError('Push notifications require a physical device');
       return null;
     }
@@ -84,6 +110,7 @@ export function usePushNotifications() {
       }
 
       if (finalStatus !== 'granted') {
+        console.warn('[PushNotifications] Permission denied by user');
         setError('Permission for push notifications was denied');
         return null;
       }
@@ -160,7 +187,12 @@ export function usePushNotifications() {
     registerForPushNotifications().then((token) => {
       if (token) {
         registerTokenWithBackend(token);
+      } else {
+        console.warn('[PushNotifications] Registration returned null token');
       }
+    }).catch((err) => {
+      console.error('[PushNotifications] Registration failed:', err);
+      setError(err instanceof Error ? err.message : 'Push notification registration failed');
     }).finally(() => {
       setIsLoading(false);
     });
@@ -172,7 +204,7 @@ export function usePushNotifications() {
 
     // Listen for notification interactions
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response: unknown) => {
-      const data = (response as any)?.notification?.request?.content?.data;
+      const data = (response as { notification?: { request?: { content?: { data?: Record<string, string> } } } })?.notification?.request?.content?.data;
       // Handle notification tap - navigate based on type
       if (data?.type === 'budget_alert' && data?.budgetId) {
         // Navigate to budgets screen

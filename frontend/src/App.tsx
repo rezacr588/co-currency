@@ -14,6 +14,7 @@ import { AuthenticatedLayout } from './components/layout/AuthenticatedLayout';
 import { HybridLayout } from './components/layout/HybridLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { queryClient } from './queryClient';
 import { ROUTES } from './constants/routes';
 
@@ -101,7 +102,9 @@ function AppContent() {
             path={ROUTES.aiChat}
             element={(
               <ProtectedRoute>
-                <AIChat />
+                <ErrorBoundary>
+                  <AIChat />
+                </ErrorBoundary>
               </ProtectedRoute>
             )}
           />
@@ -109,7 +112,9 @@ function AppContent() {
             path={ROUTES.aiChatConversation}
             element={(
               <ProtectedRoute>
-                <AIChat />
+                <ErrorBoundary>
+                  <AIChat />
+                </ErrorBoundary>
               </ProtectedRoute>
             )}
           />

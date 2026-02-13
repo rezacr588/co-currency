@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api, setAuthToken, setRefreshToken, getAuthToken, clearAuthToken, setOnAuthError } from '../api';
 import type { User, LoginRequest, RegisterRequest } from '../types/wallet';
@@ -21,6 +21,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  const navigateRef = useRef(navigate);
+  const locationRef = useRef(location);
+
+  // Keep refs up to date
+  useEffect(() => {
+    navigateRef.current = navigate;
+  }, [navigate]);
+
+  useEffect(() => {
+    locationRef.current = location;
+  }, [location]);
 
   // Handle auth errors (401) - redirect to login
   useEffect(() => {
@@ -36,14 +47,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ROUTES.resetPassword,
         ROUTES.about,
       ];
+      const currentPath = locationRef.current.pathname;
       const isPublicPath = publicPaths.some(path =>
-        location.pathname === path || location.pathname.startsWith(ROUTES.resetPassword)
+        currentPath === path || currentPath.startsWith(ROUTES.resetPassword)
       );
 
       if (!isPublicPath) {
         // Save current path to redirect back after login
-        navigate(ROUTES.login, {
-          state: { from: location.pathname },
+        navigateRef.current(ROUTES.login, {
+          state: { from: currentPath },
           replace: true
         });
       }
@@ -53,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       setOnAuthError(null);
     };
-  }, [navigate, location.pathname]);
+  }, []);
 
   const refreshProfile = useCallback(async () => {
     try {

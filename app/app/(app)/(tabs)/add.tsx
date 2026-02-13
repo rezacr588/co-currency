@@ -280,7 +280,7 @@ export default function AddTransactionScreen() {
             className="font-semibold text-foreground mb-6"
             style={{ fontSize: isDesktop ? 24 : 22 }}
           >
-            {t('addTransaction')}
+            {t('addTransaction') || 'Add Transaction'}
           </Text>
 
           <FormError message={error} />
@@ -294,7 +294,7 @@ export default function AddTransactionScreen() {
           >
             {/* Transaction Type */}
             <View className="mb-5" style={{ flex: isDesktop ? 1 : undefined }}>
-              <Text className="text-muted-foreground text-sm mb-2">{t('transactionType')}</Text>
+              <Text className="text-muted-foreground text-sm mb-2">{t('transactionType') || 'Transaction Type'}</Text>
               <View className="flex-row gap-2">
                 <Pressable
                   onPress={() => setType('debit')}
@@ -312,7 +312,7 @@ export default function AddTransactionScreen() {
                       type === 'debit' ? 'text-background' : 'text-foreground'
                     }`}
                   >
-                    {t('expense')}
+                    {t('expense') || 'Expense'}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -331,7 +331,7 @@ export default function AddTransactionScreen() {
                       type === 'credit' ? 'text-background' : 'text-foreground'
                     }`}
                   >
-                    {t('income')}
+                    {t('income') || 'Income'}
                   </Text>
                 </Pressable>
               </View>
@@ -339,7 +339,7 @@ export default function AddTransactionScreen() {
 
             {/* Amount */}
             <View className="mb-5" style={{ flex: isDesktop ? 1 : undefined }}>
-              <Text className="text-muted-foreground text-sm mb-2">{t('amount')}</Text>
+              <Text className="text-muted-foreground text-sm mb-2">{t('amount') || 'Amount'}</Text>
               <View className="bg-muted border border-border rounded-lg flex-row items-center px-4">
                 <Text className="text-xl text-muted-foreground mr-2">
                   {currencyDisplay.symbol}
@@ -367,7 +367,7 @@ export default function AddTransactionScreen() {
 
           {/* Currency */}
           <View className="mb-5">
-            <Text className="text-muted-foreground text-sm mb-2">{t('currency')}</Text>
+            <Text className="text-muted-foreground text-sm mb-2">{t('currency') || 'Currency'}</Text>
             {isDesktop ? (
               <View className="flex-row flex-wrap gap-2">
                 {CURRENCIES.map((code) => {
@@ -668,7 +668,7 @@ export default function AddTransactionScreen() {
 
           {/* Description */}
           <View className="mb-6">
-            <Text className="text-muted-foreground text-sm mb-2">{t('description')}</Text>
+            <Text className="text-muted-foreground text-sm mb-2">{t('description') || 'Description'}</Text>
             <TextInput
               value={description}
               onChangeText={setDescription}
@@ -699,7 +699,7 @@ export default function AddTransactionScreen() {
             isLoading={mutation.isPending}
             leftIcon={<Check size={18} color={colors.primaryForeground} />}
           >
-            {t('saveTransaction')}
+            {t('saveTransaction') || 'Save Transaction'}
           </Button>
         </ScrollView>
       </KeyboardAvoidingView>

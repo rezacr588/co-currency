@@ -191,16 +191,16 @@ export function Reports() {
 
   const monthlyCategoryData = monthlyReport?.categories?.map((cat, index) => ({
     name: t(`category_${cat.category}` as any) || cat.category,
-    value: cat.amount,
+    value: cat.amount ?? 0,
     color: COLORS[index % COLORS.length],
-  })) || [];
+  })) ?? [];
 
   const yearlyTrendData = yearlyReport?.months?.map((m) => ({
-    name: new Date(year, m.month - 1).toLocaleString('default', { month: 'short' }),
-    income: m.income,
-    expenses: m.expenses,
-    net: m.net,
-  })) || [];
+    name: new Date(year, (m.month ?? 1) - 1).toLocaleString('default', { month: 'short' }),
+    income: m.income ?? 0,
+    expenses: m.expenses ?? 0,
+    net: m.net ?? 0,
+  })) ?? [];
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
   const months = Array.from({ length: 12 }, (_, i) => i + 1);

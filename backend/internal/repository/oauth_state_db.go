@@ -62,6 +62,15 @@ func (r *OAuthStateRepository) Validate(ctx context.Context, state string) error
 		return fmt.Errorf("validating oauth state: %w", err)
 	}
 
+	// Check expiry BEFORE deleting so an expired state is not consumed
+	if time.Now().After(expiresAt) {
+		// Still delete the expired state to keep the table clean
+		deleteQuery := `DELETE FROM oauth_states WHERE state = $1`
+		_, _ = tx.Exec(ctx, deleteQuery, state)
+		_ = tx.Commit(ctx)
+		return ErrOAuthStateExpired
+	}
+
 	// Delete the state (one-time use)
 	deleteQuery := `DELETE FROM oauth_states WHERE state = $1`
 	_, err = tx.Exec(ctx, deleteQuery, state)
@@ -71,11 +80,6 @@ func (r *OAuthStateRepository) Validate(ctx context.Context, state string) error
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("committing transaction: %w", err)
-	}
-
-	// Check if expired after deletion
-	if time.Now().After(expiresAt) {
-		return ErrOAuthStateExpired
 	}
 
 	return nil

@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../../src/context/AuthContext';
+import { isValidJWT } from '../../../src/utils/validation';
 
 export default function LinkedInCallbackScreen() {
   const router = useRouter();
@@ -15,15 +16,20 @@ export default function LinkedInCallbackScreen() {
       const { token, refresh_token, error: errorParam } = params;
 
       if (errorParam) {
-        setError(errorParam);
+        setError(typeof errorParam === 'string' ? errorParam : 'Unknown error');
         // Redirect to login with error after a delay
         setTimeout(() => {
-          router.replace(`/login?error=${encodeURIComponent(errorParam)}`);
+          router.replace(`/login?error=${encodeURIComponent(typeof errorParam === 'string' ? errorParam : 'Unknown error')}`);
         }, 2000);
         return;
       }
 
-      if (token && refresh_token) {
+      if (
+        typeof token === 'string' &&
+        typeof refresh_token === 'string' &&
+        isValidJWT(token) &&
+        isValidJWT(refresh_token)
+      ) {
         try {
           await handleOAuthCallback(token, refresh_token);
           router.replace('/(app)/(tabs)');

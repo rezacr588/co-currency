@@ -23,7 +23,9 @@ export function Login() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const from = (location.state as { from?: string })?.from || ROUTES.wallet;
+  const rawFrom = (location.state as { from?: string })?.from || ROUTES.wallet;
+  // Prevent open redirect: ensure `from` is a relative path
+  const from = (rawFrom.startsWith('/') && !rawFrom.includes('://')) ? rawFrom : ROUTES.wallet;
 
   // Check for error from OAuth callback
   useEffect(() => {
@@ -49,11 +51,17 @@ export function Login() {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = api.auth.getGoogleAuthUrl();
+    const url = api.auth.getGoogleAuthUrl();
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/')) {
+      window.location.href = url;
+    }
   };
 
   const handleLinkedInLogin = () => {
-    window.location.href = api.auth.getLinkedInAuthUrl();
+    const url = api.auth.getLinkedInAuthUrl();
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/')) {
+      window.location.href = url;
+    }
   };
 
   return (

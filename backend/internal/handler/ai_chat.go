@@ -11,6 +11,7 @@ import (
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/service"
 	"github.com/rezacr588/currency-converter/pkg/httputil"
+	"github.com/rs/zerolog/log"
 )
 
 // AIChatHandler handles AI chat endpoints
@@ -233,10 +234,12 @@ func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 		req.ConversationID,
 		req.Message,
 		func(conversationID string) {
-			_ = sendEvent(map[string]interface{}{
+			if err := sendEvent(map[string]interface{}{
 				"type":            "start",
 				"conversation_id": conversationID,
-			})
+			}); err != nil {
+				log.Error().Err(err).Str("conversation_id", conversationID).Msg("Failed to send SSE start event")
+			}
 		},
 		func(chunk string) error {
 			return sendEvent(map[string]interface{}{
@@ -254,18 +257,22 @@ func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 		} else if isAIProviderError(err) {
 			message = "AI service is unavailable. Please try again later."
 		}
-		_ = sendEvent(map[string]interface{}{
+		if sseErr := sendEvent(map[string]interface{}{
 			"type":  "error",
 			"error": message,
-		})
+		}); sseErr != nil {
+			log.Error().Err(sseErr).Str("message", message).Msg("Failed to send SSE error event")
+		}
 		return
 	}
 
-	_ = sendEvent(map[string]interface{}{
+	if err := sendEvent(map[string]interface{}{
 		"type":            "done",
 		"conversation_id": response.ConversationID,
 		"message":         response.Message,
-	})
+	}); err != nil {
+		log.Error().Err(err).Str("conversation_id", response.ConversationID).Msg("Failed to send SSE done event")
+	}
 }
 
 func isAIProviderError(err error) bool {

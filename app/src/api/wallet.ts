@@ -1,3 +1,5 @@
+// TODO: API responses are not runtime-validated. Consider adding a schema validation
+// library (e.g., zod) for critical endpoints to catch backend contract changes early.
 import type {
   WalletBalance,
   WalletSummary,

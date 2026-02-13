@@ -150,6 +150,12 @@ func (rl *RateLimiter) getLimiter(key string, limit rate.Limit, burst int) *rate
 
 	entry, exists := rl.limiters[key]
 	if !exists {
+		// Emergency guard: if the map grows beyond 100k entries, skip adding
+		// new ones to prevent unbounded memory growth from a DDoS or scan.
+		if len(rl.limiters) > 100000 {
+			log.Warn().Int("size", len(rl.limiters)).Msg("Rate limiter map exceeded 100k entries, rejecting new entry")
+			return rate.NewLimiter(limit, burst)
+		}
 		entry = &rateLimiterEntry{
 			limiter:    rate.NewLimiter(limit, burst),
 			lastAccess: time.Now(),
@@ -162,7 +168,16 @@ func (rl *RateLimiter) getLimiter(key string, limit rate.Limit, burst int) *rate
 	return entry.limiter
 }
 
-// getIP extracts the client IP from request headers
+// getIP extracts the client IP from request headers.
+//
+// SECURITY NOTE: X-Forwarded-For and X-Real-IP headers can be spoofed by
+// the client. These headers should only be trusted when the request comes
+// through a known reverse proxy (e.g., Koyeb, Cloudflare). Currently this
+// app runs behind Koyeb's reverse proxy which sets these headers reliably.
+//
+// TODO: For stricter environments, implement a TrustedProxies list and only
+// trust forwarding headers when r.RemoteAddr matches a trusted proxy CIDR.
+// When no trusted proxy is configured, prefer r.RemoteAddr directly.
 func getIP(r *http.Request) string {
 	// Try to get real IP from headers (for proxies)
 	// X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"

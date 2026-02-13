@@ -155,6 +155,8 @@ async function refreshAuthToken(): Promise<boolean> {
         if (data.refresh_token) {
           await setRefreshToken(data.refresh_token);
         }
+        // TODO: After successful token refresh, user profile data may be stale.
+        // Consider emitting an event or calling a callback to trigger profile refetch.
         return true;
       }
     } catch (error) {

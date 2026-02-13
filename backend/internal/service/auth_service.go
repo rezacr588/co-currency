@@ -67,8 +67,8 @@ func (s *AuthService) Register(ctx context.Context, req *model.RegisterRequest) 
 		return nil, errors.New("email and password are required")
 	}
 
-	if len(req.Password) < 6 {
-		return nil, errors.New("password must be at least 6 characters")
+	if len(req.Password) < 8 {
+		return nil, errors.New("password must be at least 8 characters")
 	}
 
 	// Hash password
@@ -236,8 +236,8 @@ func (s *AuthService) UpdateProfile(ctx context.Context, userID uuid.UUID, req *
 
 // ChangePassword updates the user's password
 func (s *AuthService) ChangePassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) error {
-	if len(newPassword) < 6 {
-		return errors.New("password must be at least 6 characters")
+	if len(newPassword) < 8 {
+		return errors.New("password must be at least 8 characters")
 	}
 
 	user, err := s.userRepo.GetByID(ctx, userID)
@@ -308,8 +308,8 @@ func (s *AuthService) GeneratePasswordResetToken(ctx context.Context, email stri
 
 // ResetPassword resets a user's password using a reset token
 func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword string) error {
-	if len(newPassword) < 6 {
-		return errors.New("password must be at least 6 characters")
+	if len(newPassword) < 8 {
+		return errors.New("password must be at least 8 characters")
 	}
 
 	// Find user by reset token

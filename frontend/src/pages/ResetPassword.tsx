@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Container } from '../components/layout';
 import { Button, Input, Card } from '../components/ui';
@@ -10,13 +10,29 @@ export function ResetPassword() {
   const { t } = useLanguage();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const token = searchParams.get('token') || '';
+  const [token] = useState(() => searchParams.get('token') || '');
+
+  // Clear token from URL bar to avoid exposure in browser history
+  useEffect(() => {
+    if (token) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [token]);
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  // Redirect to login after successful reset
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => {
+      navigate(ROUTES.login);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [success, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,9 +53,6 @@ export function ResetPassword() {
     try {
       await api.auth.resetPassword({ token, new_password: newPassword });
       setSuccess(true);
-      setTimeout(() => {
-        navigate(ROUTES.login);
-      }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to reset password');
     } finally {

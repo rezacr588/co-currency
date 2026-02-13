@@ -43,6 +43,7 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 	r.Use(middleware.Recovery) // Catch panics
 	r.Use(middleware.Logging)  // Logging will include trace ID
 	r.Use(middleware.CORS)
+	r.Use(middleware.Security)
 
 	// Health check (no rate limiting)
 	r.Get("/health", h.Exchange.Health)
@@ -65,8 +66,14 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/register", h.Auth.Register)
 			r.Post("/login", h.Auth.Login)
-			r.Post("/forgot-password", h.Auth.ForgotPassword)
-			r.Post("/reset-password", h.Auth.ResetPassword)
+			// Apply login rate limiter to password reset endpoints to prevent abuse
+			r.Group(func(r chi.Router) {
+				if rateLimiter != nil {
+					r.Use(rateLimiter.LoginMiddleware)
+				}
+				r.Post("/forgot-password", h.Auth.ForgotPassword)
+				r.Post("/reset-password", h.Auth.ResetPassword)
+			})
 			r.Post("/refresh", h.Auth.RefreshToken)
 			r.Post("/logout", h.Auth.Logout)
 

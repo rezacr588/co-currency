@@ -105,9 +105,9 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// In a real app, you would send an email here with the token
-	// For security, never expose the token in the API response
-	// TODO: Implement email service to send reset link with token
+	// TODO: The password reset token is generated but never delivered to the user.
+	// An email service (e.g., SendGrid, SES) needs to be integrated to send the
+	// reset link containing this token. Until then, password reset is non-functional.
 	_ = token // Token should be sent via email, not exposed in response
 	httputil.Success(w, map[string]string{
 		"message": "If an account exists with this email, a password reset link has been sent",

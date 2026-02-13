@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { I18nManager } from 'react-native';
+import { I18nManager, Platform } from 'react-native';
 import { getLocales } from 'expo-localization';
 import { translations, Language } from '../i18n/translations';
 import { readStorage, writeStorage } from '../utils/storage';
@@ -103,6 +103,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
     // Handle RTL change (requires app restart on native)
     const shouldBeRTL = RTL_LANGUAGES.includes(lang);
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      document.documentElement.dir = shouldBeRTL ? 'rtl' : 'ltr';
+      document.documentElement.lang = lang;
+    }
     if (I18nManager.isRTL !== shouldBeRTL) {
       I18nManager.forceRTL(shouldBeRTL);
       // Note: On native, RTL changes require app restart to take effect
@@ -119,10 +123,15 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   // Update RTL on initial load
   useEffect(() => {
-    if (isInitialized && I18nManager.isRTL !== isRTL) {
+    if (!isInitialized) return;
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
+      document.documentElement.lang = language;
+    }
+    if (I18nManager.isRTL !== isRTL) {
       I18nManager.forceRTL(isRTL);
     }
-  }, [isInitialized, isRTL]);
+  }, [isInitialized, isRTL, language]);
 
   if (!isInitialized) {
     return null;
