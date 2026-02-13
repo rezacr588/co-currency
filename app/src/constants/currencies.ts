@@ -3,8 +3,7 @@
  * These are the most frequently used currencies.
  */
 export const COMMON_CURRENCIES = [
-  'USD', 'EUR', 'GBP', 'IRR', 'JPY', 'CHF', 'CAD', 'AUD',
-  'CNY', 'INR', 'KRW', 'SGD', 'HKD', 'NZD', 'SEK', 'NOK',
+  'TRY', 'GBP', 'USD', 'EUR', 'IRR',
 ] as const;
 
 /**
