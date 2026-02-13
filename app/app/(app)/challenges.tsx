@@ -301,7 +301,7 @@ export default function ChallengesScreen() {
     <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
       {/* Header */}
       <View className="flex-row items-center justify-between p-4 border-b border-border">
-        <Pressable onPress={() => router.back()} className="p-2" hitSlop={12}>
+        <Pressable onPress={() => router.back()} className="p-2" hitSlop={12} style={({ pressed }) => [pressed && { opacity: 0.7 }]} accessibilityLabel={t('back') || 'Go back'} accessibilityRole="button">
           <ArrowLeft size={24} color={iconColor} />
         </Pressable>
         <Text className="text-xl font-bold text-foreground">
@@ -320,7 +320,7 @@ export default function ChallengesScreen() {
       >
         {/* Stats Card */}
         {stats && (
-          <View className="bg-card border border-border p-5 rounded-xl mb-6">
+          <View className="bg-card border border-border p-4 rounded-xl mb-6">
             <View className="flex-row items-center mb-4">
               <Award size={24} color={colors.accent} />
               <Text className="text-base font-semibold text-foreground ml-2">
@@ -531,6 +531,9 @@ function ChallengeCard({
     <Pressable
       onPress={onPress}
       className="bg-card border border-border p-4 rounded-xl"
+      style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+      accessibilityLabel={challenge.name}
+      accessibilityRole="button"
     >
       <View className="flex-row items-center">
         <View
@@ -618,6 +621,7 @@ function ActiveChallengeCard({
   onAbandon: () => void;
   isDark: boolean;
 }) {
+  const { t } = useLanguage();
   const colors = useColors();
   const DIFFICULTY_COLORS = useDifficultyColors();
   const challenge = userChallenge.challenge;
@@ -644,7 +648,7 @@ function ActiveChallengeCard({
           )}
         </View>
         <View className="flex-1">
-          <Text className="text-foreground font-semibold">{challenge.name}</Text>
+          <Text className="text-foreground font-semibold" numberOfLines={1}>{challenge.name}</Text>
           <View className="flex-row items-center mt-1">
             <Clock size={12} color={colors.mutedForeground} />
             <Text className="text-muted-foreground text-xs ml-1">
@@ -688,6 +692,9 @@ function ActiveChallengeCard({
           onPress={onAbandon}
           className="p-2"
           hitSlop={8}
+          style={({ pressed }) => [{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]}
+          accessibilityLabel={t('abandonChallenge') || 'Abandon challenge'}
+          accessibilityRole="button"
         >
           <XCircle size={20} color={colors.danger} />
         </Pressable>
@@ -723,7 +730,7 @@ function HistoryChallengeCard({
           <StatusIcon size={20} color={statusColor} />
         </View>
         <View className="flex-1">
-          <Text className="text-foreground font-semibold">{challenge.name}</Text>
+          <Text className="text-foreground font-semibold" numberOfLines={1}>{challenge.name}</Text>
           <View className="flex-row items-center mt-1">
             <Text
               className="text-xs capitalize"

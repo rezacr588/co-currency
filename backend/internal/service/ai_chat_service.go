@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	gocache "github.com/patrickmn/go-cache"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rs/zerolog/log"
@@ -33,12 +35,51 @@ type AIChatService struct {
 	subscriptionRepo *repository.SubscriptionRepository
 	noteRepo         *repository.NoteRepository
 	toolExecutor     *AIToolExecutor
+	contextCache     *gocache.Cache // In-memory cache for financial context per user
 }
 
 var (
 	ErrConversationNotFound  = errors.New("conversation not found")
 	ErrInvalidConversationID = errors.New("invalid conversation id")
+
+	// promptInjectionPattern matches lines that look like prompt override attempts
+	promptInjectionPattern = regexp.MustCompile(`(?i)^(SYSTEM:|You are |Ignore previous|Forget all|Disregard|New instructions:|ASSISTANT:|<\|im_start\||<\|system\|)`)
 )
+
+// sanitizeForPrompt sanitizes user-provided data before interpolation into the system prompt.
+// It strips characters that could be used for prompt injection and limits length.
+func sanitizeForPrompt(s string, maxLen int) string {
+	if s == "" {
+		return s
+	}
+
+	// Remove control characters (except common whitespace)
+	var sb strings.Builder
+	for _, r := range s {
+		if r == '\n' || r == '\r' || r == '\t' || (r >= 32 && r < 127) || (r >= 160) {
+			sb.WriteRune(r)
+		}
+	}
+	s = sb.String()
+
+	// Remove lines that look like prompt injection attempts
+	lines := strings.Split(s, "\n")
+	var cleaned []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if !promptInjectionPattern.MatchString(trimmed) {
+			cleaned = append(cleaned, line)
+		}
+	}
+	s = strings.Join(cleaned, "\n")
+
+	// Truncate to max length
+	if len(s) > maxLen {
+		s = s[:maxLen]
+	}
+
+	return strings.TrimSpace(s)
+}
 
 // NewAIChatService creates a new AIChatService
 func NewAIChatService(
@@ -76,6 +117,7 @@ func NewAIChatService(
 		subscriptionRepo: subscriptionRepo,
 		noteRepo:         noteRepo,
 		toolExecutor:     toolExecutor,
+		contextCache:     gocache.New(60*time.Second, 2*time.Minute),
 	}
 }
 
@@ -133,8 +175,8 @@ func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName str
 		return nil, fmt.Errorf("saving user message: empty response")
 	}
 
-	// Get conversation history for context (last 20 messages)
-	history, err := s.chatRepo.GetRecentMessages(ctx, convID, 20)
+	// Get conversation history for context (last 40 messages)
+	history, err := s.chatRepo.GetRecentMessages(ctx, convID, 40)
 	if err != nil {
 		return nil, fmt.Errorf("getting history: %w", err)
 	}
@@ -147,6 +189,7 @@ func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName str
 	}
 
 	// Get user memories (long-term context) - use semantic search with current message
+	// TODO: Avoid logging memory content in production — it may contain sensitive financial data
 	memories, memErr := s.getUserMemories(ctx, userID, message)
 	if memErr != nil {
 		// Log but continue - memories are optional context
@@ -257,8 +300,8 @@ func (s *AIChatService) ChatStream(
 		return nil, fmt.Errorf("saving user message: empty response")
 	}
 
-	// Get conversation history for context (last 20 messages)
-	history, err := s.chatRepo.GetRecentMessages(ctx, convID, 20)
+	// Get conversation history for context (last 40 messages)
+	history, err := s.chatRepo.GetRecentMessages(ctx, convID, 40)
 	if err != nil {
 		return nil, fmt.Errorf("getting history: %w", err)
 	}
@@ -319,8 +362,13 @@ func (s *AIChatService) ChatStream(
 
 		result, execErr := s.toolExecutor.Execute(ctx, userID, baseCurrency, tc)
 		if execErr != nil {
-			log.Warn().Err(execErr).Str("tool", tc.Name).Msg("Tool execution failed")
-			result = fmt.Sprintf("Tool error: %v. Please answer based on the available context.", execErr)
+			log.Warn().
+				Err(execErr).
+				Str("tool", tc.Name).
+				Str("user_id", userID.String()).
+				Str("error_type", fmt.Sprintf("%T", execErr)).
+				Msg("Tool execution failed in ChatStream")
+			result = fmt.Sprintf("Tool '%s' failed: %v. Please answer based on the available context.", tc.Name, execErr)
 		}
 
 		messages = append(messages, llms.MessageContent{
@@ -351,8 +399,13 @@ func (s *AIChatService) ChatStream(
 			})
 			result, execErr = s.toolExecutor.Execute(ctx, userID, baseCurrency, nextTC)
 			if execErr != nil {
-				log.Warn().Err(execErr).Str("tool", nextTC.Name).Msg("Tool execution failed")
-				result = fmt.Sprintf("Tool error: %v. Please answer based on the available context.", execErr)
+				log.Warn().
+					Err(execErr).
+					Str("tool", nextTC.Name).
+					Str("user_id", userID.String()).
+					Str("error_type", fmt.Sprintf("%T", execErr)).
+					Msg("Tool execution failed in ChatStream loop")
+				result = fmt.Sprintf("Tool '%s' failed: %v. Please answer based on the available context.", nextTC.Name, execErr)
 			}
 			messages = append(messages, llms.MessageContent{
 				Parts: []llms.ContentPart{llms.TextPart(fmt.Sprintf("Tool '%s' returned:\n%s\n\nNow provide your final answer to the user based on this data.", nextTC.Name, result))},
@@ -449,8 +502,8 @@ func (s *AIChatService) ChatStream(
 func (s *AIChatService) buildSystemPrompt(userName string, fctx *model.FinancialContext, memories []model.UserMemory, rates map[string]float64) string {
 	var sb strings.Builder
 
-	// Header with user context
-	displayName := userName
+	// Header with user context (sanitize to prevent prompt injection)
+	displayName := sanitizeForPrompt(userName, 100)
 	if displayName == "" {
 		displayName = "User"
 	}
@@ -465,7 +518,7 @@ func (s *AIChatService) buildSystemPrompt(userName string, fctx *model.Financial
 	// User profile
 	sb.WriteString("## USER PROFILE\n")
 	if fctx.UserName != "" {
-		sb.WriteString(fmt.Sprintf("- Name: %s\n", fctx.UserName))
+		sb.WriteString(fmt.Sprintf("- Name: %s\n", sanitizeForPrompt(fctx.UserName, 100)))
 	}
 	if fctx.AccountAgeDays > 0 {
 		sb.WriteString(fmt.Sprintf("- Account age: %d days\n", fctx.AccountAgeDays))
@@ -479,7 +532,7 @@ func (s *AIChatService) buildSystemPrompt(userName string, fctx *model.Financial
 	if len(memories) > 0 {
 		sb.WriteString("## WHAT I REMEMBER ABOUT YOU\n")
 		for _, m := range memories {
-			sb.WriteString(fmt.Sprintf("- [%s] %s\n", m.Category, m.Content))
+			sb.WriteString(fmt.Sprintf("- [%s] %s\n", sanitizeForPrompt(m.Category, 100), sanitizeForPrompt(m.Content, 500)))
 		}
 		sb.WriteString("\n")
 	}
@@ -689,8 +742,13 @@ func (s *AIChatService) resolveToolCalls(ctx context.Context, llm llms.Model, me
 		// Execute the tool
 		result, execErr := s.toolExecutor.Execute(ctx, userID, currency, tc)
 		if execErr != nil {
-			log.Warn().Err(execErr).Str("tool", tc.Name).Msg("Tool execution failed")
-			result = fmt.Sprintf("Tool error: %v. Please answer based on the available context.", execErr)
+			log.Warn().
+				Err(execErr).
+				Str("tool", tc.Name).
+				Str("user_id", userID.String()).
+				Str("error_type", fmt.Sprintf("%T", execErr)).
+				Msg("Tool execution failed in resolveToolCalls")
+			result = fmt.Sprintf("Tool '%s' failed: %v. Please answer based on the available context.", tc.Name, execErr)
 		}
 
 		// Append the AI response and tool result to messages for the next iteration
@@ -750,8 +808,27 @@ func (s *AIChatService) buildLLMMessages(systemPrompt string, history []model.Ch
 	return messages
 }
 
-// getFinancialContext gathers the user's financial data for the AI
+// getFinancialContext gathers the user's financial data for the AI (with 60s cache)
 func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUID) (*model.FinancialContext, error) {
+	cacheKey := "financial-context:" + userID.String()
+	if cached, found := s.contextCache.Get(cacheKey); found {
+		if fctx, ok := cached.(*model.FinancialContext); ok {
+			return fctx, nil
+		}
+	}
+
+	fctx, err := s.fetchFinancialContext(ctx, userID)
+	if err != nil {
+		return fctx, err
+	}
+
+	s.contextCache.Set(cacheKey, fctx, 60*time.Second)
+	return fctx, nil
+}
+
+// fetchFinancialContext performs the actual queries to gather financial data
+func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.UUID) (*model.FinancialContext, error) {
+	// TODO: Financial context should not be logged in production — it contains sensitive data
 	fctx := &model.FinancialContext{}
 	now := time.Now()
 
@@ -763,7 +840,7 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 	if s.userRepo != nil {
 		user, err := s.userRepo.GetByID(ctx, userID)
 		if err == nil && user != nil {
-			fctx.UserName = user.Name
+			fctx.UserName = sanitizeForPrompt(user.Name, 100)
 			if !user.CreatedAt.IsZero() {
 				fctx.AccountAgeDays = int(now.Sub(user.CreatedAt).Hours() / 24)
 			}
@@ -796,7 +873,7 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	startOfLastMonth := startOfMonth.AddDate(0, -1, 0)
 
-	transactions, err := s.walletRepo.GetTransactions(ctx, userID, 500, 0)
+	transactions, err := s.walletRepo.GetTransactions(ctx, userID, 100, 0)
 	if err == nil {
 		categoryTotals := make(map[string]float64)
 
@@ -821,15 +898,15 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 				}
 			}
 
-			// Add recent transactions to list (last 50)
-			if i < 50 {
+			// Add recent transactions to list (last 10 for prompt efficiency)
+			if i < 10 {
 				fctx.RecentTransactionList = append(fctx.RecentTransactionList, model.TransactionSummary{
 					Date:        tx.CreatedAt.Format("Jan 2"),
 					Type:        tx.Type,
 					Amount:      tx.Amount,
 					Currency:    tx.Currency,
-					Category:    tx.Category,
-					Description: tx.Description,
+					Category:    sanitizeForPrompt(tx.Category, 100),
+					Description: sanitizeForPrompt(tx.Description, 500),
 				})
 			}
 		}
@@ -869,28 +946,34 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 		}
 	}
 
-	// Get budgets
+	// Get budgets (limit to 10 for prompt efficiency)
 	budgets, err := s.budgetRepo.GetByUser(ctx, userID)
 	if err == nil {
-		for _, b := range budgets {
+		for i, b := range budgets {
+			if i >= 10 {
+				break
+			}
 			fctx.ActiveBudgets = append(fctx.ActiveBudgets, model.BudgetSummary{
-				Category: b.Category,
+				Category: sanitizeForPrompt(b.Category, 100),
 				Budget:   b.Amount,
 				Spent:    b.Spent,
 			})
 		}
 	}
 
-	// Get goals
+	// Get goals (limit to 10 for prompt efficiency)
 	goals, err := s.goalRepo.GetByUser(ctx, userID)
 	if err == nil {
-		for _, g := range goals {
+		for i, g := range goals {
+			if i >= 10 {
+				break
+			}
 			progress := float64(0)
 			if g.TargetAmount > 0 {
 				progress = (g.CurrentAmount / g.TargetAmount) * 100
 			}
 			fctx.SavingsGoals = append(fctx.SavingsGoals, model.GoalSummary{
-				Name:     g.Name,
+				Name:     sanitizeForPrompt(g.Name, 100),
 				Target:   g.TargetAmount,
 				Current:  g.CurrentAmount,
 				Progress: progress,
@@ -909,7 +992,7 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 						recType = "income"
 					}
 					fctx.RecurringItems = append(fctx.RecurringItems, model.RecurringSummary{
-						Description: r.Description,
+						Description: sanitizeForPrompt(r.Description, 500),
 						Amount:      r.Amount,
 						Currency:    r.Currency,
 						Frequency:   r.Frequency,
@@ -921,13 +1004,16 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 		}
 	}
 
-	// Get categories
+	// Get categories (limit to top 10 for prompt efficiency)
 	if s.categoryRepo != nil {
 		categories, err := s.categoryRepo.GetCategories(ctx, userID)
 		if err == nil {
-			for _, cat := range categories {
+			for i, cat := range categories {
+				if i >= 10 {
+					break
+				}
 				fctx.Categories = append(fctx.Categories, model.CategoryInfo{
-					Name:      cat.Name,
+					Name:      sanitizeForPrompt(cat.Name, 100),
 					Icon:      cat.Icon,
 					IsDefault: cat.IsDefault,
 				})
@@ -941,11 +1027,11 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 		if err == nil {
 			for _, loan := range loans {
 				loanSummary := model.LoanSummaryForAI{
-					Name:            loan.Name,
+					Name:            sanitizeForPrompt(loan.Name, 100),
 					Type:            string(loan.Type),
 					RemainingAmount: loan.RemainingAmount,
 					Currency:        loan.Currency,
-					Counterparty:    loan.Counterparty,
+					Counterparty:    sanitizeForPrompt(loan.Counterparty, 100),
 				}
 				if loan.DueDate != nil {
 					loanSummary.DueDate = loan.DueDate.Format("Jan 2, 2006")

@@ -66,13 +66,13 @@ export default function BudgetsScreen() {
       {/* Header */}
       <View className="flex-row items-center justify-between p-4 border-b border-border" style={{ maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
         <View className="flex-row items-center">
-          <Pressable onPress={() => router.back()} className="p-2 mr-2" style={{ cursor: 'pointer' }}>
+          <Pressable onPress={() => router.back()} className="p-2 mr-2" style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('back') || 'Go back'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <ArrowLeft size={24} color={colors.foreground} />
           </Pressable>
-          <Text className="text-2xl font-bold text-foreground">{t('budgets')}</Text>
+          <Text className="text-xl font-bold text-foreground">{t('budgets')}</Text>
         </View>
-        <Pressable onPress={() => setShowForm(true)} className="bg-primary p-2 rounded-full" style={{ cursor: 'pointer' }}>
-          <Plus size={24} color={colors.primaryForeground} />
+        <Pressable onPress={() => setShowForm(true)} className="bg-primary p-2.5 rounded-full" style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('createBudget') || 'Create Budget'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Plus size={22} color={colors.primaryForeground} />
         </Pressable>
       </View>
 
@@ -85,6 +85,7 @@ export default function BudgetsScreen() {
           alignSelf: 'center',
         }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        keyboardDismissMode="on-drag"
       >
         {isError ? (
           <View className="bg-danger-muted border border-danger/20 p-6 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
@@ -162,7 +163,7 @@ function BudgetCard({ budget }: { budget: any }) {
             </View>
           )}
           <View>
-            <Text className="text-lg font-semibold text-foreground capitalize">{budget.category}</Text>
+            <Text className="text-lg font-semibold text-foreground capitalize" numberOfLines={1}>{budget.category}</Text>
             <Text className="text-muted-foreground text-sm">{t(budget.period)}</Text>
           </View>
         </View>
@@ -189,11 +190,11 @@ function BudgetCard({ budget }: { budget: any }) {
       </View>
 
       <View className="flex-row items-center justify-between">
-        <Text className="text-muted-foreground">
+        <Text className="text-muted-foreground text-sm" numberOfLines={1}>
           {formatCompactCurrency(budget.spent, budget.currency)} / {formatCompactCurrency(budget.amount, budget.currency)}
         </Text>
-        <Text className={budget.is_over_budget ? 'text-danger font-semibold' : 'text-foreground'}>
-          {formatNumber(progressPercent, 0)}%
+        <Text className={`text-sm ${budget.is_over_budget ? 'text-danger font-semibold' : 'text-foreground font-medium'}`}>
+          {formatNumber(progressPercent, 0)}% {budget.is_over_budget ? `(${t('overBudget')})` : ''}
         </Text>
       </View>
 
@@ -272,13 +273,14 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
       <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
         <View className="flex-row items-center justify-between p-4 border-b border-border">
           <Text className="text-xl font-bold text-foreground">{t('createBudget')}</Text>
-          <Pressable onPress={onClose} style={{ cursor: 'pointer' }}>
+          <Pressable onPress={onClose} style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <X size={24} color={colors.placeholder} />
           </Pressable>
         </View>
 
         <ScrollView
           className="flex-1"
+          keyboardDismissMode="on-drag"
           contentContainerStyle={{
             padding: isDesktop ? 32 : 16,
             maxWidth: 600,

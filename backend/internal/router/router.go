@@ -122,9 +122,12 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 			// Status endpoint is public
 			r.Get("/status", h.AI.GetStatus)
 
-			// All other AI endpoints require authentication
+			// All other AI endpoints require authentication and AI rate limiting
 			r.Group(func(r chi.Router) {
 				r.Use(authMiddleware.Middleware)
+				if rateLimiter != nil {
+					r.Use(rateLimiter.AIMiddleware)
+				}
 				// Parse endpoints now require auth to prevent abuse
 				r.Post("/parse-receipt", h.AI.ParseReceipt)
 				r.Post("/parse-text", h.AI.ParseReceiptText)

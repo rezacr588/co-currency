@@ -1,10 +1,13 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func TestNewRateLimiter(t *testing.T) {
@@ -433,6 +436,199 @@ func TestRateLimiterConfig(t *testing.T) {
 
 	if cfg.LoginAttemptsPerMinute != 10 {
 		t.Errorf("Expected LoginAttemptsPerMinute 10, got %d", cfg.LoginAttemptsPerMinute)
+	}
+}
+
+// Tests for AIMiddleware
+func TestRateLimiter_AIMiddleware_AllowsRequestsUnderLimit(t *testing.T) {
+	cfg := RateLimiterConfig{
+		RequestsPerMinute:   60,
+		AIRequestsPerMinute: 20,
+	}
+	rl := NewRateLimiterWithConfig(cfg)
+	defer rl.Stop()
+
+	userID := uuid.New()
+
+	handler := rl.AIMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// A few requests should all be allowed (under the burst of 5)
+	for i := 0; i < 3; i++ {
+		req := httptest.NewRequest("POST", "/api/v1/ai/chat", nil)
+		ctx := context.WithValue(req.Context(), UserIDKey, userID)
+		req = req.WithContext(ctx)
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("Request %d: expected status 200, got %d", i, rr.Code)
+		}
+	}
+}
+
+func TestRateLimiter_AIMiddleware_BlocksRequestsOverLimit(t *testing.T) {
+	cfg := RateLimiterConfig{
+		RequestsPerMinute:   60,
+		AIRequestsPerMinute: 1, // Very strict: 1 per minute
+	}
+	rl := NewRateLimiterWithConfig(cfg)
+	defer rl.Stop()
+
+	userID := uuid.New()
+
+	handler := rl.AIMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// Make many requests to exhaust the burst (aiBurst = 5)
+	rateLimited := false
+	for i := 0; i < 20; i++ {
+		req := httptest.NewRequest("POST", "/api/v1/ai/chat", nil)
+		ctx := context.WithValue(req.Context(), UserIDKey, userID)
+		req = req.WithContext(ctx)
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code == http.StatusTooManyRequests {
+			rateLimited = true
+			break
+		}
+	}
+
+	if !rateLimited {
+		t.Error("Expected AI rate limiter to block requests over the limit")
+	}
+}
+
+func TestRateLimiter_AIMiddleware_UsesUserIDForPerUserLimiting(t *testing.T) {
+	cfg := RateLimiterConfig{
+		RequestsPerMinute:   60,
+		AIRequestsPerMinute: 1, // Very strict
+	}
+	rl := NewRateLimiterWithConfig(cfg)
+	defer rl.Stop()
+
+	userID1 := uuid.New()
+	userID2 := uuid.New()
+
+	handler := rl.AIMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// Exhaust user1's limit
+	for i := 0; i < 20; i++ {
+		req := httptest.NewRequest("POST", "/api/v1/ai/chat", nil)
+		ctx := context.WithValue(req.Context(), UserIDKey, userID1)
+		req = req.WithContext(ctx)
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+	}
+
+	// User2 should still be able to make requests (different user = different limiter)
+	req := httptest.NewRequest("POST", "/api/v1/ai/chat", nil)
+	ctx := context.WithValue(req.Context(), UserIDKey, userID2)
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected user2 to be allowed (separate limit), got status %d", rr.Code)
+	}
+}
+
+func TestRateLimiter_AIMiddleware_FallsBackToIPWhenNoUserID(t *testing.T) {
+	cfg := RateLimiterConfig{
+		RequestsPerMinute:   60,
+		AIRequestsPerMinute: 20,
+	}
+	rl := NewRateLimiterWithConfig(cfg)
+	defer rl.Stop()
+
+	handler := rl.AIMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// Request without user ID in context - should use IP-based key
+	req := httptest.NewRequest("POST", "/api/v1/ai/chat", nil)
+	req.RemoteAddr = "10.0.0.1"
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status 200 for unauthenticated AI request, got %d", rr.Code)
+	}
+
+	// Verify the IP-based key was used by checking stats
+	stats := rl.Stats()
+	activeEntries := stats["active_entries"].(int)
+	if activeEntries < 1 {
+		t.Error("Expected at least 1 active entry after unauthenticated AI request")
+	}
+}
+
+func TestRateLimiter_AIMiddleware_NilUserIDFallsBackToIP(t *testing.T) {
+	cfg := RateLimiterConfig{
+		RequestsPerMinute:   60,
+		AIRequestsPerMinute: 20,
+	}
+	rl := NewRateLimiterWithConfig(cfg)
+	defer rl.Stop()
+
+	handler := rl.AIMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// Request with uuid.Nil in context should fall back to IP
+	req := httptest.NewRequest("POST", "/api/v1/ai/chat", nil)
+	ctx := context.WithValue(req.Context(), UserIDKey, uuid.Nil)
+	req = req.WithContext(ctx)
+	req.RemoteAddr = "10.0.0.2"
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", rr.Code)
+	}
+}
+
+func TestRateLimiterWithConfig_AIDefaults(t *testing.T) {
+	cfg := RateLimiterConfig{
+		RequestsPerMinute: 60,
+		// AIRequestsPerMinute not set - should default to 20
+	}
+
+	rl := NewRateLimiterWithConfig(cfg)
+	defer rl.Stop()
+
+	expectedAILimit := float64(20) / 60.0
+	if float64(rl.aiLimit) != expectedAILimit {
+		t.Errorf("Expected AI limit %f, got %f", expectedAILimit, float64(rl.aiLimit))
+	}
+
+	if rl.aiBurst != 5 {
+		t.Errorf("Expected AI burst 5, got %d", rl.aiBurst)
+	}
+}
+
+func TestRateLimiterWithConfig_CustomAILimit(t *testing.T) {
+	cfg := RateLimiterConfig{
+		RequestsPerMinute:   60,
+		AIRequestsPerMinute: 30,
+	}
+
+	rl := NewRateLimiterWithConfig(cfg)
+	defer rl.Stop()
+
+	expectedAILimit := float64(30) / 60.0
+	if float64(rl.aiLimit) != expectedAILimit {
+		t.Errorf("Expected AI limit %f, got %f", expectedAILimit, float64(rl.aiLimit))
 	}
 }
 

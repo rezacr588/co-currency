@@ -343,7 +343,9 @@ export default function TransactionHistoryScreen() {
           onPress={() => router.back()}
           className="p-2"
           hitSlop={12}
-          style={{ cursor: 'pointer' }}
+          style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+          accessibilityLabel={t('back') || 'Go back'}
+          accessibilityRole="button"
         >
           <ArrowLeft size={24} color={iconColor} />
         </Pressable>
@@ -355,7 +357,9 @@ export default function TransactionHistoryScreen() {
             disabled={isExporting || transactions.length === 0}
             className="p-2"
             hitSlop={8}
-            style={{ cursor: 'pointer', opacity: isExporting || transactions.length === 0 ? 0.5 : 1 }}
+            style={({ pressed }) => [{ cursor: 'pointer', opacity: isExporting || transactions.length === 0 ? 0.5 : 1 }, pressed && { opacity: 0.7 }]}
+            accessibilityLabel={t('export') || 'Export transactions'}
+            accessibilityRole="button"
           >
             {isExporting ? (
               <ActivityIndicator size="small" color={colors.placeholder} />
@@ -368,7 +372,9 @@ export default function TransactionHistoryScreen() {
             onPress={() => setShowFilterModal(true)}
             className="p-2"
             hitSlop={8}
-            style={{ cursor: 'pointer' }}
+            style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+            accessibilityLabel={t('filters') || 'Filter transactions'}
+            accessibilityRole="button"
           >
             <Filter
               size={24}
@@ -425,6 +431,7 @@ export default function TransactionHistoryScreen() {
       <FlatList
         data={listData}
         keyExtractor={(item) => item.id}
+        keyboardDismissMode="on-drag"
         renderItem={({ item }) => {
           if ('__skeleton' in item) {
             return <SkeletonTransaction />;
@@ -488,7 +495,7 @@ export default function TransactionHistoryScreen() {
                   <Text className="font-semibold text-foreground" numberOfLines={1}>
                     {tx.description || tx.category || 'Transaction'}
                   </Text>
-                  <Text className="text-muted-foreground text-sm">
+                  <Text className="text-muted-foreground text-sm" numberOfLines={1}>
                     {formatDate(tx.created_at)} - {tx.category || t('uncategorized')}
                   </Text>
                 </View>
@@ -496,6 +503,7 @@ export default function TransactionHistoryScreen() {
                   className={`text-lg font-semibold ${
                     tx.type === 'credit' ? 'text-success' : 'text-danger'
                   }`}
+                  numberOfLines={1}
                 >
                   {`${tx.type === 'credit' ? '+' : '-'}${formatCompactCurrency(tx.amount, tx.currency)}`}
                 </Text>
@@ -507,7 +515,9 @@ export default function TransactionHistoryScreen() {
                       onPress={() => handleOpenNotes(tx)}
                       className="ml-2 p-2"
                       hitSlop={10}
-                      style={{ cursor: 'pointer' }}
+                      style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                      accessibilityLabel={t('transactionNotes') || 'Notes'}
+                      accessibilityRole="button"
                     >
                       <StickyNote size={18} color={colors.accent} />
                     </Pressable>
@@ -517,7 +527,9 @@ export default function TransactionHistoryScreen() {
                         onPress={() => handleEdit(tx)}
                         className="ml-1 p-2"
                         hitSlop={10}
-                        style={{ cursor: 'pointer' }}
+                        style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                        accessibilityLabel={t('editTransaction') || 'Edit'}
+                        accessibilityRole="button"
                       >
                         <Pencil size={18} color={colors.mutedForeground} />
                       </Pressable>
@@ -526,8 +538,10 @@ export default function TransactionHistoryScreen() {
                       onPress={() => handleDelete(tx)}
                       className="ml-1 p-2"
                       hitSlop={10}
-                      style={{ cursor: 'pointer' }}
+                      style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
                       disabled={deleteMutation.isPending}
+                      accessibilityLabel={t('deleteTransaction') || 'Delete'}
+                      accessibilityRole="button"
                     >
                       <Trash2 size={18} color={colors.mutedForeground} />
                     </Pressable>
@@ -577,12 +591,12 @@ export default function TransactionHistoryScreen() {
           >
             <View className="flex-row items-center justify-between mb-6">
               <Text className="text-xl font-bold text-foreground">{t('filters')}</Text>
-              <Pressable onPress={() => setShowFilterModal(false)} hitSlop={8} className="p-2" style={{ cursor: 'pointer' }}>
+              <Pressable onPress={() => setShowFilterModal(false)} hitSlop={8} className="p-2" style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button">
                 <X size={24} color={colors.placeholder} />
               </Pressable>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
               {/* Type Filter */}
               <View className="mb-5">
                 <Text className="text-muted-foreground text-sm mb-2">{t('type')}</Text>
@@ -775,7 +789,7 @@ export default function TransactionHistoryScreen() {
             >
             <View className="flex-row items-center justify-between mb-6">
               <Text className="text-xl font-bold text-foreground">{t('editTransaction')}</Text>
-              <Pressable onPress={resetEditModalState} hitSlop={8} className="p-2" style={{ cursor: 'pointer' }}>
+              <Pressable onPress={resetEditModalState} hitSlop={8} className="p-2" style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button">
                 <X size={24} color={colors.placeholder} />
               </Pressable>
             </View>
@@ -985,7 +999,7 @@ export default function TransactionHistoryScreen() {
                     </Text>
                   )}
                 </View>
-                <Pressable onPress={handleCloseNotesModal} hitSlop={8} className="p-2" style={{ cursor: 'pointer' }}>
+                <Pressable onPress={handleCloseNotesModal} hitSlop={8} className="p-2" style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button">
                   <X size={24} color={colors.placeholder} />
                 </Pressable>
               </View>
@@ -1019,7 +1033,9 @@ export default function TransactionHistoryScreen() {
                           onPress={() => handleDeleteNote(note.id)}
                           className="p-2"
                           hitSlop={10}
-                          style={{ cursor: 'pointer' }}
+                          style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                          accessibilityLabel={t('deleteNote') || 'Delete note'}
+                          accessibilityRole="button"
                         >
                           <Trash2 size={16} color={colors.danger} />
                         </Pressable>

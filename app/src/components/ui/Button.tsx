@@ -103,7 +103,7 @@ export const Button = forwardRef<View, ButtonProps>(
           flex-row items-center justify-center rounded-xl
           ${variantStyles[variant]}
           ${sizeStyles[size]}
-          ${isDisabled ? 'opacity-50' : ''}
+          ${isDisabled ? 'opacity-40' : ''}
           ${className}
         `}
         {...props}

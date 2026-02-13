@@ -30,6 +30,7 @@ import {
   X,
   CheckCircle2,
   AlertTriangle,
+  RotateCcw,
 } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
@@ -39,6 +40,26 @@ import type { SmartParseResponse } from '../../../../src/types/wallet';
 import type { ConversionResult } from '../../../../src/types/currency';
 import type { Goal, RecurringTransaction } from '../../../../src/types/goal';
 import { formatNumber } from '../../../../src/utils/format';
+
+const MAX_MESSAGE_LENGTH = 5000;
+const CHAR_COUNT_THRESHOLD = 4000;
+
+function getFriendlyErrorMessage(error: unknown): string {
+  if (error instanceof TypeError) {
+    return 'Connection lost. Please check your internet and try again.';
+  }
+  const msg = error instanceof Error ? error.message : String(error);
+  if (msg.includes('503') || msg.toLowerCase().includes('unavailable')) {
+    return 'AI assistant is temporarily unavailable. Please try again in a moment.';
+  }
+  if (msg.includes('429') || msg.toLowerCase().includes('too many')) {
+    return 'Too many requests. Please wait a moment before sending another message.';
+  }
+  if (msg.includes('network') || msg.includes('fetch') || msg.includes('Failed to fetch')) {
+    return 'Connection lost. Please check your internet and try again.';
+  }
+  return 'Something went wrong. Please try again.';
+}
 
 // These are populated with translations at render time via useSuggestedPrompts()
 function useSuggestedPrompts() {
@@ -133,6 +154,7 @@ export default function AIChatScreen() {
   const [showInputModal, setShowInputModal] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(
     conversationId || null
   );
@@ -333,6 +355,7 @@ export default function AIChatScreen() {
       pendingMutationRef.current = true;
       setIsTyping(true);
       setSendError(null);
+      setLastFailedMessage(null);
       const now = new Date().toISOString();
       const optimisticMessageId = `temp-${Date.now()}`;
       const optimisticMessage: ChatMessage = {
@@ -527,11 +550,13 @@ export default function AIChatScreen() {
         // Reset to no conversation
         setActiveConversationId(null);
       }
+      // Save the failed message for retry
+      setLastFailedMessage(_msg);
       // Restore the user's message so they can retry
       if (lastSentMessageRef.current) {
         setMessage(lastSentMessageRef.current);
       }
-      setSendError(error instanceof Error ? error.message : 'Unable to reach the assistant. Please try again.');
+      setSendError(getFriendlyErrorMessage(error));
       setIsTyping(false);
       pendingMutationRef.current = false;
     },
@@ -698,19 +723,29 @@ export default function AIChatScreen() {
   }, [messages, isTyping, activeConversationId, maybeAutoScroll]);
 
 
-  const handleSend = () => {
-    if (!message.trim() || sendMessageMutation.isPending || pendingMutationRef.current) return;
+  const handleSend = (overrideMessage?: string) => {
+    const msgToSend = overrideMessage || message;
+    if (!msgToSend.trim() || sendMessageMutation.isPending || pendingMutationRef.current) return;
+    if (msgToSend.length > MAX_MESSAGE_LENGTH) return;
     if (!aiConfigured) {
       setSendError('AI is not configured on the server.');
       return;
     }
-    const trimmed = message.trim();
+    const trimmed = msgToSend.trim();
     lastSentMessageRef.current = trimmed; // Save message for retry on error
     sendMessageMutation.mutate(trimmed);
-    setMessage('');
+    if (!overrideMessage) setMessage('');
+    setLastFailedMessage(null);
     void maybeStartAction(trimmed);
     isNearBottomRef.current = true;
     setTimeout(scrollToBottom, 50);
+  };
+
+  const handleRetry = () => {
+    if (lastFailedMessage) {
+      setSendError(null);
+      handleSend(lastFailedMessage);
+    }
   };
 
   const handleNewConversation = () => {
@@ -1612,36 +1647,70 @@ export default function AIChatScreen() {
             >
               {sendError && (
                 <View className="bg-danger-muted border border-danger/20 p-3 rounded-lg mb-3">
-                  <Text className="text-danger text-xs">{sendError}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text className="text-danger text-xs" style={{ flex: 1 }}>{sendError}</Text>
+                    {lastFailedMessage && (
+                      <Pressable
+                        onPress={handleRetry}
+                        disabled={sendMessageMutation.isPending}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: colors.danger + '20',
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                          borderRadius: 6,
+                          marginLeft: 8,
+                        }}
+                      >
+                        <RotateCcw size={12} color={colors.danger} />
+                        <Text style={{ color: colors.danger, fontSize: 11, fontWeight: '600', marginLeft: 4 }}>
+                          {t('retry') || 'Retry'}
+                        </Text>
+                      </Pressable>
+                    )}
+                  </View>
                 </View>
               )}
 
               <View className="flex-row items-center" style={{ gap: 12 }}>
                 {/* Tap to open input modal */}
+                <View style={{ flex: 1 }}>
+                  <Pressable
+                    onPress={() => setShowInputModal(true)}
+                    disabled={sendMessageMutation.isPending}
+                    style={{
+                      backgroundColor: colors.muted,
+                      borderWidth: 1,
+                      borderColor: colors.borderStrong,
+                      borderRadius: 12,
+                      paddingHorizontal: 16,
+                      paddingVertical: 14,
+                      minHeight: 48,
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text style={{ color: message ? colors.foreground : colors.mutedForeground, fontSize: 16 }} numberOfLines={1}>
+                      {message || t('typeMessage')}
+                    </Text>
+                  </Pressable>
+                  {message.length > CHAR_COUNT_THRESHOLD && (
+                    <Text style={{
+                      position: 'absolute',
+                      right: 12,
+                      bottom: 4,
+                      fontSize: 10,
+                      color: message.length >= MAX_MESSAGE_LENGTH ? colors.danger : colors.mutedForeground,
+                    }}>
+                      {message.length}/{MAX_MESSAGE_LENGTH}
+                    </Text>
+                  )}
+                </View>
                 <Pressable
-                  onPress={() => setShowInputModal(true)}
-                  disabled={sendMessageMutation.isPending}
-                  style={{
-                    flex: 1,
-                    backgroundColor: colors.muted,
-                    borderWidth: 1,
-                    borderColor: colors.borderStrong,
-                    borderRadius: 12,
-                    paddingHorizontal: 16,
-                    paddingVertical: 14,
-                    minHeight: 48,
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text style={{ color: message ? colors.foreground : colors.mutedForeground, fontSize: 16 }} numberOfLines={1}>
-                    {message || t('typeMessage')}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={handleSend}
-                  disabled={!message.trim() || sendMessageMutation.isPending}
+                  onPress={() => handleSend()}
+                  disabled={!message.trim() || message.length > MAX_MESSAGE_LENGTH || sendMessageMutation.isPending}
                   className={`bg-primary p-3 rounded-xl ${
-                    !message.trim() || sendMessageMutation.isPending ? 'opacity-50' : ''
+                    !message.trim() || message.length > MAX_MESSAGE_LENGTH || sendMessageMutation.isPending ? 'opacity-50' : ''
                   }`}
                   style={{ cursor: 'pointer' }}
                 >
@@ -1688,20 +1757,20 @@ export default function AIChatScreen() {
                     <Pressable
                       onPress={() => {
                         setShowInputModal(false);
-                        if (message.trim()) {
+                        if (message.trim() && message.length <= MAX_MESSAGE_LENGTH) {
                           handleSend();
                         }
                       }}
-                      disabled={!message.trim() || sendMessageMutation.isPending}
+                      disabled={!message.trim() || message.length > MAX_MESSAGE_LENGTH || sendMessageMutation.isPending}
                       style={{
-                        backgroundColor: message.trim() ? colors.accent : colors.secondary,
+                        backgroundColor: message.trim() && message.length <= MAX_MESSAGE_LENGTH ? colors.accent : colors.secondary,
                         paddingHorizontal: 16,
                         paddingVertical: 8,
                         borderRadius: 8,
                       }}
                     >
                       <Text style={{
-                        color: message.trim() ? colors.primaryForeground : colors.mutedForeground,
+                        color: message.trim() && message.length <= MAX_MESSAGE_LENGTH ? colors.primaryForeground : colors.mutedForeground,
                         fontWeight: '600',
                       }}>
                         {t('send') || 'Send'}
@@ -1713,11 +1782,12 @@ export default function AIChatScreen() {
                   <View style={{ flex: 1, padding: 16 }}>
                     <TextInput
                       value={message}
-                      onChangeText={setMessage}
+                      onChangeText={(text) => setMessage(text.slice(0, MAX_MESSAGE_LENGTH))}
                       placeholder={t('typeMessage')}
                       placeholderTextColor={colors.mutedForeground}
                       multiline
                       autoFocus
+                      maxLength={MAX_MESSAGE_LENGTH}
                       selectionColor={colors.accent}
                       cursorColor={colors.accent}
                       style={{
@@ -1732,6 +1802,16 @@ export default function AIChatScreen() {
                         textAlignVertical: 'top',
                       }}
                     />
+                    {message.length > CHAR_COUNT_THRESHOLD && (
+                      <Text style={{
+                        textAlign: 'right',
+                        fontSize: 11,
+                        color: message.length >= MAX_MESSAGE_LENGTH ? colors.danger : colors.mutedForeground,
+                        marginTop: 4,
+                      }}>
+                        {message.length}/{MAX_MESSAGE_LENGTH}
+                      </Text>
+                    )}
                   </View>
 
                   {/* Suggested prompts */}

@@ -186,3 +186,119 @@ func TestLoad_DatabaseAndCrawlerCustomValues(t *testing.T) {
 		t.Errorf("IRRCrawlerEnabled = %v, want false", cfg.IRRCrawlerEnabled)
 	}
 }
+
+// Tests for MaxMemoryResults validation
+
+func TestLoad_MaxMemoryResults_DefaultValue(t *testing.T) {
+	// Clear any existing env vars that might interfere
+	os.Unsetenv("MAX_MEMORY_RESULTS")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if cfg.MaxMemoryResults != 10 {
+		t.Errorf("MaxMemoryResults = %v, want 10 (default)", cfg.MaxMemoryResults)
+	}
+}
+
+func TestLoad_MaxMemoryResults_RejectsLessThan1(t *testing.T) {
+	os.Setenv("MAX_MEMORY_RESULTS", "0")
+	defer os.Unsetenv("MAX_MEMORY_RESULTS")
+
+	_, err := Load()
+	if err == nil {
+		t.Error("Expected error for MAX_MEMORY_RESULTS = 0, got nil")
+	}
+}
+
+func TestLoad_MaxMemoryResults_RejectsNegative(t *testing.T) {
+	os.Setenv("MAX_MEMORY_RESULTS", "-5")
+	defer os.Unsetenv("MAX_MEMORY_RESULTS")
+
+	_, err := Load()
+	if err == nil {
+		t.Error("Expected error for MAX_MEMORY_RESULTS = -5, got nil")
+	}
+}
+
+func TestLoad_MaxMemoryResults_RejectsGreaterThan100(t *testing.T) {
+	os.Setenv("MAX_MEMORY_RESULTS", "101")
+	defer os.Unsetenv("MAX_MEMORY_RESULTS")
+
+	_, err := Load()
+	if err == nil {
+		t.Error("Expected error for MAX_MEMORY_RESULTS = 101, got nil")
+	}
+}
+
+func TestLoad_MaxMemoryResults_RejectsLargeValue(t *testing.T) {
+	os.Setenv("MAX_MEMORY_RESULTS", "500")
+	defer os.Unsetenv("MAX_MEMORY_RESULTS")
+
+	_, err := Load()
+	if err == nil {
+		t.Error("Expected error for MAX_MEMORY_RESULTS = 500, got nil")
+	}
+}
+
+func TestLoad_MaxMemoryResults_AcceptsValidValues(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    string
+		expected int
+	}{
+		{"minimum value", "1", 1},
+		{"low value", "5", 5},
+		{"default value", "10", 10},
+		{"mid value", "50", 50},
+		{"maximum value", "100", 100},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Setenv("MAX_MEMORY_RESULTS", tt.value)
+			defer os.Unsetenv("MAX_MEMORY_RESULTS")
+
+			cfg, err := Load()
+			if err != nil {
+				t.Fatalf("Load() error = %v for MAX_MEMORY_RESULTS = %s", err, tt.value)
+			}
+
+			if cfg.MaxMemoryResults != tt.expected {
+				t.Errorf("MaxMemoryResults = %v, want %v", cfg.MaxMemoryResults, tt.expected)
+			}
+		})
+	}
+}
+
+func TestLoad_MaxMemoryResults_BoundaryValues(t *testing.T) {
+	tests := []struct {
+		name        string
+		value       string
+		expectError bool
+	}{
+		{"0 - below minimum", "0", true},
+		{"1 - at minimum", "1", false},
+		{"2 - above minimum", "2", false},
+		{"99 - below maximum", "99", false},
+		{"100 - at maximum", "100", false},
+		{"101 - above maximum", "101", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Setenv("MAX_MEMORY_RESULTS", tt.value)
+			defer os.Unsetenv("MAX_MEMORY_RESULTS")
+
+			_, err := Load()
+			if tt.expectError && err == nil {
+				t.Errorf("Expected error for MAX_MEMORY_RESULTS = %s, got nil", tt.value)
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Unexpected error for MAX_MEMORY_RESULTS = %s: %v", tt.value, err)
+			}
+		})
+	}
+}

@@ -167,7 +167,7 @@ func (s *MemoryService) getRelevantMemoriesVector(ctx context.Context, userID uu
 		Query:          query,
 		ConversationID: conversationID,
 		Limit:          s.maxResults,
-		MinScore:       0.5, // Minimum similarity threshold
+		MinScore:       0.65, // Minimum similarity threshold
 	}
 
 	result, err := s.vectorRepo.SearchBothMemories(ctx, req, embResp.Embedding)

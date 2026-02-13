@@ -89,7 +89,7 @@ export default function WalletScreen() {
         }
       >
         {/* 1. Hero Balance Card */}
-        <View className="bg-card border border-border rounded-2xl p-5 mb-6" style={{ overflow: 'hidden' }}>
+        <View className="bg-card border border-border rounded-2xl p-4 mb-6" style={{ overflow: 'hidden' }}>
           {isLoadingSummary ? (
             <View>
               <Skeleton width={120} height={14} borderRadius={4} />
@@ -109,14 +109,16 @@ export default function WalletScreen() {
                   {t('totalBalance') || 'Total Balance'}
                 </Text>
               </View>
-              <Text className="text-foreground text-3xl font-bold mb-5">
+              <Text className="text-foreground text-2xl font-bold mb-4">
                 {formatCurrency(summary?.total_balance_usd ?? 0, 'USD')}
               </Text>
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <Link href={'/(app)/(tabs)/add' as any} asChild>
                   <Pressable
                     className="flex-1 bg-primary rounded-xl flex-row items-center justify-center"
-                    style={{ height: 44, cursor: 'pointer' }}
+                    style={({ pressed }) => [{ height: 44, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                    accessibilityLabel={t('addTransaction') || 'Add Transaction'}
+                    accessibilityRole="button"
                   >
                     <Plus size={18} color={colors.primaryForeground} />
                     <Text className="text-primary-foreground font-semibold ml-2 text-sm">
@@ -127,7 +129,9 @@ export default function WalletScreen() {
                 <Link href={'/(app)/(tabs)/wallet/convert' as any} asChild>
                   <Pressable
                     className="flex-1 bg-secondary rounded-xl flex-row items-center justify-center"
-                    style={{ height: 44, cursor: 'pointer' }}
+                    style={({ pressed }) => [{ height: 44, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                    accessibilityLabel={t('convertCurrency') || t('convert') || 'Convert Currency'}
+                    accessibilityRole="button"
                   >
                     <ArrowLeftRight size={18} color={colors.secondaryForeground} />
                     <Text className="text-foreground font-semibold ml-2 text-sm">
@@ -156,7 +160,9 @@ export default function WalletScreen() {
                 <Link key={action.href} href={action.href as any} asChild>
                   <Pressable
                     className="items-center"
-                    style={{ width: itemWidth, minHeight: 44, cursor: 'pointer' }}
+                    style={({ pressed }) => [{ width: itemWidth, minHeight: 44, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                    accessibilityLabel={action.label}
+                    accessibilityRole="button"
                   >
                     <View
                       className="bg-card border border-border items-center justify-center"
@@ -234,7 +240,7 @@ export default function WalletScreen() {
               </View>
               {showViewAllBalances && (
                 <Link href={'/(app)/(tabs)/wallet/history' as any} asChild>
-                  <Pressable className="mt-3 items-center" style={{ cursor: 'pointer' }}>
+                  <Pressable className="mt-3 items-center" style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}>
                     <Text className="text-accent text-sm font-medium">
                       {t('viewAll') || 'View All'} ({balances.length})
                     </Text>
@@ -255,7 +261,7 @@ export default function WalletScreen() {
               </Text>
             </View>
             <Link href={'/(app)/(tabs)/wallet/history' as any} asChild>
-              <Pressable className="flex-row items-center" style={{ cursor: 'pointer' }}>
+              <Pressable className="flex-row items-center" style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Text className="text-accent text-sm">{t('viewAll')}</Text>
               </Pressable>
             </Link>
@@ -275,7 +281,7 @@ export default function WalletScreen() {
                   style={{
                     width: txCardWidth,
                     minWidth: txCols === 1 ? undefined : 280,
-                    padding: 14,
+                    padding: 16,
                   }}
                 >
                   <StyledCategoryIcon category={tx.category || 'other'} size={18} />
@@ -283,7 +289,7 @@ export default function WalletScreen() {
                     <Text className="font-semibold text-foreground text-sm" numberOfLines={1}>
                       {tx.description || tx.category || 'Transaction'}
                     </Text>
-                    <Text className="text-muted-foreground" style={{ fontSize: 11, marginTop: 2 }}>
+                    <Text className="text-muted-foreground" style={{ fontSize: 11, marginTop: 2 }} numberOfLines={1}>
                       {formatDate(tx.created_at, { month: 'short', day: 'numeric' })}
                       {tx.category ? ` · ${tx.category}` : ''}
                     </Text>
@@ -297,7 +303,7 @@ export default function WalletScreen() {
                     >
                       {`${tx.type === 'credit' ? '+' : '-'}${formatCompactCurrency(tx.amount, tx.currency)}`}
                     </Text>
-                    <Text className="text-muted-foreground" style={{ fontSize: 10, marginTop: 1 }}>
+                    <Text className="text-muted-foreground" style={{ fontSize: 10, marginTop: 1 }} numberOfLines={1}>
                       {tx.currency}
                     </Text>
                   </View>

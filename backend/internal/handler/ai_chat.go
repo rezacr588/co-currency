@@ -134,6 +134,9 @@ func (h *AIChatHandler) DeleteConversation(w http.ResponseWriter, r *http.Reques
 	})
 }
 
+// maxChatMessageLength is the maximum allowed length for a chat message
+const maxChatMessageLength = 5000
+
 // Chat handles a chat message and returns AI response
 func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 	userID, ok := requireUserID(w, r)
@@ -152,6 +155,11 @@ func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(req.Message) > maxChatMessageLength {
+		httputil.BadRequestWithContext(r.Context(), w, fmt.Sprintf("Message too long: %d characters, maximum is %d", len(req.Message), maxChatMessageLength), nil)
+		return
+	}
+
 	// Get user name for personalization
 	user, err := h.authService.GetUserByID(r.Context(), userID)
 	userName := "User"
@@ -159,6 +167,7 @@ func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 		userName = user.Name
 	}
 
+	// TODO: Populate tokens_used field from AI provider response for usage tracking and billing
 	response, err := h.chatService.Chat(r.Context(), userID, userName, req.ConversationID, req.Message)
 	if err != nil {
 		switch {
@@ -192,6 +201,11 @@ func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 
 	if req.Message == "" {
 		httputil.BadRequestWithContext(r.Context(), w, "Message is required", nil)
+		return
+	}
+
+	if len(req.Message) > maxChatMessageLength {
+		httputil.BadRequestWithContext(r.Context(), w, fmt.Sprintf("Message too long: %d characters, maximum is %d", len(req.Message), maxChatMessageLength), nil)
 		return
 	}
 

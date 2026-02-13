@@ -38,10 +38,13 @@ function NavItem({ icon, label, isActive, onPress, isCollapsed }: NavItemProps) 
   return (
     <Pressable
       onPress={onPress}
-      style={{ cursor: 'pointer' }}
+      style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
       className={`flex-row items-center px-3 py-2.5 rounded-lg mb-0.5 ${
         isActive ? 'bg-secondary' : 'hover:bg-secondary/50'
       }`}
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isActive }}
     >
       <View style={{ opacity: isActive ? 1 : 0.6 }}>{icon}</View>
       {!isCollapsed && (
@@ -98,7 +101,7 @@ function DesktopSidebar({
         {!isCollapsed && (
           <Text className="text-lg font-semibold text-foreground">CoFinance</Text>
         )}
-        <Pressable onPress={onToggle} hitSlop={8} style={{ cursor: 'pointer' }} className="p-2 hover:bg-secondary rounded-md">
+        <Pressable onPress={onToggle} hitSlop={8} style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} className="p-2 hover:bg-secondary rounded-md" accessibilityLabel={isCollapsed ? (t('expandSidebar') || 'Expand sidebar') : (t('collapseSidebar') || 'Collapse sidebar')} accessibilityRole="button">
           {isCollapsed ? (
             <Menu size={18} color={colors.mutedForeground} />
           ) : (
@@ -154,8 +157,10 @@ function DesktopSidebar({
       <View className="p-3 border-t border-border">
         <Pressable
           onPress={() => router.push('/(app)/profile')}
-          style={{ cursor: 'pointer' }}
+          style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
           className="flex-row items-center p-2.5 rounded-lg hover:bg-secondary"
+          accessibilityLabel={t('profile') || 'Profile'}
+          accessibilityRole="button"
         >
           <View className="bg-secondary p-2 rounded-full">
             <User size={18} color={colors.secondaryForeground} />
@@ -175,8 +180,10 @@ function DesktopSidebar({
 
         <Pressable
           onPress={logout}
-          style={{ cursor: 'pointer' }}
+          style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
           className="flex-row items-center p-2.5 rounded-lg hover:bg-secondary mt-1"
+          accessibilityLabel={t('logout') || 'Logout'}
+          accessibilityRole="button"
         >
           <LogOut size={18} color={colors.mutedForeground} />
           {!isCollapsed && (
@@ -206,15 +213,19 @@ function DesktopNavbar() {
         <Pressable
           onPress={toggleTheme}
           hitSlop={6}
-          style={{ cursor: 'pointer' }}
+          style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
           className="p-2 rounded-md hover:bg-secondary border border-border"
+          accessibilityLabel={t('toggleTheme') || 'Toggle theme'}
+          accessibilityRole="button"
         >
           <LayoutDashboard size={18} color={colors.secondaryForeground} />
         </Pressable>
         <Pressable
           onPress={() => router.push('/(app)/profile')}
-          style={{ cursor: 'pointer' }}
+          style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
           className="flex-row items-center gap-2 bg-secondary border border-border px-3 py-2 rounded-lg"
+          accessibilityLabel={t('profile') || 'Profile'}
+          accessibilityRole="button"
         >
           <View className="bg-muted p-1.5 rounded-full">
             <User size={14} color={colors.secondaryForeground} />

@@ -161,6 +161,11 @@ func main() {
 			Msg("IRR rate crawler started")
 	}
 
+	// TODO: Add a conversation cleanup background worker to periodically delete
+	// old/inactive chat conversations (e.g., conversations older than 90 days with
+	// no activity). This would prevent unbounded growth of the chat_conversations
+	// and chat_messages tables.
+
 	// Initialize core dependencies
 	cache := repository.NewInMemoryCache(cfg.CacheTTL)
 	frankfurterClient := repository.NewFrankfurterClient(cfg.FrankfurterURL)

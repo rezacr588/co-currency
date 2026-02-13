@@ -458,18 +458,18 @@ export default function ReportsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <Text className="text-2xl font-bold text-foreground mb-4">{t('reportsAndStats')}</Text>
+        <Text className="text-xl font-bold text-foreground mb-4">{t('reportsAndStats')}</Text>
 
         {/* Net Worth Card (always visible) */}
         {networth && !networthError && (
-          <View className="bg-card p-6 rounded-xl mb-6">
+          <View className="bg-card p-4 rounded-xl mb-6">
             <View className="flex-row items-center mb-4">
               <View className="bg-accent/20 p-2 rounded-lg mr-3">
                 <Wallet size={20} color={colors.accent} />
               </View>
               <Text className="text-muted-foreground">{t('netWorth')}</Text>
             </View>
-            <Text className="text-4xl font-bold text-accent mb-4">
+            <Text className="text-2xl font-bold text-accent mb-4">
               {formatCompactCurrency(networth.total_balance, networth.currency)}
             </Text>
 

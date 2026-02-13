@@ -31,6 +31,8 @@ type RateLimiter struct {
 	authBurst       int
 	loginLimit      rate.Limit // Stricter limit for login attempts
 	loginBurst      int
+	aiLimit         rate.Limit // Stricter limit for AI endpoints
+	aiBurst         int
 }
 
 // RateLimiterConfig holds configuration for the rate limiter
@@ -38,6 +40,7 @@ type RateLimiterConfig struct {
 	RequestsPerMinute      int           // Default limit for anonymous users
 	AuthRequestsPerMinute  int           // Limit for authenticated users (0 = use default)
 	LoginAttemptsPerMinute int           // Limit for login endpoint (0 = use 5)
+	AIRequestsPerMinute    int           // Limit for AI endpoints per user (0 = use 20)
 	CleanupInterval        time.Duration // How often to clean up stale entries (0 = 10 minutes)
 	EntryTTL               time.Duration // How long to keep inactive entries (0 = 30 minutes)
 }
@@ -63,6 +66,9 @@ func NewRateLimiterWithConfig(cfg RateLimiterConfig) *RateLimiter {
 	if cfg.LoginAttemptsPerMinute == 0 {
 		cfg.LoginAttemptsPerMinute = 5 // 5 login attempts per minute
 	}
+	if cfg.AIRequestsPerMinute == 0 {
+		cfg.AIRequestsPerMinute = 20 // 20 AI requests per minute
+	}
 
 	rl := &RateLimiter{
 		limiters:        make(map[string]*rateLimiterEntry),
@@ -75,6 +81,8 @@ func NewRateLimiterWithConfig(cfg RateLimiterConfig) *RateLimiter {
 		authBurst:       cfg.AuthRequestsPerMinute / 2, // Allow larger burst for authenticated users
 		loginLimit:      rate.Limit(float64(cfg.LoginAttemptsPerMinute) / 60.0),
 		loginBurst:      2, // Allow small burst for login
+		aiLimit:         rate.Limit(float64(cfg.AIRequestsPerMinute) / 60.0),
+		aiBurst:         5, // Allow small burst for AI
 	}
 
 	// Ensure burst is at least 1
@@ -237,6 +245,29 @@ func (rl *RateLimiter) LoginMiddleware(next http.Handler) http.Handler {
 
 		if !limiter.Allow() {
 			httputil.TooManyRequestsWithContext(r.Context(), w, "too many login attempts", nil)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// AIMiddleware returns a stricter rate limiting middleware for AI endpoints (per user)
+func (rl *RateLimiter) AIMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// AI endpoints are always authenticated, use user ID if available
+		userID, authenticated := r.Context().Value(UserIDKey).(uuid.UUID)
+		var key string
+		if authenticated && userID != uuid.Nil {
+			key = "ai:user:" + userID.String()
+		} else {
+			key = "ai:ip:" + getIP(r)
+		}
+
+		limiter := rl.getLimiter(key, rl.aiLimit, rl.aiBurst)
+
+		if !limiter.Allow() {
+			httputil.TooManyRequestsWithContext(r.Context(), w, "too many AI requests, please slow down", nil)
 			return
 		}
 

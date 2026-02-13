@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { Send, Bot, User, Plus, Trash2, ArrowLeft, Sparkles, Menu, X } from 'lucide-react';
+import { Send, Bot, User, Plus, Trash2, ArrowLeft, Sparkles, Menu, X, RotateCcw } from 'lucide-react';
 import { api } from '../api';
 import { ROUTES } from '../constants/routes';
 import type { ChatMessage, Conversation, ConversationWithMessages } from '../api/chat';
@@ -14,6 +14,26 @@ const suggestedQuestions = [
     "How can I save more money?",
     "How much did I spend this month?",
 ];
+
+const MAX_MESSAGE_LENGTH = 5000;
+const CHAR_COUNT_THRESHOLD = 4000;
+
+function getFriendlyErrorMessage(error: unknown): string {
+    if (error instanceof TypeError) {
+        return 'Connection lost. Please check your internet and try again.';
+    }
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('503') || msg.toLowerCase().includes('unavailable')) {
+        return 'AI assistant is temporarily unavailable. Please try again in a moment.';
+    }
+    if (msg.includes('429') || msg.toLowerCase().includes('too many')) {
+        return 'Too many requests. Please wait a moment before sending another message.';
+    }
+    if (msg.includes('network') || msg.includes('fetch') || msg.includes('Failed to fetch')) {
+        return 'Connection lost. Please check your internet and try again.';
+    }
+    return 'Something went wrong. Please try again.';
+}
 
 export default function AIChat() {
     const { t } = useLanguage();
@@ -27,6 +47,7 @@ export default function AIChat() {
     const [activeConversationId, setActiveConversationId] = useState<string | null>(
         conversationId || null
     );
+    const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
     const optimisticConversationIdRef = useRef<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -109,6 +130,7 @@ export default function AIChat() {
         onMutate: async (msg) => {
             setIsTyping(true);
             setSendError(null);
+            setLastFailedMessage(null);
             const now = new Date().toISOString();
             const optimisticMessageId = `temp-${Date.now()}`;
             const optimisticMessage: ChatMessage = {
@@ -271,7 +293,8 @@ export default function AIChat() {
         },
         onError: (error, _msg, context) => {
             setIsTyping(false);
-            setSendError(error instanceof Error ? error.message : 'Unable to reach the assistant. Please try again.');
+            setSendError(getFriendlyErrorMessage(error));
+            setLastFailedMessage(_msg);
 
             // Remove optimistic temp conversation (entire conversation for new chats)
             if (context?.optimisticConversationId?.startsWith('temp-')) {
@@ -336,14 +359,24 @@ export default function AIChat() {
         inputRef.current?.focus();
     }, [conversationId]);
 
-    const handleSend = () => {
-        if (!message.trim() || sendMessageMutation.isPending || isTyping) return;
+    const handleSend = (overrideMessage?: string) => {
+        const msgToSend = overrideMessage || message;
+        if (!msgToSend.trim() || sendMessageMutation.isPending || isTyping) return;
+        if (msgToSend.length > MAX_MESSAGE_LENGTH) return;
         if (!aiConfigured) {
             setSendError('AI is not configured on the server.');
             return;
         }
-        sendMessageMutation.mutate(message.trim());
-        setMessage('');
+        sendMessageMutation.mutate(msgToSend.trim());
+        if (!overrideMessage) setMessage('');
+        setLastFailedMessage(null);
+    };
+
+    const handleRetry = () => {
+        if (lastFailedMessage) {
+            setSendError(null);
+            handleSend(lastFailedMessage);
+        }
     };
 
     const handleNewConversation = () => {
@@ -627,24 +660,42 @@ export default function AIChat() {
                 {/* Input */}
                 <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                     {sendError && (
-                        <div className="max-w-4xl mx-auto mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
-                            {sendError}
+                        <div className="max-w-4xl mx-auto mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300 flex items-center justify-between gap-2">
+                            <span>{sendError}</span>
+                            {lastFailedMessage && (
+                                <button
+                                    onClick={handleRetry}
+                                    disabled={sendMessageMutation.isPending || isTyping}
+                                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-200 bg-red-100 dark:bg-red-900/50 rounded-md hover:bg-red-200 dark:hover:bg-red-900/70 transition-colors disabled:opacity-50"
+                                >
+                                    <RotateCcw className="w-3 h-3" />
+                                    {t('retry') || 'Retry'}
+                                </button>
+                            )}
                         </div>
                     )}
                     <div className="flex gap-2 max-w-4xl mx-auto">
-                        <input
-                            ref={inputRef}
-                            type="text"
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            placeholder={t('typeMessage') || 'Ask about your finances...'}
-                            disabled={sendMessageMutation.isPending || isTyping || !aiConfigured}
-                            className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                        />
+                        <div className="flex-1 relative">
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                value={message}
+                                onChange={(e) => setMessage(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
+                                onKeyDown={handleKeyDown}
+                                placeholder={t('typeMessage') || 'Ask about your finances...'}
+                                disabled={sendMessageMutation.isPending || isTyping || !aiConfigured}
+                                maxLength={MAX_MESSAGE_LENGTH}
+                                className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                            />
+                            {message.length > CHAR_COUNT_THRESHOLD && (
+                                <span className={`absolute right-3 bottom-1 text-xs ${message.length >= MAX_MESSAGE_LENGTH ? 'text-red-500' : 'text-slate-400'}`}>
+                                    {message.length}/{MAX_MESSAGE_LENGTH}
+                                </span>
+                            )}
+                        </div>
                         <button
-                            onClick={handleSend}
-                            disabled={!message.trim() || sendMessageMutation.isPending || isTyping || !aiConfigured}
+                            onClick={() => handleSend()}
+                            disabled={!message.trim() || message.length > MAX_MESSAGE_LENGTH || sendMessageMutation.isPending || isTyping || !aiConfigured}
                             className="px-4 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary-500/20"
                         >
                             <Send className="w-5 h-5" />

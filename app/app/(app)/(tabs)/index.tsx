@@ -145,9 +145,15 @@ export default function DashboardScreen() {
         {/* Error State */}
         {(isSummaryError || isMonthlyError || isGoalsError || isBudgetsError) && (
           <View className="bg-danger-muted border border-danger/20 p-4 rounded-xl mb-4">
-            <Text className="text-danger font-medium">{t('failedToLoad')}</Text>
+            <Text className="text-danger font-medium">{t('failedToLoad') || 'Failed to load data'}</Text>
             <Text className="text-danger/70 text-sm mt-1">
-              {t('checkConnection') || 'Please check your connection and try again.'}
+              {isSummaryError && isMonthlyError
+                ? (t('failedToLoadDashboard') || 'Could not load your dashboard data. Please check your connection.')
+                : isSummaryError
+                  ? (t('failedToLoadBalance') || 'Could not load balance information.')
+                  : isBudgetsError
+                    ? (t('failedToLoadBudgets') || 'Could not load budget data.')
+                    : (t('checkConnection') || 'Please check your connection and try again.')}
             </Text>
             <Pressable
               onPress={() => {
@@ -169,9 +175,9 @@ export default function DashboardScreen() {
           <View className="mb-6">
             {/* Logo Row */}
             <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-2xl font-bold text-primary">CoFinance</Text>
+              <Text className="text-xl font-bold text-primary">CoFinance</Text>
               <Link href="/(app)/profile" asChild>
-                <Pressable hitSlop={8} style={{ cursor: 'pointer', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }} className="bg-secondary border border-border p-3 rounded-full">
+                <Pressable hitSlop={8} style={({ pressed }) => [{ cursor: 'pointer', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]} className="bg-secondary border border-border p-3 rounded-full" accessibilityLabel={t('profile') || 'Profile'} accessibilityRole="button">
                   <User size={20} color={colors.secondaryForeground} />
                 </Pressable>
               </Link>
@@ -195,7 +201,7 @@ export default function DashboardScreen() {
         >
           {/* Total Balance */}
           <View style={{ flex: isDesktop ? 1 : isTablet ? undefined : 1, width: isTablet && !isDesktop ? '48%' : undefined, minWidth: isDesktop ? 200 : undefined }}>
-            <View className="bg-card border border-border p-5 rounded-xl h-full">
+            <View className="bg-card border border-border p-4 rounded-xl h-full">
               <View className="flex-row items-center justify-between mb-3">
                 <Text className="text-muted-foreground text-sm">{t('totalBalance')}</Text>
                 <DollarSign size={18} color={colors.mutedForeground} />
@@ -213,7 +219,7 @@ export default function DashboardScreen() {
           {/* Income */}
           {monthlyReport && (
             <View style={{ flex: isDesktop ? 1 : isTablet ? undefined : 1, width: isTablet && !isDesktop ? '48%' : undefined, minWidth: isDesktop ? 200 : undefined }}>
-              <View className="bg-card border border-border p-5 rounded-xl h-full">
+              <View className="bg-card border border-border p-4 rounded-xl h-full">
                 <View className="flex-row items-center justify-between mb-3">
                   <Text className="text-muted-foreground text-sm">{t('income')}</Text>
                   <TrendingUp size={18} color={colors.success} />
@@ -229,7 +235,7 @@ export default function DashboardScreen() {
           {/* Expenses */}
           {monthlyReport && (
             <View style={{ flex: isDesktop ? 1 : isTablet ? undefined : 1, width: isTablet && !isDesktop ? '48%' : undefined, minWidth: isDesktop ? 200 : undefined }}>
-              <View className="bg-card border border-border p-5 rounded-xl h-full">
+              <View className="bg-card border border-border p-4 rounded-xl h-full">
                 <View className="flex-row items-center justify-between mb-3">
                   <Text className="text-muted-foreground text-sm">{t('expenses')}</Text>
                   <TrendingDown size={18} color={colors.danger} />
@@ -244,7 +250,7 @@ export default function DashboardScreen() {
 
           {/* Goals Progress */}
           <View style={{ flex: isDesktop ? 1 : isTablet ? undefined : 1, width: isTablet && !isDesktop ? '48%' : undefined, minWidth: isDesktop ? 200 : undefined }}>
-            <View className="bg-card border border-border p-5 rounded-xl h-full">
+            <View className="bg-card border border-border p-4 rounded-xl h-full">
               <View className="flex-row items-center justify-between mb-3">
                 <Text className="text-muted-foreground text-sm">{t('financialGoals')}</Text>
                 <PiggyBank size={18} color={colors.mutedForeground} />
@@ -259,7 +265,7 @@ export default function DashboardScreen() {
           {/* Budget Status */}
           {budgets.length > 0 && (
             <View style={{ flex: isDesktop ? 1 : isTablet ? undefined : 1, width: isTablet && !isDesktop ? '48%' : undefined, minWidth: isDesktop ? 200 : undefined }}>
-              <View className="bg-card border border-border p-5 rounded-xl h-full">
+              <View className="bg-card border border-border p-4 rounded-xl h-full">
                 <View className="flex-row items-center justify-between mb-3">
                   <Text className="text-muted-foreground text-sm">{t('budgetStatus') || 'Budget'}</Text>
                   <PieChart size={18} color={budgetPercentage > 90 ? colors.danger : budgetPercentage > 70 ? colors.warning : colors.success} />
@@ -278,13 +284,13 @@ export default function DashboardScreen() {
         {/* AI Financial Advisor Card */}
         {aiStatus?.configured && (
           <Link href="/(app)/(tabs)/wallet/chat" asChild>
-            <Pressable style={{ cursor: 'pointer' }}>
+            <Pressable style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.85 }]} accessibilityLabel={t('aiAdvisor') || 'AI Financial Advisor'} accessibilityRole="button">
               <View
                 style={{
                   backgroundColor: colors.accent,
                   borderWidth: 1,
                   borderColor: colors.accent + '4D',
-                  padding: 20,
+                  padding: 16,
                   borderRadius: 12,
                   marginBottom: 24,
                 }}
@@ -345,8 +351,8 @@ export default function DashboardScreen() {
         {forecast && forecast.avg_daily_spend > 0 && (
           <View className="mb-6">
             <CollapsibleSection title={t('spendingForecast') || 'Spending Forecast'} storageKey="dashboard_forecast">
-              <View className="bg-card border border-border p-5 rounded-xl">
-                <Text className="text-xs text-muted-foreground mb-4">{t('basedOnLast30Days') || 'Based on last 30 days'}</Text>
+              <View className="bg-card border border-border p-4 rounded-xl">
+                <Text className="text-xs text-muted-foreground mb-3">{t('basedOnLast30Days') || 'Based on last 30 days'}</Text>
                 <View className="flex-row justify-between">
                   <View className="items-center flex-1">
                     <Text className="text-xs text-muted-foreground">{t('dailySpend') || 'Daily Spend'}</Text>
@@ -382,7 +388,7 @@ export default function DashboardScreen() {
         {/* Insights */}
         <View className="mb-6">
           <CollapsibleSection title={t('insights') || 'Insights'} storageKey="dashboard_insights">
-            <View className="bg-card border border-border p-5 rounded-xl">
+            <View className="bg-card border border-border p-4 rounded-xl">
               <View className="gap-3">
                 {insights.length === 0 ? (
                   <View className="bg-muted border border-border p-4 rounded-lg">
@@ -463,11 +469,11 @@ export default function DashboardScreen() {
                         <View className="bg-secondary p-2 rounded-md mr-3">
                           <Wallet size={18} color={colors.secondaryForeground} />
                         </View>
-                        <Text className="text-base font-medium text-foreground">
+                        <Text className="text-base font-medium text-foreground" numberOfLines={1}>
                           {balance.currency}
                         </Text>
                       </View>
-                      <Text className="text-base font-semibold text-foreground">
+                      <Text className="text-base font-semibold text-foreground" numberOfLines={1}>
                         {formatCompactCurrency(balance.balance, balance.currency)}
                       </Text>
                     </View>

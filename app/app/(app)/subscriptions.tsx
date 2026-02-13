@@ -90,13 +90,13 @@ export default function SubscriptionsScreen() {
       {/* Header */}
       <View className="flex-row items-center justify-between p-4 border-b border-border" style={{ maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
         <View className="flex-row items-center">
-          <Pressable onPress={() => router.back()} className="p-2 mr-2" style={{ cursor: 'pointer' }}>
+          <Pressable onPress={() => router.back()} className="p-2 mr-2" style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('back') || 'Go back'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <ArrowLeft size={24} color={colors.foreground} />
           </Pressable>
-          <Text className="text-2xl font-bold text-foreground">{t('subscriptions')}</Text>
+          <Text className="text-xl font-bold text-foreground">{t('subscriptions')}</Text>
         </View>
-        <Pressable onPress={() => setShowForm(true)} className="bg-primary p-2 rounded-full" style={{ cursor: 'pointer' }}>
-          <Plus size={24} color={colors.primaryForeground} />
+        <Pressable onPress={() => setShowForm(true)} className="bg-primary p-2.5 rounded-full" style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('addSubscription') || 'Add Subscription'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Plus size={22} color={colors.primaryForeground} />
         </Pressable>
       </View>
 
@@ -112,9 +112,9 @@ export default function SubscriptionsScreen() {
       >
         {/* Summary Card */}
         {summary && (
-          <View className="bg-card border border-border p-5 rounded-xl mb-6" style={{ maxWidth: isDesktop ? 500 : '100%' }}>
-            <Text className="text-muted-foreground mb-2">{t('monthlyCost')}</Text>
-            <Text className="text-3xl font-bold text-accent">
+          <View className="bg-card border border-border p-4 rounded-xl mb-6" style={{ maxWidth: isDesktop ? 500 : '100%' }}>
+            <Text className="text-muted-foreground text-sm mb-2">{t('monthlyCost')}</Text>
+            <Text className="text-2xl font-bold text-accent">
               {formatCompactCurrency(summary.total_monthly, summary.currency)}
             </Text>
             <View className="flex-row mt-3 pt-3 border-t border-border">
@@ -266,7 +266,7 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
             </Text>
           </View>
         </View>
-        <Text className="text-lg font-bold text-foreground">
+        <Text className="text-lg font-bold text-foreground" numberOfLines={1}>
           {formatCompactCurrency(subscription.amount, subscription.currency)}
           <Text className="text-sm text-muted-foreground">/{t(subscription.billing_cycle)}</Text>
         </Text>
@@ -275,7 +275,7 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
       <View className="flex-row items-center justify-between pt-3 border-t border-border">
         <View className="flex-row items-center">
           <Calendar size={14} color={colors.placeholder} />
-          <Text className="text-muted-foreground text-sm ml-1">
+          <Text className="text-muted-foreground text-sm ml-1" numberOfLines={1}>
             {t('nextBilling')}: {formatDate(subscription.next_billing_date)}
           </Text>
         </View>
@@ -284,7 +284,9 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
             onPress={handleToggle}
             disabled={updateMutation.isPending}
             className={`p-2 rounded-lg ${isPaused ? 'bg-success/20' : 'bg-warning/20'}`}
-            style={{ cursor: 'pointer' }}
+            style={({ pressed }) => [{ cursor: 'pointer', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]}
+            accessibilityLabel={isPaused ? (t('resumeSubscription') || 'Resume') : (t('pauseSubscription') || 'Pause')}
+            accessibilityRole="button"
           >
             {updateMutation.isPending ? (
               <ActivityIndicator size="small" />
@@ -368,13 +370,14 @@ function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose
       <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
         <View className="flex-row items-center justify-between p-4 border-b border-border">
           <Text className="text-xl font-bold text-foreground">{t('addSubscription')}</Text>
-          <Pressable onPress={onClose} style={{ cursor: 'pointer' }}>
+          <Pressable onPress={onClose} style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <X size={24} color={colors.placeholder} />
           </Pressable>
         </View>
 
         <ScrollView
           className="flex-1"
+          keyboardDismissMode="on-drag"
           contentContainerStyle={{
             padding: isDesktop ? 32 : 16,
             maxWidth: 600,

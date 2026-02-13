@@ -268,6 +268,7 @@ export default function AddTransactionScreen() {
         <ScrollView
           className="flex-1"
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           contentContainerStyle={{
             padding: isDesktop ? 32 : 16,
             maxWidth: isDesktop ? 800 : undefined,

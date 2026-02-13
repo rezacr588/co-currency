@@ -152,8 +152,11 @@ export default function BadgesScreen() {
           <View className="flex-row items-center">
             <Pressable
               onPress={() => router.back()}
-              style={{ cursor: 'pointer' }}
+              style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
               className="p-2 mr-2"
+              accessibilityLabel={t('back') || 'Go back'}
+              accessibilityRole="button"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <ChevronLeft size={24} color={colors.placeholder} />
             </Pressable>
@@ -164,8 +167,10 @@ export default function BadgesScreen() {
           <Pressable
             onPress={handleClaimRewards}
             disabled={checkBadgesMutation.isPending}
-            style={{ cursor: 'pointer' }}
+            style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
             className="bg-primary px-4 py-2 rounded-xl flex-row items-center"
+            accessibilityLabel={t('claimRewards') || 'Claim Rewards'}
+            accessibilityRole="button"
           >
             {checkBadgesMutation.isPending ? (
               <ActivityIndicator size="small" color={colors.primaryForeground} />

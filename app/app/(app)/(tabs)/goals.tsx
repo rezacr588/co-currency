@@ -138,14 +138,17 @@ export default function GoalsScreen() {
           paddingBottom: bottomPadding,
         }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        keyboardDismissMode="on-drag"
       >
         <View className="flex-row items-center justify-between mb-6">
-          <Text className="text-2xl font-semibold text-foreground">{t('financialGoals')}</Text>
+          <Text className="text-xl font-bold text-foreground">{t('financialGoals')}</Text>
           <Pressable
             onPress={() => setShowForm(true)}
             className="bg-foreground p-2.5 rounded-lg"
-            hitSlop={4}
-            style={{ cursor: 'pointer' }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+            accessibilityLabel={t('createGoal') || 'Create Goal'}
+            accessibilityRole="button"
           >
             <Plus size={20} color={colors.primaryForeground} />
           </Pressable>
@@ -329,9 +332,9 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
           )}
         </View>
         <View className="flex-1">
-          <Text className="text-base font-medium text-foreground">{goal.name}</Text>
+          <Text className="text-base font-medium text-foreground" numberOfLines={1}>{goal.name}</Text>
           {goal.category && (
-            <Text className="text-muted-foreground text-xs">
+            <Text className="text-muted-foreground text-xs" numberOfLines={1}>
               {t(goal.category as any) || goal.category}
             </Text>
           )}
@@ -343,7 +346,9 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
               onPress={() => onEdit(goal)}
               className="p-2"
               hitSlop={10}
-              style={{ cursor: 'pointer' }}
+              style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+              accessibilityLabel={t('editGoal') || 'Edit Goal'}
+              accessibilityRole="button"
             >
               <Pencil size={16} color={colors.mutedForeground} />
             </Pressable>
@@ -351,7 +356,9 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
               onPress={() => onDelete(goal)}
               className="p-2"
               hitSlop={10}
-              style={{ cursor: 'pointer' }}
+              style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+              accessibilityLabel={t('deleteGoal') || 'Delete Goal'}
+              accessibilityRole="button"
             >
               <Trash2 size={16} color={colors.mutedForeground} />
             </Pressable>
@@ -380,7 +387,7 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
       </View>
 
       {goal.deadline && (
-        <Text className="text-muted-foreground text-xs mt-2">
+        <Text className="text-muted-foreground text-xs mt-2" numberOfLines={1}>
           {t('deadline')}: {formatDate(goal.deadline)}
         </Text>
       )}
@@ -427,7 +434,9 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
             <Pressable
               onPress={() => setShowContribute(true)}
               className="bg-secondary border border-border p-2.5 rounded-md items-center"
-              style={{ cursor: 'pointer' }}
+              style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+              accessibilityLabel={t('contribute') || 'Contribute'}
+              accessibilityRole="button"
             >
               <Text className="text-foreground font-medium text-sm">{t('contribute')}</Text>
             </Pressable>
@@ -522,13 +531,14 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
       <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
         <View className="flex-row items-center justify-between p-4 border-b border-border">
           <Text className="text-lg font-semibold text-foreground">{t('createGoal')}</Text>
-          <Pressable onPress={onClose} hitSlop={8} style={{ cursor: 'pointer' }} className="p-2 bg-secondary rounded-full">
+          <Pressable onPress={onClose} hitSlop={8} style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} className="p-2 bg-secondary rounded-full" accessibilityLabel={t('close') || 'Close'} accessibilityRole="button">
             <X size={18} color={colors.secondaryForeground} />
           </Pressable>
         </View>
 
         <ScrollView
           className="flex-1"
+          keyboardDismissMode="on-drag"
           contentContainerStyle={{
             padding: isDesktop ? 32 : 16,
             maxWidth: 500,
@@ -696,13 +706,14 @@ function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goa
       <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
         <View className="flex-row items-center justify-between p-4 border-b border-border">
           <Text className="text-lg font-semibold text-foreground">{t('editGoal') || 'Edit Goal'}</Text>
-          <Pressable onPress={onClose} hitSlop={8} style={{ cursor: 'pointer' }} className="p-2 bg-secondary rounded-full">
+          <Pressable onPress={onClose} hitSlop={8} style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} className="p-2 bg-secondary rounded-full" accessibilityLabel={t('close') || 'Close'} accessibilityRole="button">
             <X size={18} color={colors.secondaryForeground} />
           </Pressable>
         </View>
 
         <ScrollView
           className="flex-1"
+          keyboardDismissMode="on-drag"
           contentContainerStyle={{
             padding: isDesktop ? 32 : 16,
             maxWidth: 500,
