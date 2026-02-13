@@ -22,7 +22,7 @@ function renderTransactionAmount(
     return formatCompactCurrency(amountInReportCurrency, reportCurrency);
   }
 
-  return formatCompactCurrency(tx.amount, tx.currency);
+  return formatCompactCurrency(tx.to_amount ?? tx.amount, tx.to_currency ?? tx.currency);
 }
 
 export function DailySelectedRangeCard({

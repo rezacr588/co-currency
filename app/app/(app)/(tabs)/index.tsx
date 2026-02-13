@@ -529,7 +529,7 @@ export default function DashboardScreen() {
                         tx.type === 'credit' ? 'text-success' : 'text-danger'
                       }`}
                     >
-                      {`${tx.type === 'credit' ? '+' : '-'}${formatCompactCurrency(tx.amount, tx.currency)}`}
+                      {`${tx.type === 'credit' ? '+' : '-'}${formatCompactCurrency(tx.to_amount ?? tx.amount, tx.to_currency ?? tx.currency)}`}
                     </Text>
                   </View>
                 ))}

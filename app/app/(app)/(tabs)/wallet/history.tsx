@@ -505,7 +505,7 @@ export default function TransactionHistoryScreen() {
                   }`}
                   numberOfLines={1}
                 >
-                  {`${tx.type === 'credit' ? '+' : '-'}${formatCompactCurrency(tx.amount, tx.currency)}`}
+                  {`${tx.type === 'credit' ? '+' : '-'}${formatCompactCurrency(tx.to_amount ?? tx.amount, tx.to_currency ?? tx.currency)}`}
                 </Text>
                 {/* Desktop: Show buttons inline */}
                 {isDesktop && (

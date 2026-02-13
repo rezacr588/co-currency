@@ -301,10 +301,10 @@ export default function WalletScreen() {
                       }`}
                       style={{ fontSize: 15 }}
                     >
-                      {`${tx.type === 'credit' ? '+' : '-'}${formatCompactCurrency(tx.amount, tx.currency)}`}
+                      {`${tx.type === 'credit' ? '+' : '-'}${formatCompactCurrency(tx.to_amount ?? tx.amount, tx.to_currency ?? tx.currency)}`}
                     </Text>
                     <Text className="text-muted-foreground" style={{ fontSize: 10, marginTop: 1 }} numberOfLines={1}>
-                      {tx.currency}
+                      {tx.to_currency ?? tx.currency}
                     </Text>
                   </View>
                 </View>
