@@ -87,49 +87,82 @@ CoFinance is an all-in-one personal finance application that combines currency c
 - **HTTPS**: Secure communication
 - **CORS Protection**: Cross-origin request filtering
 
----
+### 11. Financial Goals
+- **Savings Targets**: Create goals with target amounts and deadlines
+- **Progress Tracking**: Visual progress bars and contribution history
+- **Goal Categories**: Emergency fund, vacation, home, car, education, retirement, investment, debt payoff
+- **Contributions**: Contribute from wallet balance directly to goals
+- **Multi-Currency**: Goals in any supported currency
 
-## Planned Features (Roadmap)
+### 12. Recurring Transactions
+- **Scheduling**: Daily, weekly, monthly, or yearly frequencies
+- **Auto-Execution**: Manual or automatic transaction creation
+- **Active/Inactive Toggle**: Pause and resume recurring transactions
+- **Next Execution Date**: Track when the next transaction will occur
 
-### Phase 3: Advanced Personal Finance
+### 13. Budgets
+- **Category Budgets**: Set spending limits per category
+- **Period Tracking**: Monthly or yearly budget periods
+- **Progress Monitoring**: Spent amount, remaining balance, percentage used
+- **Alerts**: Near-limit and over-budget warnings
 
-#### Financial Goals
-- Create savings goals with target amounts
-- Track progress toward goals
-- Multiple goals per currency
-- Goal categories (Emergency Fund, Vacation, etc.)
-- Automatic progress calculation
+### 14. Reports & Analytics
+- **Monthly/Yearly Reports**: Income, expenses, and savings summaries
+- **Category Breakdown**: Spending distribution by category with percentages
+- **Spending Trends**: Income vs expense trends over configurable time periods
+- **Net Worth Tracking**: Total balance distribution across currencies
+- **Financial Forecasting**: Projected income and expenses
+- **Health Score**: Overall financial health assessment
+- **Weekly Recap**: Summary of the past week's financial activity
+- **Cash Flow Projections**: Forward-looking cash flow analysis
+- **Spending Anomaly Detection**: Alerts for unusual spending patterns
 
-#### Transaction Notes & Attachments
-- Add detailed notes to transactions
-- Attach receipt images (OCR planned)
-- Tag transactions with custom labels
-- Search within notes
+### 15. Subscriptions Tracking
+- **Subscription Management**: Track active subscriptions with billing cycles
+- **Billing Cycles**: Weekly, monthly, quarterly, yearly tracking
+- **Upcoming Payments**: See what's due soon
+- **Summary View**: Total subscription costs and category breakdown
+- **Categories**: Organize subscriptions by type
 
-#### Reports & Statistics
-- Monthly spending reports
-- Category breakdown over time
-- Income trend analysis
-- Net worth tracking
-- Custom date range reports
-- PDF export
+### 16. Loans Management
+- **Loan Tracking**: Record loans with amounts, interest rates, and terms
+- **Payment History**: Log individual loan payments
+- **Summary View**: Outstanding balance and total paid
+- **Upcoming Payments**: See upcoming loan payment due dates
 
-#### Recurring Transactions
-- Schedule recurring income/expenses
-- Daily, weekly, monthly, yearly frequencies
-- Automatic transaction creation
-- Reminder notifications
+### 17. Notes System
+- **Rich Notes**: Create notes with color coding
+- **Pinned Notes**: Pin important notes to the top
+- **Transaction Links**: Attach notes to specific transactions
+- **Color Palette**: Choose from multiple note colors for organization
 
-#### Budgets
-- Set monthly budgets per category
-- Budget alerts and warnings
-- Rollover unused budget
-- Budget vs actual visualization
+### 18. Challenges & Gamification
+- **Financial Challenges**: Join challenges to improve financial habits
+- **XP System**: Earn experience points for financial activities
+- **Badges**: Unlock badges for achievements
+- **Daily Rewards**: Claim daily rewards for engagement
+- **Leaderboard**: Compare progress with other users
+- **Featured Challenges**: Curated challenges for new users
 
-#### Transaction Types Enhancement
-- More granular transaction types
-- Custom transaction type creation
-- Transaction type icons and colors
+### 19. Smart Financial Advice
+- **AI-Powered Tips**: Personalized advice based on your spending patterns, balances, and goals
+- **Context-Aware**: Analyzes your financial data to provide relevant suggestions
+- **Dismiss & Refresh**: Dismiss tips you've seen, refresh for new advice
+- **Fallback Tips**: Static financial tips when AI is unavailable
+- **Categories**: Spending, saving, budgeting, investing, and general advice
+
+### 20. Financial News Feed
+- **Aggregated News**: Financial news from MarketWatch, Yahoo Finance, and CNBC
+- **Categorized Articles**: Markets, finance, economy, and crypto categories
+- **Cached Feed**: News cached for fast loading (30-minute refresh)
+- **External Links**: Open full articles in browser
+
+### 21. Enhanced AI Chat
+- **Voice Recording**: Record voice messages (up to 2 minutes) for AI interaction
+- **Image Attachments**: Attach photos of receipts and invoices for AI parsing
+- **Vision Model Support**: AI can read and extract data from receipt/invoice images
+- **Document Attachments**: Attach documents for AI analysis
+- **Multi-Provider**: Supports Groq, OpenAI, Google AI, and Cerebras AI providers
 
 ---
 
@@ -192,23 +225,32 @@ See [API.md](./API.md) for full documentation.
 ## Technical Stack
 
 ### Backend
-- **Language**: Go 1.21+
+- **Language**: Go 1.24+
 - **Router**: Chi
-- **Database**: PostgreSQL (pgx)
-- **Cache**: In-memory (go-cache)
-- **AI**: LangChainGo + Cerebras
-- **Auth**: JWT (golang-jwt/v5)
+- **Database**: PostgreSQL (Neon, pgx/pgxpool)
+- **Vector DB**: Qdrant (semantic memory)
+- **Cache**: In-memory (go-cache + singleflight)
+- **AI**: LangChainGo with multi-provider support (Groq, OpenAI, Google AI, Cerebras)
+- **Auth**: JWT (golang-jwt/v5) with OAuth (Google, LinkedIn)
 
-### Frontend
+### Web Frontend
 - **Framework**: React 18
 - **Language**: TypeScript
 - **Build**: Vite
 - **State**: TanStack Query
 - **Styling**: Tailwind CSS
 - **Charts**: Recharts
-- **PWA**: Workbox
+
+### Mobile App
+- **Framework**: Expo ~54, React Native 0.81
+- **Language**: TypeScript
+- **Routing**: Expo Router (file-based)
+- **Styling**: styled-components/native
+- **State**: TanStack Query
+- **Charts**: react-native-gifted-charts
+- **Testing**: jest-expo, @testing-library/react-native
 
 ### Infrastructure
-- **Container**: Docker
-- **Deployment**: Koyeb
-- **CI/CD**: GitHub Actions
+- **Container**: Docker (3-stage build)
+- **Deployment**: Koyeb (web), EAS (mobile OTA updates)
+- **CI/CD**: GitHub Actions (web + mobile workflows)

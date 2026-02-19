@@ -141,7 +141,20 @@ make clean                        # Remove build artifacts
 **AI Handler (`internal/handler/ai.go`):**
 - `AIHandler` struct holds aiService, walletService, recurringService, goalService
 - Supports dependency injection via `SetRecurringService()` and `SetGoalService()`
-- Endpoints: parse-receipt, parse-text, detect-intent, smart-parse, apply-parsed, apply-recurring, apply-goal-contribution, status
+- Endpoints: parse-receipt, parse-text, detect-intent, smart-parse, apply-parsed, apply-recurring, apply-goal-contribution, advice, status
+- Vision model support: accepts base64-encoded images for receipt/invoice parsing (`ParseReceipt`)
+- Vision models per provider: Groq (`llama-3.2-90b-vision-preview`), OpenAI (`gpt-4o-mini`), GoogleAI (`gemini-1.5-flash`), Cerebras (falls back to text)
+
+**News Service (`internal/service/news_service.go`):**
+- Fetches financial news from RSS feeds (MarketWatch, Yahoo Finance, CNBC)
+- Cached with configurable TTL (`NEWS_CACHE_TTL`, default 30min)
+- Returns up to 30 items sorted by publication date
+
+**Advice Service (`internal/service/advice_service.go`):**
+- AI-powered personalized financial advice based on user context (balances, spending trends, categories)
+- 5 static fallback tips when AI is unavailable
+- Cached for 6 hours per user
+- Returns: title, detail, category (spending/saving/budgeting/investing/general), isAI flag
 
 **Key models:**
 - User: ID, Email, PasswordHash, Name, FailedLoginAttempts, LockedUntil, OnboardingCompleted, LinkedInID, GoogleID, AvatarURL — `ToProfile()` strips sensitive fields
@@ -206,7 +219,7 @@ src/
 
 ### Mobile App (`/app`)
 
-**Tech stack:** Expo ~54.0, React Native 0.81.5, React 19.1, Expo Router ~6.0, NativeWind 4 (Tailwind 3), TanStack Query 5, TypeScript ~5.9
+**Tech stack:** Expo ~54.0, React Native 0.81.5, React 19.1, Expo Router ~6.0, styled-components 6 (styled-components/native), TanStack Query 5, TypeScript ~5.9
 
 - **Path alias:** `@/*` → `./*` (app root)
 - **Expo Router**: File-based routing with typed routes (`experiments.typedRoutes: true`)
@@ -227,7 +240,7 @@ app/
     │   ├── add.tsx       # Add transaction
     │   ├── goals.tsx     # Goals
     │   ├── reports.tsx   # Reports/analytics
-    │   └── wallet/       # Nested stack (index, history, chat, ai, convert)
+    │   └── wallet/       # Nested stack (index, history, chat, convert)
     ├── budgets, recurring, subscriptions, badges, notes, loans, challenges
     ├── historical, profile, change-password, notification-settings
     └── onboarding.tsx    # fullScreenModal
@@ -238,16 +251,18 @@ app/
 2. SafeAreaProvider (safe area insets)
 3. QueryClientProvider (TanStack Query: retry=2, staleTime=30s)
 4. ThemeProvider (dark/light, persisted in AsyncStorage)
-5. LanguageProvider (4 languages, RTL support)
-6. SettingsProvider (biometric, notifications, display)
-7. AuthProvider (user state + route protection)
-8. ToastProvider (from `src/components/ui/Toast.tsx`, not a separate context file)
+5. StyledThemeWrapper (SCThemeProvider — bridges ThemeProvider colors to styled-components via `buildTheme()`)
+6. LanguageProvider (4 languages, RTL support)
+7. SettingsProvider (biometric, notifications, display)
+8. AuthProvider (user state + route protection)
+9. ToastProvider (from `src/components/ui/Toast.tsx`, not a separate context file)
+10. BiometricLock (biometric authentication UI)
 
 **API client (`src/api/base.ts`):**
 - URL logic: relative `/api/v1` on koyeb.app web, full backend URL on native
 - Token storage: in-memory cache + Expo SecureStore (native) or AsyncStorage (web)
 - Retry: 1 retry, 1s base delay, 10s max, 30s request timeout, 15s for refresh
-- 20 API modules: auth, wallet, ai, chat, goals, budgets, recurring, subscriptions, reports, badges, notes, loans, xp, challenges, notifications, tags, exchange, utils
+- 21 API modules: auth, wallet, ai, chat, goals, budgets, recurring, subscriptions, reports, badges, notes, loans, xp, challenges, notifications, tags, exchange, news, utils
 
 **Key native features:**
 - Biometric auth: `expo-local-authentication` (Face ID, Touch ID, Fingerprint)
@@ -262,14 +277,18 @@ app/
 - App: `useAppUpdates`, `useAndroidNavigationBar`, `usePushNotifications`, `useOfflineSync`, `useDebounce`
 - State: `useAuth`, `useTheme`, `useColors`, `useLanguage`, `useSettings`
 
-**Theme system:**
+**Theme system (`src/theme/index.ts`):**
+- Built with `buildTheme(colors, isDark)` returning `AppTheme` interface
+- Design tokens: `spacing`, `radii`, `shadows`, `typography`, `gradients`, `animation`, `glass`
 - Dark mode (default): bg `#09090b`, card `#141416`, text `#fafafa`, accent gold `#d4af37`, success `#22c55e`, danger `#ef4444`
 - Light mode: inverted values, system detection via `useColorScheme()`
 - Font: Inter (400/500/600/700 via `@expo-google-fonts/inter`)
+- Type declarations in `src/theme/styled.d.ts`
 
 **Component library (`src/components/`):**
-- UI (22 files): Badge, Button (6 variants), BiometricLock, BottomSheet (@gorhom), Card, CollapsibleSection, CurrencyBadge, CurrencyPicker, EmptyState, ErrorBoundary, FormError, Input, LoadingSpinner, OfflineBanner, ProgressBar, Select, Skeleton, SwipeableRow, AnimatedSplash, Toast (includes ToastProvider), Toggle, index
-- Features: CurrencyConverter, DailyReward (DailyRewardModal), DailyTip (DailyTipCard), HealthScore (HealthScoreCard), Reports (Monthly/Yearly/Weekly/Daily views, CashFlowProjectionCard, SpendingAnomalyCard, ReportPeriodTabs, daily/ subdirectory), WeeklyRecap (WeeklyRecapCard), CalendarHeatMap, Notes (NoteCard, NoteFormModal)
+- UI (22+ files): Badge, Button (6 variants), BiometricLock, BottomSheet (@gorhom), Card, CollapsibleSection, CurrencyBadge, CurrencyPicker, EmptyState, ErrorBoundary, FormError, Input, LoadingSpinner, OfflineBanner, ProgressBar, Select, Skeleton, SwipeableRow, AnimatedSplash, Toast (includes ToastProvider), Toggle, index
+- UI styled primitives (`src/components/ui/styled/`): StyledText (H1-H3, Body, Caption, Label), StyledCard (Card, CardHeader, CardTitle, CardContent, CardFooter), StyledButton, StyledInput, StyledToggle, StyledBadge, StyledProgressBar, StyledSkeleton (SkeletonCard, SkeletonTransaction)
+- Features: CurrencyConverter, DailyReward (DailyRewardModal), DailyTip (DailyTipCard), HealthScore (HealthScoreCard), Reports (Monthly/Yearly/Weekly/Daily views, CashFlowProjectionCard, SpendingAnomalyCard, ReportPeriodTabs, daily/ subdirectory), WeeklyRecap (WeeklyRecapCard), CalendarHeatMap, Notes (NoteCard, NoteFormModal), SmartAdvice (SmartAdviceCard), News (FinancialNewsCard), Chat (VoiceRecorder, AttachmentPicker)
 - Charts: `react-native-gifted-charts`, Markdown: `react-native-markdown-display`
 - Animations: `react-native-reanimated` (useSharedValue, withTiming, withSpring, withSequence)
 
@@ -280,16 +299,22 @@ app/
 - Safe areas: Always use `useSafeAreaInsets()` from `react-native-safe-area-context`
 - Sub-components must call `useLanguage()` themselves — hooks can't be passed from parent
 - Translations file (`src/i18n/translations.ts`) has 4 parallel sections (en, fa, ar, tr) — new keys must be added to ALL four
-- No testing framework installed for mobile app
+
+**Test infrastructure:**
+- Framework: jest-expo with @testing-library/react-native and @testing-library/jest-native
+- Config: `jest.config.js` (jest-expo preset, `@/*` alias mapping, transformIgnorePatterns for 30+ packages)
+- Setup: `jest.setup.js` (mocks for 12+ Expo modules and React Native dependencies)
+- Existing tests: Button, ErrorBoundary, FormError components; color palette validation; haptics utilities
+- Run: `cd app && npm test`
 
 ## API Routes
 
 All routes defined in `internal/router/router.go`. Groups:
 
-- **Public:** `/health`, `/health/detailed`, `/swagger/*`, exchange rates (`/api/v1/currencies`, `/rates/{base}`, `/convert`, `/historical/{date}`)
+- **Public:** `/health`, `/health/detailed`, `/swagger/*`, exchange rates (`/api/v1/currencies`, `/rates/{base}`, `/convert`, `/historical/{date}`), `/api/v1/news`
 - **Auth:** register, login, OAuth (Google, LinkedIn), password reset (login-rate-limited), refresh, logout, profile/onboarding (protected)
 - **Wallet** (protected): balances, summary, transactions (CRUD + import/export), categories (CRUD), convert
-- **AI** (mixed): status (public); parse-receipt, parse-text, detect-intent, smart-parse, apply-parsed, apply-recurring, apply-goal-contribution, chat (protected + AI rate limited)
+- **AI** (mixed): status (public); parse-receipt (vision support), parse-text, detect-intent, smart-parse, apply-parsed, apply-recurring, apply-goal-contribution, chat, advice (protected + AI rate limited)
 - **Goals** (protected): CRUD, categories, contribute
 - **Tags** (protected): CRUD
 - **Budgets** (protected): CRUD
@@ -352,7 +377,7 @@ See `backend/.env.example` for full list. Key variable groups:
 
 **OAuth:** `GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI`, `LINKEDIN_CLIENT_ID/SECRET/REDIRECT_URI`
 
-**AI:** `AI_PROVIDER` (googleai/openai/cerebras, default: googleai), `AI_API_KEY`, `AI_MODEL` (model name), `AI_CLOUD_PROJECT` (Google Cloud project ID)
+**AI:** `AI_PROVIDER` (googleai/openai/cerebras/groq, default: googleai), `AI_API_KEY`, `AI_MODEL` (model name), `AI_VISION_MODEL` (vision model override), `AI_CLOUD_PROJECT` (Google Cloud project ID)
 
 **Vector memory:** `QDRANT_ENABLED`, `QDRANT_URL`, `QDRANT_API_KEY`
 
@@ -361,6 +386,8 @@ See `backend/.env.example` for full list. Key variable groups:
 **Memory:** `SHORT_TERM_MEMORY_TTL` (24h), `MAX_MEMORY_RESULTS` (1-100, default 10)
 
 **IRR Crawler:** `IRR_CRAWLER_ENABLED` (true), `IRR_CRAWLER_INTERVAL` (5m)
+
+**News:** `NEWS_CACHE_TTL` (default 30m)
 
 **External APIs:** `FRANKFURTER_URL` (https://api.frankfurter.app)
 

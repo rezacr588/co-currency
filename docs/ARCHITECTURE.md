@@ -34,6 +34,7 @@
 │   PostgreSQL    │  │   Qdrant        │      │  External APIs  │
 │   (Neon)        │  │   (Vector DB)   │      │  - ECB Rates    │
 │   - Users       │  │   - Embeddings  │      │  - AI Providers │
+│                 │      │  - RSS Feeds    │
 │   - Transactions│  │   - Memories    │      │  - OAuth        │
 │   - Goals       │  │                 │      │                 │
 │   - Budgets     │  │                 │      │                 │
@@ -101,11 +102,12 @@ co-currency/
 - **PWA**: vite-plugin-pwa
 
 ### Mobile (React Native)
-- **Framework**: Expo (SDK 52)
+- **Framework**: Expo (SDK 54)
 - **Routing**: Expo Router (file-based)
-- **Styling**: NativeWind (Tailwind)
+- **Styling**: styled-components/native with custom theme system (`buildTheme()`, `AppTheme`)
 - **Storage**: Expo SecureStore
 - **Updates**: EAS Update (OTA)
+- **Testing**: jest-expo, @testing-library/react-native
 
 ## Core Features
 
@@ -133,12 +135,19 @@ co-currency/
 - Spending alerts
 
 ### 5. AI Financial Advisor
-- Powered by Cerebras/OpenAI/GoogleAI
+- Powered by Groq/OpenAI/GoogleAI/Cerebras (multi-provider)
 - User context awareness
 - Long-term memory (PostgreSQL + Qdrant)
-- Receipt parsing
+- Receipt/invoice parsing (text and vision/image support)
+- Personalized financial advice service
+- Voice recording and image attachments in chat (mobile)
 
-### 6. Reports & Analytics
+### 6. Financial News & Advice
+- Aggregated RSS news from MarketWatch, Yahoo Finance, CNBC
+- AI-powered personalized financial tips
+- Cached for performance (news: 30min, advice: 6h)
+
+### 7. Reports & Analytics
 - Monthly summaries
 - Category breakdowns
 - Spending trends
@@ -186,15 +195,26 @@ Client → POST /api/v1/ai/chat
 - `goals` - Savings goals
 - `budgets` - Spending budgets
 - `recurring_transactions` - Scheduled transactions
+- `subscriptions` - Subscription tracking
+- `notes` - User notes (with colors, pinning)
+- `loans`, `loan_payments` - Loan tracking and payments
+- `tags`, `transaction_tags` - Transaction tagging
+
+### Gamification Tables
+- `badges`, `user_badges` - Badge definitions and earned badges
+- `challenges`, `user_challenges` - Challenge system
+- `user_xp` - Experience points and levels
 
 ### AI/Chat Tables
 - `chat_conversations` - Chat threads
 - `chat_messages` - Individual messages
 - `user_memories` - AI long-term memory
 
-### Auth Tables
+### Auth/Device Tables
 - `refresh_tokens` - Active refresh tokens
 - `oauth_states` - OAuth flow state
+- `user_devices` - Push notification device tokens
+- `notification_preferences` - Per-user notification settings
 
 ## API Structure
 
@@ -203,12 +223,22 @@ All API endpoints follow RESTful conventions:
 | Category | Prefix | Auth Required |
 |----------|--------|---------------|
 | Public | `/api/v1/currencies`, `/api/v1/rates` | No |
+| News | `/api/v1/news` | No |
 | Auth | `/api/v1/auth/*` | Partial |
 | Wallet | `/api/v1/wallet/*` | Yes |
 | Goals | `/api/v1/goals/*` | Yes |
 | Budgets | `/api/v1/budgets/*` | Yes |
+| Recurring | `/api/v1/recurring/*` | Yes |
+| Subscriptions | `/api/v1/subscriptions/*` | Yes |
 | Reports | `/api/v1/reports/*` | Yes |
-| AI | `/api/v1/ai/*` | Yes |
+| AI | `/api/v1/ai/*` | Mixed |
+| Badges | `/api/v1/badges/*` | Mixed |
+| Notes | `/api/v1/notes/*` | Yes |
+| Loans | `/api/v1/loans/*` | Yes |
+| Challenges | `/api/v1/challenges/*` | Mixed |
+| XP | `/api/v1/xp/*` | Yes |
+| Tags | `/api/v1/tags/*` | Yes |
+| Notifications | `/api/v1/notifications/*` | Yes |
 
 ## Deployment
 

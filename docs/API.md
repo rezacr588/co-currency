@@ -334,6 +334,51 @@ Invalid date format:
 
 ---
 
+## News Endpoints
+
+### Get Financial News
+
+Get aggregated financial news from major sources.
+
+```
+GET /api/v1/news
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| limit | integer | No | 10 | Number of articles to return (max: 50) |
+
+**Example:**
+
+```bash
+curl "https://your-app.koyeb.app/api/v1/news?limit=5"
+```
+
+**Response (200 OK):**
+
+```json
+[
+  {
+    "title": "Markets Rally on Fed Decision",
+    "description": "Stock markets surged today following...",
+    "source": "MarketWatch",
+    "url": "https://www.marketwatch.com/...",
+    "image_url": "https://...",
+    "published_at": "2026-02-19T10:30:00Z",
+    "category": "markets"
+  }
+]
+```
+
+**Notes:**
+- Sources: MarketWatch, Yahoo Finance, CNBC
+- Results are cached (default 30 minutes)
+- Categories: markets, finance, economy, crypto
+
+---
+
 ## Authentication Endpoints
 
 ### Register
@@ -979,6 +1024,53 @@ GET /api/v1/ai/status
 
 ---
 
+### Parse Receipt Image
+
+Parse a receipt or invoice image using AI vision models. Accepts base64-encoded images.
+
+```
+POST /api/v1/ai/parse-receipt
+```
+
+**Headers:**
+
+```
+Authorization: Bearer <jwt-token>
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+  "image": "base64-encoded-image-data",
+  "mime_type": "image/jpeg"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| image | string | Yes | Base64-encoded image data |
+| mime_type | string | Yes | MIME type: `image/jpeg`, `image/png`, `application/pdf` |
+
+**Response (200 OK):**
+
+```json
+{
+  "amount": 45.99,
+  "currency": "USD",
+  "type": "debit",
+  "description": "Grocery store purchase"
+}
+```
+
+**Notes:**
+- Vision models used: Groq (`llama-3.2-90b-vision-preview`), OpenAI (`gpt-4o-mini`), Google AI (`gemini-1.5-flash`)
+- Cerebras falls back to text-only parsing
+- Configurable via `AI_VISION_MODEL` environment variable
+
+---
+
 ### Parse Receipt Text
 
 Parse text from a receipt to extract transaction details. This endpoint uses AI to intelligently extract amount, currency, and transaction type from text.
@@ -1072,6 +1164,45 @@ Content-Type: application/json
   "created_at": "2024-01-15T11:00:00Z"
 }
 ```
+
+---
+
+### Get Personalized Advice
+
+Get AI-powered personalized financial advice based on the user's financial context.
+
+```
+GET /api/v1/ai/advice
+```
+
+**Headers:**
+
+```
+Authorization: Bearer <jwt-token>
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| lang | string | No | Language code (en, fa, ar, tr) |
+
+**Response (200 OK):**
+
+```json
+{
+  "title": "Review Your Subscription Costs",
+  "detail": "You're spending $89/month on subscriptions. Consider reviewing which ones you actively use.",
+  "category": "spending",
+  "is_ai": true
+}
+```
+
+**Notes:**
+- Categories: `spending`, `saving`, `budgeting`, `investing`, `general`
+- Advice is cached for 6 hours per user
+- Falls back to static tips if AI is unavailable
+- `is_ai` indicates whether the advice was AI-generated or a static fallback
 
 ---
 
