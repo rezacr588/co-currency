@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Heart, TrendingUp, TrendingDown, Minus, RefreshCw, Info } from 'lucide-react-native';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
-import { useColors } from '../../../context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { haptics } from '../../../utils/haptics';
 
 interface HealthScoreData {
@@ -24,7 +24,8 @@ interface HealthScoreCardProps {
 }
 
 function ScoreGauge({ score }: { score: number }) {
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   // Calculate color based on score
   const getColor = (score: number): string => {
     if (score >= 80) return colors.success;
@@ -37,11 +38,15 @@ function ScoreGauge({ score }: { score: number }) {
   const color = getColor(score);
 
   return (
-    <View className="items-center">
+    <View style={{ alignItems: 'center' }}>
       {/* Score Circle - Simple solid ring design */}
       <View
-        className="w-24 h-24 rounded-full items-center justify-center"
         style={{
+          width: 96,
+          height: 96,
+          borderRadius: 9999,
+          alignItems: 'center',
+          justifyContent: 'center',
           borderWidth: 8,
           borderColor: `${color}30`,
           backgroundColor: 'transparent',
@@ -49,8 +54,11 @@ function ScoreGauge({ score }: { score: number }) {
       >
         {/* Progress indicator - colored arc segment */}
         <View
-          className="absolute w-24 h-24 rounded-full"
           style={{
+            position: 'absolute',
+            width: 96,
+            height: 96,
+            borderRadius: 9999,
             borderWidth: 8,
             borderColor: 'transparent',
             borderLeftColor: score > 0 ? color : 'transparent',
@@ -60,9 +68,9 @@ function ScoreGauge({ score }: { score: number }) {
           }}
         />
         {/* Score text */}
-        <View className="items-center justify-center">
-          <Text className="text-3xl font-bold text-foreground">{score}</Text>
-          <Text className="text-xs text-muted-foreground">/100</Text>
+        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontSize: 30, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{score}</Text>
+          <Text style={{ fontSize: 12, color: colors.mutedForeground }}>/100</Text>
         </View>
       </View>
     </View>
@@ -70,16 +78,19 @@ function ScoreGauge({ score }: { score: number }) {
 }
 
 function ComponentBar({ label, value, color }: { label: string; value: number; color: string }) {
+  const theme = useTheme();
+  const colors = theme.colors;
   return (
-    <View className="mb-2">
-      <View className="flex-row justify-between mb-1">
-        <Text className="text-xs text-muted-foreground">{label}</Text>
-        <Text className="text-xs text-foreground font-medium">{Math.round(value)}%</Text>
+    <View style={{ marginBottom: 8 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+        <Text style={{ fontSize: 12, color: colors.mutedForeground }}>{label}</Text>
+        <Text style={{ fontSize: 12, color: colors.foreground, fontFamily: 'Inter_500Medium' }}>{Math.round(value)}%</Text>
       </View>
-      <View className="h-1.5 bg-muted rounded-full overflow-hidden">
+      <View style={{ height: 6, backgroundColor: colors.muted, borderRadius: 9999, overflow: 'hidden' }}>
         <View
-          className="h-full rounded-full"
           style={{
+            height: '100%',
+            borderRadius: 9999,
             width: `${Math.min(100, value)}%`,
             backgroundColor: color,
           }}
@@ -91,7 +102,8 @@ function ComponentBar({ label, value, color }: { label: string; value: number; c
 
 export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
 
   const {
     data: healthScore,
@@ -142,27 +154,27 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
 
   if (compact) {
     return (
-      <View className="bg-card border border-border p-4 rounded-xl">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center">
-            <View className="w-10 h-10 rounded-full bg-success/20 items-center justify-center mr-3">
+      <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ width: 40, height: 40, borderRadius: 9999, backgroundColor: colors.success + '33', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
               <Heart size={20} color={colors.success} />
             </View>
             <View>
-              <Text className="text-foreground font-semibold">
+              <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
                 {t('financialHealth') || 'Financial Health'}
               </Text>
               {isPending ? (
                 <ActivityIndicator size="small" color={colors.mutedForeground} />
               ) : healthScore ? (
-                <View className="flex-row items-center">
-                  <Text className="text-2xl font-bold text-foreground mr-2">
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground, marginRight: 8 }}>
                     {healthScore.score}
                   </Text>
                   {getTrendIcon(healthScore.trend)}
                 </View>
               ) : (
-                <Text className="text-muted-foreground text-sm">
+                <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
                   {t('noDataYet') || 'No data yet'}
                 </Text>
               )}
@@ -174,18 +186,18 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
   }
 
   return (
-    <View className="bg-card border border-border p-5 rounded-xl">
+    <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 20, borderRadius: 12 }}>
       {/* Header */}
-      <View className="flex-row items-center justify-between mb-4">
-        <View className="flex-row items-center">
-          <View className="w-10 h-10 rounded-full bg-success/20 items-center justify-center mr-3">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ width: 40, height: 40, borderRadius: 9999, backgroundColor: colors.success + '33', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
             <Heart size={20} color={colors.success} />
           </View>
           <View>
-            <Text className="text-base font-semibold text-foreground">
+            <Text style={{ fontSize: 16, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
               {t('financialHealth') || 'Financial Health Score'}
             </Text>
-            <Text className="text-xs text-muted-foreground">
+            <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
               {t('overallFinancialWellness') || 'Your overall financial wellness'}
             </Text>
           </View>
@@ -193,8 +205,7 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
         <Pressable
           onPress={handleRefresh}
           disabled={isRefetching}
-          style={{ cursor: 'pointer' }}
-          className="p-2"
+          style={{ cursor: 'pointer', padding: 8 }}
         >
           <RefreshCw
             size={18}
@@ -205,24 +216,24 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
       </View>
 
       {isPending || isRefetching ? (
-        <View className="items-center py-8">
+        <View style={{ alignItems: 'center', paddingVertical: 32 }}>
           <ActivityIndicator color={colors.accent} />
-          <Text className="text-muted-foreground text-sm mt-2">
+          <Text style={{ color: colors.mutedForeground, fontSize: 14, marginTop: 8 }}>
             {t('calculatingScore') || 'Calculating your score...'}
           </Text>
         </View>
       ) : healthScore ? (
         <>
           {/* Score Display */}
-          <View className="flex-row items-center justify-between mb-6">
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
             <ScoreGauge score={healthScore.score} />
-            <View className="flex-1 ml-6">
-              <Text className="text-lg font-bold text-foreground mb-1">
+            <View style={{ flex: 1, marginLeft: 24 }}>
+              <Text style={{ fontSize: 18, fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 4 }}>
                 {getScoreLabel(healthScore.score)}
               </Text>
-              <View className="flex-row items-center">
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 {getTrendIcon(healthScore.trend)}
-                <Text className="text-sm text-muted-foreground ml-1">
+                <Text style={{ fontSize: 14, color: colors.mutedForeground, marginLeft: 4 }}>
                   {getTrendLabel(healthScore.trend)}
                 </Text>
               </View>
@@ -230,8 +241,8 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
           </View>
 
           {/* Component Breakdown */}
-          <View className="bg-muted/50 p-4 rounded-lg mb-4">
-            <Text className="text-sm font-medium text-foreground mb-3">
+          <View style={{ backgroundColor: colors.muted + '80', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+            <Text style={{ fontSize: 14, fontFamily: 'Inter_500Medium', color: colors.foreground, marginBottom: 12 }}>
               {t('scoreBreakdown') || 'Score Breakdown'}
             </Text>
             <ComponentBar
@@ -264,25 +275,25 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
           {/* Tips */}
           {healthScore.tips && healthScore.tips.length > 0 && (
             <View>
-              <View className="flex-row items-center mb-2">
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 <Info size={14} color={colors.mutedForeground} />
-                <Text className="text-xs text-muted-foreground ml-1 font-medium">
+                <Text style={{ fontSize: 12, color: colors.mutedForeground, marginLeft: 4, fontFamily: 'Inter_500Medium' }}>
                   {t('tipsToImprove') || 'Tips to improve'}
                 </Text>
               </View>
               {healthScore.tips.slice(0, 2).map((tip, idx) => (
-                <View key={idx} className="flex-row items-start mb-1">
-                  <Text className="text-accent mr-2">•</Text>
-                  <Text className="text-foreground text-sm flex-1">{tip}</Text>
+                <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 }}>
+                  <Text style={{ color: colors.accent, marginRight: 8 }}>•</Text>
+                  <Text style={{ color: colors.foreground, fontSize: 14, flex: 1 }}>{tip}</Text>
                 </View>
               ))}
             </View>
           )}
         </>
       ) : (
-        <View className="bg-muted/50 p-6 rounded-lg items-center">
+        <View style={{ backgroundColor: colors.muted + '80', padding: 24, borderRadius: 8, alignItems: 'center' }}>
           <Heart size={32} color={colors.mutedForeground} />
-          <Text className="text-muted-foreground text-center mt-2">
+          <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 8 }}>
             {t('addTransactionsForScore') || 'Add some transactions to calculate your financial health score'}
           </Text>
         </View>

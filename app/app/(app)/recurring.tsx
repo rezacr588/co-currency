@@ -17,7 +17,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, ArrowLeft, X, RefreshCw, Play, Pause, TrendingUp, TrendingDown } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { useColors } from '../../src/context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { formatDate, formatTransactionAmount } from '../../src/utils/format';
 import { FrequencyIcon, StyledCategoryIcon, CATEGORY_COLORS, getCategoryBackground, CategoryIcon } from '../../src/constants/icons';
 import { useToast } from '../../src/components/ui/Toast';
@@ -31,7 +31,8 @@ const FREQUENCIES = ['daily', 'weekly', 'monthly', 'yearly'] as const;
 
 export default function RecurringScreen() {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const router = useRouter();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
@@ -65,22 +66,22 @@ export default function RecurringScreen() {
   const pausedTransactions = transactions.filter((t) => !t.is_active);
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
       {/* Header */}
-      <View className="flex-row items-center justify-between p-4 border-b border-border" style={{ maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
-        <View className="flex-row items-center">
-          <Pressable onPress={() => router.back()} className="p-2 mr-2" style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('back') || 'Go back'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Pressable onPress={() => router.back()} style={({ pressed }) => [{ cursor: 'pointer', padding: 8, marginRight: 8 }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('back') || 'Go back'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <ArrowLeft size={24} color={colors.foreground} />
           </Pressable>
-          <Text className="text-xl font-bold text-foreground">{t('recurring')}</Text>
+          <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('recurring')}</Text>
         </View>
-        <Pressable onPress={() => setShowForm(true)} className="bg-primary p-2.5 rounded-full" style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('createRecurring') || 'Create Recurring'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Pressable onPress={() => setShowForm(true)} style={({ pressed }) => [{ cursor: 'pointer', backgroundColor: colors.primary, padding: 10, borderRadius: 9999 }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('createRecurring') || 'Create Recurring'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Plus size={22} color={colors.primaryForeground} />
         </Pressable>
       </View>
 
       <ScrollView
-        className="flex-1"
+        style={{ flex: 1 }}
         contentContainerStyle={{
           padding: isDesktop ? 32 : 16,
           maxWidth: 1400,
@@ -91,29 +92,28 @@ export default function RecurringScreen() {
         keyboardDismissMode="on-drag"
       >
         {isError ? (
-          <View className="bg-danger-muted border border-danger/20 p-6 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
-            <Text className="text-danger font-medium mb-2">{t('failedToLoadRecurring') || 'Failed to load recurring transactions'}</Text>
+          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger + '33', padding: 24, borderRadius: 12, alignItems: 'center', maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
+            <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium', marginBottom: 8 }}>{t('failedToLoadRecurring') || 'Failed to load recurring transactions'}</Text>
             <Pressable
               onPress={() => refetch()}
-              className="bg-danger/20 px-4 py-2 rounded-lg"
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: 'pointer', backgroundColor: colors.danger + '33', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
             >
-              <Text className="text-danger font-medium">{t('retry') || 'Retry'}</Text>
+              <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium' }}>{t('retry') || 'Retry'}</Text>
             </Pressable>
           </View>
         ) : isPending ? (
           <SkeletonList count={3} ItemComponent={SkeletonCard} />
         ) : transactions.length === 0 ? (
-          <View className="bg-card border border-border p-6 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
+          <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 24, borderRadius: 12, alignItems: 'center', maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
             <RefreshCw size={48} color={colors.placeholder} />
-            <Text className="text-lg font-semibold text-foreground mt-4">{t('noRecurring')}</Text>
-            <Text className="text-muted-foreground text-center mt-2">{t('noRecurringDescription')}</Text>
+            <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginTop: 16 }}>{t('noRecurring')}</Text>
+            <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 8 }}>{t('noRecurringDescription')}</Text>
           </View>
         ) : (
           <>
             {activeTransactions.length > 0 && (
-              <View className="mb-6">
-                <Text className="text-lg font-semibold text-foreground mb-4">
+              <View style={{ marginBottom: 24 }}>
+                <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginBottom: 16 }}>
                   {t('active')} ({activeTransactions.length})
                 </Text>
                 <View style={{
@@ -135,7 +135,7 @@ export default function RecurringScreen() {
 
             {pausedTransactions.length > 0 && (
               <View>
-                <Text className="text-lg font-semibold text-muted-foreground mb-4">
+                <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.mutedForeground, marginBottom: 16 }}>
                   {t('paused')} ({pausedTransactions.length})
                 </Text>
                 <View style={{
@@ -165,7 +165,8 @@ export default function RecurringScreen() {
 
 function RecurringCard({ transaction }: { transaction: any }) {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
@@ -225,10 +226,10 @@ function RecurringCard({ transaction }: { transaction: any }) {
   };
 
   return (
-    <View className={`bg-card border border-border p-4 rounded-xl ${!transaction.is_active ? 'opacity-60' : ''}`}>
-      <View className="flex-row items-center justify-between mb-3">
-        <View className="flex-row items-center flex-1">
-          <View className="mr-3">
+    <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12, opacity: !transaction.is_active ? 0.6 : 1 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+          <View style={{ marginRight: 12 }}>
             <StyledCategoryIcon
               category={transaction.category || 'other'}
               size={22}
@@ -237,36 +238,37 @@ function RecurringCard({ transaction }: { transaction: any }) {
               padding={10}
             />
           </View>
-          <View className="flex-1">
-            <Text className="font-semibold text-foreground" numberOfLines={1}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground }} numberOfLines={1}>
               {transaction.description || transaction.category || 'Recurring'}
             </Text>
-            <View className="flex-row items-center">
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <FrequencyIcon frequency={transaction.frequency} size={12} color={colors.placeholder} />
-              <Text className="text-muted-foreground text-sm ml-1">{t(transaction.frequency)}</Text>
+              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginLeft: 4 }}>{t(transaction.frequency)}</Text>
             </View>
           </View>
         </View>
         <Text
-          className={`text-lg font-bold ${
-            transaction.type === 'credit' ? 'text-success' : 'text-danger'
-          }`}
+          style={{
+            fontSize: 18,
+            fontFamily: 'Inter_700Bold',
+            color: transaction.type === 'credit' ? colors.success : colors.danger,
+          }}
         >
           {formatTransactionAmount(transaction)}
         </Text>
       </View>
 
-      <View className="flex-row items-center justify-between pt-3 border-t border-border">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
         <View>
-          <Text className="text-muted-foreground text-xs">{t('nextExecution')}</Text>
-          <Text className="text-foreground">{formatDate(transaction.next_execution)}</Text>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('nextExecution')}</Text>
+          <Text style={{ color: colors.foreground }}>{formatDate(transaction.next_execution)}</Text>
         </View>
-        <View className="flex-row items-center gap-2">
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Pressable
             onPress={handleExecute}
             disabled={executeMutation.isPending || !transaction.is_active}
-            className={`bg-accent p-2 rounded-lg ${!transaction.is_active ? 'opacity-40' : ''}`}
-            style={({ pressed }) => [{ cursor: 'pointer', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [{ cursor: 'pointer', backgroundColor: colors.accent, padding: 8, borderRadius: 8, opacity: !transaction.is_active ? 0.4 : 1, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]}
             accessibilityLabel={t('execute') || 'Execute transaction'}
             accessibilityRole="button"
           >
@@ -279,8 +281,7 @@ function RecurringCard({ transaction }: { transaction: any }) {
           <Pressable
             onPress={handleToggle}
             disabled={toggleMutation.isPending}
-            className={`p-2 rounded-lg ${transaction.is_active ? 'bg-warning/20' : 'bg-success/20'}`}
-            style={({ pressed }) => [{ cursor: 'pointer', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [{ cursor: 'pointer', padding: 8, borderRadius: 8, backgroundColor: transaction.is_active ? colors.warning + '33' : colors.success + '33', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]}
             accessibilityLabel={transaction.is_active ? (t('pauseRecurring') || 'Pause') : (t('resumeRecurring') || 'Resume')}
             accessibilityRole="button"
           >
@@ -300,7 +301,8 @@ function RecurringCard({ transaction }: { transaction: any }) {
 
 function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { width } = useWindowDimensions();
@@ -360,16 +362,16 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
-        <View className="flex-row items-center justify-between p-4 border-b border-border">
-          <Text className="text-xl font-bold text-foreground">{t('createRecurring')}</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('createRecurring')}</Text>
           <Pressable onPress={onClose} style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <X size={24} color={colors.placeholder} />
           </Pressable>
         </View>
 
         <ScrollView
-          className="flex-1"
+          style={{ flex: 1 }}
           keyboardDismissMode="on-drag"
           contentContainerStyle={{
             padding: isDesktop ? 32 : 16,
@@ -380,37 +382,34 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
         >
           <FormError message={error} />
 
-          <View className="mb-6">
-            <Text className="text-muted-foreground mb-2">{t('type')}</Text>
-            <View className="flex-row gap-3">
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>{t('type')}</Text>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
               <Pressable
                 onPress={() => setType('debit')}
-                className={`flex-1 p-4 rounded-xl items-center ${type === 'debit' ? 'bg-danger' : 'bg-card'}`}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'pointer', flex: 1, padding: 16, borderRadius: 12, alignItems: 'center', backgroundColor: type === 'debit' ? colors.danger : colors.card }}
               >
-                <TrendingDown size={20} color={type === 'debit' ? colors.foreground : colors.danger} />
-                <Text className={`mt-1 ${type === 'debit' ? 'text-white font-semibold' : 'text-foreground'}`}>
+                <TrendingDown size={20} color={type === 'debit' ? '#ffffff' : colors.danger} />
+                <Text style={{ marginTop: 4, color: type === 'debit' ? '#ffffff' : colors.foreground, fontFamily: type === 'debit' ? 'Inter_600SemiBold' : undefined }}>
                   {t('expense')}
                 </Text>
               </Pressable>
               <Pressable
                 onPress={() => setType('credit')}
-                className={`flex-1 p-4 rounded-xl items-center ${type === 'credit' ? 'bg-success' : 'bg-card'}`}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'pointer', flex: 1, padding: 16, borderRadius: 12, alignItems: 'center', backgroundColor: type === 'credit' ? colors.success : colors.card }}
               >
-                <TrendingUp size={20} color={type === 'credit' ? colors.foreground : colors.success} />
-                <Text className={`mt-1 ${type === 'credit' ? 'text-white font-semibold' : 'text-foreground'}`}>
+                <TrendingUp size={20} color={type === 'credit' ? '#ffffff' : colors.success} />
+                <Text style={{ marginTop: 4, color: type === 'credit' ? '#ffffff' : colors.foreground, fontFamily: type === 'credit' ? 'Inter_600SemiBold' : undefined }}>
                   {t('income')}
                 </Text>
               </Pressable>
             </View>
           </View>
 
-          <View className="mb-6">
-            <Text className="text-muted-foreground mb-2">{t('amount')}</Text>
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>{t('amount')}</Text>
             <TextInput
-              className="bg-card p-4 rounded-xl text-foreground text-lg"
-              style={{ outlineStyle: 'none' } as any}
+              style={{ backgroundColor: colors.card, padding: 16, borderRadius: 12, color: colors.foreground, fontSize: 18, outlineStyle: 'none' } as any}
               value={amount}
               onChangeText={setAmount}
               keyboardType="decimal-pad"
@@ -419,17 +418,16 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
             />
           </View>
 
-          <View className="mb-6">
-            <Text className="text-muted-foreground mb-2">{t('frequency')}</Text>
-            <View className="flex-row flex-wrap gap-2">
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>{t('frequency')}</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {FREQUENCIES.map((freq) => (
                 <Pressable
                   key={freq}
                   onPress={() => setFrequency(freq)}
-                  className={`px-4 py-2 rounded-lg ${frequency === freq ? 'bg-accent' : 'bg-card'}`}
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: 'pointer', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, backgroundColor: frequency === freq ? colors.accent : colors.card }}
                 >
-                  <Text className={frequency === freq ? 'text-accent-foreground font-semibold' : 'text-foreground'}>
+                  <Text style={{ color: frequency === freq ? colors.accentForeground : colors.foreground, fontFamily: frequency === freq ? 'Inter_600SemiBold' : undefined }}>
                     {t(freq)}
                   </Text>
                 </Pressable>
@@ -437,9 +435,9 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
             </View>
           </View>
 
-          <View className="mb-6">
-            <Text className="text-muted-foreground mb-2">{t('category')}</Text>
-            <View className="flex-row flex-wrap gap-2">
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>{t('category')}</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {CATEGORIES.map((cat) => {
                 const isSelected = category === cat;
                 const catColor = CATEGORY_COLORS[cat.toLowerCase()] || colors.placeholder;
@@ -454,18 +452,23 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
                       backgroundColor: bgColor,
                       borderWidth: isSelected ? 0 : 1,
                       borderColor: isSelected ? 'transparent' : getCategoryBackground(cat, 0.25),
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 12,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
                     }}
-                    className="px-4 py-2 rounded-xl flex-row items-center gap-2"
                   >
                     <CategoryIcon
                       category={cat}
                       size={16}
-                      color={isSelected ? 'white' : catColor}
+                      color={isSelected ? '#ffffff' : catColor}
                     />
                     <Text
                       style={{
-                        color: isSelected ? 'white' : catColor,
-                        fontWeight: isSelected ? '600' : '500',
+                        color: isSelected ? '#ffffff' : catColor,
+                        fontFamily: isSelected ? 'Inter_600SemiBold' : 'Inter_500Medium',
                       }}
                     >
                       {t(cat) || cat}
@@ -476,11 +479,10 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
             </View>
           </View>
 
-          <View className="mb-6">
-            <Text className="text-muted-foreground mb-2">{t('description')}</Text>
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>{t('description')}</Text>
             <TextInput
-              className="bg-card p-4 rounded-xl text-foreground"
-              style={{ outlineStyle: 'none' } as any}
+              style={{ backgroundColor: colors.card, padding: 16, borderRadius: 12, color: colors.foreground, outlineStyle: 'none' } as any}
               value={description}
               onChangeText={setDescription}
               placeholder={t('descriptionPlaceholder')}

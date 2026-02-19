@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Calendar, TrendingUp, TrendingDown, Lightbulb, CheckCircle, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency, formatNumber } from '../../../utils/format';
 import { CATEGORY_COLORS, StyledCategoryIcon } from '../../../constants/icons';
 
@@ -13,6 +14,8 @@ interface WeeklyReportViewProps {
 
 export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
   const { t } = useLanguage();
+  const theme = useTheme();
+  const colors = theme.colors;
   const [weekOffset, setWeekOffset] = useState(0);
 
   const referenceDate = useMemo(() => {
@@ -31,28 +34,28 @@ export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
 
   if (isPending) {
     return (
-      <View className="items-center justify-center py-8">
-        <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
+      <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 32 }}>
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
 
   if (isError) {
     return (
-      <View className="bg-card p-6 rounded-xl items-center">
-        <AlertCircle size={48} color="rgb(220, 38, 38)" />
-        <Text className="text-foreground font-semibold mt-4 text-lg">{t('failedToLoadReport')}</Text>
-        <Text className="text-muted-foreground mt-2 text-center">{t('checkConnection')}</Text>
+      <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, alignItems: 'center' }}>
+        <AlertCircle size={48} color={colors.danger} />
+        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginTop: 16, fontSize: 18 }}>{t('failedToLoadReport')}</Text>
+        <Text style={{ color: colors.mutedForeground, marginTop: 8, textAlign: 'center' }}>{t('checkConnection')}</Text>
       </View>
     );
   }
 
   if (!weeklyRecap) {
     return (
-      <View className="bg-card p-8 rounded-xl items-center">
-        <Calendar size={48} color="rgb(71, 71, 71)" />
-        <Text className="text-foreground font-semibold mt-4 text-lg">{t('noDataAvailable')}</Text>
-        <Text className="text-muted-foreground mt-2 text-center">
+      <View style={{ backgroundColor: colors.card, padding: 32, borderRadius: 12, alignItems: 'center' }}>
+        <Calendar size={48} color={colors.mutedForeground} />
+        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginTop: 16, fontSize: 18 }}>{t('noDataAvailable')}</Text>
+        <Text style={{ color: colors.mutedForeground, marginTop: 8, textAlign: 'center' }}>
           {t('addTransaction')}
         </Text>
       </View>
@@ -70,22 +73,22 @@ export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
   return (
     <View>
       {/* Week Navigation */}
-      <View className="flex-row items-center justify-between mb-4 bg-card px-4 py-3 rounded-xl">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, backgroundColor: colors.card, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12 }}>
         <Pressable
           onPress={() => setWeekOffset(weekOffset + 1)}
-          className="p-2 rounded-lg bg-secondary"
+          style={{ padding: 8, borderRadius: 8, backgroundColor: colors.secondary }}
           accessibilityLabel={t('previousWeek')}
         >
           <ChevronLeft size={20} color="#a1a1aa" />
         </Pressable>
-        <View className="items-center flex-1 mx-3">
-          <Text className="text-foreground font-semibold text-sm" numberOfLines={1}>
+        <View style={{ alignItems: 'center', flex: 1, marginHorizontal: 12 }}>
+          <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 14 }} numberOfLines={1}>
             {weekLabel}
           </Text>
         </View>
         <Pressable
           onPress={() => weekOffset > 0 && setWeekOffset(weekOffset - 1)}
-          className={`p-2 rounded-lg ${weekOffset === 0 ? 'opacity-30' : 'bg-secondary'}`}
+          style={{ padding: 8, borderRadius: 8, backgroundColor: weekOffset === 0 ? colors.secondary + '4d' : colors.secondary, opacity: weekOffset === 0 ? 0.3 : 1 }}
           disabled={weekOffset === 0}
           accessibilityLabel={t('nextWeek')}
         >
@@ -94,32 +97,40 @@ export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
       </View>
 
       {/* Weekly Summary Card */}
-      <View className="bg-card p-6 rounded-xl mb-6">
-        <View className="flex-row items-center justify-between mb-4">
-          <View className="flex-row items-center">
-            <View className="bg-accent/20 p-2 rounded-lg mr-3">
-              <Calendar size={20} color="rgb(212, 175, 55)" />
+      <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
+              <Calendar size={20} color={colors.accent} />
             </View>
-            <Text className="text-foreground font-semibold">{t('thisWeek')}</Text>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('thisWeek')}</Text>
           </View>
 
           {/* Week over Week Comparison */}
           <View
-            className={`px-3 py-1.5 rounded-full flex-row items-center ${
-              isPositiveCompare ? 'bg-success/20' : comparePercent > 0 ? 'bg-danger/20' : 'bg-secondary'
-            }`}
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 9999,
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: isPositiveCompare ? colors.success + '33' : comparePercent > 0 ? colors.danger + '33' : colors.secondary,
+            }}
           >
             {comparePercent !== 0 && (
               isPositiveCompare ? (
-                <TrendingDown size={14} color="rgb(16, 185, 129)" />
+                <TrendingDown size={14} color={colors.success} />
               ) : (
-                <TrendingUp size={14} color="rgb(220, 38, 38)" />
+                <TrendingUp size={14} color={colors.danger} />
               )
             )}
             <Text
-              className={`text-sm font-semibold ml-1 ${
-                isPositiveCompare ? 'text-success' : comparePercent > 0 ? 'text-danger' : 'text-muted-foreground'
-              }`}
+              style={{
+                fontSize: 14,
+                fontFamily: 'Inter_600SemiBold',
+                marginLeft: 4,
+                color: isPositiveCompare ? colors.success : comparePercent > 0 ? colors.danger : colors.mutedForeground,
+              }}
             >
               {comparePercent > 0 ? '+' : ''}{formatNumber(comparePercent, 1)}% {t('weekOverWeek')}
             </Text>
@@ -131,35 +142,37 @@ export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
           gap: 12,
         }}>
           {/* Total Income */}
-          <View className="flex-1 bg-success/10 border border-success/30 p-4 rounded-xl">
-            <View className="flex-row items-center mb-2">
-              <TrendingUp size={16} color="rgb(16, 185, 129)" />
-              <Text className="text-muted-foreground text-sm ml-2">{t('totalIncome')}</Text>
+          <View style={{ flex: 1, backgroundColor: colors.success + '1a', borderWidth: 1, borderColor: colors.success + '4d', padding: 16, borderRadius: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <TrendingUp size={16} color={colors.success} />
+              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginLeft: 8 }}>{t('totalIncome')}</Text>
             </View>
-            <Text className="text-success text-2xl font-bold">
+            <Text style={{ color: colors.success, fontSize: 24, fontFamily: 'Inter_700Bold' }}>
               {formatCompactCurrency(weeklyRecap.total_income, weeklyRecap.currency)}
             </Text>
           </View>
 
           {/* Total Spent */}
-          <View className="flex-1 bg-danger/10 border border-danger/30 p-4 rounded-xl">
-            <View className="flex-row items-center mb-2">
-              <TrendingDown size={16} color="rgb(220, 38, 38)" />
-              <Text className="text-muted-foreground text-sm ml-2">{t('totalExpenses')}</Text>
+          <View style={{ flex: 1, backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', padding: 16, borderRadius: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <TrendingDown size={16} color={colors.danger} />
+              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginLeft: 8 }}>{t('totalExpenses')}</Text>
             </View>
-            <Text className="text-danger text-2xl font-bold">
+            <Text style={{ color: colors.danger, fontSize: 24, fontFamily: 'Inter_700Bold' }}>
               {formatCompactCurrency(weeklyRecap.total_spent, weeklyRecap.currency)}
             </Text>
           </View>
         </View>
 
         {/* Net Change */}
-        <View className="mt-4 bg-secondary/50 p-4 rounded-lg">
-          <Text className="text-muted-foreground text-sm mb-1">{t('net')}</Text>
+        <View style={{ marginTop: 16, backgroundColor: colors.secondary + '80', padding: 16, borderRadius: 8 }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 4 }}>{t('net')}</Text>
           <Text
-            className={`text-2xl font-bold ${
-              weeklyRecap.net_change >= 0 ? 'text-success' : 'text-danger'
-            }`}
+            style={{
+              fontSize: 24,
+              fontFamily: 'Inter_700Bold',
+              color: weeklyRecap.net_change >= 0 ? colors.success : colors.danger,
+            }}
           >
             {weeklyRecap.net_change >= 0 ? '+' : ''}{formatCompactCurrency(weeklyRecap.net_change, weeklyRecap.currency)}
           </Text>
@@ -168,24 +181,24 @@ export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
 
       {/* Top Categories */}
       {weeklyRecap.top_categories && weeklyRecap.top_categories.length > 0 && (
-        <View className="bg-card p-6 rounded-xl mb-6">
-          <View className="flex-row items-center mb-4">
-            <View className="bg-secondary p-2 rounded-lg mr-3">
-              <Calendar size={20} color="rgb(148, 163, 184)" />
+        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginRight: 12 }}>
+              <Calendar size={20} color={colors.mutedForeground} />
             </View>
-            <Text className="text-foreground font-semibold">{t('topCategories')}</Text>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('topCategories')}</Text>
           </View>
 
-          <View className="gap-3">
+          <View style={{ gap: 12 }}>
             {weeklyRecap.top_categories.slice(0, 5).map((cat, index) => {
               const maxAmount = weeklyRecap.top_categories[0]?.amount || 1;
               const barWidth = (cat.amount / maxAmount) * 100;
-              const categoryColor = CATEGORY_COLORS[cat.category.toLowerCase()] || 'rgb(212, 175, 55)';
+              const categoryColor = CATEGORY_COLORS[cat.category.toLowerCase()] || colors.accent;
 
               return (
                 <View key={cat.category}>
-                  <View className="flex-row items-center justify-between mb-1">
-                    <View className="flex-row items-center">
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <StyledCategoryIcon
                         category={cat.category}
                         size={14}
@@ -193,16 +206,17 @@ export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
                         borderRadius={6}
                         padding={6}
                       />
-                      <Text className="text-foreground text-sm capitalize ml-2">{cat.category}</Text>
+                      <Text style={{ color: colors.foreground, fontSize: 14, textTransform: 'capitalize', marginLeft: 8 }}>{cat.category}</Text>
                     </View>
-                    <Text className="text-muted-foreground text-sm font-medium">
+                    <Text style={{ color: colors.mutedForeground, fontSize: 14, fontFamily: 'Inter_500Medium' }}>
                       {formatCompactCurrency(cat.amount, weeklyRecap.currency)}
                     </Text>
                   </View>
-                  <View className="h-3 bg-secondary rounded-full overflow-hidden">
+                  <View style={{ height: 12, backgroundColor: colors.secondary, borderRadius: 9999, overflow: 'hidden' }}>
                     <View
-                      className="h-full rounded-full"
                       style={{
+                        height: '100%',
+                        borderRadius: 9999,
                         width: `${barWidth}%`,
                         backgroundColor: categoryColor,
                       }}
@@ -217,24 +231,24 @@ export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
 
       {/* Weekly Insights */}
       {weeklyRecap.insights && weeklyRecap.insights.length > 0 && (
-        <View className="bg-card p-6 rounded-xl mb-6">
-          <View className="flex-row items-center mb-4">
-            <View className="bg-accent/20 p-2 rounded-lg mr-3">
-              <Lightbulb size={20} color="rgb(212, 175, 55)" />
+        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
+              <Lightbulb size={20} color={colors.accent} />
             </View>
-            <Text className="text-foreground font-semibold">{t('weeklyInsights')}</Text>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('weeklyInsights')}</Text>
           </View>
 
-          <View className="gap-3">
+          <View style={{ gap: 12 }}>
             {weeklyRecap.insights.map((insight, index) => (
               <View
                 key={index}
-                className="bg-secondary/30 p-3 rounded-lg flex-row items-start"
+                style={{ backgroundColor: colors.secondary + '4d', padding: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'flex-start' }}
               >
-                <View className="w-6 h-6 rounded-full bg-accent/20 items-center justify-center mr-3 mt-0.5">
-                  <Text className="text-accent text-xs font-bold">{index + 1}</Text>
+                <View style={{ width: 24, height: 24, borderRadius: 9999, backgroundColor: colors.accent + '33', alignItems: 'center', justifyContent: 'center', marginRight: 12, marginTop: 2 }}>
+                  <Text style={{ color: colors.accent, fontSize: 12, fontFamily: 'Inter_700Bold' }}>{index + 1}</Text>
                 </View>
-                <Text className="text-foreground text-sm flex-1">{insight}</Text>
+                <Text style={{ color: colors.foreground, fontSize: 14, flex: 1 }}>{insight}</Text>
               </View>
             ))}
           </View>
@@ -243,22 +257,22 @@ export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
 
       {/* Action Items */}
       {weeklyRecap.action_items && weeklyRecap.action_items.length > 0 && (
-        <View className="bg-card p-6 rounded-xl">
-          <View className="flex-row items-center mb-4">
-            <View className="bg-success/20 p-2 rounded-lg mr-3">
-              <CheckCircle size={20} color="rgb(16, 185, 129)" />
+        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <View style={{ backgroundColor: colors.success + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
+              <CheckCircle size={20} color={colors.success} />
             </View>
-            <Text className="text-foreground font-semibold">{t('actionItems')}</Text>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('actionItems')}</Text>
           </View>
 
-          <View className="gap-3">
+          <View style={{ gap: 12 }}>
             {weeklyRecap.action_items.map((item, index) => (
               <View
                 key={index}
-                className="bg-success/5 border border-success/20 p-3 rounded-lg flex-row items-start"
+                style={{ backgroundColor: colors.success + '0d', borderWidth: 1, borderColor: colors.success + '33', padding: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'flex-start' }}
               >
-                <View className="w-5 h-5 rounded border-2 border-success mr-3 mt-0.5" />
-                <Text className="text-foreground text-sm flex-1">{item}</Text>
+                <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: colors.success, marginRight: 12, marginTop: 2 }} />
+                <Text style={{ color: colors.foreground, fontSize: 14, flex: 1 }}>{item}</Text>
               </View>
             ))}
           </View>

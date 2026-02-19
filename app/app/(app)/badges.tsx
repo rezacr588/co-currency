@@ -6,7 +6,7 @@ import { Trophy, Target, Lock, Award, ChevronLeft, RefreshCw, Gift, X } from 'lu
 import { useRouter } from 'expo-router';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { useColors } from '../../src/context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { Card } from '../../src/components/ui';
 import { haptics } from '../../src/utils/haptics';
 import { useToast } from '../../src/components/ui/Toast';
@@ -29,68 +29,68 @@ interface BadgeProgress {
   earned_at?: string;
 }
 
-const RARITY_STYLES = {
-  common: {
-    bg: 'bg-muted',
-    border: 'border-border',
-    text: 'text-muted-foreground',
-  },
-  rare: {
-    bg: 'bg-blue-500/10',
-    border: 'border-blue-500/30',
-    text: 'text-blue-500',
-  },
-  epic: {
-    bg: 'bg-purple-500/10',
-    border: 'border-purple-500/30',
-    text: 'text-purple-500',
-  },
-  legendary: {
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-500/30',
-    text: 'text-amber-500',
-  },
-};
+function getRarityStyles(rarity: string, colors: any) {
+  switch (rarity) {
+    case 'rare':
+      return { bg: '#3b82f51a', border: '#3b82f54d', text: '#3b82f5' };
+    case 'epic':
+      return { bg: '#a855f71a', border: '#a855f74d', text: '#a855f7' };
+    case 'legendary':
+      return { bg: '#f59e0b1a', border: '#f59e0b4d', text: '#f59e0b' };
+    default: // common
+      return { bg: colors.muted, border: colors.border, text: colors.mutedForeground };
+  }
+}
 
 function BadgeCard({ progress }: { progress: BadgeProgress }) {
+  const theme = useTheme();
+  const colors = theme.colors;
   const { badge, is_earned, progress_percent, current_value, required_value } = progress;
-  const style = RARITY_STYLES[badge.rarity] || RARITY_STYLES.common;
+  const style = getRarityStyles(badge.rarity, colors);
 
   return (
     <View
-      className={`p-4 rounded-xl border-2 ${style.bg} ${style.border} ${
-        is_earned ? '' : 'opacity-60'
-      }`}
+      style={{
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 2,
+        backgroundColor: style.bg,
+        borderColor: style.border,
+        opacity: is_earned ? 1 : 0.6,
+      }}
     >
-      <View className="items-center">
-        <Text className="text-4xl mb-2">{badge.icon}</Text>
+      <View style={{ alignItems: 'center' }}>
+        <Text style={{ fontSize: 36, marginBottom: 8 }}>{badge.icon}</Text>
         <Text
-          className={`text-sm font-semibold text-center mb-1 ${
-            is_earned ? 'text-foreground' : 'text-muted-foreground'
-          }`}
+          style={{
+            fontSize: 14,
+            fontFamily: 'Inter_600SemiBold',
+            textAlign: 'center',
+            marginBottom: 4,
+            color: is_earned ? colors.foreground : colors.mutedForeground,
+          }}
           numberOfLines={2}
         >
           {badge.name}
         </Text>
-        <Text className={`text-xs uppercase ${style.text}`}>{badge.rarity}</Text>
+        <Text style={{ fontSize: 12, textTransform: 'uppercase', color: style.text }}>{badge.rarity}</Text>
 
         {!is_earned && progress_percent > 0 && (
-          <View className="w-full mt-2">
-            <View className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+          <View style={{ width: '100%', marginTop: 8 }}>
+            <View style={{ width: '100%', height: 6, backgroundColor: colors.muted, borderRadius: 9999, overflow: 'hidden' }}>
               <View
-                className="h-full bg-primary rounded-full"
-                style={{ width: `${Math.min(progress_percent, 100)}%` }}
+                style={{ height: '100%', backgroundColor: colors.primary, borderRadius: 9999, width: `${Math.min(progress_percent, 100)}%` }}
               />
             </View>
-            <Text className="text-xs text-muted-foreground text-center mt-1">
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: 'center', marginTop: 4 }}>
               {Math.round(current_value)}/{Math.round(required_value)}
             </Text>
           </View>
         )}
 
         {is_earned && (
-          <View className="absolute -top-1 -right-1 w-5 h-5 bg-success rounded-full items-center justify-center">
-            <Text className="text-white text-xs">✓</Text>
+          <View style={{ position: 'absolute', top: -4, right: -4, width: 20, height: 20, backgroundColor: colors.success, borderRadius: 9999, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ color: 'white', fontSize: 12 }}>✓</Text>
           </View>
         )}
       </View>
@@ -104,7 +104,8 @@ export default function BadgesScreen() {
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
   const { showToast } = useToast();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const [showNewlyEarned, setShowNewlyEarned] = useState(false);
 
   const isLargeScreen = width > 768;
@@ -145,30 +146,28 @@ export default function BadgesScreen() {
     data?.progress?.filter((p: BadgeProgress) => !p.is_earned && p.progress_percent === 0) || [];
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <ScrollView className="flex-1" contentContainerClassName="p-4">
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
         {/* Header */}
-        <View className="flex-row items-center justify-between mb-6">
-          <View className="flex-row items-center">
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Pressable
               onPress={() => router.back()}
-              style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
-              className="p-2 mr-2"
+              style={({ pressed }) => [{ cursor: 'pointer', padding: 8, marginRight: 8 }, pressed && { opacity: 0.7 }]}
               accessibilityLabel={t('back') || 'Go back'}
               accessibilityRole="button"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <ChevronLeft size={24} color={colors.placeholder} />
             </Pressable>
-            <Text className="text-2xl font-bold text-foreground">
+            <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
               {t('badges') || 'Badges'}
             </Text>
           </View>
           <Pressable
             onPress={handleClaimRewards}
             disabled={checkBadgesMutation.isPending}
-            style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
-            className="bg-primary px-4 py-2 rounded-xl flex-row items-center"
+            style={({ pressed }) => [{ cursor: 'pointer', backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, flexDirection: 'row', alignItems: 'center' }, pressed && { opacity: 0.7 }]}
             accessibilityLabel={t('claimRewards') || 'Claim Rewards'}
             accessibilityRole="button"
           >
@@ -177,7 +176,7 @@ export default function BadgesScreen() {
             ) : (
               <>
                 <Gift size={18} color={colors.primaryForeground} />
-                <Text className="text-primary-foreground font-semibold ml-2">
+                <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>
                   {t('claimRewards') || 'Claim Rewards'}
                 </Text>
               </>
@@ -187,19 +186,19 @@ export default function BadgesScreen() {
 
         {/* Newly Earned Badges Alert */}
         {showNewlyEarned && checkBadgesMutation.data?.newly_earned && checkBadgesMutation.data.newly_earned.length > 0 && (
-          <View className="bg-success/10 border border-success/30 p-4 rounded-xl mb-6">
-            <View className="flex-row items-center justify-between mb-2">
-              <Text className="text-success font-semibold">
+          <View style={{ backgroundColor: colors.success + '1a', borderWidth: 1, borderColor: colors.success + '4d', padding: 16, borderRadius: 12, marginBottom: 24 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={{ color: colors.success, fontFamily: 'Inter_600SemiBold' }}>
                 🎉 {t('newBadgesEarned') || 'New Badges Earned!'}
               </Text>
-              <Pressable onPress={() => setShowNewlyEarned(false)} style={{ cursor: 'pointer' }} className="p-1">
+              <Pressable onPress={() => setShowNewlyEarned(false)} style={{ cursor: 'pointer', padding: 4 }}>
                 <X size={18} color={colors.success} />
               </Pressable>
             </View>
-            <View className="flex-row flex-wrap justify-center gap-2">
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 }}>
               {checkBadgesMutation.data.newly_earned.map((badge: any) => (
-                <View key={badge.badge_id} className="bg-success/20 px-3 py-1 rounded-full">
-                  <Text className="text-success text-sm">
+                <View key={badge.badge_id} style={{ backgroundColor: colors.success + '33', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 9999 }}>
+                  <Text style={{ color: colors.success, fontSize: 14 }}>
                     {badge.badge?.icon} {badge.badge?.name}
                   </Text>
                 </View>
@@ -209,15 +208,15 @@ export default function BadgesScreen() {
         )}
 
         {isPending ? (
-          <View className="flex-1 items-center justify-center py-12">
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 48 }}>
             <ActivityIndicator size="large" color={colors.accent} />
           </View>
         ) : error ? (
-          <View className="bg-danger/10 p-4 rounded-xl">
-            <Text className="text-danger text-center">Error loading badges</Text>
+          <View style={{ backgroundColor: colors.danger + '1a', padding: 16, borderRadius: 12 }}>
+            <Text style={{ color: colors.danger, textAlign: 'center' }}>Error loading badges</Text>
           </View>
         ) : (
-          <View className="gap-6">
+          <View style={{ gap: 24 }}>
             {/* Stats */}
             <View
               style={{
@@ -227,45 +226,45 @@ export default function BadgesScreen() {
               }}
             >
               <View style={{ flex: 1, minWidth: isLargeScreen ? 150 : '45%' }}>
-                <Card className="p-4 items-center">
+                <Card style={{ padding: 16, alignItems: 'center' }}>
                   <Trophy size={24} color={colors.accent} />
-                  <Text className="text-2xl font-bold text-primary mt-2">
+                  <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.primary, marginTop: 8 }}>
                     {data?.earned_count || 0}
                   </Text>
-                  <Text className="text-xs text-muted-foreground">
+                  <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
                     {t('badgesEarned') || 'Earned'}
                   </Text>
                 </Card>
               </View>
               <View style={{ flex: 1, minWidth: isLargeScreen ? 150 : '45%' }}>
-                <Card className="p-4 items-center">
+                <Card style={{ padding: 16, alignItems: 'center' }}>
                   <Target size={24} color={colors.warning} />
-                  <Text className="text-2xl font-bold text-amber-500 mt-2">
+                  <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: '#f59e0b', marginTop: 8 }}>
                     {inProgress.length}
                   </Text>
-                  <Text className="text-xs text-muted-foreground">
+                  <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
                     {t('inProgress') || 'In Progress'}
                   </Text>
                 </Card>
               </View>
               <View style={{ flex: 1, minWidth: isLargeScreen ? 150 : '45%' }}>
-                <Card className="p-4 items-center">
+                <Card style={{ padding: 16, alignItems: 'center' }}>
                   <Lock size={24} color={colors.placeholder} />
-                  <Text className="text-2xl font-bold text-muted-foreground mt-2">
+                  <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.mutedForeground, marginTop: 8 }}>
                     {locked.length}
                   </Text>
-                  <Text className="text-xs text-muted-foreground">
+                  <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
                     {t('locked') || 'Locked'}
                   </Text>
                 </Card>
               </View>
               <View style={{ flex: 1, minWidth: isLargeScreen ? 150 : '45%' }}>
-                <Card className="p-4 items-center">
+                <Card style={{ padding: 16, alignItems: 'center' }}>
                   <Award size={24} color={colors.placeholder} />
-                  <Text className="text-2xl font-bold text-foreground mt-2">
+                  <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground, marginTop: 8 }}>
                     {data?.total_badges || 0}
                   </Text>
-                  <Text className="text-xs text-muted-foreground">
+                  <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
                     {t('totalBadges') || 'Total'}
                   </Text>
                 </Card>
@@ -275,7 +274,7 @@ export default function BadgesScreen() {
             {/* Earned Badges */}
             {earned.length > 0 && (
               <View>
-                <Text className="text-lg font-semibold text-foreground mb-3 flex-row items-center">
+                <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginBottom: 12 }}>
                   <Text>🏆 {t('earnedBadges') || 'Earned Badges'} ({earned.length})</Text>
                 </Text>
                 <View
@@ -297,7 +296,7 @@ export default function BadgesScreen() {
             {/* In Progress Badges */}
             {inProgress.length > 0 && (
               <View>
-                <Text className="text-lg font-semibold text-foreground mb-3">
+                <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginBottom: 12 }}>
                   🎯 {t('inProgressBadges') || 'In Progress'} ({inProgress.length})
                 </Text>
                 <View
@@ -319,7 +318,7 @@ export default function BadgesScreen() {
             {/* Locked Badges */}
             {locked.length > 0 && (
               <View>
-                <Text className="text-lg font-semibold text-foreground mb-3">
+                <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginBottom: 12 }}>
                   🔒 {t('lockedBadges') || 'Locked'} ({locked.length})
                 </Text>
                 <View
@@ -340,12 +339,12 @@ export default function BadgesScreen() {
 
             {/* Empty State */}
             {data?.progress?.length === 0 && (
-              <View className="items-center py-12">
-                <Text className="text-6xl mb-4">🎖️</Text>
-                <Text className="text-lg font-medium text-foreground mb-1">
+              <View style={{ alignItems: 'center', paddingVertical: 48 }}>
+                <Text style={{ fontSize: 60, marginBottom: 16 }}>🎖️</Text>
+                <Text style={{ fontSize: 18, fontFamily: 'Inter_500Medium', color: colors.foreground, marginBottom: 4 }}>
                   {t('noBadgesYet') || 'No badges yet'}
                 </Text>
-                <Text className="text-muted-foreground text-center">
+                <Text style={{ color: colors.mutedForeground, textAlign: 'center' }}>
                   {t('startEarningBadges') || 'Start using CoFinance to earn achievements!'}
                 </Text>
               </View>

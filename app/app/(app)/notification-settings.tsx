@@ -22,7 +22,8 @@ import {
 } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { useTheme, useColors } from '../../src/context/ThemeContext';
+import { useTheme } from '../../src/context/ThemeContext';
+import { useTheme as useStyledTheme } from 'styled-components/native';
 import { usePushNotifications, scheduleLocalNotification } from '../../src/hooks/usePushNotifications';
 import { haptics } from '../../src/utils/haptics';
 import { Toggle } from '../../src/components/ui/Toggle';
@@ -34,7 +35,8 @@ export default function NotificationSettingsScreen() {
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
-  const colors = useColors();
+  const styledTheme = useStyledTheme();
+  const colors = styledTheme.colors;
   const { expoPushToken, error: pushError, isLoading: isPushLoading, registerForPushNotifications } = usePushNotifications();
 
   const iconColor = isDark ? colors.foreground : 'rgb(51, 65, 85)';
@@ -114,15 +116,16 @@ export default function NotificationSettingsScreen() {
     <Pressable
       onPress={onToggle}
       disabled={disabled}
-      className={`flex-row items-center justify-between p-4 border-b border-border ${
-        disabled ? 'opacity-50' : ''
-      }`}
+      style={{
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border,
+        opacity: disabled ? 0.5 : 1,
+      }}
     >
-      <View className="flex-row items-center flex-1 mr-4">
+      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 16 }}>
         {icon}
-        <View className="ml-3 flex-1">
-          <Text className="text-foreground font-medium">{title}</Text>
-          <Text className="text-muted-foreground text-xs mt-0.5">{description}</Text>
+        <View style={{ marginLeft: 12, flex: 1 }}>
+          <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>{title}</Text>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 2 }}>{description}</Text>
         </View>
       </View>
       <Toggle
@@ -134,75 +137,75 @@ export default function NotificationSettingsScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       {/* Header */}
-      <View className="flex-row items-center justify-between p-4 border-b border-border">
-        <Pressable onPress={() => router.back()} className="p-2" hitSlop={12}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <Pressable onPress={() => router.back()} style={{ padding: 8 }} hitSlop={12}>
           <ArrowLeft size={24} color={iconColor} />
         </Pressable>
-        <Text className="text-xl font-bold text-foreground">
+        <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
           {t('notificationSettings') || 'Notification Settings'}
         </Text>
-        <View className="w-10" />
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView
-        className="flex-1"
+        style={{ flex: 1 }}
         contentContainerStyle={{
           padding: 16,
           paddingBottom: insets.bottom + 32,
         }}
       >
         {/* Push Token Status */}
-        <View className="bg-card border border-border p-4 rounded-xl mb-6">
-          <View className="flex-row items-center mb-2">
+        <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12, marginBottom: 24 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <Bell size={20} color={colors.accent} />
-            <Text className="text-foreground font-semibold ml-2">
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>
               {t('pushNotifications') || 'Push Notifications'}
             </Text>
           </View>
           {expoPushToken ? (
-            <View className="bg-success/10 border border-success/20 p-3 rounded-lg">
-              <Text className="text-success text-sm">
+            <View style={{ backgroundColor: colors.success + '1a', borderWidth: 1, borderColor: colors.success + '33', padding: 12, borderRadius: 8 }}>
+              <Text style={{ color: colors.success, fontSize: 14 }}>
                 {t('notificationsEnabled') || 'Push notifications are enabled'}
               </Text>
             </View>
           ) : isPushLoading ? (
-            <View className="items-center py-2">
+            <View style={{ alignItems: 'center', paddingVertical: 8 }}>
               <ActivityIndicator color={colors.accent} />
-              <Text className="text-muted-foreground text-sm mt-2">
+              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginTop: 8 }}>
                 {t('checkingPermissions') || 'Checking permissions...'}
               </Text>
             </View>
           ) : pushError ? (
             <View>
-              <View className="bg-danger/10 border border-danger/20 p-3 rounded-lg mb-3">
-                <View className="flex-row items-center">
+              <View style={{ backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '33', padding: 12, borderRadius: 8, marginBottom: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <AlertCircle size={16} color={colors.danger} />
-                  <Text className="text-danger text-sm ml-2">{pushError}</Text>
+                  <Text style={{ color: colors.danger, fontSize: 14, marginLeft: 8 }}>{pushError}</Text>
                 </View>
               </View>
               <Pressable
                 onPress={handleRequestPermission}
-                className="bg-accent p-3 rounded-lg items-center"
+                style={{ backgroundColor: colors.accent, padding: 12, borderRadius: 8, alignItems: 'center' }}
               >
-                <Text className="text-accent-foreground font-medium">
+                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_500Medium' }}>
                   {t('enableNotifications') || 'Enable Notifications'}
                 </Text>
               </Pressable>
             </View>
           ) : (
             <View>
-              <View className="bg-muted/50 border border-border p-3 rounded-lg mb-3">
-                <Text className="text-muted-foreground text-sm">
+              <View style={{ backgroundColor: colors.muted + '80', borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 8, marginBottom: 12 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
                   {t('notificationsNotSetUp') || 'Push notifications are not set up yet'}
                 </Text>
               </View>
               <Pressable
                 onPress={handleRequestPermission}
-                className="bg-accent p-3 rounded-lg items-center"
+                style={{ backgroundColor: colors.accent, padding: 12, borderRadius: 8, alignItems: 'center' }}
               >
-                <Text className="text-accent-foreground font-medium">
+                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_500Medium' }}>
                   {t('enableNotifications') || 'Enable Notifications'}
                 </Text>
               </Pressable>
@@ -212,12 +215,12 @@ export default function NotificationSettingsScreen() {
 
         {/* Notification Types */}
         {isPending ? (
-          <View className="items-center py-8">
+          <View style={{ alignItems: 'center', paddingVertical: 32 }}>
             <ActivityIndicator color={colors.accent} />
           </View>
         ) : preferences ? (
-          <View className="bg-card border border-border rounded-xl overflow-hidden mb-6">
-            <Text className="text-sm text-muted-foreground p-4 pb-2">
+          <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 12, overflow: 'hidden', marginBottom: 24 }}>
+            <Text style={{ fontSize: 14, color: colors.mutedForeground, padding: 16, paddingBottom: 8 }}>
               {t('notificationTypes') || 'Notification Types'}
             </Text>
 
@@ -258,8 +261,8 @@ export default function NotificationSettingsScreen() {
             />
           </View>
         ) : (
-          <View className="bg-muted/50 p-6 rounded-xl items-center mb-6">
-            <Text className="text-muted-foreground text-center">
+          <View style={{ backgroundColor: colors.muted + '80', padding: 24, borderRadius: 12, alignItems: 'center', marginBottom: 24 }}>
+            <Text style={{ color: colors.mutedForeground, textAlign: 'center' }}>
               {t('unableToLoadPreferences') || 'Unable to load notification preferences'}
             </Text>
           </View>
@@ -269,18 +272,18 @@ export default function NotificationSettingsScreen() {
         {expoPushToken && (
           <Pressable
             onPress={handleTestNotification}
-            className="bg-secondary border border-border p-4 rounded-xl flex-row items-center justify-center"
+            style={{ backgroundColor: colors.secondary, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
           >
             <Bell size={20} color={iconColor} />
-            <Text className="text-foreground font-medium ml-2">
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium', marginLeft: 8 }}>
               {t('sendTestNotification') || 'Send Test Notification'}
             </Text>
           </Pressable>
         )}
 
         {/* Info */}
-        <View className="mt-6">
-          <Text className="text-muted-foreground text-xs text-center">
+        <View style={{ marginTop: 24 }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, textAlign: 'center' }}>
             {t('notificationInfo') ||
               'Notifications are processed on our servers and sent via Expo Push Notification service. You can disable notifications at any time from your device settings.'}
           </Text>

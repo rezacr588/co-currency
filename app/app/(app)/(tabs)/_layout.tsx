@@ -17,7 +17,8 @@ import {
   LogOut,
   ChevronRight,
 } from 'lucide-react-native';
-import { useTheme, useColors } from '../../../src/context/ThemeContext';
+import { useTheme } from '../../../src/context/ThemeContext';
+import { useTheme as useStyledTheme } from 'styled-components/native';
 import { useLanguage } from '../../../src/context/LanguageContext';
 import { useAuth } from '../../../src/context/AuthContext';
 import { ErrorBoundary } from '../../../src/components/ui/ErrorBoundary';
@@ -35,13 +36,13 @@ interface NavItemProps {
 }
 
 function NavItem({ icon, label, isActive, onPress, isCollapsed }: NavItemProps) {
+  const styledTheme = useStyledTheme();
+  const colors = styledTheme.colors;
+
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
-      className={`flex-row items-center px-3 py-2.5 rounded-lg mb-0.5 ${
-        isActive ? 'bg-secondary' : 'hover:bg-secondary/50'
-      }`}
+      style={({ pressed }) => [{ cursor: 'pointer', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, marginBottom: 2, backgroundColor: isActive ? colors.secondary : 'transparent' }, pressed && { opacity: 0.7 }]}
       accessibilityLabel={label}
       accessibilityRole="button"
       accessibilityState={{ selected: isActive }}
@@ -49,7 +50,7 @@ function NavItem({ icon, label, isActive, onPress, isCollapsed }: NavItemProps) 
       <View style={{ opacity: isActive ? 1 : 0.6 }}>{icon}</View>
       {!isCollapsed && (
         <Text
-          className={`ml-3 text-sm ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground'}`}
+          style={{ marginLeft: 12, fontSize: 14, color: isActive ? colors.foreground : colors.mutedForeground, fontFamily: isActive ? 'Inter_500Medium' : undefined }}
         >
           {label}
         </Text>
@@ -67,7 +68,8 @@ function DesktopSidebar({
 }) {
   const { t } = useLanguage();
   const { user, logout } = useAuth();
-  const colors = useColors();
+  const styledTheme = useStyledTheme();
+  const colors = styledTheme.colors;
   const router = useRouter();
   const pathname = usePathname();
 
@@ -93,15 +95,14 @@ function DesktopSidebar({
 
   return (
     <View
-      className="bg-background border-r border-border h-full"
-      style={{ width: isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH }}
+      style={{ backgroundColor: colors.background, borderRightWidth: 1, borderRightColor: colors.border, height: '100%', width: isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH }}
     >
       {/* Logo/Header */}
-      <View className="p-4 border-b border-border flex-row items-center justify-between">
+      <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         {!isCollapsed && (
-          <Text className="text-lg font-semibold text-foreground">CoFinance</Text>
+          <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>CoFinance</Text>
         )}
-        <Pressable onPress={onToggle} hitSlop={8} style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} className="p-2 hover:bg-secondary rounded-md" accessibilityLabel={isCollapsed ? (t('expandSidebar') || 'Expand sidebar') : (t('collapseSidebar') || 'Collapse sidebar')} accessibilityRole="button">
+        <Pressable onPress={onToggle} hitSlop={8} style={({ pressed }) => [{ cursor: 'pointer', padding: 8, borderRadius: 6 }, pressed && { opacity: 0.7 }]} accessibilityLabel={isCollapsed ? (t('expandSidebar') || 'Expand sidebar') : (t('collapseSidebar') || 'Collapse sidebar')} accessibilityRole="button">
           {isCollapsed ? (
             <Menu size={18} color={colors.mutedForeground} />
           ) : (
@@ -111,11 +112,11 @@ function DesktopSidebar({
       </View>
 
       {/* Navigation */}
-      <ScrollView className="flex-1 p-3">
+      <ScrollView style={{ flex: 1, padding: 12 }}>
         {/* Main Navigation */}
-        <View className="mb-6">
+        <View style={{ marginBottom: 24 }}>
           {!isCollapsed && (
-            <Text className="text-xs text-muted-foreground uppercase tracking-wider px-3 mb-2">
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, textTransform: 'uppercase', letterSpacing: 1, paddingHorizontal: 12, marginBottom: 8 }}>
               {t('main') || 'Main'}
             </Text>
           )}
@@ -135,7 +136,7 @@ function DesktopSidebar({
         {/* Tools */}
         <View>
           {!isCollapsed && (
-            <Text className="text-xs text-muted-foreground uppercase tracking-wider px-3 mb-2">
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, textTransform: 'uppercase', letterSpacing: 1, paddingHorizontal: 12, marginBottom: 8 }}>
               {t('tools') || 'Tools'}
             </Text>
           )}
@@ -154,23 +155,22 @@ function DesktopSidebar({
       </ScrollView>
 
       {/* User Section */}
-      <View className="p-3 border-t border-border">
+      <View style={{ padding: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
         <Pressable
           onPress={() => router.push('/(app)/profile')}
-          style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
-          className="flex-row items-center p-2.5 rounded-lg hover:bg-secondary"
+          style={({ pressed }) => [{ cursor: 'pointer', flexDirection: 'row', alignItems: 'center', padding: 10, borderRadius: 8 }, pressed && { opacity: 0.7 }]}
           accessibilityLabel={t('profile') || 'Profile'}
           accessibilityRole="button"
         >
-          <View className="bg-secondary p-2 rounded-full">
+          <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 9999 }}>
             <User size={18} color={colors.secondaryForeground} />
           </View>
           {!isCollapsed && (
-            <View className="flex-1 ml-3">
-              <Text className="font-medium text-foreground text-sm" numberOfLines={1}>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={{ fontFamily: 'Inter_500Medium', color: colors.foreground, fontSize: 14 }} numberOfLines={1}>
                 {user?.name}
               </Text>
-              <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground }} numberOfLines={1}>
                 {user?.email}
               </Text>
             </View>
@@ -180,14 +180,13 @@ function DesktopSidebar({
 
         <Pressable
           onPress={logout}
-          style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
-          className="flex-row items-center p-2.5 rounded-lg hover:bg-secondary mt-1"
+          style={({ pressed }) => [{ cursor: 'pointer', flexDirection: 'row', alignItems: 'center', padding: 10, borderRadius: 8, marginTop: 4 }, pressed && { opacity: 0.7 }]}
           accessibilityLabel={t('logout') || 'Logout'}
           accessibilityRole="button"
         >
           <LogOut size={18} color={colors.mutedForeground} />
           {!isCollapsed && (
-            <Text className="ml-3 text-muted-foreground text-sm">{t('logout')}</Text>
+            <Text style={{ marginLeft: 12, color: colors.mutedForeground, fontSize: 14 }}>{t('logout')}</Text>
           )}
         </Pressable>
       </View>
@@ -199,22 +198,22 @@ function DesktopNavbar() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const { isDark, toggleTheme } = useTheme();
-  const colors = useColors();
+  const styledTheme = useStyledTheme();
+  const colors = styledTheme.colors;
   const router = useRouter();
 
   return (
-    <View className="bg-background border-b border-border px-6 py-4 flex-row items-center justify-between">
+    <View style={{ backgroundColor: colors.background, borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 24, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
       <View>
-        <Text className="text-muted-foreground text-xs">{t('welcomeBack')}</Text>
-        <Text className="text-lg font-semibold text-foreground">{user?.name}</Text>
+        <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('welcomeBack')}</Text>
+        <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>{user?.name}</Text>
       </View>
 
-      <View className="flex-row items-center gap-3">
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <Pressable
           onPress={toggleTheme}
           hitSlop={6}
-          style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
-          className="p-2 rounded-md hover:bg-secondary border border-border"
+          style={({ pressed }) => [{ cursor: 'pointer', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: colors.border }, pressed && { opacity: 0.7 }]}
           accessibilityLabel={t('toggleTheme') || 'Toggle theme'}
           accessibilityRole="button"
         >
@@ -222,15 +221,14 @@ function DesktopNavbar() {
         </Pressable>
         <Pressable
           onPress={() => router.push('/(app)/profile')}
-          style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
-          className="flex-row items-center gap-2 bg-secondary border border-border px-3 py-2 rounded-lg"
+          style={({ pressed }) => [{ cursor: 'pointer', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.secondary, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }, pressed && { opacity: 0.7 }]}
           accessibilityLabel={t('profile') || 'Profile'}
           accessibilityRole="button"
         >
-          <View className="bg-muted p-1.5 rounded-full">
+          <View style={{ backgroundColor: colors.muted, padding: 6, borderRadius: 9999 }}>
             <User size={14} color={colors.secondaryForeground} />
           </View>
-          <Text className="font-medium text-foreground text-sm">{user?.name?.split(' ')[0]}</Text>
+          <Text style={{ fontFamily: 'Inter_500Medium', color: colors.foreground, fontSize: 14 }}>{user?.name?.split(' ')[0]}</Text>
         </Pressable>
       </View>
     </View>
@@ -239,7 +237,8 @@ function DesktopNavbar() {
 
 function TabsLayoutInner() {
   const { isDark } = useTheme();
-  const colors = useColors();
+  const styledTheme = useStyledTheme();
+  const colors = styledTheme.colors;
   const { t } = useLanguage();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -253,12 +252,12 @@ function TabsLayoutInner() {
   // Desktop layout with sidebar
   if (isDesktop) {
     return (
-      <View className="flex-1 flex-row bg-background">
+      <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
         <DesktopSidebar
           isCollapsed={isSidebarCollapsed}
           onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         />
-        <View className="flex-1">
+        <View style={{ flex: 1 }}>
           <DesktopNavbar />
           <Tabs
             screenOptions={{
@@ -286,12 +285,12 @@ function TabsLayoutInner() {
   // Tablet layout - sidebar but collapsed by default
   if (isTablet) {
     return (
-      <View className="flex-1 flex-row bg-background">
+      <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
         <DesktopSidebar
           isCollapsed={isSidebarCollapsed}
           onToggle={() => setIsSidebarCollapsed((prev) => !prev)}
         />
-        <View className="flex-1">
+        <View style={{ flex: 1 }}>
           <Tabs
             screenOptions={{
               headerShown: false,

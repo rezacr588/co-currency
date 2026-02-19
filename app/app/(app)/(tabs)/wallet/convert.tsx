@@ -6,7 +6,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
-import { useTheme, useColors } from '../../../../src/context/ThemeContext';
+import { useTheme } from '../../../../src/context/ThemeContext';
+import { useTheme as useStyledTheme } from 'styled-components/native';
 import { CurrencyConverter } from '../../../../src/components/features/CurrencyConverter';
 import { useToast } from '../../../../src/components/ui/Toast';
 import { Button } from '../../../../src/components/ui/Button';
@@ -18,7 +19,8 @@ export default function WalletConvertScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
-  const colors = useColors();
+  const styledTheme = useStyledTheme();
+  const colors = styledTheme.colors;
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
@@ -89,22 +91,21 @@ export default function WalletConvertScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
       {/* Header */}
-      <View className="flex-row items-center p-4 border-b border-border" style={{ maxWidth: 800, width: '100%', alignSelf: 'center' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, maxWidth: 800, width: '100%', alignSelf: 'center' }}>
         <Pressable
           onPress={() => router.back()}
-          className="p-2 mr-2"
+          style={{ padding: 8, marginRight: 8, cursor: 'pointer' }}
           hitSlop={12}
-          style={{ cursor: 'pointer' }}
         >
           <ArrowLeft size={24} color={iconColor} />
         </Pressable>
-        <Text className="text-xl font-bold text-foreground">{t('convertCurrency')}</Text>
+        <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('convertCurrency')}</Text>
       </View>
 
       <ScrollView
-        className="flex-1"
+        style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
           padding: isDesktop ? 32 : 24,
@@ -115,31 +116,31 @@ export default function WalletConvertScreen() {
         }}
       >
         {error ? (
-          <View className="bg-danger-muted border border-danger/20 p-4 rounded-xl mb-4">
-            <Text className="text-danger">{error}</Text>
+          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger + '33', padding: 16, borderRadius: 12, marginBottom: 16 }}>
+            <Text style={{ color: colors.danger }}>{error}</Text>
           </View>
         ) : null}
 
         {isBalancesError && (
-          <View className="bg-danger-muted border border-danger/20 p-4 rounded-xl mb-4">
-            <Text className="text-danger mb-2">{t('failedToLoadBalances') || 'Failed to load balances'}</Text>
-            <Pressable onPress={() => refetchBalances()} className="bg-danger/20 px-4 py-2 rounded-lg self-start" style={{ cursor: 'pointer' }}>
-              <Text className="text-danger font-medium">{t('retry') || 'Retry'}</Text>
+          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger + '33', padding: 16, borderRadius: 12, marginBottom: 16 }}>
+            <Text style={{ color: colors.danger, marginBottom: 8 }}>{t('failedToLoadBalances') || 'Failed to load balances'}</Text>
+            <Pressable onPress={() => refetchBalances()} style={{ backgroundColor: colors.danger + '33', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, alignSelf: 'flex-start', cursor: 'pointer' }}>
+              <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium' }}>{t('retry') || 'Retry'}</Text>
             </Pressable>
           </View>
         )}
 
         {(balances?.balances?.length ?? 0) === 0 && (
-          <View className="bg-card border border-border p-4 rounded-xl mb-6">
-            <Text className="text-foreground font-medium mb-2">
+          <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12, marginBottom: 24 }}>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium', marginBottom: 8 }}>
               {t('noWalletBalances') || 'No wallet balances yet'}
             </Text>
-            <Text className="text-muted-foreground text-sm mb-3">
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 12 }}>
               {t('noWalletBalancesDescription') || 'Add a transaction to create a wallet balance before converting.'}
             </Text>
             <Link href="/(app)/(tabs)/add" asChild>
-              <Pressable style={{ cursor: 'pointer' }} className="bg-accent px-4 py-2 rounded-lg self-start">
-                <Text className="text-accent-foreground font-medium text-sm">{t('addTransaction') || 'Add Transaction'}</Text>
+              <Pressable style={{ cursor: 'pointer', backgroundColor: colors.accent, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, alignSelf: 'flex-start' }}>
+                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_500Medium', fontSize: 14 }}>{t('addTransaction') || 'Add Transaction'}</Text>
               </Pressable>
             </Link>
           </View>
@@ -155,13 +156,13 @@ export default function WalletConvertScreen() {
 
         {/* Balance Warning */}
         {isLoadingBalances && parsedAmount > 0 && (
-          <View className="bg-muted border border-border p-3 rounded-xl mb-4">
-            <Text className="text-muted-foreground text-sm">{t('loadingBalances') || 'Loading balances...'}</Text>
+          <View style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 12, marginBottom: 16 }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>{t('loadingBalances') || 'Loading balances...'}</Text>
           </View>
         )}
         {hasInsufficientBalance && !isLoadingBalances && (
-          <View className="bg-danger-muted border border-danger/20 p-3 rounded-xl mb-4">
-            <Text className="text-danger text-sm">
+          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger + '33', padding: 12, borderRadius: 12, marginBottom: 16 }}>
+            <Text style={{ color: colors.danger, fontSize: 14 }}>
               {t('insufficientBalance') || 'Insufficient balance'}: {fromBalance ? `${fromBalance.balance} ${fromCurrency}` : `0 ${fromCurrency}`}
             </Text>
           </View>

@@ -33,7 +33,8 @@ import {
 } from 'lucide-react-native';
 import { api, getAuthToken, API_BASE } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
-import { useTheme, useColors } from '../../../../src/context/ThemeContext';
+import { useTheme } from '../../../../src/context/ThemeContext';
+import { useTheme as useStyledTheme } from 'styled-components/native';
 import { formatDate, getCurrencyDisplay, formatTransactionAmount } from '../../../../src/utils/format';
 import { StyledCategoryIcon, CATEGORY_ICONS, CategoryIcon } from '../../../../src/constants/icons';
 import { SkeletonTransaction, SkeletonList } from '../../../../src/components/ui/Skeleton';
@@ -54,7 +55,8 @@ export default function TransactionHistoryScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
-  const colors = useColors();
+  const styledTheme = useStyledTheme();
+  const colors = styledTheme.colors;
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
@@ -333,31 +335,28 @@ export default function TransactionHistoryScreen() {
     : transactions;
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
       {/* Header */}
       <View
-        className="flex-row items-center justify-between p-4 border-b border-border"
-        style={{ maxWidth: 1400, width: '100%', alignSelf: 'center' }}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, maxWidth: 1400, width: '100%', alignSelf: 'center' }}
       >
         <Pressable
           onPress={() => router.back()}
-          className="p-2"
           hitSlop={12}
-          style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+          style={({ pressed }) => [{ padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
           accessibilityLabel={t('back') || 'Go back'}
           accessibilityRole="button"
         >
           <ArrowLeft size={24} color={iconColor} />
         </Pressable>
-        <Text className="text-xl font-bold text-foreground">{t('transactionHistory')}</Text>
-        <View className="flex-row items-center gap-2">
+        <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('transactionHistory')}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {/* Export Button */}
           <Pressable
             onPress={handleExport}
             disabled={isExporting || transactions.length === 0}
-            className="p-2"
             hitSlop={8}
-            style={({ pressed }) => [{ cursor: 'pointer', opacity: isExporting || transactions.length === 0 ? 0.5 : 1 }, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [{ padding: 8, cursor: 'pointer', opacity: isExporting || transactions.length === 0 ? 0.5 : 1 }, pressed && { opacity: 0.7 }]}
             accessibilityLabel={t('export') || 'Export transactions'}
             accessibilityRole="button"
           >
@@ -370,9 +369,8 @@ export default function TransactionHistoryScreen() {
           {/* Filter Button */}
           <Pressable
             onPress={() => setShowFilterModal(true)}
-            className="p-2"
             hitSlop={8}
-            style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [{ padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
             accessibilityLabel={t('filters') || 'Filter transactions'}
             accessibilityRole="button"
           >
@@ -386,27 +384,27 @@ export default function TransactionHistoryScreen() {
 
       {/* Active Filters Badge */}
       {hasActiveFilters && (
-        <View className="px-4 py-2" style={{ maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
-          <View className="flex-row items-center gap-2 flex-wrap">
+        <View style={{ paddingHorizontal: 16, paddingVertical: 8, maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             {filterCategory && (
-              <View className="bg-accent/20 px-3 py-1 rounded-full flex-row items-center">
-                <Text className="text-accent text-sm mr-1">{filterCategory}</Text>
-                <Pressable onPress={() => setFilterCategory(null)} hitSlop={12} className="p-1">
+              <View style={{ backgroundColor: colors.accent + '33', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 9999, flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ color: colors.accent, fontSize: 14, marginRight: 4 }}>{filterCategory}</Text>
+                <Pressable onPress={() => setFilterCategory(null)} hitSlop={12} style={{ padding: 4 }}>
                   <X size={14} color={colors.accent} />
                 </Pressable>
               </View>
             )}
             {filterType && (
-              <View className="bg-accent/20 px-3 py-1 rounded-full flex-row items-center">
-                <Text className="text-accent text-sm mr-1">{t(filterType)}</Text>
-                <Pressable onPress={() => setFilterType(null)} hitSlop={12} className="p-1">
+              <View style={{ backgroundColor: colors.accent + '33', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 9999, flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ color: colors.accent, fontSize: 14, marginRight: 4 }}>{t(filterType)}</Text>
+                <Pressable onPress={() => setFilterType(null)} hitSlop={12} style={{ padding: 4 }}>
                   <X size={14} color={colors.accent} />
                 </Pressable>
               </View>
             )}
             {(filterFromDate || filterToDate) && (
-              <View className="bg-accent/20 px-3 py-1 rounded-full flex-row items-center">
-                <Text className="text-accent text-sm mr-1">
+              <View style={{ backgroundColor: colors.accent + '33', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 9999, flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ color: colors.accent, fontSize: 14, marginRight: 4 }}>
                   {filterFromDate || '...'} - {filterToDate || '...'}
                 </Text>
                 <Pressable
@@ -415,14 +413,14 @@ export default function TransactionHistoryScreen() {
                     setFilterToDate('');
                   }}
                   hitSlop={12}
-                  className="p-1"
+                  style={{ padding: 4 }}
                 >
                   <X size={14} color={colors.accent} />
                 </Pressable>
               </View>
             )}
-            <Pressable onPress={clearFilters} className="px-3 py-1" style={{ minHeight: 44, justifyContent: 'center' }}>
-              <Text className="text-muted-foreground text-sm">{t('clearFilters')}</Text>
+            <Pressable onPress={clearFilters} style={{ paddingHorizontal: 12, paddingVertical: 4, minHeight: 44, justifyContent: 'center' }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>{t('clearFilters')}</Text>
             </Pressable>
           </View>
         </View>
@@ -476,13 +474,19 @@ export default function TransactionHistoryScreen() {
               enabled={Platform.OS !== 'web'}
             >
               <View
-                className="bg-card border border-border p-4 rounded-xl flex-row items-center"
                 style={{
+                  backgroundColor: colors.card,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  padding: 16,
+                  borderRadius: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
                   width: isDesktop ? '48%' : '100%',
                   minWidth: 300,
                 }}
               >
-                <View className="mr-3">
+                <View style={{ marginRight: 12 }}>
                   <StyledCategoryIcon
                     category={tx.category || 'other'}
                     size={20}
@@ -491,18 +495,20 @@ export default function TransactionHistoryScreen() {
                     padding={10}
                   />
                 </View>
-                <View className="flex-1">
-                  <Text className="font-semibold text-foreground" numberOfLines={1}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground }} numberOfLines={1}>
                     {tx.description || tx.category || 'Transaction'}
                   </Text>
-                  <Text className="text-muted-foreground text-sm" numberOfLines={1}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 14 }} numberOfLines={1}>
                     {formatDate(tx.created_at)} - {tx.category || t('uncategorized')}
                   </Text>
                 </View>
                 <Text
-                  className={`text-lg font-semibold ${
-                    tx.type === 'credit' ? 'text-success' : 'text-danger'
-                  }`}
+                  style={{
+                    fontSize: 18,
+                    fontFamily: 'Inter_600SemiBold',
+                    color: tx.type === 'credit' ? colors.success : colors.danger,
+                  }}
                   numberOfLines={1}
                 >
                   {formatTransactionAmount(tx)}
@@ -513,9 +519,8 @@ export default function TransactionHistoryScreen() {
                     {/* Notes Button */}
                     <Pressable
                       onPress={() => handleOpenNotes(tx)}
-                      className="ml-2 p-2"
                       hitSlop={10}
-                      style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                      style={({ pressed }) => [{ marginLeft: 8, padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
                       accessibilityLabel={t('transactionNotes') || 'Notes'}
                       accessibilityRole="button"
                     >
@@ -525,9 +530,8 @@ export default function TransactionHistoryScreen() {
                     {!isConversion && (
                       <Pressable
                         onPress={() => handleEdit(tx)}
-                        className="ml-1 p-2"
                         hitSlop={10}
-                        style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                        style={({ pressed }) => [{ marginLeft: 4, padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
                         accessibilityLabel={t('editTransaction') || 'Edit'}
                         accessibilityRole="button"
                       >
@@ -536,9 +540,8 @@ export default function TransactionHistoryScreen() {
                     )}
                     <Pressable
                       onPress={() => handleDelete(tx)}
-                      className="ml-1 p-2"
                       hitSlop={10}
-                      style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                      style={({ pressed }) => [{ marginLeft: 4, padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
                       disabled={deleteMutation.isPending}
                       accessibilityLabel={t('deleteTransaction') || 'Delete'}
                       accessibilityRole="button"
@@ -564,10 +567,9 @@ export default function TransactionHistoryScreen() {
         ListEmptyComponent={
           !isPending ? (
             <View
-              className="bg-card p-8 rounded-xl items-center"
-              style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}
+              style={{ backgroundColor: colors.card, padding: 32, borderRadius: 12, alignItems: 'center', maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}
             >
-              <Text className="text-muted-foreground">{t('noTransactions')}</Text>
+              <Text style={{ color: colors.mutedForeground }}>{t('noTransactions')}</Text>
             </View>
           ) : null
         }
@@ -581,81 +583,106 @@ export default function TransactionHistoryScreen() {
         onRequestClose={() => setShowFilterModal(false)}
       >
         <Pressable
-          className="flex-1 bg-black/50 justify-end"
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
           onPress={() => setShowFilterModal(false)}
         >
           <Pressable
-            className="bg-card rounded-t-3xl p-6"
-            style={{ maxHeight: '80%' }}
+            style={{ backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '80%' }}
             onPress={(e) => e.stopPropagation()}
           >
-            <View className="flex-row items-center justify-between mb-6">
-              <Text className="text-xl font-bold text-foreground">{t('filters')}</Text>
-              <Pressable onPress={() => setShowFilterModal(false)} hitSlop={8} className="p-2" style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button">
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+              <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('filters')}</Text>
+              <Pressable onPress={() => setShowFilterModal(false)} hitSlop={8} style={({ pressed }) => [{ padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button">
                 <X size={24} color={colors.placeholder} />
               </Pressable>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
               {/* Type Filter */}
-              <View className="mb-5">
-                <Text className="text-muted-foreground text-sm mb-2">{t('type')}</Text>
-                <View className="flex-row gap-2">
+              <View style={{ marginBottom: 20 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('type')}</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
                   <Pressable
                     onPress={() => setFilterType(null)}
-                    style={{ cursor: 'pointer' }}
-                    className={`flex-1 p-3 rounded-lg flex-row items-center justify-center border ${
-                      filterType === null
-                        ? 'bg-foreground border-foreground'
-                        : 'bg-secondary border-border'
-                    }`}
+                    style={{
+                      flex: 1,
+                      padding: 12,
+                      borderRadius: 8,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      backgroundColor: filterType === null ? colors.foreground : colors.secondary,
+                      borderColor: filterType === null ? colors.foreground : colors.border,
+                      cursor: 'pointer',
+                    }}
                   >
                     <Text
-                      className={`font-medium text-sm ${
-                        filterType === null ? 'text-background' : 'text-foreground'
-                      }`}
+                      style={{
+                        fontFamily: 'Inter_500Medium',
+                        fontSize: 14,
+                        color: filterType === null ? colors.background : colors.foreground,
+                      }}
                     >
                       {t('allTypes')}
                     </Text>
                   </Pressable>
                   <Pressable
                     onPress={() => setFilterType('debit')}
-                    style={{ cursor: 'pointer' }}
-                    className={`flex-1 p-3 rounded-lg flex-row items-center justify-center border ${
-                      filterType === 'debit'
-                        ? 'bg-foreground border-foreground'
-                        : 'bg-secondary border-border'
-                    }`}
+                    style={{
+                      flex: 1,
+                      padding: 12,
+                      borderRadius: 8,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      backgroundColor: filterType === 'debit' ? colors.foreground : colors.secondary,
+                      borderColor: filterType === 'debit' ? colors.foreground : colors.border,
+                      cursor: 'pointer',
+                    }}
                   >
                     <TrendingDown
                       size={16}
                       color={filterType === 'debit' ? colors.primaryForeground : colors.danger}
                     />
                     <Text
-                      className={`font-medium ml-2 text-sm ${
-                        filterType === 'debit' ? 'text-background' : 'text-foreground'
-                      }`}
+                      style={{
+                        fontFamily: 'Inter_500Medium',
+                        marginLeft: 8,
+                        fontSize: 14,
+                        color: filterType === 'debit' ? colors.background : colors.foreground,
+                      }}
                     >
                       {t('expenses')}
                     </Text>
                   </Pressable>
                   <Pressable
                     onPress={() => setFilterType('credit')}
-                    style={{ cursor: 'pointer' }}
-                    className={`flex-1 p-3 rounded-lg flex-row items-center justify-center border ${
-                      filterType === 'credit'
-                        ? 'bg-foreground border-foreground'
-                        : 'bg-secondary border-border'
-                    }`}
+                    style={{
+                      flex: 1,
+                      padding: 12,
+                      borderRadius: 8,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      backgroundColor: filterType === 'credit' ? colors.foreground : colors.secondary,
+                      borderColor: filterType === 'credit' ? colors.foreground : colors.border,
+                      cursor: 'pointer',
+                    }}
                   >
                     <TrendingUp
                       size={16}
                       color={filterType === 'credit' ? colors.primaryForeground : colors.success}
                     />
                     <Text
-                      className={`font-medium ml-2 text-sm ${
-                        filterType === 'credit' ? 'text-background' : 'text-foreground'
-                      }`}
+                      style={{
+                        fontFamily: 'Inter_500Medium',
+                        marginLeft: 8,
+                        fontSize: 14,
+                        color: filterType === 'credit' ? colors.background : colors.foreground,
+                      }}
                     >
                       {t('income')}
                     </Text>
@@ -664,22 +691,28 @@ export default function TransactionHistoryScreen() {
               </View>
 
               {/* Category Filter */}
-              <View className="mb-5">
-                <Text className="text-muted-foreground text-sm mb-2">{t('category')}</Text>
-                <View className="flex-row flex-wrap gap-2">
+              <View style={{ marginBottom: 20 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('category')}</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                   <Pressable
                     onPress={() => setFilterCategory(null)}
-                    style={{ cursor: 'pointer', minHeight: 44 }}
-                    className={`px-3 py-2 rounded-md border ${
-                      filterCategory === null
-                        ? 'bg-foreground border-foreground'
-                        : 'bg-secondary border-border'
-                    }`}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 6,
+                      borderWidth: 1,
+                      backgroundColor: filterCategory === null ? colors.foreground : colors.secondary,
+                      borderColor: filterCategory === null ? colors.foreground : colors.border,
+                      cursor: 'pointer',
+                      minHeight: 44,
+                    }}
                   >
                     <Text
-                      className={`text-sm ${
-                        filterCategory === null ? 'text-background font-medium' : 'text-foreground'
-                      }`}
+                      style={{
+                        fontSize: 14,
+                        color: filterCategory === null ? colors.background : colors.foreground,
+                        fontFamily: filterCategory === null ? 'Inter_500Medium' : undefined,
+                      }}
                     >
                       {t('allCategories')}
                     </Text>
@@ -688,12 +721,19 @@ export default function TransactionHistoryScreen() {
                     <Pressable
                       key={cat}
                       onPress={() => setFilterCategory(cat)}
-                      style={{ cursor: 'pointer', minHeight: 44 }}
-                      className={`px-3 py-2 rounded-md flex-row items-center gap-2 border ${
-                        filterCategory === cat
-                          ? 'bg-foreground border-foreground'
-                          : 'bg-secondary border-border'
-                      }`}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        borderRadius: 6,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                        borderWidth: 1,
+                        backgroundColor: filterCategory === cat ? colors.foreground : colors.secondary,
+                        borderColor: filterCategory === cat ? colors.foreground : colors.border,
+                        cursor: 'pointer',
+                        minHeight: 44,
+                      }}
                     >
                       <CategoryIcon
                         category={cat}
@@ -701,11 +741,11 @@ export default function TransactionHistoryScreen() {
                         color={filterCategory === cat ? colors.primaryForeground : colors.secondaryForeground}
                       />
                       <Text
-                        className={`text-sm ${
-                          filterCategory === cat
-                            ? 'text-background font-medium'
-                            : 'text-foreground'
-                        }`}
+                        style={{
+                          fontSize: 14,
+                          color: filterCategory === cat ? colors.background : colors.foreground,
+                          fontFamily: filterCategory === cat ? 'Inter_500Medium' : undefined,
+                        }}
                       >
                         {cat}
                       </Text>
@@ -715,13 +755,12 @@ export default function TransactionHistoryScreen() {
               </View>
 
               {/* Date Range Filter */}
-              <View className="mb-5">
-                <Text className="text-muted-foreground text-sm mb-2">{t('fromDate')}</Text>
-                <View className="flex-row items-center bg-muted border border-border rounded-lg px-3">
+              <View style={{ marginBottom: 20 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('fromDate')}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12 }}>
                   <Calendar size={18} color={colors.mutedForeground} />
                   <TextInput
-                    className="flex-1 p-3 text-foreground"
-                    style={{ outlineStyle: 'none' } as any}
+                    style={{ flex: 1, padding: 12, color: colors.foreground, outlineStyle: 'none' } as any}
                     value={filterFromDate}
                     onChangeText={setFilterFromDate}
                     placeholder="YYYY-MM-DD"
@@ -730,13 +769,12 @@ export default function TransactionHistoryScreen() {
                 </View>
               </View>
 
-              <View className="mb-6">
-                <Text className="text-muted-foreground text-sm mb-2">{t('toDate')}</Text>
-                <View className="flex-row items-center bg-muted border border-border rounded-lg px-3">
+              <View style={{ marginBottom: 24 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('toDate')}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12 }}>
                   <Calendar size={18} color={colors.mutedForeground} />
                   <TextInput
-                    className="flex-1 p-3 text-foreground"
-                    style={{ outlineStyle: 'none' } as any}
+                    style={{ flex: 1, padding: 12, color: colors.foreground, outlineStyle: 'none' } as any}
                     value={filterToDate}
                     onChangeText={setFilterToDate}
                     placeholder="YYYY-MM-DD"
@@ -746,20 +784,18 @@ export default function TransactionHistoryScreen() {
               </View>
 
               {/* Action Buttons */}
-              <View className="flex-row gap-3">
+              <View style={{ flexDirection: 'row', gap: 12 }}>
                 <Pressable
                   onPress={clearFilters}
-                  style={{ cursor: 'pointer' }}
-                  className="flex-1 p-3 rounded-lg border border-border items-center"
+                  style={{ flex: 1, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: colors.border, alignItems: 'center', cursor: 'pointer' }}
                 >
-                  <Text className="text-foreground font-medium">{t('clearFilters')}</Text>
+                  <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>{t('clearFilters')}</Text>
                 </Pressable>
                 <Pressable
                   onPress={applyFilters}
-                  style={{ cursor: 'pointer' }}
-                  className="flex-1 bg-accent p-3 rounded-lg items-center"
+                  style={{ flex: 1, backgroundColor: colors.accent, padding: 12, borderRadius: 8, alignItems: 'center', cursor: 'pointer' }}
                 >
-                  <Text className="text-accent-foreground font-medium">{t('filters')}</Text>
+                  <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_500Medium' }}>{t('filters')}</Text>
                 </Pressable>
               </View>
             </ScrollView>
@@ -776,61 +812,78 @@ export default function TransactionHistoryScreen() {
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1"
+          style={{ flex: 1 }}
         >
           <Pressable
-            className="flex-1 bg-black/50 justify-end"
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
             onPress={resetEditModalState}
           >
             <Pressable
-              className="bg-card rounded-t-3xl p-6"
-              style={{ maxHeight: '85%' }}
+              style={{ backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '85%' }}
               onPress={(e) => e.stopPropagation()}
             >
-            <View className="flex-row items-center justify-between mb-6">
-              <Text className="text-xl font-bold text-foreground">{t('editTransaction')}</Text>
-              <Pressable onPress={resetEditModalState} hitSlop={8} className="p-2" style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button">
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+              <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('editTransaction')}</Text>
+              <Pressable onPress={resetEditModalState} hitSlop={8} style={({ pressed }) => [{ padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button">
                 <X size={24} color={colors.placeholder} />
               </Pressable>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
               {/* Transaction Type */}
-              <View className="mb-5">
-                <Text className="text-muted-foreground text-sm mb-2">{t('transactionType')}</Text>
-                <View className="flex-row gap-2">
+              <View style={{ marginBottom: 20 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('transactionType')}</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
                   <Pressable
                     onPress={() => setEditType('debit')}
-                    style={{ cursor: 'pointer' }}
-                    className={`flex-1 p-3.5 rounded-lg flex-row items-center justify-center border ${
-                      editType === 'debit'
-                        ? 'bg-foreground border-foreground'
-                        : 'bg-card border-border'
-                    }`}
+                    style={{
+                      flex: 1,
+                      padding: 14,
+                      borderRadius: 8,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      backgroundColor: editType === 'debit' ? colors.foreground : colors.card,
+                      borderColor: editType === 'debit' ? colors.foreground : colors.border,
+                      cursor: 'pointer',
+                    }}
                   >
                     <TrendingDown size={18} color={editType === 'debit' ? colors.primaryForeground : colors.danger} />
                     <Text
-                      className={`font-medium ml-2 text-sm ${
-                        editType === 'debit' ? 'text-background' : 'text-foreground'
-                      }`}
+                      style={{
+                        fontFamily: 'Inter_500Medium',
+                        marginLeft: 8,
+                        fontSize: 14,
+                        color: editType === 'debit' ? colors.background : colors.foreground,
+                      }}
                     >
                       {t('expenses')}
                     </Text>
                   </Pressable>
                   <Pressable
                     onPress={() => setEditType('credit')}
-                    style={{ cursor: 'pointer' }}
-                    className={`flex-1 p-3.5 rounded-lg flex-row items-center justify-center border ${
-                      editType === 'credit'
-                        ? 'bg-foreground border-foreground'
-                        : 'bg-card border-border'
-                    }`}
+                    style={{
+                      flex: 1,
+                      padding: 14,
+                      borderRadius: 8,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      backgroundColor: editType === 'credit' ? colors.foreground : colors.card,
+                      borderColor: editType === 'credit' ? colors.foreground : colors.border,
+                      cursor: 'pointer',
+                    }}
                   >
                     <TrendingUp size={18} color={editType === 'credit' ? colors.primaryForeground : colors.success} />
                     <Text
-                      className={`font-medium ml-2 text-sm ${
-                        editType === 'credit' ? 'text-background' : 'text-foreground'
-                      }`}
+                      style={{
+                        fontFamily: 'Inter_500Medium',
+                        marginLeft: 8,
+                        fontSize: 14,
+                        color: editType === 'credit' ? colors.background : colors.foreground,
+                      }}
                     >
                       {t('income')}
                     </Text>
@@ -839,15 +892,14 @@ export default function TransactionHistoryScreen() {
               </View>
 
               {/* Amount */}
-              <View className="mb-5">
-                <Text className="text-muted-foreground text-sm mb-2">{t('amount')}</Text>
-                <View className="bg-muted border border-border rounded-lg flex-row items-center px-4">
-                  <Text className="text-xl text-muted-foreground mr-2">
+              <View style={{ marginBottom: 20 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('amount')}</Text>
+                <View style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 8, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
+                  <Text style={{ fontSize: 20, color: colors.mutedForeground, marginRight: 8 }}>
                     {getCurrencyDisplay(editCurrency).symbol}
                   </Text>
                   <TextInput
-                    className="flex-1 p-3.5 text-xl font-semibold text-foreground"
-                    style={{ outlineStyle: 'none' } as any}
+                    style={{ flex: 1, padding: 14, fontSize: 20, fontFamily: 'Inter_600SemiBold', color: colors.foreground, outlineStyle: 'none' } as any}
                     value={editAmount}
                     onChangeText={setEditAmount}
                     keyboardType="decimal-pad"
@@ -858,30 +910,36 @@ export default function TransactionHistoryScreen() {
               </View>
 
               {/* Currency */}
-              <View className="mb-5">
-                <Text className="text-muted-foreground text-sm mb-2">{t('currency')}</Text>
+              <View style={{ marginBottom: 20 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('currency')}</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View className="flex-row gap-2">
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
                     {CURRENCIES.map((code) => {
                       const display = getCurrencyDisplay(code);
                       return (
                         <Pressable
                           key={code}
                           onPress={() => setEditCurrency(code)}
-                          style={{ cursor: 'pointer', minHeight: 44 }}
-                          className={`px-3 py-2 rounded-md flex-row items-center border ${
-                            editCurrency === code
-                              ? 'bg-foreground border-foreground'
-                              : 'bg-secondary border-border'
-                          }`}
+                          style={{
+                            paddingHorizontal: 12,
+                            paddingVertical: 8,
+                            borderRadius: 6,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            borderWidth: 1,
+                            backgroundColor: editCurrency === code ? colors.foreground : colors.secondary,
+                            borderColor: editCurrency === code ? colors.foreground : colors.border,
+                            cursor: 'pointer',
+                            minHeight: 44,
+                          }}
                         >
-                          <Text className="mr-1 text-sm">{display.flag || ''}</Text>
+                          <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || ''}</Text>
                           <Text
-                            className={`text-sm ${
-                              editCurrency === code
-                                ? 'text-background font-medium'
-                                : 'text-foreground'
-                            }`}
+                            style={{
+                              fontSize: 14,
+                              color: editCurrency === code ? colors.background : colors.foreground,
+                              fontFamily: editCurrency === code ? 'Inter_500Medium' : undefined,
+                            }}
                           >
                             {code}
                           </Text>
@@ -893,21 +951,28 @@ export default function TransactionHistoryScreen() {
               </View>
 
               {/* Category */}
-              <View className="mb-5">
-                <Text className="text-muted-foreground text-sm mb-2">{t('category')}</Text>
-                <View className="flex-row flex-wrap gap-2">
+              <View style={{ marginBottom: 20 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('category')}</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                   {CATEGORIES.map((cat) => {
                     const isSelected = editCategory === cat;
                     return (
                       <Pressable
                         key={cat}
                         onPress={() => setEditCategory(cat)}
-                        style={{ cursor: 'pointer', minHeight: 44 }}
-                        className={`px-3 py-2 rounded-md flex-row items-center gap-2 border ${
-                          isSelected
-                            ? 'bg-foreground border-foreground'
-                            : 'bg-secondary border-border'
-                        }`}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: 6,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 8,
+                          borderWidth: 1,
+                          backgroundColor: isSelected ? colors.foreground : colors.secondary,
+                          borderColor: isSelected ? colors.foreground : colors.border,
+                          cursor: 'pointer',
+                          minHeight: 44,
+                        }}
                       >
                         <CategoryIcon
                           category={cat}
@@ -915,9 +980,11 @@ export default function TransactionHistoryScreen() {
                           color={isSelected ? colors.primaryForeground : colors.secondaryForeground}
                         />
                         <Text
-                          className={`text-sm ${
-                            isSelected ? 'text-background font-medium' : 'text-foreground'
-                          }`}
+                          style={{
+                            fontSize: 14,
+                            color: isSelected ? colors.background : colors.foreground,
+                            fontFamily: isSelected ? 'Inter_500Medium' : undefined,
+                          }}
                         >
                           {cat}
                         </Text>
@@ -928,11 +995,10 @@ export default function TransactionHistoryScreen() {
               </View>
 
               {/* Description */}
-              <View className="mb-6">
-                <Text className="text-muted-foreground text-sm mb-2">{t('description')}</Text>
+              <View style={{ marginBottom: 24 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('description')}</Text>
                 <TextInput
-                  className="bg-muted border border-border p-3.5 rounded-lg text-foreground"
-                  style={{ outlineStyle: 'none' } as any}
+                  style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 8, color: colors.foreground, outlineStyle: 'none' } as any}
                   value={editDescription}
                   onChangeText={setEditDescription}
                   placeholder={t('descriptionPlaceholder')}
@@ -945,17 +1011,23 @@ export default function TransactionHistoryScreen() {
               <Pressable
                 onPress={handleSaveEdit}
                 disabled={updateMutation.isPending}
-                style={{ cursor: 'pointer' }}
-                className={`bg-accent p-3.5 rounded-lg flex-row items-center justify-center ${
-                  updateMutation.isPending ? 'opacity-50' : ''
-                }`}
+                style={{
+                  backgroundColor: colors.accent,
+                  padding: 14,
+                  borderRadius: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: updateMutation.isPending ? 0.5 : 1,
+                  cursor: 'pointer',
+                }}
               >
                 {updateMutation.isPending ? (
                   <ActivityIndicator color={colors.primaryForeground} />
                 ) : (
                   <>
                     <Check size={18} color={colors.primaryForeground} />
-                    <Text className="text-accent-foreground font-semibold ml-2">
+                    <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>
                       {t('saveChanges')}
                     </Text>
                   </>
@@ -976,64 +1048,62 @@ export default function TransactionHistoryScreen() {
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1"
+          style={{ flex: 1 }}
         >
           <Pressable
-            className="flex-1 bg-black/50 justify-end"
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
             onPress={handleCloseNotesModal}
           >
             <Pressable
-              className="bg-card rounded-t-3xl p-6"
-              style={{ maxHeight: '85%' }}
+              style={{ backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '85%' }}
               onPress={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <View className="flex-row items-center justify-between mb-4">
-                <View className="flex-1">
-                  <Text className="text-xl font-bold text-foreground">
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
                     {t('transactionNotes') || 'Transaction Notes'}
                   </Text>
                   {selectedTransactionForNotes && (
-                    <Text className="text-muted-foreground text-sm mt-1" numberOfLines={1}>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 14, marginTop: 4 }} numberOfLines={1}>
                       {selectedTransactionForNotes.description || selectedTransactionForNotes.category || 'Transaction'}
                     </Text>
                   )}
                 </View>
-                <Pressable onPress={handleCloseNotesModal} hitSlop={8} className="p-2" style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button">
+                <Pressable onPress={handleCloseNotesModal} hitSlop={8} style={({ pressed }) => [{ padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button">
                   <X size={24} color={colors.placeholder} />
                 </Pressable>
               </View>
 
-              <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+              <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
                 {/* Existing Notes */}
                 {isLoadingNotes ? (
-                  <View className="items-center py-4">
+                  <View style={{ alignItems: 'center', paddingVertical: 16 }}>
                     <ActivityIndicator color={colors.accent} />
                   </View>
                 ) : transactionNotes.length > 0 ? (
-                  <View className="mb-4">
-                    <Text className="text-muted-foreground text-sm mb-2">
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>
                       {t('existingNotes') || 'Existing Notes'} ({transactionNotes.length})
                     </Text>
                     {transactionNotes.map((note: Note) => (
                       <View
                         key={note.id}
-                        className="bg-muted p-3 rounded-lg mb-2 flex-row items-start"
+                        style={{ backgroundColor: colors.muted, padding: 12, borderRadius: 8, marginBottom: 8, flexDirection: 'row', alignItems: 'flex-start' }}
                       >
-                        <View className="flex-1">
-                          <Text className="text-foreground font-medium">{note.title}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>{note.title}</Text>
                           {note.content && (
-                            <Text className="text-muted-foreground text-sm mt-1">{note.content}</Text>
+                            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginTop: 4 }}>{note.content}</Text>
                           )}
-                          <Text className="text-muted-foreground/60 text-xs mt-2">
+                          <Text style={{ color: colors.mutedForeground + '99', fontSize: 12, marginTop: 8 }}>
                             {formatDate(note.created_at)}
                           </Text>
                         </View>
                         <Pressable
                           onPress={() => handleDeleteNote(note.id)}
-                          className="p-2"
                           hitSlop={10}
-                          style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                          style={({ pressed }) => [{ padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
                           accessibilityLabel={t('deleteNote') || 'Delete note'}
                           accessibilityRole="button"
                         >
@@ -1043,17 +1113,17 @@ export default function TransactionHistoryScreen() {
                     ))}
                   </View>
                 ) : (
-                  <View className="bg-muted/50 p-4 rounded-lg mb-4 items-center">
+                  <View style={{ backgroundColor: colors.muted + '80', padding: 16, borderRadius: 8, marginBottom: 16, alignItems: 'center' }}>
                     <StickyNote size={32} color={colors.placeholder} />
-                    <Text className="text-muted-foreground text-center mt-2">
+                    <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 8 }}>
                       {t('noNotesForTransaction') || 'No notes for this transaction yet'}
                     </Text>
                   </View>
                 )}
 
                 {/* Add New Note */}
-                <View className="border-t border-border pt-4">
-                  <Text className="text-muted-foreground text-sm mb-2">
+                <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 16 }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>
                     {t('addNewNote') || 'Add New Note'}
                   </Text>
                   <TextInput
@@ -1061,33 +1131,37 @@ export default function TransactionHistoryScreen() {
                     onChangeText={setNewNoteTitle}
                     placeholder={t('noteTitle') || 'Note title...'}
                     placeholderTextColor={colors.mutedForeground}
-                    className="bg-muted border border-border p-3 rounded-lg text-foreground mb-2"
-                    style={{ outlineStyle: 'none' } as any}
+                    style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 8, color: colors.foreground, marginBottom: 8, outlineStyle: 'none' } as any}
                   />
                   <TextInput
                     value={newNoteContent}
                     onChangeText={setNewNoteContent}
                     placeholder={t('noteContent') || 'Note content (optional)...'}
                     placeholderTextColor={colors.mutedForeground}
-                    className="bg-muted border border-border p-3 rounded-lg text-foreground mb-3"
-                    style={{ outlineStyle: 'none', minHeight: 80 } as any}
+                    style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 8, color: colors.foreground, marginBottom: 12, minHeight: 80, outlineStyle: 'none' } as any}
                     multiline
                     textAlignVertical="top"
                   />
                   <Pressable
                     onPress={handleAddNote}
                     disabled={createNoteMutation.isPending || !newNoteTitle.trim()}
-                    style={{ cursor: 'pointer' }}
-                    className={`bg-accent p-3 rounded-lg flex-row items-center justify-center ${
-                      createNoteMutation.isPending || !newNoteTitle.trim() ? 'opacity-50' : ''
-                    }`}
+                    style={{
+                      backgroundColor: colors.accent,
+                      padding: 12,
+                      borderRadius: 8,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: createNoteMutation.isPending || !newNoteTitle.trim() ? 0.5 : 1,
+                      cursor: 'pointer',
+                    }}
                   >
                     {createNoteMutation.isPending ? (
                       <ActivityIndicator color={colors.primaryForeground} size="small" />
                     ) : (
                       <>
                         <Plus size={18} color={colors.primaryForeground} />
-                        <Text className="text-accent-foreground font-semibold ml-2">
+                        <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>
                           {t('addNote') || 'Add Note'}
                         </Text>
                       </>

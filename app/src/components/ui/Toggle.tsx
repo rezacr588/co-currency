@@ -6,7 +6,7 @@ import Animated, {
   interpolateColor,
 } from 'react-native-reanimated';
 import { useEffect } from 'react';
-import { useColors } from '../../context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { haptics } from '../../utils/haptics';
 
 interface ToggleProps {
@@ -22,7 +22,8 @@ const THUMB_SIZE = 22;
 const THUMB_MARGIN = 3;
 
 export function Toggle({ value, onValueChange, disabled = false, label }: ToggleProps) {
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const progress = useSharedValue(value ? 1 : 0);
 
   useEffect(() => {

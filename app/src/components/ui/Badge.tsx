@@ -1,33 +1,37 @@
 import { View, Text } from 'react-native';
+import { useTheme } from 'styled-components/native';
 
 type BadgeVariant = 'default' | 'success' | 'danger' | 'warning' | 'info';
 
 interface BadgeProps {
   variant?: BadgeVariant;
   children: React.ReactNode;
-  className?: string;
+  style?: any;
 }
 
-const variantStyles: Record<BadgeVariant, string> = {
-  default: 'bg-secondary',
-  success: 'bg-success/20',
-  danger: 'bg-danger/20',
-  warning: 'bg-warning/20',
-  info: 'bg-primary/20',
-};
+export function Badge({ variant = 'default', children, style }: BadgeProps) {
+  const theme = useTheme();
+  const colors = theme.colors;
 
-const textStyles: Record<BadgeVariant, string> = {
-  default: 'text-foreground',
-  success: 'text-success',
-  danger: 'text-danger',
-  warning: 'text-warning',
-  info: 'text-primary-foreground',
-};
+  const variantStyles: Record<BadgeVariant, { bg: string }> = {
+    default: { bg: colors.secondary },
+    success: { bg: colors.success + '33' },
+    danger: { bg: colors.danger + '33' },
+    warning: { bg: colors.warning + '33' },
+    info: { bg: colors.primary + '33' },
+  };
 
-export function Badge({ variant = 'default', children, className = '' }: BadgeProps) {
+  const textColors: Record<BadgeVariant, string> = {
+    default: colors.foreground,
+    success: colors.success,
+    danger: colors.danger,
+    warning: colors.warning,
+    info: colors.primaryForeground,
+  };
+
   return (
-    <View className={`px-2 py-1 rounded ${variantStyles[variant]} ${className}`}>
-      <Text className={`text-xs font-semibold ${textStyles[variant]}`}>
+    <View style={[{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, backgroundColor: variantStyles[variant].bg }, style]}>
+      <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', color: textColors[variant] }}>
         {children}
       </Text>
     </View>

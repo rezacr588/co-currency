@@ -1,5 +1,6 @@
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useTheme } from 'styled-components/native';
 
 export type ReportPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
@@ -10,6 +11,8 @@ interface ReportPeriodTabsProps {
 
 export function ReportPeriodTabs({ selected, onSelect }: ReportPeriodTabsProps) {
   const { t } = useLanguage();
+  const theme = useTheme();
+  const colors = theme.colors;
 
   const tabs: { key: ReportPeriod; label: string }[] = [
     { key: 'daily', label: t('dailyReport') },
@@ -19,7 +22,7 @@ export function ReportPeriodTabs({ selected, onSelect }: ReportPeriodTabsProps) 
   ];
 
   return (
-    <View className="mb-4" accessibilityRole="tablist">
+    <View style={{ marginBottom: 16 }} accessibilityRole="tablist">
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -29,19 +32,24 @@ export function ReportPeriodTabs({ selected, onSelect }: ReportPeriodTabsProps) 
           <Pressable
             key={tab.key}
             onPress={() => onSelect(tab.key)}
-            className={`px-5 py-2.5 rounded-full ${
-              selected === tab.key
-                ? 'bg-accent'
-                : 'bg-secondary border border-border'
-            }`}
+            style={{
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+              borderRadius: 9999,
+              backgroundColor: selected === tab.key ? colors.accent : colors.secondary,
+              borderWidth: selected === tab.key ? 0 : 1,
+              borderColor: colors.border,
+            }}
             accessibilityRole="tab"
             accessibilityLabel={tab.label}
             accessibilityState={{ selected: selected === tab.key }}
           >
             <Text
-              className={`text-sm font-semibold ${
-                selected === tab.key ? 'text-background' : 'text-foreground'
-              }`}
+              style={{
+                fontSize: 14,
+                fontFamily: 'Inter_600SemiBold',
+                color: selected === tab.key ? colors.background : colors.foreground,
+              }}
             >
               {tab.label}
             </Text>

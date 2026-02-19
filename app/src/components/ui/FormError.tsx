@@ -1,13 +1,14 @@
 import { View, Text } from 'react-native';
 import { AlertCircle } from 'lucide-react-native';
-import { useColors } from '../../context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 
 interface FormErrorProps {
   message: string;
 }
 
 export function FormError({ message }: FormErrorProps) {
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
 
   if (!message) return null;
 

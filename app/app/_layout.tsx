@@ -1,5 +1,4 @@
-import '../global.css';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -13,7 +12,8 @@ import {
 } from '@expo-google-fonts/inter';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ThemeProvider, useTheme, useColors } from '../src/context/ThemeContext';
+import { ThemeProvider as SCThemeProvider, useTheme as useStyledTheme } from 'styled-components/native';
+import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
 import { LanguageProvider } from '../src/context/LanguageContext';
 import { AuthProvider } from '../src/context/AuthContext';
 import { SettingsProvider } from '../src/context/SettingsContext';
@@ -24,6 +24,7 @@ import { BiometricLock } from '../src/components/ui/BiometricLock';
 import { useAppUpdates } from '../src/hooks/useAppUpdates';
 import { useAndroidNavigationBar } from '../src/hooks/useAndroidNavigationBar';
 import { usePushNotifications } from '../src/hooks/usePushNotifications';
+import { buildTheme } from '../src/theme';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -38,9 +39,16 @@ const queryClient = new QueryClient({
   },
 });
 
+function StyledThemeWrapper({ children }: { children: ReactNode }) {
+  const { isDark, colors } = useTheme();
+  const theme = buildTheme(colors, isDark);
+  return <SCThemeProvider theme={theme}>{children}</SCThemeProvider>;
+}
+
 function RootLayoutNav() {
   const { isDark } = useTheme();
-  const colors = useColors();
+  const styledTheme = useStyledTheme();
+  const colors = styledTheme.colors;
   const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -97,6 +105,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
+            <StyledThemeWrapper>
             <LanguageProvider>
               <SettingsProvider>
                 <AuthProvider>
@@ -107,6 +116,7 @@ export default function RootLayout() {
                 </AuthProvider>
               </SettingsProvider>
             </LanguageProvider>
+            </StyledThemeWrapper>
           </ThemeProvider>
         </QueryClientProvider>
       </SafeAreaProvider>

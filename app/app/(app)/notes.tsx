@@ -23,7 +23,7 @@ import {
 } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { useColors } from '../../src/context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { NoteCard, NoteFormModal } from '../../src/components/features/Notes';
 import type { Note, CreateNoteRequest, UpdateNoteRequest } from '../../src/types/note';
 
@@ -32,7 +32,8 @@ export default function NotesScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
@@ -167,33 +168,31 @@ export default function NotesScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
-        <View className="flex-row items-center flex-1">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
           <Pressable
             onPress={() => router.back()}
-            style={{ cursor: 'pointer' }}
-            className="p-2 mr-2"
+            style={{ cursor: 'pointer', padding: 8, marginRight: 8 }}
           >
             <ChevronLeft size={24} color={colors.placeholder} />
           </Pressable>
-          <Text className="text-2xl font-bold text-foreground">
+          <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
             {t('notes') || 'Notes'}
           </Text>
         </View>
         <Pressable
           onPress={handleAddNote}
-          style={{ cursor: 'pointer' }}
-          className="bg-accent p-2 rounded-lg"
+          style={{ cursor: 'pointer', backgroundColor: colors.accent, padding: 8, borderRadius: 8 }}
         >
           <Plus size={24} color={colors.primaryForeground} />
         </Pressable>
       </View>
 
       {/* Search Bar */}
-      <View className="px-4 py-3">
-        <View className="flex-row items-center bg-muted rounded-lg px-3">
+      <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.muted, borderRadius: 8, paddingHorizontal: 12 }}>
           <Search size={20} color={colors.placeholder} />
           <TextInput
             value={searchQuery}
@@ -216,7 +215,7 @@ export default function NotesScreen() {
 
       {/* Content */}
       <ScrollView
-        className="flex-1"
+        style={{ flex: 1 }}
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
         refreshControl={
           <RefreshControl
@@ -227,26 +226,26 @@ export default function NotesScreen() {
         }
       >
         {isPending ? (
-          <View className="flex-1 items-center justify-center py-12">
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 48 }}>
             <ActivityIndicator size="large" color={colors.accent} />
           </View>
         ) : error ? (
-          <View className="bg-danger/10 p-4 rounded-xl">
-            <Text className="text-danger text-center">
+          <View style={{ backgroundColor: colors.danger + '1a', padding: 16, borderRadius: 12 }}>
+            <Text style={{ color: colors.danger, textAlign: 'center' }}>
               {t('errorLoadingNotes') || 'Error loading notes'}
             </Text>
           </View>
         ) : sortedNotes.length === 0 ? (
-          <View className="items-center justify-center py-16">
-            <View className="bg-muted/50 p-6 rounded-full mb-4">
+          <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 64 }}>
+            <View style={{ backgroundColor: colors.muted + '80', padding: 24, borderRadius: 9999, marginBottom: 16 }}>
               <StickyNote size={48} color={colors.placeholder} />
             </View>
-            <Text className="text-lg font-medium text-foreground mb-2">
+            <Text style={{ fontSize: 18, fontFamily: 'Inter_500Medium', color: colors.foreground, marginBottom: 8 }}>
               {searchQuery
                 ? (t('noNotesFound') || 'No notes found')
                 : (t('noNotesYet') || 'No notes yet')}
             </Text>
-            <Text className="text-muted-foreground text-center mb-4">
+            <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginBottom: 16 }}>
               {searchQuery
                 ? (t('tryDifferentSearch') || 'Try a different search term')
                 : (t('createFirstNote') || 'Create your first note to get started')}
@@ -254,11 +253,10 @@ export default function NotesScreen() {
             {!searchQuery && (
               <Pressable
                 onPress={handleAddNote}
-                style={{ cursor: 'pointer' }}
-                className="bg-accent px-6 py-3 rounded-lg flex-row items-center"
+                style={{ cursor: 'pointer', backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}
               >
                 <Plus size={20} color={colors.primaryForeground} />
-                <Text className="text-accent-foreground font-medium ml-2">
+                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_500Medium', marginLeft: 8 }}>
                   {t('addNote') || 'Add Note'}
                 </Text>
               </Pressable>

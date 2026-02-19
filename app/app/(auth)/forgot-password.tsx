@@ -14,13 +14,14 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Mail, ArrowLeft } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { useColors } from '../../src/context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { Button } from '../../src/components/ui/Button';
 import { FormError } from '../../src/components/ui/FormError';
 
 export default function ForgotPasswordScreen() {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -52,21 +53,21 @@ export default function ForgotPasswordScreen() {
 
   if (success) {
     return (
-      <SafeAreaView className="flex-1 bg-background">
-        <View className="flex-1 p-6 justify-center items-center">
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={{ flex: 1, padding: 24, justifyContent: 'center', alignItems: 'center' }}>
           <View style={{ width: '100%', maxWidth: 400 }}>
-            <View className="bg-success-muted border border-success/20 p-5 rounded-lg mb-6">
-              <Text className="text-success text-center">
+            <View style={{ backgroundColor: colors.successMuted, borderWidth: 1, borderColor: colors.success + '33', padding: 20, borderRadius: 8, marginBottom: 24 }}>
+              <Text style={{ color: colors.success, textAlign: 'center' }}>
                 {t('resetEmailSent')}
               </Text>
             </View>
-            <Text className="text-muted-foreground text-center mb-8 text-sm">
+            <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginBottom: 32, fontSize: 14 }}>
               {t('checkEmail')}
             </Text>
-            <View className="items-center">
+            <View style={{ alignItems: 'center' }}>
               <Link href="/login" asChild>
-                <Pressable style={{ cursor: 'pointer' }} className="bg-foreground px-5 py-3 rounded-lg">
-                  <Text className="text-background font-medium text-sm">{t('backToLogin')}</Text>
+                <Pressable style={{ cursor: 'pointer', backgroundColor: colors.foreground, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8 }}>
+                  <Text style={{ color: colors.background, fontFamily: 'Inter_500Medium', fontSize: 14 }}>{t('backToLogin')}</Text>
                 </Pressable>
               </Link>
             </View>
@@ -77,13 +78,13 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
+        style={{ flex: 1 }}
       >
         <ScrollView
-          className="flex-1"
+          style={{ flex: 1 }}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{
             flexGrow: 1,
@@ -95,31 +96,30 @@ export default function ForgotPasswordScreen() {
         >
           <View style={{ width: '100%', maxWidth: 400 }}>
           <Link href="/login" asChild>
-            <Pressable style={{ cursor: 'pointer' }} className="flex-row items-center mb-8">
+            <Pressable style={{ cursor: 'pointer', flexDirection: 'row', alignItems: 'center', marginBottom: 32 }}>
               <ArrowLeft size={18} color={colors.mutedForeground} />
-              <Text className="text-muted-foreground ml-2 text-sm">{t('backToLogin')}</Text>
+              <Text style={{ color: colors.mutedForeground, marginLeft: 8, fontSize: 14 }}>{t('backToLogin')}</Text>
             </Pressable>
           </Link>
 
-          <View className="items-center mb-8">
-            <Text className="text-2xl font-semibold text-foreground mb-2">
+          <View style={{ alignItems: 'center', marginBottom: 32 }}>
+            <Text style={{ fontSize: 24, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginBottom: 8 }}>
               {t('forgotPassword')}
             </Text>
-            <Text className="text-muted-foreground text-center text-sm">
+            <Text style={{ color: colors.mutedForeground, textAlign: 'center', fontSize: 14 }}>
               {t('forgotPasswordSubtitle')}
             </Text>
           </View>
 
           <FormError message={error} />
 
-          <View className="gap-4">
+          <View style={{ gap: 16 }}>
             {/* Email Input */}
-            <Text className="text-xs text-muted-foreground">{t('email')}</Text>
-            <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
+            <Text style={{ fontSize: 12, color: colors.mutedForeground }}>{t('email')}</Text>
+            <View style={{ backgroundColor: colors.muted, borderRadius: 8, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, borderWidth: 1, borderColor: colors.border }}>
               <Mail size={18} color={colors.mutedForeground} />
               <TextInput
-                className="flex-1 p-3.5 text-foreground"
-                style={{ outlineStyle: 'none', fontSize: 15 } as any}
+                style={{ flex: 1, padding: 14, color: colors.foreground, outlineStyle: 'none', fontSize: 15 } as any}
                 placeholder={t('email')}
                 placeholderTextColor={colors.placeholder}
                 value={email}

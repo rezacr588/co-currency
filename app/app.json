@@ -16,7 +16,12 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cofinance.app",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Take photos of receipts and invoices",
+        "NSPhotoLibraryUsageDescription": "Attach receipt photos from your library",
+        "NSMicrophoneUsageDescription": "Record voice messages for the AI advisor"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -25,6 +30,7 @@
       },
       "package": "com.cofinance.app",
       "versionCode": 1,
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "RECORD_AUDIO"],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
@@ -54,7 +60,21 @@
         }
       ],
       "expo-updates",
-      "expo-navigation-bar"
+      "expo-navigation-bar",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Allow CoFinance to take photos of receipts and invoices",
+          "photosPermission": "Allow CoFinance to access your photos for receipt uploads"
+        }
+      ],
+      "expo-document-picker",
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow CoFinance to record voice messages for the AI advisor"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

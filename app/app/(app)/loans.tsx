@@ -32,7 +32,8 @@ import {
 } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { useTheme, useColors } from '../../src/context/ThemeContext';
+import { useTheme } from '../../src/context/ThemeContext';
+import { useTheme as useStyledTheme } from 'styled-components/native';
 import { formatCompactCurrency, formatDate } from '../../src/utils/format';
 import { getCurrencyDisplay } from '../../src/utils/format';
 import { haptics } from '../../src/utils/haptics';
@@ -50,7 +51,8 @@ export default function LoansScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
-  const colors = useColors();
+  const styledTheme = useStyledTheme();
+  const colors = styledTheme.colors;
 
   const isDesktop = width >= 1024;
   const bottomPadding = isDesktop ? insets.bottom : insets.bottom + 96;
@@ -208,13 +210,13 @@ export default function LoansScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
       {/* Header */}
-      <View className="flex-row items-center justify-between p-4 border-b border-border">
-        <Pressable onPress={() => router.back()} className="p-2" hitSlop={12}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <Pressable onPress={() => router.back()} style={{ padding: 8 }} hitSlop={12}>
           <ArrowLeft size={24} color={iconColor} />
         </Pressable>
-        <Text className="text-2xl font-bold text-foreground">
+        <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
           {t('loansAndDebts') || 'Loans & Debts'}
         </Text>
         <Pressable
@@ -222,14 +224,14 @@ export default function LoansScreen() {
             haptics.light();
             setShowCreateModal(true);
           }}
-          className="p-2"
+          style={{ padding: 8 }}
         >
           <Plus size={24} color={colors.accent} />
         </Pressable>
       </View>
 
       <ScrollView
-        className="flex-1"
+        style={{ flex: 1 }}
         contentContainerStyle={{
           padding: 16,
           paddingBottom: bottomPadding,
@@ -238,48 +240,50 @@ export default function LoansScreen() {
       >
         {/* Summary Card */}
         {summary && (
-          <View className="bg-card border border-border p-5 rounded-xl mb-6">
-            <Text className="text-base font-semibold text-foreground mb-4">
+          <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 20, borderRadius: 12, marginBottom: 24 }}>
+            <Text style={{ fontSize: 16, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginBottom: 16 }}>
               {t('loanSummary') || 'Loan Summary'}
             </Text>
-            <View className="flex-row justify-between mb-3">
-              <View className="flex-1 items-center">
-                <View className="flex-row items-center mb-1">
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+              <View style={{ flex: 1, alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                   <TrendingDown size={16} color={colors.danger} />
-                  <Text className="text-xs text-muted-foreground ml-1">
+                  <Text style={{ fontSize: 12, color: colors.mutedForeground, marginLeft: 4 }}>
                     {t('youOwe') || 'You Owe'}
                   </Text>
                 </View>
-                <Text className="text-lg font-bold text-danger">
+                <Text style={{ fontSize: 18, fontFamily: 'Inter_700Bold', color: colors.danger }}>
                   {formatCompactCurrency(summary.remaining_borrowed, summary.currency)}
                 </Text>
               </View>
-              <View className="flex-1 items-center">
-                <View className="flex-row items-center mb-1">
+              <View style={{ flex: 1, alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                   <TrendingUp size={16} color={colors.success} />
-                  <Text className="text-xs text-muted-foreground ml-1">
+                  <Text style={{ fontSize: 12, color: colors.mutedForeground, marginLeft: 4 }}>
                     {t('owedToYou') || 'Owed to You'}
                   </Text>
                 </View>
-                <Text className="text-lg font-bold text-success">
+                <Text style={{ fontSize: 18, fontFamily: 'Inter_700Bold', color: colors.success }}>
                   {formatCompactCurrency(summary.remaining_lent, summary.currency)}
                 </Text>
               </View>
             </View>
-            <View className="border-t border-border pt-3">
-              <View className="flex-row items-center justify-center">
-                <Text className="text-muted-foreground text-sm mr-2">
+            <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginRight: 8 }}>
                   {t('netPosition') || 'Net Position'}:
                 </Text>
                 <Text
-                  className={`text-lg font-bold ${
-                    summary.net_debt > 0 ? 'text-danger' : 'text-success'
-                  }`}
+                  style={{
+                    fontSize: 18,
+                    fontFamily: 'Inter_700Bold',
+                    color: summary.net_debt > 0 ? colors.danger : colors.success,
+                  }}
                 >
                   {`${summary.net_debt > 0 ? '-' : '+'}${formatCompactCurrency(Math.abs(summary.net_debt), summary.currency)}`}
                 </Text>
               </View>
-              <Text className="text-xs text-muted-foreground text-center mt-1">
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: 'center', marginTop: 4 }}>
                 {summary.net_debt > 0
                   ? t('netDebtor') || 'You are a net debtor'
                   : t('netCreditor') || 'You are a net creditor'}
@@ -289,7 +293,7 @@ export default function LoansScreen() {
         )}
 
         {/* Filter Tabs */}
-        <View className="flex-row gap-2 mb-4">
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
           {(['all', 'borrowed', 'lent'] as const).map((f) => (
             <Pressable
               key={f}
@@ -297,16 +301,22 @@ export default function LoansScreen() {
                 haptics.selection();
                 setFilter(f);
               }}
-              className={`flex-1 p-3 rounded-lg border ${
-                filter === f
-                  ? 'bg-foreground border-foreground'
-                  : 'bg-card border-border'
-              }`}
+              style={{
+                flex: 1,
+                padding: 12,
+                borderRadius: 8,
+                borderWidth: 1,
+                backgroundColor: filter === f ? colors.foreground : colors.card,
+                borderColor: filter === f ? colors.foreground : colors.border,
+              }}
             >
               <Text
-                className={`text-center text-sm font-medium ${
-                  filter === f ? 'text-background' : 'text-foreground'
-                }`}
+                style={{
+                  textAlign: 'center',
+                  fontSize: 14,
+                  fontFamily: 'Inter_500Medium',
+                  color: filter === f ? colors.background : colors.foreground,
+                }}
               >
                 {f === 'all' ? t('all') || 'All' : f === 'borrowed' ? t('borrowed') || 'Borrowed' : t('lent') || 'Lent'}
               </Text>
@@ -318,22 +328,22 @@ export default function LoansScreen() {
         {isPending ? (
           <SkeletonList count={3} ItemComponent={SkeletonCard} />
         ) : loans.length === 0 ? (
-          <View className="bg-card border border-border p-8 rounded-xl items-center">
+          <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 32, borderRadius: 12, alignItems: 'center' }}>
             <CreditCard size={48} color={colors.mutedForeground} />
-            <Text className="text-muted-foreground text-center mt-4">
+            <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 16 }}>
               {t('noLoans') || 'No loans or debts yet'}
             </Text>
             <Pressable
               onPress={() => setShowCreateModal(true)}
-              className="bg-accent px-4 py-2 rounded-lg mt-4"
+              style={{ backgroundColor: colors.accent, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, marginTop: 16 }}
             >
-              <Text className="text-accent-foreground font-medium">
+              <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_500Medium' }}>
                 {t('addLoan') || 'Add Loan'}
               </Text>
             </Pressable>
           </View>
         ) : (
-          <View className="gap-3">
+          <View style={{ gap: 12 }}>
             {loans.map((loan) => {
               const progress = ((loan.principal_amount - loan.remaining_amount) / loan.principal_amount) * 100;
               const isBorrowed = loan.type === 'borrowed';
@@ -344,14 +354,20 @@ export default function LoansScreen() {
                   key={loan.id}
                   onPress={() => openPaymentModal(loan)}
                   onLongPress={() => handleDelete(loan)}
-                  className="bg-card border border-border p-4 rounded-xl"
+                  style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12 }}
                 >
-                  <View className="flex-row items-start justify-between mb-2">
-                    <View className="flex-row items-center flex-1">
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                       <View
-                        className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${
-                          isBorrowed ? 'bg-danger/20' : 'bg-success/20'
-                        }`}
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 9999,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: 12,
+                          backgroundColor: isBorrowed ? colors.danger + '33' : colors.success + '33',
+                        }}
                       >
                         {isBorrowed ? (
                           <CreditCard size={20} color={colors.danger} />
@@ -359,14 +375,14 @@ export default function LoansScreen() {
                           <HandCoins size={20} color={colors.success} />
                         )}
                       </View>
-                      <View className="flex-1">
-                        <Text className="text-foreground font-semibold" numberOfLines={1}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }} numberOfLines={1}>
                           {loan.name}
                         </Text>
                         {loan.counterparty && (
-                          <View className="flex-row items-center mt-0.5">
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
                             <User size={12} color={colors.mutedForeground} />
-                            <Text className="text-muted-foreground text-xs ml-1">
+                            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginLeft: 4 }}>
                               {isBorrowed ? t('from') || 'From' : t('to') || 'To'}: {loan.counterparty}
                             </Text>
                           </View>
@@ -374,40 +390,39 @@ export default function LoansScreen() {
                       </View>
                     </View>
                     {isOverdue && (
-                      <View className="bg-danger/20 px-2 py-1 rounded flex-row items-center">
+                      <View style={{ backgroundColor: colors.danger + '33', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, flexDirection: 'row', alignItems: 'center' }}>
                         <AlertCircle size={12} color={colors.danger} />
-                        <Text className="text-danger text-xs ml-1">{t('overdue') || 'Overdue'}</Text>
+                        <Text style={{ color: colors.danger, fontSize: 12, marginLeft: 4 }}>{t('overdue') || 'Overdue'}</Text>
                       </View>
                     )}
                   </View>
 
                   {/* Amount */}
-                  <View className="flex-row items-baseline justify-between mb-2">
-                    <Text className={`text-lg font-bold ${isBorrowed ? 'text-danger' : 'text-success'}`}>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text style={{ fontSize: 18, fontFamily: 'Inter_700Bold', color: isBorrowed ? colors.danger : colors.success }}>
                       {formatCompactCurrency(loan.remaining_amount, loan.currency)}
                     </Text>
-                    <Text className="text-muted-foreground text-sm">
+                    <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
                       {t('of') || 'of'} {formatCompactCurrency(loan.principal_amount, loan.currency)}
                     </Text>
                   </View>
 
                   {/* Progress Bar */}
-                  <View className="h-2 bg-muted rounded-full overflow-hidden mb-2">
+                  <View style={{ height: 8, backgroundColor: colors.muted, borderRadius: 9999, overflow: 'hidden', marginBottom: 8 }}>
                     <View
-                      className={`h-full ${isBorrowed ? 'bg-danger' : 'bg-success'}`}
-                      style={{ width: `${progress}%` }}
+                      style={{ height: '100%', backgroundColor: isBorrowed ? colors.danger : colors.success, width: `${progress}%` }}
                     />
                   </View>
 
                   {/* Footer */}
-                  <View className="flex-row items-center justify-between">
-                    <Text className="text-muted-foreground text-xs">
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
                       {Math.round(progress)}% {t('paid') || 'paid'}
                     </Text>
                     {loan.due_date && (
-                      <View className="flex-row items-center">
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Calendar size={12} color={colors.mutedForeground} />
-                        <Text className="text-muted-foreground text-xs ml-1">
+                        <Text style={{ color: colors.mutedForeground, fontSize: 12, marginLeft: 4 }}>
                           {t('due') || 'Due'}: {formatDate(loan.due_date)}
                         </Text>
                       </View>
@@ -429,19 +444,18 @@ export default function LoansScreen() {
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1"
+          style={{ flex: 1 }}
         >
           <Pressable
-            className="flex-1 bg-black/50 justify-end"
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
             onPress={() => setShowCreateModal(false)}
           >
             <Pressable
-              className="bg-card rounded-t-3xl p-6"
-              style={{ maxHeight: '90%' }}
+              style={{ backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '90%' }}
               onPress={(e) => e.stopPropagation()}
             >
-              <View className="flex-row items-center justify-between mb-6">
-                <Text className="text-xl font-bold text-foreground">
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+                <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
                   {t('newLoan') || 'New Loan'}
                 </Text>
                 <Pressable onPress={() => setShowCreateModal(false)}>
@@ -451,39 +465,55 @@ export default function LoansScreen() {
 
               <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Loan Type */}
-                <View className="mb-5">
-                  <Text className="text-muted-foreground text-sm mb-2">{t('type') || 'Type'}</Text>
-                  <View className="flex-row gap-2">
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('type') || 'Type'}</Text>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
                     <Pressable
                       onPress={() => setFormType('borrowed')}
-                      className={`flex-1 p-4 rounded-lg border flex-row items-center justify-center ${
-                        formType === 'borrowed'
-                          ? 'bg-danger/10 border-danger'
-                          : 'bg-card border-border'
-                      }`}
+                      style={{
+                        flex: 1,
+                        padding: 16,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: formType === 'borrowed' ? colors.danger + '1a' : colors.card,
+                        borderColor: formType === 'borrowed' ? colors.danger : colors.border,
+                      }}
                     >
                       <CreditCard size={20} color={formType === 'borrowed' ? colors.danger : colors.mutedForeground} />
                       <Text
-                        className={`ml-2 font-medium ${
-                          formType === 'borrowed' ? 'text-danger' : 'text-foreground'
-                        }`}
+                        style={{
+                          marginLeft: 8,
+                          fontFamily: 'Inter_500Medium',
+                          color: formType === 'borrowed' ? colors.danger : colors.foreground,
+                        }}
                       >
                         {t('borrowed') || 'I Borrowed'}
                       </Text>
                     </Pressable>
                     <Pressable
                       onPress={() => setFormType('lent')}
-                      className={`flex-1 p-4 rounded-lg border flex-row items-center justify-center ${
-                        formType === 'lent'
-                          ? 'bg-success/10 border-success'
-                          : 'bg-card border-border'
-                      }`}
+                      style={{
+                        flex: 1,
+                        padding: 16,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: formType === 'lent' ? colors.success + '1a' : colors.card,
+                        borderColor: formType === 'lent' ? colors.success : colors.border,
+                      }}
                     >
                       <HandCoins size={20} color={formType === 'lent' ? colors.success : colors.mutedForeground} />
                       <Text
-                        className={`ml-2 font-medium ${
-                          formType === 'lent' ? 'text-success' : 'text-foreground'
-                        }`}
+                        style={{
+                          marginLeft: 8,
+                          fontFamily: 'Inter_500Medium',
+                          color: formType === 'lent' ? colors.success : colors.foreground,
+                        }}
                       >
                         {t('lent') || 'I Lent'}
                       </Text>
@@ -492,11 +522,10 @@ export default function LoansScreen() {
                 </View>
 
                 {/* Name */}
-                <View className="mb-5">
-                  <Text className="text-muted-foreground text-sm mb-2">{t('name') || 'Name'} *</Text>
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('name') || 'Name'} *</Text>
                   <TextInput
-                    className="bg-muted border border-border p-3.5 rounded-lg text-foreground"
-                    style={{ outlineStyle: 'none' } as any}
+                    style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 8, color: colors.foreground, outlineStyle: 'none' } as any}
                     value={formName}
                     onChangeText={setFormName}
                     placeholder={t('loanNamePlaceholder') || 'e.g., Car loan, Personal loan'}
@@ -505,15 +534,14 @@ export default function LoansScreen() {
                 </View>
 
                 {/* Amount */}
-                <View className="mb-5">
-                  <Text className="text-muted-foreground text-sm mb-2">{t('amount') || 'Amount'} *</Text>
-                  <View className="bg-muted border border-border rounded-lg flex-row items-center px-4">
-                    <Text className="text-xl text-muted-foreground mr-2">
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('amount') || 'Amount'} *</Text>
+                  <View style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 8, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
+                    <Text style={{ fontSize: 20, color: colors.mutedForeground, marginRight: 8 }}>
                       {getCurrencyDisplay(formCurrency).symbol}
                     </Text>
                     <TextInput
-                      className="flex-1 p-3.5 text-xl font-semibold text-foreground"
-                      style={{ outlineStyle: 'none' } as any}
+                      style={{ flex: 1, padding: 14, fontSize: 20, fontFamily: 'Inter_600SemiBold', color: colors.foreground, outlineStyle: 'none' } as any}
                       value={formAmount}
                       onChangeText={setFormAmount}
                       keyboardType="decimal-pad"
@@ -524,29 +552,34 @@ export default function LoansScreen() {
                 </View>
 
                 {/* Currency */}
-                <View className="mb-5">
-                  <Text className="text-muted-foreground text-sm mb-2">{t('currency') || 'Currency'}</Text>
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('currency') || 'Currency'}</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View className="flex-row gap-2">
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
                       {CURRENCIES.map((code) => {
                         const display = getCurrencyDisplay(code);
                         return (
                           <Pressable
                             key={code}
                             onPress={() => setFormCurrency(code)}
-                            className={`px-3 py-2 rounded-md flex-row items-center border ${
-                              formCurrency === code
-                                ? 'bg-foreground border-foreground'
-                                : 'bg-secondary border-border'
-                            }`}
+                            style={{
+                              paddingHorizontal: 12,
+                              paddingVertical: 8,
+                              borderRadius: 6,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              borderWidth: 1,
+                              backgroundColor: formCurrency === code ? colors.foreground : colors.secondary,
+                              borderColor: formCurrency === code ? colors.foreground : colors.border,
+                            }}
                           >
-                            <Text className="mr-1 text-sm">{display.flag || ''}</Text>
+                            <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || ''}</Text>
                             <Text
-                              className={`text-sm ${
-                                formCurrency === code
-                                  ? 'text-background font-medium'
-                                  : 'text-foreground'
-                              }`}
+                              style={{
+                                fontSize: 14,
+                                color: formCurrency === code ? colors.background : colors.foreground,
+                                fontFamily: formCurrency === code ? 'Inter_500Medium' : undefined,
+                              }}
                             >
                               {code}
                             </Text>
@@ -558,15 +591,14 @@ export default function LoansScreen() {
                 </View>
 
                 {/* Counterparty */}
-                <View className="mb-5">
-                  <Text className="text-muted-foreground text-sm mb-2">
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>
                     {formType === 'borrowed' ? t('lender') || 'Lender' : t('borrower') || 'Borrower'}
                   </Text>
-                  <View className="flex-row items-center bg-muted border border-border rounded-lg px-3">
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12 }}>
                     <User size={18} color={colors.mutedForeground} />
                     <TextInput
-                      className="flex-1 p-3.5 text-foreground"
-                      style={{ outlineStyle: 'none' } as any}
+                      style={{ flex: 1, padding: 14, color: colors.foreground, outlineStyle: 'none' } as any}
                       value={formCounterparty}
                       onChangeText={setFormCounterparty}
                       placeholder={t('personOrCompany') || 'Person or company name'}
@@ -576,13 +608,12 @@ export default function LoansScreen() {
                 </View>
 
                 {/* Interest Rate */}
-                <View className="mb-5">
-                  <Text className="text-muted-foreground text-sm mb-2">
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>
                     {t('interestRate') || 'Interest Rate'} (%)
                   </Text>
                   <TextInput
-                    className="bg-muted border border-border p-3.5 rounded-lg text-foreground"
-                    style={{ outlineStyle: 'none' } as any}
+                    style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 8, color: colors.foreground, outlineStyle: 'none' } as any}
                     value={formInterestRate}
                     onChangeText={setFormInterestRate}
                     keyboardType="decimal-pad"
@@ -592,13 +623,12 @@ export default function LoansScreen() {
                 </View>
 
                 {/* Description */}
-                <View className="mb-6">
-                  <Text className="text-muted-foreground text-sm mb-2">
+                <View style={{ marginBottom: 24 }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>
                     {t('description') || 'Description'}
                   </Text>
                   <TextInput
-                    className="bg-muted border border-border p-3.5 rounded-lg text-foreground"
-                    style={{ outlineStyle: 'none', minHeight: 80 } as any}
+                    style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 8, color: colors.foreground, outlineStyle: 'none', minHeight: 80 } as any}
                     value={formDescription}
                     onChangeText={setFormDescription}
                     placeholder={t('loanDescriptionPlaceholder') || 'Additional notes...'}
@@ -633,18 +663,18 @@ export default function LoansScreen() {
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1"
+          style={{ flex: 1 }}
         >
           <Pressable
-            className="flex-1 bg-black/50 justify-end"
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
             onPress={() => setShowPaymentModal(false)}
           >
             <Pressable
-              className="bg-card rounded-t-3xl p-6"
+              style={{ backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}
               onPress={(e) => e.stopPropagation()}
             >
-              <View className="flex-row items-center justify-between mb-6">
-                <Text className="text-xl font-bold text-foreground">
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+                <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
                   {t('makePayment') || 'Make Payment'}
                 </Text>
                 <Pressable onPress={() => setShowPaymentModal(false)}>
@@ -654,25 +684,24 @@ export default function LoansScreen() {
 
               {selectedLoan && (
                 <>
-                  <View className="bg-muted p-4 rounded-lg mb-4">
-                    <Text className="text-foreground font-semibold">{selectedLoan.name}</Text>
-                    <Text className="text-muted-foreground text-sm mt-1">
+                  <View style={{ backgroundColor: colors.muted, padding: 16, borderRadius: 8, marginBottom: 16 }}>
+                    <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{selectedLoan.name}</Text>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 14, marginTop: 4 }}>
                       {t('remaining') || 'Remaining'}:{' '}
                       {formatCompactCurrency(selectedLoan.remaining_amount, selectedLoan.currency)}
                     </Text>
                   </View>
 
-                  <View className="mb-5">
-                    <Text className="text-muted-foreground text-sm mb-2">
+                  <View style={{ marginBottom: 20 }}>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>
                       {t('paymentAmount') || 'Payment Amount'}
                     </Text>
-                    <View className="bg-muted border border-border rounded-lg flex-row items-center px-4">
-                      <Text className="text-xl text-muted-foreground mr-2">
+                    <View style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 8, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
+                      <Text style={{ fontSize: 20, color: colors.mutedForeground, marginRight: 8 }}>
                         {getCurrencyDisplay(selectedLoan.currency).symbol}
                       </Text>
                       <TextInput
-                        className="flex-1 p-3.5 text-xl font-semibold text-foreground"
-                        style={{ outlineStyle: 'none' } as any}
+                        style={{ flex: 1, padding: 14, fontSize: 20, fontFamily: 'Inter_600SemiBold', color: colors.foreground, outlineStyle: 'none' } as any}
                         value={paymentAmount}
                         onChangeText={setPaymentAmount}
                         keyboardType="decimal-pad"
@@ -682,13 +711,12 @@ export default function LoansScreen() {
                     </View>
                   </View>
 
-                  <View className="mb-6">
-                    <Text className="text-muted-foreground text-sm mb-2">
+                  <View style={{ marginBottom: 24 }}>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>
                       {t('notes') || 'Notes'}
                     </Text>
                     <TextInput
-                      className="bg-muted border border-border p-3.5 rounded-lg text-foreground"
-                      style={{ outlineStyle: 'none' } as any}
+                      style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 8, color: colors.foreground, outlineStyle: 'none' } as any}
                       value={paymentNotes}
                       onChangeText={setPaymentNotes}
                       placeholder={t('paymentNotes') || 'Payment notes (optional)'}

@@ -3,17 +3,18 @@ import { Link } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, ArrowLeftRight, Bot, History, MessageCircle, Target, PiggyBank, BarChart3, Wallet } from 'lucide-react-native';
+import { Plus, ArrowLeftRight, History, MessageCircle, Target, PiggyBank, BarChart3, Wallet } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
-import { useColors } from '../../../../src/context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { formatCurrency, formatCompactCurrency, getCurrencyDisplay, formatDate, formatTransactionAmount, getTransactionCurrency } from '../../../../src/utils/format';
 import { StyledCategoryIcon } from '../../../../src/constants/icons';
 import { Skeleton, SkeletonList, SkeletonTransaction, SkeletonBalance } from '../../../../src/components/ui/Skeleton';
 
 export default function WalletScreen() {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -67,16 +68,15 @@ export default function WalletScreen() {
     { label: t('goals') || 'Goals', href: '/(app)/(tabs)/goals', icon: Target },
     { label: t('budgets') || 'Budgets', href: '/(app)/budgets', icon: PiggyBank },
     { label: t('aiAdvisor') || 'AI Advisor', href: '/(app)/(tabs)/wallet/chat', icon: MessageCircle },
-    { label: t('aiReceiptParser') || 'AI Parser', href: '/(app)/(tabs)/wallet/ai', icon: Bot },
     { label: t('reports') || 'Reports', href: '/(app)/(tabs)/reports', icon: BarChart3 },
   ];
 
   const featureCols = isDesktop ? 6 : 3;
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
       <ScrollView
-        className="flex-1"
+        style={{ flex: 1 }}
         contentContainerStyle={{
           padding: isDesktop ? 32 : 16,
           maxWidth: 1400,
@@ -89,7 +89,7 @@ export default function WalletScreen() {
         }
       >
         {/* 1. Hero Balance Card */}
-        <View className="bg-card border border-border rounded-2xl p-4 mb-6" style={{ overflow: 'hidden' }}>
+        <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 16, marginBottom: 24, overflow: 'hidden' }}>
           {isLoadingSummary ? (
             <View>
               <Skeleton width={120} height={14} borderRadius={4} />
@@ -103,38 +103,36 @@ export default function WalletScreen() {
             </View>
           ) : (
             <>
-              <View className="flex-row items-center mb-2">
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 <Wallet size={16} color={colors.secondaryForeground} />
-                <Text className="text-muted-foreground text-sm ml-2 font-medium">
+                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginLeft: 8, fontFamily: 'Inter_500Medium' }}>
                   {t('totalBalance') || 'Total Balance'}
                 </Text>
               </View>
-              <Text className="text-foreground text-2xl font-bold mb-4">
+              <Text style={{ color: colors.foreground, fontSize: 24, fontFamily: 'Inter_700Bold', marginBottom: 16 }}>
                 {formatCurrency(summary?.total_balance_usd ?? 0, 'USD')}
               </Text>
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <Link href={'/(app)/(tabs)/add' as any} asChild>
                   <Pressable
-                    className="flex-1 bg-primary rounded-xl flex-row items-center justify-center"
-                    style={({ pressed }) => [{ height: 44, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                    style={({ pressed }) => [{ flex: 1, backgroundColor: colors.primary, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 44, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
                     accessibilityLabel={t('addTransaction') || 'Add Transaction'}
                     accessibilityRole="button"
                   >
                     <Plus size={18} color={colors.primaryForeground} />
-                    <Text className="text-primary-foreground font-semibold ml-2 text-sm">
+                    <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 8, fontSize: 14 }}>
                       {t('addTransaction')}
                     </Text>
                   </Pressable>
                 </Link>
                 <Link href={'/(app)/(tabs)/wallet/convert' as any} asChild>
                   <Pressable
-                    className="flex-1 bg-secondary rounded-xl flex-row items-center justify-center"
-                    style={({ pressed }) => [{ height: 44, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                    style={({ pressed }) => [{ flex: 1, backgroundColor: colors.secondary, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 44, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
                     accessibilityLabel={t('convertCurrency') || t('convert') || 'Convert Currency'}
                     accessibilityRole="button"
                   >
                     <ArrowLeftRight size={18} color={colors.secondaryForeground} />
-                    <Text className="text-foreground font-semibold ml-2 text-sm">
+                    <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginLeft: 8, fontSize: 14 }}>
                       {t('convertCurrency') || t('convert') || 'Convert'}
                     </Text>
                   </Pressable>
@@ -145,7 +143,7 @@ export default function WalletScreen() {
         </View>
 
         {/* 2. Quick Actions Grid */}
-        <View className="mb-6">
+        <View style={{ marginBottom: 24 }}>
           <View
             style={{
               flexDirection: 'row',
@@ -159,20 +157,17 @@ export default function WalletScreen() {
               return (
                 <Link key={action.href} href={action.href as any} asChild>
                   <Pressable
-                    className="items-center"
-                    style={({ pressed }) => [{ width: itemWidth, minHeight: 44, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                    style={({ pressed }) => [{ alignItems: 'center', width: itemWidth, minHeight: 44, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
                     accessibilityLabel={action.label}
                     accessibilityRole="button"
                   >
                     <View
-                      className="bg-card border border-border items-center justify-center"
-                      style={{ width: 48, height: 48, borderRadius: 24 }}
+                      style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', width: 48, height: 48, borderRadius: 24 }}
                     >
                       <Icon size={20} color={colors.accent} />
                     </View>
                     <Text
-                      className="text-foreground mt-2 text-center"
-                      style={{ fontSize: 10 }}
+                      style={{ color: colors.foreground, marginTop: 8, textAlign: 'center', fontSize: 10 }}
                       numberOfLines={1}
                     >
                       {action.label}
@@ -185,13 +180,13 @@ export default function WalletScreen() {
         </View>
 
         {/* 4. Currency Balances - 2-Column Compact Grid */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold text-foreground mb-4">{t('balances')}</Text>
+        <View style={{ marginBottom: 24 }}>
+          <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginBottom: 16 }}>{t('balances')}</Text>
           {isLoadingBalances ? (
             <SkeletonList count={4} ItemComponent={SkeletonBalance} />
           ) : balances.length === 0 ? (
-            <View className="bg-card p-6 rounded-xl items-center">
-              <Text className="text-muted-foreground">{t('noBalances')}</Text>
+            <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, alignItems: 'center' }}>
+              <Text style={{ color: colors.mutedForeground }}>{t('noBalances')}</Text>
             </View>
           ) : (
             <>
@@ -201,8 +196,9 @@ export default function WalletScreen() {
                   return (
                     <View
                       key={balance.currency}
-                      className="bg-card rounded-xl"
                       style={{
+                        backgroundColor: colors.card,
+                        borderRadius: 12,
                         width: balanceCardWidth,
                         padding: 12,
                         overflow: 'hidden',
@@ -221,15 +217,17 @@ export default function WalletScreen() {
                           borderBottomLeftRadius: 12,
                         }}
                       />
-                      <View className="flex-row items-center mb-1" style={{ paddingLeft: 4 }}>
-                        <Text className="text-2xl mr-2">{display.flag || '🌐'}</Text>
-                        <Text className="text-foreground font-bold text-sm">{balance.currency}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4, paddingLeft: 4 }}>
+                        <Text style={{ fontSize: 24, marginRight: 8 }}>{display.flag || '🌐'}</Text>
+                        <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 14 }}>{balance.currency}</Text>
                       </View>
                       <Text
-                        className={`font-semibold ${
-                          balance.balance >= 0 ? 'text-foreground' : 'text-danger'
-                        }`}
-                        style={{ fontSize: 15, paddingLeft: 4 }}
+                        style={{
+                          fontFamily: 'Inter_600SemiBold',
+                          color: balance.balance >= 0 ? colors.foreground : colors.danger,
+                          fontSize: 15,
+                          paddingLeft: 4,
+                        }}
                         numberOfLines={1}
                       >
                         {formatCompactCurrency(balance.balance, balance.currency)}
@@ -240,8 +238,8 @@ export default function WalletScreen() {
               </View>
               {showViewAllBalances && (
                 <Link href={'/(app)/(tabs)/wallet/history' as any} asChild>
-                  <Pressable className="mt-3 items-center" style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}>
-                    <Text className="text-accent text-sm font-medium">
+                  <Pressable style={({ pressed }) => [{ marginTop: 12, alignItems: 'center', cursor: 'pointer' }, pressed && { opacity: 0.7 }]}>
+                    <Text style={{ color: colors.accent, fontSize: 14, fontFamily: 'Inter_500Medium' }}>
                       {t('viewAll') || 'View All'} ({balances.length})
                     </Text>
                   </Pressable>
@@ -253,57 +251,61 @@ export default function WalletScreen() {
 
         {/* 5. Recent Transactions - Enhanced Cards */}
         <View>
-          <View className="flex-row items-center justify-between mb-4">
-            <View className="flex-row items-center">
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <History size={18} color={colors.accent} />
-              <Text className="text-lg font-semibold text-foreground ml-2">
+              <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginLeft: 8 }}>
                 {t('recentTransactions')}
               </Text>
             </View>
             <Link href={'/(app)/(tabs)/wallet/history' as any} asChild>
-              <Pressable className="flex-row items-center" style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text className="text-accent text-sm">{t('viewAll')}</Text>
+              <Pressable style={({ pressed }) => [{ flexDirection: 'row', alignItems: 'center', cursor: 'pointer' }, pressed && { opacity: 0.7 }]} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={{ color: colors.accent, fontSize: 14 }}>{t('viewAll')}</Text>
               </Pressable>
             </Link>
           </View>
           {isLoadingTransactions ? (
             <SkeletonList count={3} ItemComponent={SkeletonTransaction} />
           ) : transactions.length === 0 ? (
-            <View className="bg-card p-6 rounded-xl items-center">
-              <Text className="text-muted-foreground">{t('noTransactions')}</Text>
+            <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, alignItems: 'center' }}>
+              <Text style={{ color: colors.mutedForeground }}>{t('noTransactions')}</Text>
             </View>
           ) : (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: txGap }}>
               {transactions.slice(0, 5).map((tx) => (
                 <View
                   key={tx.id}
-                  className="bg-card rounded-xl flex-row items-center"
                   style={{
+                    backgroundColor: colors.card,
+                    borderRadius: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
                     width: txCardWidth,
                     minWidth: txCols === 1 ? undefined : 280,
                     padding: 16,
                   }}
                 >
                   <StyledCategoryIcon category={tx.category || 'other'} size={18} />
-                  <View className="flex-1 ml-3">
-                    <Text className="font-semibold text-foreground text-sm" numberOfLines={1}>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground, fontSize: 14 }} numberOfLines={1}>
                       {tx.description || tx.category || 'Transaction'}
                     </Text>
-                    <Text className="text-muted-foreground" style={{ fontSize: 11, marginTop: 2 }} numberOfLines={1}>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
                       {formatDate(tx.created_at, { month: 'short', day: 'numeric' })}
                       {tx.category ? ` · ${tx.category}` : ''}
                     </Text>
                   </View>
-                  <View className="items-end">
+                  <View style={{ alignItems: 'flex-end' }}>
                     <Text
-                      className={`font-semibold ${
-                        tx.type === 'credit' ? 'text-success' : 'text-danger'
-                      }`}
-                      style={{ fontSize: 15 }}
+                      style={{
+                        fontFamily: 'Inter_600SemiBold',
+                        color: tx.type === 'credit' ? colors.success : colors.danger,
+                        fontSize: 15,
+                      }}
                     >
                       {formatTransactionAmount(tx)}
                     </Text>
-                    <Text className="text-muted-foreground" style={{ fontSize: 10, marginTop: 1 }} numberOfLines={1}>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 10, marginTop: 1 }} numberOfLines={1}>
                       {getTransactionCurrency(tx)}
                     </Text>
                   </View>

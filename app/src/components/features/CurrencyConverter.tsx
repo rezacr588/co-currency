@@ -15,7 +15,7 @@ import {
 import { ArrowDownUp, ChevronDown, X, Search } from 'lucide-react-native';
 import { useConvert, useCurrencies } from '../../hooks';
 import { useLanguage } from '../../context/LanguageContext';
-import { useColors } from '../../context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { formatNumber, getCurrencyDisplay } from '../../utils/format';
 import type { Currency } from '../../types/currency';
 
@@ -54,7 +54,8 @@ export function CurrencyConverter({
   onStateChange,
 }: CurrencyConverterProps) {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
 

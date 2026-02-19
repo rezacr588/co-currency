@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle, Wallet, Target, ArrowRight, ArrowLeft } from 'lucide-react-native';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { useColors } from '../../src/context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { useAuth } from '../../src/context/AuthContext';
 import { useCurrencies } from '../../src/hooks';
 import { api } from '../../src/api';
@@ -31,7 +31,8 @@ export default function OnboardingScreen() {
   const { refreshProfile } = useAuth();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
 
   const [step, setStep] = useState<Step>('welcome');
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
@@ -123,13 +124,13 @@ export default function OnboardingScreen() {
     })) || [];
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
-        className="flex-1"
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
       <ScrollView
-        className="flex-1"
+        style={{ flex: 1 }}
         contentContainerStyle={{
           flexGrow: 1,
           padding: 24,
@@ -138,7 +139,7 @@ export default function OnboardingScreen() {
       >
         <View style={{ width: '100%', maxWidth: formMaxWidth }}>
           {/* Progress Bar */}
-          <View className="mb-8">
+          <View style={{ marginBottom: 32 }}>
             <View style={{ flexDirection: 'row', gap: 4 }}>
               {STEPS.map((s, i) => (
                 <View
@@ -152,41 +153,39 @@ export default function OnboardingScreen() {
                 />
               ))}
             </View>
-            <Text className="text-muted-foreground text-xs text-center mt-2">
+            <Text style={{ color: colors.mutedForeground, fontSize: 12, textAlign: 'center', marginTop: 8 }}>
               {currentIndex + 1} / {STEPS.length}
             </Text>
           </View>
 
-          <Card className="p-6">
+          <Card style={{ padding: 24 }}>
             {/* Welcome Step */}
             {step === 'welcome' && (
-              <View className="items-center">
-                <View className="bg-primary/20 p-6 rounded-full mb-6">
+              <View style={{ alignItems: 'center' }}>
+                <View style={{ backgroundColor: colors.primary + '33', padding: 24, borderRadius: 9999, marginBottom: 24 }}>
                   <Wallet size={48} color={colors.accent} />
                 </View>
-                <Text className="text-2xl font-bold text-foreground mb-2 text-center">
+                <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 8, textAlign: 'center' }}>
                   {t('welcomeToCoFinance') || 'Welcome to CoFinance!'}
                 </Text>
-                <Text className="text-muted-foreground text-center mb-8 text-sm">
+                <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginBottom: 32, fontSize: 14 }}>
                   {t('onboardingWelcomeDesc') ||
                     "Set up your wallet in a few quick steps."}
                 </Text>
-                <View className="flex-row gap-4 w-full">
+                <View style={{ flexDirection: 'row', gap: 16, width: '100%' }}>
                   <Pressable
                     onPress={handleSkip}
-                    style={{ cursor: 'pointer' }}
-                    className="flex-1 p-4 rounded-xl border border-border items-center"
+                    style={{ cursor: 'pointer', flex: 1, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center' }}
                   >
-                    <Text className="text-muted-foreground font-medium">
+                    <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_500Medium' }}>
                       {t('skip') || 'Skip'}
                     </Text>
                   </Pressable>
                   <Pressable
                     onPress={handleNext}
-                    style={{ cursor: 'pointer' }}
-                    className="flex-1 bg-primary p-4 rounded-xl flex-row items-center justify-center"
+                    style={{ cursor: 'pointer', flex: 1, backgroundColor: colors.primary, padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
                   >
-                    <Text className="text-primary-foreground font-semibold mr-2">
+                    <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginRight: 8 }}>
                       {t('getStarted') || 'Get Started'}
                     </Text>
                     <ArrowRight size={20} color={colors.primaryForeground} />
@@ -198,20 +197,20 @@ export default function OnboardingScreen() {
             {/* Currency Setup Step */}
             {step === 'currency' && (
               <View>
-                <View className="items-center mb-6">
-                  <View className="bg-primary/20 p-4 rounded-full mb-4">
+                <View style={{ alignItems: 'center', marginBottom: 24 }}>
+                  <View style={{ backgroundColor: colors.primary + '33', padding: 16, borderRadius: 9999, marginBottom: 16 }}>
                     <Target size={32} color={colors.accent} />
                   </View>
-                  <Text className="text-xl font-bold text-foreground mb-2 text-center">
+                  <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 8, textAlign: 'center' }}>
                     {t('selectPrimaryCurrency') || 'Select Your Primary Currency'}
                   </Text>
-                  <Text className="text-muted-foreground text-center text-sm">
+                  <Text style={{ color: colors.mutedForeground, textAlign: 'center', fontSize: 14 }}>
                     {t('currencySetupDesc') ||
                       'Pick your most-used currency.'}
                   </Text>
                 </View>
 
-                <View className="mb-6">
+                <View style={{ marginBottom: 24 }}>
                   <Select
                     value={selectedCurrency}
                     onValueChange={setSelectedCurrency}
@@ -220,23 +219,21 @@ export default function OnboardingScreen() {
                   />
                 </View>
 
-                <View className="flex-row gap-4">
+                <View style={{ flexDirection: 'row', gap: 16 }}>
                   <Pressable
                     onPress={handleBack}
-                    style={{ cursor: 'pointer' }}
-                    className="flex-1 p-4 rounded-xl border border-border flex-row items-center justify-center"
+                    style={{ cursor: 'pointer', flex: 1, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
                   >
                     <ArrowLeft size={20} color={colors.placeholder} />
-                    <Text className="text-muted-foreground font-medium ml-2">
+                    <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_500Medium', marginLeft: 8 }}>
                       {t('back') || 'Back'}
                     </Text>
                   </Pressable>
                   <Pressable
                     onPress={handleNext}
-                    style={{ cursor: 'pointer' }}
-                    className="flex-1 bg-primary p-4 rounded-xl flex-row items-center justify-center"
+                    style={{ cursor: 'pointer', flex: 1, backgroundColor: colors.primary, padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
                   >
-                    <Text className="text-primary-foreground font-semibold mr-2">
+                    <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginRight: 8 }}>
                       {t('next') || 'Next'}
                     </Text>
                     <ArrowRight size={20} color={colors.primaryForeground} />
@@ -248,28 +245,27 @@ export default function OnboardingScreen() {
             {/* First Transaction Step */}
             {step === 'transaction' && (
               <View>
-                <View className="items-center mb-6">
-                  <View className="bg-success/20 p-4 rounded-full mb-4">
+                <View style={{ alignItems: 'center', marginBottom: 24 }}>
+                  <View style={{ backgroundColor: colors.success + '33', padding: 16, borderRadius: 9999, marginBottom: 16 }}>
                     <Wallet size={32} color={colors.success} />
                   </View>
-                  <Text className="text-xl font-bold text-foreground mb-2 text-center">
+                  <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 8, textAlign: 'center' }}>
                     {t('addInitialBalance') || 'Add Initial Balance'}
                   </Text>
-                  <Text className="text-muted-foreground text-center text-sm">
+                  <Text style={{ color: colors.mutedForeground, textAlign: 'center', fontSize: 14 }}>
                     {t('initialBalanceDesc') ||
                       'Add your current balance to get started (optional).'}
                   </Text>
                 </View>
 
-                <View className="mb-6">
-                  <Text className="text-sm text-muted-foreground mb-2">
+                <View style={{ marginBottom: 24 }}>
+                  <Text style={{ fontSize: 14, color: colors.mutedForeground, marginBottom: 8 }}>
                     {t('amount') || 'Amount'} ({selectedCurrency})
                   </Text>
-                  <View className="bg-muted rounded-xl flex-row items-center px-4 border border-border">
-                    <Text className="text-muted-foreground mr-2">{selectedCurrency}</Text>
+                  <View style={{ backgroundColor: colors.muted, borderRadius: 12, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, borderWidth: 1, borderColor: colors.border }}>
+                    <Text style={{ color: colors.mutedForeground, marginRight: 8 }}>{selectedCurrency}</Text>
                     <TextInput
-                      className="flex-1 p-4 text-foreground text-lg"
-                      style={{ outlineStyle: 'none' } as any}
+                      style={{ flex: 1, padding: 16, color: colors.foreground, fontSize: 18, outlineStyle: 'none' } as any}
                       placeholder="0.00"
                       placeholderTextColor={colors.placeholder}
                       value={initialBalance}
@@ -279,30 +275,29 @@ export default function OnboardingScreen() {
                   </View>
                 </View>
 
-                <View className="flex-row gap-4">
+                <View style={{ flexDirection: 'row', gap: 16 }}>
                   <Pressable
                     onPress={handleBack}
-                    style={{ cursor: 'pointer' }}
-                    className="flex-1 p-4 rounded-xl border border-border flex-row items-center justify-center"
+                    style={{ cursor: 'pointer', flex: 1, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
                   >
                     <ArrowLeft size={20} color={colors.placeholder} />
-                    <Text className="text-muted-foreground font-medium ml-2">
+                    <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_500Medium', marginLeft: 8 }}>
                       {t('back') || 'Back'}
                     </Text>
                   </Pressable>
                   <Pressable
                     onPress={handleAddInitialBalance}
                     disabled={isSubmitting}
-                    style={{ cursor: 'pointer' }}
-                    className={`flex-1 bg-primary p-4 rounded-xl flex-row items-center justify-center ${
-                      isSubmitting ? 'opacity-50' : ''
-                    }`}
+                    style={{
+                      cursor: 'pointer', flex: 1, backgroundColor: colors.primary, padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                      opacity: isSubmitting ? 0.5 : 1,
+                    }}
                   >
                     {isSubmitting ? (
                       <ActivityIndicator color={colors.primaryForeground} />
                     ) : (
                       <>
-                        <Text className="text-primary-foreground font-semibold mr-2">
+                        <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginRight: 8 }}>
                           {initialBalance ? t('addAndContinue') || 'Add & Continue' : t('skip') || 'Skip'}
                         </Text>
                         <ArrowRight size={20} color={colors.primaryForeground} />
@@ -315,27 +310,29 @@ export default function OnboardingScreen() {
 
             {/* Complete Step */}
             {step === 'complete' && (
-              <View className="items-center">
-                <View className="bg-success/20 p-6 rounded-full mb-6">
+              <View style={{ alignItems: 'center' }}>
+                <View style={{ backgroundColor: colors.success + '33', padding: 24, borderRadius: 9999, marginBottom: 24 }}>
                   <CheckCircle size={48} color={colors.success} />
                 </View>
-                <Text className="text-2xl font-bold text-foreground mb-2 text-center">
+                <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 8, textAlign: 'center' }}>
                   {t('setupComplete') || "You're All Set!"}
                 </Text>
-                <Text className="text-muted-foreground text-center text-sm mb-8">
+                <Text style={{ color: colors.mutedForeground, textAlign: 'center', fontSize: 14, marginBottom: 32 }}>
                   {t('setupCompleteDesc') ||
                     'Your wallet is ready — start tracking!'}
                 </Text>
                 <Pressable
                   onPress={handleComplete}
                   disabled={isSubmitting}
-                  style={{ cursor: 'pointer' }}
-                  className={`bg-primary px-8 py-4 rounded-xl ${isSubmitting ? 'opacity-50' : ''}`}
+                  style={{
+                    cursor: 'pointer', backgroundColor: colors.primary, paddingHorizontal: 32, paddingVertical: 16, borderRadius: 12,
+                    opacity: isSubmitting ? 0.5 : 1,
+                  }}
                 >
                   {isSubmitting ? (
                     <ActivityIndicator color={colors.primaryForeground} />
                   ) : (
-                    <Text className="text-primary-foreground font-semibold text-lg">
+                    <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', fontSize: 18 }}>
                       {t('goToWallet') || 'Go to Wallet'}
                     </Text>
                   )}

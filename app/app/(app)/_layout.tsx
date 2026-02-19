@@ -1,16 +1,17 @@
 import { Redirect, Stack } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../../src/context/AuthContext';
-import { useColors } from '../../src/context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { DailyRewardModal } from '../../src/components/features/DailyReward';
 
 export default function AppLayout() {
   const { isAuthenticated, isLoading } = useAuth();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
 
   if (isLoading) {
     return (
-      <View className="flex-1 bg-background items-center justify-center">
+      <View style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );

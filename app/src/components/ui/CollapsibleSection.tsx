@@ -6,7 +6,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { ChevronDown } from 'lucide-react-native';
-import { useColors } from '../../context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { readStorage, writeStorage } from '../../utils/storage';
 
 interface CollapsibleSectionProps {
@@ -24,7 +24,8 @@ export function CollapsibleSection({
   defaultCollapsed = false,
   children,
 }: CollapsibleSectionProps) {
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const [initialized, setInitialized] = useState(!storageKey);
   const rotation = useSharedValue(defaultCollapsed ? -90 : 0);

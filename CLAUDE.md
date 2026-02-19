@@ -62,19 +62,21 @@ make clean                        # Remove build artifacts
 
 **Structure:** Handler → Service → Repository layered architecture with Chi router.
 
-- `cmd/api/main.go`: Entry point (~585 lines), initializes DB and services
+- `cmd/api/main.go`: Entry point (~598 lines), initializes DB and services
 - `internal/router/router.go`: All route definitions
-- `internal/handler/`: HTTP handlers (37 files)
-- `internal/service/`: Business logic (32 files)
-- `internal/repository/`: Data access with pgxpool (37 files)
-- `internal/middleware/`: Middleware stack (auth, logging, trace, rate limiting, CORS, recovery)
-- `internal/model/`: Domain models (23 files)
+- `internal/handler/`: HTTP handlers (27 source files + 9 test files)
+- `internal/service/`: Business logic (20 source files + 12 test files)
+- `internal/repository/`: Data access with pgxpool (27 source files + 8 test files)
+- `internal/middleware/`: Middleware stack (7 source files + 6 test files: auth, logging, trace, rate limiting, CORS, recovery, security)
+- `internal/model/`: Domain models (18 source files + 3 test files)
 - `internal/migrations/`: Embedded SQL migrations (`//go:embed sql/main/`, `sql/irr/`)
-- `internal/config/`: Struct-based config with `caarlos0/env/v9` tags
-- `pkg/httputil/`: HTTP error/response utilities
+- `internal/config/`: Struct-based config with `caarlos0/env/v9` tags (1 source + 1 test)
+- `pkg/httputil/`: HTTP error/response utilities (2 source + 2 test files)
 - `pkg/ctxkeys/`: Type-safe context key constants
 
-**Middleware order:** Trace → Recovery → Logging → CORS → (per-route) Rate Limiting → Auth
+**Middleware order:** Trace → Recovery → Logging → CORS → Security → (per-route) Rate Limiting → Auth
+
+**Security middleware (`security.go`):** Adds X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy headers. HSTS (Strict-Transport-Security) is only set in non-development environments.
 
 **Context helpers:**
 - `middleware.GetUserIDFromContext(ctx) (uuid.UUID, bool)`
@@ -86,6 +88,7 @@ make clean                        # Remove build artifacts
 - `patrickmn/go-cache` (in-memory cache), `rs/zerolog` (logging), `swaggo/swag` (Swagger)
 - `tmc/langchaingo` (LLM framework), `qdrant/go-client` (vector DB), `caarlos0/env/v9` (config)
 - `golang.org/x/sync/singleflight` (cache stampede prevention), `golang.org/x/time/rate` (rate limiting)
+- `google/uuid` (UUID generation)
 
 **Key patterns:**
 - PostgreSQL with pgx/pgxpool (MaxConns: 10, MinConns: 2, MaxConnLifetime: 30min, HealthCheck: 30s)
@@ -113,7 +116,9 @@ make clean                        # Remove build artifacts
 
 **Rate limiting:**
 - Per-IP token bucket (`golang.org/x/time/rate.Limiter`)
-- Separate limits: anonymous (100/min, burst 50), authenticated (configurable), login (5/min, burst 2)
+- Separate limits: anonymous (100/min, burst 50), authenticated (configurable), login (5/min, burst 2), AI endpoints (configurable, default 20/min)
+- `RateLimiterConfig` struct with: `RequestsPerMinute`, `AuthRequestsPerMinute`, `LoginAttemptsPerMinute`, `AIRequestsPerMinute`, `CleanupInterval`, `EntryTTL`
+- Three middlewares: `Middleware` (general), `LoginMiddleware` (login/password reset), `AIMiddleware` (AI endpoints)
 - Auto-cleanup goroutine (every 10min, entry TTL 30min)
 - IP extracted from X-Forwarded-For → X-Real-IP → RemoteAddr
 
@@ -133,6 +138,11 @@ make clean                        # Remove build artifacts
 - Embedding providers: HuggingFace (`sentence-transformers/all-MiniLM-L6-v2`, 384-dim), Ollama, Google AI
 - Qdrant collections: `short_term_memory` (24h TTL), `long_term_memory` via gRPC+TLS
 
+**AI Handler (`internal/handler/ai.go`):**
+- `AIHandler` struct holds aiService, walletService, recurringService, goalService
+- Supports dependency injection via `SetRecurringService()` and `SetGoalService()`
+- Endpoints: parse-receipt, parse-text, detect-intent, smart-parse, apply-parsed, apply-recurring, apply-goal-contribution, status
+
 **Key models:**
 - User: ID, Email, PasswordHash, Name, FailedLoginAttempts, LockedUntil, OnboardingCompleted, LinkedInID, GoogleID, AvatarURL — `ToProfile()` strips sensitive fields
 - Transaction: types `credit`/`debit`/`convert`, sources `manual`/`ai_receipt`/`ai_invoice`, AIExtractedData (JSON)
@@ -140,28 +150,28 @@ make clean                        # Remove build artifacts
 
 ### Frontend (`/frontend/src`)
 
-**Tech stack:** React 18, React Router v7, TanStack Query 5, Tailwind CSS 3, TypeScript 5.6, Vite 5
+**Tech stack:** React 18, React Router v7, TanStack Query 5, Tailwind CSS 3, TypeScript 5.6, Vite 5, Recharts 3
 
 - **Path alias:** `@/*` → `src/*`
-- **Routing:** React Router v7 with `<BrowserRouter>`, 26 routes, lazy-loaded with code splitting
+- **Routing:** React Router v7 with `<BrowserRouter>`, 27 routes, lazy-loaded with code splitting
 - **Three layout types:** `PublicLayout` (header/footer), `AuthenticatedLayout` (sidebar/nav), `HybridLayout` (auth-aware public pages)
 - **Protected routes:** `<ProtectedRoute>` component redirects to `/login` with `state.from` for post-login redirect
 
 **Directory structure:**
 ```
 src/
-├── api/           # 16 endpoint files + base client with auth/retry
+├── api/           # 14 endpoint files + base client (base.ts) + index + 1 test
 ├── components/
-│   ├── ui/        # 20+ reusable components (Button, Card, Input, Modal, CurrencyInput, etc.)
-│   ├── layout/    # 10 layout components (PublicLayout, AuthenticatedLayout, Header, Sidebar, etc.)
-│   └── features/  # 16 domain folders (Dashboard, Wallet [11 components], Goals, Budgets, etc.)
+│   ├── ui/        # 20 reusable components + 4 test files (Button, Card, Input, Modal, CurrencyInput, ConfirmDialog, EmptyState, ErrorMessage, ErrorBoundary, HamburgerMenu, InfoMessage, LanguageToggle, LoadingSpinner, OfflineBanner, RateChange, Select, Skeleton, StatusBadge, ThemeToggle, Toast/ToastContainer)
+│   ├── layout/    # 14 layout components (PublicLayout, AuthenticatedLayout, AppLayout, Header, MobileHeader, Sidebar, BottomNav, Footer, Container, Grid, BalanceDisplay, HybridLayout, UserDropdown, index)
+│   └── features/  # 16 domain folders (AboutUs, Badges, Budgets, Converter [5], Dashboard, Goals, Historical, NotFound, Onboarding, QuickConvert, RatesGrid, Recurring, Subscriptions, Wallet [8])
 ├── context/       # AuthContext, ThemeContext, LanguageContext, ToastContext
-├── hooks/         # useConvert, useRates, useCurrencies, useHistorical, useDebounce, useMutationAction
-├── pages/         # 15 page components (AIChat.tsx is largest at 32KB)
-├── types/         # wallet.ts (150+ lines), currency.ts, goal.ts
-├── utils/         # format.ts (currency/date formatting with Jalali), storage.ts (localStorage), constants.ts
-├── constants/     # routes.ts (26 routes), navigation.ts, icons.tsx
-├── i18n/          # translations.ts (2397 lines, 4 languages)
+├── hooks/         # useConvert, useRates, useCurrencies, useHistorical, useDebounce, useMutationAction, index
+├── pages/         # 12 page components (AIChat, Badges, Converter, ForgotPassword, Home, Login, OAuthCallback, Profile, Register, Reports, ResetPassword, Subscriptions)
+├── types/         # wallet.ts, currency.ts, goal.ts, index.ts
+├── utils/         # format.ts (currency/date formatting with Jalali), storage.ts (localStorage), constants.ts + 2 test files
+├── constants/     # routes.ts (27 routes), navigation.ts, icons.tsx
+├── i18n/          # translations.ts (2398 lines, 4 languages) + 1 test file
 └── styles/        # globals.css (Tailwind + design tokens)
 ```
 
@@ -176,7 +186,7 @@ src/
 - `useMutationAction` hook: wraps `useMutation` with auto-invalidation, toast notifications, type-safe
 - Forms: uncontrolled with `useState()` (no form library)
 - Vite: dev proxy `/api` and `/health` → `localhost:8080`, manual chunks (vendor: React libs, ui: Recharts+Lucide)
-- **No PWA plugin** currently installed (no vite-plugin-pwa despite earlier mention)
+- **No PWA plugin** currently installed (no vite-plugin-pwa)
 
 **Design system:**
 - Colors: Navy blue (primary), Gold (accent `#d4af37`), Emerald (success), Red (danger)
@@ -196,7 +206,7 @@ src/
 
 ### Mobile App (`/app`)
 
-**Tech stack:** Expo 54, React Native 0.81, React 19, Expo Router 6, NativeWind 4 (Tailwind), TanStack Query 5
+**Tech stack:** Expo ~54.0, React Native 0.81.5, React 19.1, Expo Router ~6.0, NativeWind 4 (Tailwind 3), TanStack Query 5, TypeScript ~5.9
 
 - **Path alias:** `@/*` → `./*` (app root)
 - **Expo Router**: File-based routing with typed routes (`experiments.typedRoutes: true`)
@@ -224,12 +234,14 @@ app/
 ```
 
 **Context providers (order in _layout.tsx):**
-1. QueryClientProvider (TanStack Query: retry=2, staleTime=30s)
-2. ThemeProvider (dark/light, persisted in AsyncStorage)
-3. LanguageProvider (4 languages, RTL support)
-4. SettingsProvider (biometric, notifications, display)
-5. AuthProvider (user state + route protection)
-6. ToastProvider (notification context)
+1. GestureHandlerRootView (gesture handling wrapper)
+2. SafeAreaProvider (safe area insets)
+3. QueryClientProvider (TanStack Query: retry=2, staleTime=30s)
+4. ThemeProvider (dark/light, persisted in AsyncStorage)
+5. LanguageProvider (4 languages, RTL support)
+6. SettingsProvider (biometric, notifications, display)
+7. AuthProvider (user state + route protection)
+8. ToastProvider (from `src/components/ui/Toast.tsx`, not a separate context file)
 
 **API client (`src/api/base.ts`):**
 - URL logic: relative `/api/v1` on koyeb.app web, full backend URL on native
@@ -239,7 +251,7 @@ app/
 
 **Key native features:**
 - Biometric auth: `expo-local-authentication` (Face ID, Touch ID, Fingerprint)
-- Push notifications: `expo-notifications` (lazy-loaded, 3 Android channels: default/budget-alerts/loan-reminders)
+- Push notifications: via `usePushNotifications` hook (uses notification API endpoints)
 - Haptic feedback: `expo-haptics` (light/medium/heavy impact, success/warning/error notification)
 - Offline queue: AsyncStorage-based, max 100 items, 3 retries, auto-sync on reconnect
 - OTA updates: `expo-updates` with `useAppUpdates()` hook (production only)
@@ -256,8 +268,8 @@ app/
 - Font: Inter (400/500/600/700 via `@expo-google-fonts/inter`)
 
 **Component library (`src/components/`):**
-- UI: Button (6 variants), Input, Card, Toast, BottomSheet (@gorhom), CurrencyPicker, Select, Toggle, LoadingSpinner, Skeleton, EmptyState, ProgressBar, SwipeableRow, CollapsibleSection, BiometricLock, OfflineBanner, AnimatedSplash
-- Features: CurrencyConverter, DailyReward, DailyTip, HealthScore, Reports (Monthly/Yearly/Weekly/Daily views), WeeklyRecap, CalendarHeatMap, Notes
+- UI (22 files): Badge, Button (6 variants), BiometricLock, BottomSheet (@gorhom), Card, CollapsibleSection, CurrencyBadge, CurrencyPicker, EmptyState, ErrorBoundary, FormError, Input, LoadingSpinner, OfflineBanner, ProgressBar, Select, Skeleton, SwipeableRow, AnimatedSplash, Toast (includes ToastProvider), Toggle, index
+- Features: CurrencyConverter, DailyReward (DailyRewardModal), DailyTip (DailyTipCard), HealthScore (HealthScoreCard), Reports (Monthly/Yearly/Weekly/Daily views, CashFlowProjectionCard, SpendingAnomalyCard, ReportPeriodTabs, daily/ subdirectory), WeeklyRecap (WeeklyRecapCard), CalendarHeatMap, Notes (NoteCard, NoteFormModal)
 - Charts: `react-native-gifted-charts`, Markdown: `react-native-markdown-display`
 - Animations: `react-native-reanimated` (useSharedValue, withTiming, withSpring, withSequence)
 
@@ -274,21 +286,22 @@ app/
 
 All routes defined in `internal/router/router.go`. Groups:
 
-- **Public:** `/health`, `/swagger/*`, exchange rates (`/api/v1/currencies`, `/rates`, `/convert`, `/historical`)
-- **Auth:** register, login, OAuth (Google, LinkedIn), password reset, profile (protected)
-- **Wallet** (protected): balances, summary, transactions (CRUD + import/export), categories, convert
+- **Public:** `/health`, `/health/detailed`, `/swagger/*`, exchange rates (`/api/v1/currencies`, `/rates/{base}`, `/convert`, `/historical/{date}`)
+- **Auth:** register, login, OAuth (Google, LinkedIn), password reset (login-rate-limited), refresh, logout, profile/onboarding (protected)
+- **Wallet** (protected): balances, summary, transactions (CRUD + import/export), categories (CRUD), convert
+- **AI** (mixed): status (public); parse-receipt, parse-text, detect-intent, smart-parse, apply-parsed, apply-recurring, apply-goal-contribution, chat (protected + AI rate limited)
 - **Goals** (protected): CRUD, categories, contribute
+- **Tags** (protected): CRUD
 - **Budgets** (protected): CRUD
 - **Recurring** (protected): CRUD, frequencies, execute
-- **Reports** (protected): monthly, yearly, category, trends, networth, forecast, insights, health-score, weekly-recap
-- **AI** (protected): receipt/text parsing, chat conversations, smart-parse
+- **Reports** (protected): monthly, yearly, category, trends, networth, forecast, insights, health-score, weekly-recap, cashflow, anomalies
 - **Subscriptions** (protected): CRUD, summary, upcoming, billing-cycles, categories
 - **Badges** (mixed): list (public), earned/progress/check (protected)
 - **Notes** (protected): CRUD, pin, transaction notes, colors
 - **Loans** (protected): CRUD, payments, summary, upcoming
 - **Notifications** (protected): register/unregister device, preferences, budget/loan alerts
 - **Challenges** (mixed): list/featured (public), browse/join/active/history/stats/check-progress/abandon (protected)
-- **XP** (protected): stats, history, level, daily-reward, leaderboard
+- **XP** (protected): stats, history, level, daily-reward, daily-reward/status, leaderboard
 
 ## CI/CD Pipeline
 
@@ -304,13 +317,13 @@ All routes defined in `internal/router/router.go`. Groups:
 **Pre-push hook** (`.githooks/pre-push`):
 - Runs Docker build then EAS OTA updates to internal/development/preview channels
 - Skip vars: `SKIP_DEPLOY=1` (skip all), `SKIP_BUILD=1` (skip Docker), `SKIP_EAS=1` (skip OTA)
-- Takes ~2 minutes
+- Additional env vars: `EAS_PLATFORM` (default: all), `EAS_CHANNELS` (default: internal,development,preview), `EAS_MESSAGE`, `DEPLOY_CMD`
 
 ## Build & Deploy
 
-**Docker** (3-stage): Expo web export (node:20-alpine) → Go binary with embedded static files (golang:1.24-alpine, `CGO_ENABLED=0 GOOS=linux GOARCH=amd64 -w -s`) → Alpine 3.19 non-root runtime (UID 1001). Health check: `GET /health` at 30s interval. **Important:** Production serves the Expo web build, NOT the Vite frontend.
+**Docker** (3-stage): Expo web export (node:20-alpine) → Go binary with embedded static files (golang:1.24-alpine, `CGO_ENABLED=0 GOOS=linux GOARCH=amd64 -w -s`) → Alpine 3.19 non-root runtime (UID 1001). Health check: `wget` to `/health` at 30s interval. **Important:** Production serves the Expo web build, NOT the Vite frontend.
 
-**Docker Compose (dev):** Backend uses Air hot-reload (build delay 1s, excludes `_test.go`), frontend mounts `src/` and `public/` for Vite HMR.
+**Docker Compose (dev):** Backend mounts full `./backend` directory, runs `go run ./cmd/api`. Frontend mounts `src/` and `public/` for Vite HMR, runs `npm run dev -- --host`.
 
 ```bash
 make build       # Build Docker image
@@ -323,9 +336,9 @@ make run-local   # Test production build locally on :8080
 - Instance: free tier, region: Frankfurt, scaling: min=0 (scale to zero when idle), max=1
 
 **EAS Build profiles (app/eas.json):**
-- Development: dev client, internal distribution, debug APK
-- Preview: internal distribution, APK
-- Production: app store distribution, AAB (Android App Bundle)
+- Development: dev client, internal distribution, debug APK, channel `development`
+- Preview: internal distribution, APK, channel `preview`
+- Production: app store distribution, AAB (Android App Bundle), channel `production`
 
 ## Configuration
 
@@ -339,13 +352,13 @@ See `backend/.env.example` for full list. Key variable groups:
 
 **OAuth:** `GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI`, `LINKEDIN_CLIENT_ID/SECRET/REDIRECT_URI`
 
-**AI:** `AI_PROVIDER` (cerebras/openai/googleai), `AI_API_KEY`, `AI_CLOUD_PROJECT` (Google)
+**AI:** `AI_PROVIDER` (googleai/openai/cerebras, default: googleai), `AI_API_KEY`, `AI_MODEL` (model name), `AI_CLOUD_PROJECT` (Google Cloud project ID)
 
 **Vector memory:** `QDRANT_ENABLED`, `QDRANT_URL`, `QDRANT_API_KEY`
 
 **Embeddings:** `EMBEDDING_PROVIDER` (huggingface/ollama/googleai), `EMBEDDING_API_KEY`, `EMBEDDING_MODEL` (default: `sentence-transformers/all-MiniLM-L6-v2`), `EMBEDDING_DIMENSIONS` (384), `OLLAMA_URL`
 
-**Memory:** `SHORT_TERM_MEMORY_TTL` (24h), `MAX_MEMORY_RESULTS` (10)
+**Memory:** `SHORT_TERM_MEMORY_TTL` (24h), `MAX_MEMORY_RESULTS` (1-100, default 10)
 
 **IRR Crawler:** `IRR_CRAWLER_ENABLED` (true), `IRR_CRAWLER_INTERVAL` (5m)
 
@@ -365,7 +378,16 @@ Tables (auto-created on startup): `users`, `wallet_balances`, `transactions`, `c
 
 - `AGENTS.md` — Guidelines for agent workflows and module organization
 - `TASKS.md` — Active task tracking
-- `FINANCE_APP_PLAN.md` — Comprehensive feature planning (28KB)
-- `FREE_FEATURES_PLAN.md` — Feature roadmap (20KB)
+- `FINANCE_APP_PLAN.md` — Comprehensive feature planning
+- `FREE_FEATURES_PLAN.md` — Feature roadmap
 - `GEMINI.md` — Gemini AI integration docs
+- `CURRENCY_CONVERTER_DOCS.md` — Currency converter documentation
+- `README.md` — Project README
 - `app/UI_UX_IMPROVEMENTS.md` — UI/UX improvement tracking
+- `docs/API.md` — API documentation
+- `docs/ARCHITECTURE.md` — Architecture overview
+- `docs/BACKEND_ARCHITECTURE.md` — Backend architecture details
+- `docs/FEATURES.md` — Features documentation
+- `docs/FREE_IMPROVEMENTS.md` — Free tier improvements
+- `docs/mobile-ui-fixes.md` — Mobile UI fix notes
+- `docs/mobile-backend-fixes.md` — Mobile backend fix notes

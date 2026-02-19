@@ -32,6 +32,7 @@ type Handlers struct {
 	Notification  *handler.NotificationHandler
 	Challenge     *handler.ChallengeHandler
 	XP            *handler.XPHandler
+	News          *handler.NewsHandler
 }
 
 // New creates a new router with all routes configured
@@ -61,6 +62,11 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 		r.Get("/rates/{base}", h.Exchange.GetRates)
 		r.Get("/convert", h.Exchange.Convert)
 		r.Get("/historical/{date}", h.Exchange.GetHistorical)
+
+		// News routes (public)
+		if h.News != nil {
+			r.Get("/news", h.News.GetNews)
+		}
 
 		// Auth routes (public)
 		r.Route("/auth", func(r chi.Router) {
@@ -136,6 +142,7 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 				r.Post("/apply-parsed", h.AI.ApplyParsed)
 				r.Post("/apply-recurring", h.AI.ApplyRecurring)
 				r.Post("/apply-goal-contribution", h.AI.ApplyGoalContribution)
+				r.Get("/advice", h.AI.GetPersonalizedAdvice)
 
 				// AI Chat routes (protected)
 				if h.AIChat != nil {

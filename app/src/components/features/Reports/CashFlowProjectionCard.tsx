@@ -3,13 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import { TrendingUp, AlertTriangle, Calendar, ArrowDown } from 'lucide-react-native';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
-import { useColors } from '../../../context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency, formatNumber } from '../../../utils/format';
 import type { CashFlowReport } from '../../../types/goal';
 
 export function CashFlowProjectionCard() {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
 
   const { data: report, isPending } = useQuery({
     queryKey: ['reports', 'cashflow'],
@@ -45,17 +46,17 @@ export function CashFlowProjectionCard() {
     .slice(0, 5);
 
   return (
-    <View className="bg-card p-6 rounded-xl mb-6">
+    <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
       {/* Header */}
-      <View className="flex-row items-center mb-4">
-        <View className="bg-accent/20 p-2 rounded-lg mr-3">
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+        <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
           <TrendingUp size={20} color={colors.accent} />
         </View>
-        <View className="flex-1">
-          <Text className="text-foreground font-semibold">
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
             {t('cashFlowProjection') || 'Cash Flow Projection'}
           </Text>
-          <Text className="text-muted-foreground text-xs">
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
             {report.days_projected} {t('daysProjected') || 'days projected'}
           </Text>
         </View>
@@ -63,7 +64,7 @@ export function CashFlowProjectionCard() {
 
       {/* Balance Chart */}
       <View style={{ height: chartHeight, marginBottom: 8 }}>
-        <View className="flex-row items-end justify-between h-full gap-0.5">
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: '100%', gap: 2 }}>
           {sampledPoints.map((point, index) => {
             const normalizedHeight =
               range > 0
@@ -77,10 +78,11 @@ export function CashFlowProjectionCard() {
                 : false;
 
             return (
-              <View key={index} className="flex-1 items-center justify-end h-full">
+              <View key={index} style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
                 <View
-                  className="rounded-t"
                   style={{
+                    borderTopLeftRadius: 4,
+                    borderTopRightRadius: 4,
                     width: '80%',
                     height: Math.max(normalizedHeight, 4),
                     backgroundColor: isNegative
@@ -96,41 +98,41 @@ export function CashFlowProjectionCard() {
           })}
         </View>
         {/* X-axis labels */}
-        <View className="flex-row justify-between mt-1">
-          <Text className="text-muted-foreground text-xs">
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
             {projections[0]?.date.slice(5) || ''}
           </Text>
-          <Text className="text-muted-foreground text-xs">
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
             {projections[projections.length - 1]?.date.slice(5) || ''}
           </Text>
         </View>
       </View>
 
       {/* Legend */}
-      <View className="flex-row justify-center gap-4 mb-4">
-        <View className="flex-row items-center">
-          <View className="w-2 h-2 rounded-full bg-success mr-1" />
-          <Text className="text-muted-foreground text-xs">{t('healthy') || 'Healthy'}</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginBottom: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.success, marginRight: 4 }} />
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('healthy') || 'Healthy'}</Text>
         </View>
-        <View className="flex-row items-center">
-          <View className="w-2 h-2 rounded-full mr-1" style={{ backgroundColor: colors.warning }} />
-          <Text className="text-muted-foreground text-xs">{t('low') || 'Low'}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ width: 8, height: 8, borderRadius: 9999, marginRight: 4, backgroundColor: colors.warning }} />
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('low') || 'Low'}</Text>
         </View>
-        <View className="flex-row items-center">
-          <View className="w-2 h-2 rounded-full bg-danger mr-1" />
-          <Text className="text-muted-foreground text-xs">{t('negative') || 'Negative'}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.danger, marginRight: 4 }} />
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('negative') || 'Negative'}</Text>
         </View>
       </View>
 
       {/* Danger Zone Alert */}
       {report.danger_zone && report.danger_date && (
-        <View className="bg-danger/10 border border-danger/30 p-4 rounded-xl flex-row items-center mb-4">
+        <View style={{ backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
           <AlertTriangle size={20} color={colors.danger} />
-          <View className="ml-3 flex-1">
-            <Text className="text-danger font-medium text-sm">
+          <View style={{ marginLeft: 12, flex: 1 }}>
+            <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium', fontSize: 14 }}>
               {t('dangerZone') || 'Danger Zone'}
             </Text>
-            <Text className="text-danger/80 text-xs mt-0.5">
+            <Text style={{ color: colors.danger + 'cc', fontSize: 12, marginTop: 2 }}>
               {t('balanceGoesNegative') || 'Balance projected to go negative on'}{' '}
               {report.danger_date}
             </Text>
@@ -139,43 +141,43 @@ export function CashFlowProjectionCard() {
       )}
 
       {/* Summary Stats */}
-      <View className="flex-row gap-3 mb-4">
-        <View className="flex-1 bg-secondary/50 p-3 rounded-lg">
-          <Text className="text-muted-foreground text-xs mb-1">
+      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+        <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
             {t('expectedIncome') || 'Expected Income'}
           </Text>
-          <Text className="text-success font-bold">
+          <Text style={{ color: colors.success, fontFamily: 'Inter_700Bold' }}>
             {formatCompactCurrency(report.summary.expected_income, report.currency)}
           </Text>
         </View>
-        <View className="flex-1 bg-secondary/50 p-3 rounded-lg">
-          <Text className="text-muted-foreground text-xs mb-1">
+        <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
             {t('expectedExpenses') || 'Expected Expenses'}
           </Text>
-          <Text className="text-danger font-bold">
+          <Text style={{ color: colors.danger, fontFamily: 'Inter_700Bold' }}>
             {formatCompactCurrency(report.summary.expected_expenses, report.currency)}
           </Text>
         </View>
       </View>
 
-      <View className="flex-row gap-3 mb-4">
-        <View className="flex-1 bg-secondary/50 p-3 rounded-lg">
-          <Text className="text-muted-foreground text-xs mb-1">
+      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+        <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
             {t('lowestBalance') || 'Lowest Balance'}
           </Text>
           <Text
-            className={`font-bold ${report.lowest_balance < 0 ? 'text-danger' : 'text-foreground'}`}
+            style={{ fontFamily: 'Inter_700Bold', color: report.lowest_balance < 0 ? colors.danger : colors.foreground }}
           >
             {formatCompactCurrency(report.lowest_balance, report.currency)}
           </Text>
-          <Text className="text-muted-foreground text-xs">{report.lowest_date}</Text>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{report.lowest_date}</Text>
         </View>
-        <View className="flex-1 bg-secondary/50 p-3 rounded-lg">
-          <Text className="text-muted-foreground text-xs mb-1">
+        <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
             {t('netProjected') || 'Net Projected'}
           </Text>
           <Text
-            className={`font-bold ${report.summary.net_projected >= 0 ? 'text-success' : 'text-danger'}`}
+            style={{ fontFamily: 'Inter_700Bold', color: report.summary.net_projected >= 0 ? colors.success : colors.danger }}
           >
             {report.summary.net_projected >= 0 ? '+' : ''}
             {formatCompactCurrency(report.summary.net_projected, report.currency)}
@@ -187,36 +189,36 @@ export function CashFlowProjectionCard() {
       {(report.summary.recurring_income > 0 ||
         report.summary.recurring_expense > 0 ||
         report.summary.subscription_cost > 0) && (
-        <View className="bg-secondary/30 p-3 rounded-lg mb-4">
-          <Text className="text-muted-foreground text-xs font-medium mb-2">
+        <View style={{ backgroundColor: colors.secondary + '4d', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: 8 }}>
             {t('recurringBreakdown') || 'Recurring Breakdown'}
           </Text>
           {report.summary.recurring_income > 0 && (
-            <View className="flex-row justify-between mb-1">
-              <Text className="text-foreground text-sm">
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+              <Text style={{ color: colors.foreground, fontSize: 14 }}>
                 {t('recurringIncome') || 'Recurring Income'}
               </Text>
-              <Text className="text-success text-sm font-medium">
+              <Text style={{ color: colors.success, fontSize: 14, fontFamily: 'Inter_500Medium' }}>
                 +{formatCompactCurrency(report.summary.recurring_income, report.currency)}
               </Text>
             </View>
           )}
           {report.summary.recurring_expense > 0 && (
-            <View className="flex-row justify-between mb-1">
-              <Text className="text-foreground text-sm">
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+              <Text style={{ color: colors.foreground, fontSize: 14 }}>
                 {t('recurringExpense') || 'Recurring Expenses'}
               </Text>
-              <Text className="text-danger text-sm font-medium">
+              <Text style={{ color: colors.danger, fontSize: 14, fontFamily: 'Inter_500Medium' }}>
                 -{formatCompactCurrency(report.summary.recurring_expense, report.currency)}
               </Text>
             </View>
           )}
           {report.summary.subscription_cost > 0 && (
-            <View className="flex-row justify-between">
-              <Text className="text-foreground text-sm">
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ color: colors.foreground, fontSize: 14 }}>
                 {t('subscriptionCost') || 'Subscriptions'}
               </Text>
-              <Text className="text-danger text-sm font-medium">
+              <Text style={{ color: colors.danger, fontSize: 14, fontFamily: 'Inter_500Medium' }}>
                 -{formatCompactCurrency(report.summary.subscription_cost, report.currency)}
               </Text>
             </View>
@@ -227,15 +229,20 @@ export function CashFlowProjectionCard() {
       {/* Upcoming Events */}
       {upcomingEvents.length > 0 && (
         <View>
-          <Text className="text-muted-foreground text-xs font-medium mb-2">
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: 8 }}>
             {t('upcomingCharges') || 'Upcoming Charges'}
           </Text>
           {upcomingEvents.map((event, idx) => (
-            <View key={idx} className="flex-row items-center justify-between py-2 border-b border-border/50">
-              <View className="flex-row items-center flex-1">
+            <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border + '80' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                 <View
-                  className="w-6 h-6 rounded items-center justify-center mr-2"
                   style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: 4,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 8,
                     backgroundColor:
                       event.type === 'subscription'
                         ? colors.accent + '20'
@@ -248,15 +255,19 @@ export function CashFlowProjectionCard() {
                     <ArrowDown size={12} color={colors.success} />
                   )}
                 </View>
-                <View className="flex-1">
-                  <Text className="text-foreground text-sm" numberOfLines={1}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.foreground, fontSize: 14 }} numberOfLines={1}>
                     {event.description}
                   </Text>
-                  <Text className="text-muted-foreground text-xs">{event.date}</Text>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{event.date}</Text>
                 </View>
               </View>
               <Text
-                className={`text-sm font-medium ${event.type === 'recurring' ? 'text-foreground' : 'text-danger'}`}
+                style={{
+                  fontSize: 14,
+                  fontFamily: 'Inter_500Medium',
+                  color: event.type === 'recurring' ? colors.foreground : colors.danger,
+                }}
               >
                 {event.type === 'subscription' ? '-' : ''}
                 {formatCompactCurrency(event.amount, report.currency)}

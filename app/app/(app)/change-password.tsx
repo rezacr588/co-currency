@@ -15,13 +15,14 @@ import { ChevronLeft, Lock, Eye, EyeOff, Check } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useAuth } from '../../src/context/AuthContext';
-import { useColors } from '../../src/context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { useToast } from '../../src/components/ui/Toast';
 import { Button } from '../../src/components/ui/Button';
 
 export default function ChangePasswordScreen() {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const router = useRouter();
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -94,9 +95,9 @@ export default function ChangePasswordScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
       <ScrollView
-        className="flex-1"
+        style={{ flex: 1 }}
         contentContainerStyle={{
           padding: isDesktop ? 32 : 16,
           maxWidth: 600,
@@ -105,24 +106,23 @@ export default function ChangePasswordScreen() {
         }}
       >
         {/* Header */}
-        <View className="flex-row items-center mb-6">
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
           <Pressable
             onPress={() => router.back()}
-            style={{ cursor: 'pointer' }}
-            className="p-2 mr-2"
+            style={{ cursor: 'pointer', padding: 8, marginRight: 8 }}
           >
             <ChevronLeft size={24} color={colors.placeholder} />
           </Pressable>
-          <Text className="text-2xl font-bold text-foreground">{t('changePassword')}</Text>
+          <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('changePassword')}</Text>
         </View>
 
         {/* Form */}
-        <View className="bg-card p-6 rounded-xl">
-          <View className="w-16 h-16 bg-primary/20 rounded-full items-center justify-center self-center mb-6">
+        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12 }}>
+          <View style={{ width: 64, height: 64, backgroundColor: colors.primary + '33', borderRadius: 9999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 24 }}>
             <Lock size={32} color={colors.accent} />
           </View>
 
-          <Text className="text-muted-foreground text-center mb-6">
+          <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginBottom: 24 }}>
             {hasPassword
               ? t('changePasswordDescription')
               : t('setPasswordDescription')}
@@ -130,14 +130,14 @@ export default function ChangePasswordScreen() {
 
           {/* Current Password */}
           {hasPassword && (
-            <View className="mb-4">
-              <Text className="text-sm text-muted-foreground mb-2">
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ fontSize: 14, color: colors.mutedForeground, marginBottom: 8 }}>
                 {t('currentPassword')}
               </Text>
-              <View className="bg-background rounded-xl flex-row items-center px-4">
+              <View style={{ backgroundColor: colors.background, borderRadius: 12, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
                 <Lock size={20} color={colors.placeholder} />
                 <TextInput
-                  className="flex-1 py-4 ml-3 text-foreground"
+                  style={{ flex: 1, paddingVertical: 16, marginLeft: 12, color: colors.foreground, outlineStyle: 'none' } as any}
                   value={currentPassword}
                   onChangeText={(text) => {
                     setCurrentPassword(text);
@@ -149,7 +149,6 @@ export default function ChangePasswordScreen() {
                   placeholderTextColor={colors.placeholder}
                   secureTextEntry={!showCurrentPassword}
                   autoCapitalize="none"
-                  style={{ outlineStyle: 'none' } as any}
                 />
                 <Pressable
                   onPress={() => setShowCurrentPassword(!showCurrentPassword)}
@@ -163,18 +162,18 @@ export default function ChangePasswordScreen() {
                 </Pressable>
               </View>
               {errors.currentPassword && (
-                <Text className="text-danger text-sm mt-1">{errors.currentPassword}</Text>
+                <Text style={{ color: colors.danger, fontSize: 14, marginTop: 4 }}>{errors.currentPassword}</Text>
               )}
             </View>
           )}
 
           {/* New Password */}
-          <View className="mb-4">
-            <Text className="text-sm text-muted-foreground mb-2">{t('newPassword')}</Text>
-            <View className="bg-background rounded-xl flex-row items-center px-4">
+          <View style={{ marginBottom: 16 }}>
+            <Text style={{ fontSize: 14, color: colors.mutedForeground, marginBottom: 8 }}>{t('newPassword')}</Text>
+            <View style={{ backgroundColor: colors.background, borderRadius: 12, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
               <Lock size={20} color={colors.placeholder} />
               <TextInput
-                className="flex-1 py-4 ml-3 text-foreground"
+                style={{ flex: 1, paddingVertical: 16, marginLeft: 12, color: colors.foreground, outlineStyle: 'none' } as any}
                 value={newPassword}
                 onChangeText={(text) => {
                   setNewPassword(text);
@@ -186,7 +185,6 @@ export default function ChangePasswordScreen() {
                 placeholderTextColor={colors.placeholder}
                 secureTextEntry={!showNewPassword}
                 autoCapitalize="none"
-                style={{ outlineStyle: 'none' } as any}
               />
               <Pressable
                 onPress={() => setShowNewPassword(!showNewPassword)}
@@ -200,19 +198,19 @@ export default function ChangePasswordScreen() {
               </Pressable>
             </View>
             {errors.newPassword && (
-              <Text className="text-danger text-sm mt-1">{errors.newPassword}</Text>
+              <Text style={{ color: colors.danger, fontSize: 14, marginTop: 4 }}>{errors.newPassword}</Text>
             )}
           </View>
 
           {/* Confirm Password */}
-          <View className="mb-6">
-            <Text className="text-sm text-muted-foreground mb-2">
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ fontSize: 14, color: colors.mutedForeground, marginBottom: 8 }}>
               {t('confirmPassword')}
             </Text>
-            <View className="bg-background rounded-xl flex-row items-center px-4">
+            <View style={{ backgroundColor: colors.background, borderRadius: 12, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
               <Lock size={20} color={colors.placeholder} />
               <TextInput
-                className="flex-1 py-4 ml-3 text-foreground"
+                style={{ flex: 1, paddingVertical: 16, marginLeft: 12, color: colors.foreground, outlineStyle: 'none' } as any}
                 value={confirmPassword}
                 onChangeText={(text) => {
                   setConfirmPassword(text);
@@ -224,7 +222,6 @@ export default function ChangePasswordScreen() {
                 placeholderTextColor={colors.placeholder}
                 secureTextEntry={!showConfirmPassword}
                 autoCapitalize="none"
-                style={{ outlineStyle: 'none' } as any}
               />
               <Pressable
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -238,7 +235,7 @@ export default function ChangePasswordScreen() {
               </Pressable>
             </View>
             {errors.confirmPassword && (
-              <Text className="text-danger text-sm mt-1">{errors.confirmPassword}</Text>
+              <Text style={{ color: colors.danger, fontSize: 14, marginTop: 4 }}>{errors.confirmPassword}</Text>
             )}
           </View>
 
@@ -254,12 +251,12 @@ export default function ChangePasswordScreen() {
         </View>
 
         {/* Password Requirements */}
-        <View className="mt-4 p-4 bg-card rounded-xl">
-          <Text className="text-sm font-medium text-foreground mb-2">
+        <View style={{ marginTop: 16, padding: 16, backgroundColor: colors.card, borderRadius: 12 }}>
+          <Text style={{ fontSize: 14, fontFamily: 'Inter_500Medium', color: colors.foreground, marginBottom: 8 }}>
             {t('passwordRequirements')}
           </Text>
           <View style={{ gap: 4 }}>
-            <Text className="text-sm text-muted-foreground">
+            <Text style={{ fontSize: 14, color: colors.mutedForeground }}>
               - {t('passwordMinLength')}
             </Text>
           </View>

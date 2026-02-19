@@ -230,7 +230,7 @@ func main() {
 	var aiService *service.AIService
 	if cfg.AIAPIKey != "" {
 		var err error
-		aiService, err = service.NewAIService(cfg.AIProvider, cfg.AIAPIKey, cfg.AIModel, cfg.AICloudProject)
+		aiService, err = service.NewAIService(cfg.AIProvider, cfg.AIAPIKey, cfg.AIModel, cfg.AIVisionModel, cfg.AICloudProject)
 		if err != nil {
 			log.Warn().Err(err).Msg("Failed to initialize AI service")
 		} else {
@@ -424,6 +424,17 @@ func main() {
 		}
 	}
 
+	// Initialize advice service (requires AI + wallet)
+	var adviceService *service.AdviceService
+	if aiService != nil && walletRepo != nil {
+		adviceService = service.NewAdviceService(aiService, walletRepo, userRepo)
+		log.Info().Msg("Advice service initialized")
+	}
+
+	// Initialize news service (always available)
+	newsService := service.NewNewsService(cfg.NewsCacheTTL)
+	log.Info().Msg("News service initialized")
+
 	// Initialize handlers
 	exchangeHandler := handler.New(exchangeService)
 	authHandler := handler.NewAuthHandler(authService)
@@ -439,6 +450,9 @@ func main() {
 	}
 	if goalService != nil {
 		aiHandler.SetGoalService(goalService)
+	}
+	if adviceService != nil {
+		aiHandler.SetAdviceService(adviceService)
 	}
 
 	// Initialize Phase 3 handlers
@@ -478,6 +492,9 @@ func main() {
 	if noteService != nil {
 		noteHandler = handler.NewNoteHandler(noteService)
 	}
+
+	// Initialize news handler
+	newsHandler := handler.NewNewsHandler(newsService)
 
 	// Initialize loan handler
 	var loanHandler *handler.LoanHandler
@@ -534,6 +551,7 @@ func main() {
 		Notification:  notificationHandler,
 		Challenge:     challengeHandler,
 		XP:            xpHandler,
+		News:          newsHandler,
 	}
 
 	rateLimiter := middleware.NewRateLimiter(cfg.RateLimitPerMin)

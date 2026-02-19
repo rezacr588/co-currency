@@ -14,10 +14,10 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, Check, Search, Plus, Trash2 } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Check, Search, Plus, Trash2, Sparkles } from 'lucide-react-native';
+import styled, { useTheme } from 'styled-components/native';
 import { api } from '../../../src/api';
 import { useLanguage } from '../../../src/context/LanguageContext';
-import { useColors } from '../../../src/context/ThemeContext';
 import { formatCompactCurrency, getCurrencyDisplay } from '../../../src/utils/format';
 import { CATEGORY_ICONS, CategoryIcon } from '../../../src/constants/icons';
 import { COMMON_CURRENCIES } from '../../../src/constants/currencies';
@@ -25,14 +25,87 @@ import { useToast } from '../../../src/components/ui/Toast';
 import { Toggle } from '../../../src/components/ui/Toggle';
 import { FormError } from '../../../src/components/ui/FormError';
 import { Button } from '../../../src/components/ui/Button';
+import { H2, Caption, BodyMedium } from '../../../src/components/ui/styled';
 import type { Category, TransactionRequest } from '../../../src/types/wallet';
+
+const ScreenContainer = styled(SafeAreaView)`
+  flex: 1;
+  background-color: ${({ theme }) => theme.colors.background};
+`;
+
+const SectionCard = styled.View`
+  background-color: ${({ theme }) => theme.colors.card};
+  border-radius: ${({ theme }) => theme.radii.lg}px;
+  padding: ${({ theme }) => theme.spacing.lg}px;
+  border-width: 1px;
+  border-color: ${({ theme }) => theme.colors.borderSubtle};
+  margin-bottom: ${({ theme }) => theme.spacing.xl}px;
+`;
+
+const TypeButton = styled.Pressable<{ $active: boolean }>`
+  flex: 1;
+  padding: 14px;
+  border-radius: ${({ theme }) => theme.radii.md}px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  border-width: 1px;
+  background-color: ${({ theme, $active }) => $active ? theme.colors.foreground : theme.colors.card};
+  border-color: ${({ theme, $active }) => $active ? theme.colors.foreground : theme.colors.border};
+`;
+
+const AmountContainer = styled.View`
+  background-color: ${({ theme }) => theme.colors.muted};
+  border-radius: ${({ theme }) => theme.radii.md}px;
+  flex-direction: row;
+  align-items: center;
+  padding-horizontal: ${({ theme }) => theme.spacing.lg}px;
+  border-width: 1px;
+  border-color: ${({ theme }) => theme.colors.border};
+`;
+
+const CurrencyChip = styled.Pressable<{ $active: boolean; $dim?: boolean }>`
+  padding-horizontal: ${({ theme }) => theme.spacing.md}px;
+  padding-vertical: ${({ theme }) => theme.spacing.sm}px;
+  border-radius: ${({ theme }) => theme.radii.md}px;
+  flex-direction: row;
+  align-items: center;
+  border-width: 1px;
+  min-height: 44px;
+  background-color: ${({ theme, $active }) => $active ? theme.colors.foreground : theme.colors.secondary};
+  border-color: ${({ theme, $active }) => $active ? theme.colors.foreground : theme.colors.border};
+  opacity: ${({ $dim }) => $dim ? 0.6 : 1};
+`;
+
+const SearchContainer = styled.View`
+  background-color: ${({ theme }) => theme.colors.secondary};
+  border-radius: ${({ theme }) => theme.radii.md}px;
+  padding-horizontal: ${({ theme }) => theme.spacing.md}px;
+  flex-direction: row;
+  align-items: center;
+  border-width: 1px;
+  border-color: ${({ theme }) => theme.colors.border};
+  margin-bottom: ${({ theme }) => theme.spacing.md}px;
+`;
+
+const CategoryChip = styled.Pressable<{ $active: boolean }>`
+  padding-horizontal: ${({ theme }) => theme.spacing.sm}px;
+  padding-vertical: 10px;
+  border-radius: ${({ theme }) => theme.radii.md}px;
+  align-items: center;
+  justify-content: center;
+  border-width: 1px;
+  min-height: 44px;
+  background-color: ${({ theme, $active }) => $active ? theme.colors.foreground : theme.colors.secondary};
+  border-color: ${({ theme, $active }) => $active ? theme.colors.foreground : theme.colors.border};
+`;
 
 const FALLBACK_CATEGORIES = Object.keys(CATEGORY_ICONS);
 const CURRENCIES = [...COMMON_CURRENCIES];
 
 export default function AddTransactionScreen() {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
@@ -42,7 +115,6 @@ export default function AddTransactionScreen() {
   const isTablet = width >= 768;
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
-  // Calculate category card widths
   const containerPadding = isDesktop ? 32 : 16;
   const categoryGap = 8;
   const availableWidth = width - containerPadding * 2;
@@ -61,6 +133,7 @@ export default function AddTransactionScreen() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
+  const [isSuggestingCategory, setIsSuggestingCategory] = useState(false);
   const { showToast } = useToast();
   const parsedAmount = Number.parseFloat(amount);
   const hasValidAmount = Number.isFinite(parsedAmount) && parsedAmount > 0;
@@ -109,6 +182,12 @@ export default function AddTransactionScreen() {
     retry: 1,
   });
 
+  const { data: aiStatus } = useQuery({
+    queryKey: ['ai-status'],
+    queryFn: () => api.ai.getStatus(),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const {
     data: categoriesData,
     isPending: isLoadingCategories,
@@ -120,29 +199,20 @@ export default function AddTransactionScreen() {
 
   const categoryOptions = useMemo<Category[]>(() => {
     const remote = categoriesData?.categories;
-    if (remote && remote.length > 0) {
-      return remote;
-    }
-    return FALLBACK_CATEGORIES.map((name) => ({
-      name,
-      is_default: true,
-    }));
+    if (remote && remote.length > 0) return remote;
+    return FALLBACK_CATEGORIES.map((name) => ({ name, is_default: true }));
   }, [categoriesData]);
 
   useEffect(() => {
     if (categoryOptions.length === 0) return;
     const hasSelected = categoryOptions.some((item) => item.name === category);
-    if (!hasSelected) {
-      setCategory(categoryOptions[0]?.name || 'other');
-    }
+    if (!hasSelected) setCategory(categoryOptions[0]?.name || 'other');
   }, [category, categoryOptions]);
 
   const filteredCategoryOptions = useMemo(() => {
     const term = categorySearch.trim().toLowerCase();
     if (!term) return categoryOptions;
-    return categoryOptions.filter((item) =>
-      item.name.toLowerCase().includes(term)
-    );
+    return categoryOptions.filter((item) => item.name.toLowerCase().includes(term));
   }, [categoryOptions, categorySearch]);
 
   const createCategoryMutation = useMutation({
@@ -150,10 +220,7 @@ export default function AddTransactionScreen() {
       const normalized = name.trim();
       const key = normalized.toLowerCase().replace(/\s+/g, '_');
       const icon = CATEGORY_ICONS[key] ? key : 'other';
-      return api.wallet.createCategory({
-        name: normalized,
-        icon,
-      });
+      return api.wallet.createCategory({ name: normalized, icon });
     },
     onSuccess: (createdCategory) => {
       queryClient.invalidateQueries({ queryKey: ['wallet', 'categories'] });
@@ -171,9 +238,7 @@ export default function AddTransactionScreen() {
     mutationFn: (categoryID: string) => api.wallet.deleteCategory(categoryID),
     onSuccess: (_result, deletedCategoryID) => {
       const deleted = categoryOptions.find((item) => item.id === deletedCategoryID);
-      if (deleted && deleted.name === category) {
-        setCategory('other');
-      }
+      if (deleted && deleted.name === category) setCategory('other');
       queryClient.invalidateQueries({ queryKey: ['wallet', 'categories'] });
       showToast(t('categoryDeleted') || 'Category deleted', 'success');
     },
@@ -188,12 +253,9 @@ export default function AddTransactionScreen() {
       setError('');
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
-      // Check for new badges in background (non-blocking)
       api.badges.check().then(() => {
         queryClient.invalidateQueries({ queryKey: ['badges'] });
-      }).catch(() => {
-        // Silently ignore badge check errors
-      });
+      }).catch(() => {});
       showToast(t('transactionAdded') || 'Transaction added', 'success');
       router.back();
     },
@@ -207,7 +269,6 @@ export default function AddTransactionScreen() {
       setError(t('enterValidAmount'));
       return;
     }
-
     const payload: TransactionRequest = {
       type,
       amount: parsedAmount,
@@ -215,11 +276,9 @@ export default function AddTransactionScreen() {
       category,
       description: description || undefined,
     };
-
     if (enableTargetConversion && walletCurrency && walletCurrency !== currency) {
       payload.wallet_currency = walletCurrency;
     }
-
     setError('');
     mutation.mutate(payload);
   };
@@ -241,13 +300,30 @@ export default function AddTransactionScreen() {
       t('confirmDeleteCategory') || 'Are you sure you want to delete this category?',
       [
         { text: t('cancel') || 'Cancel', style: 'cancel' },
-        {
-          text: t('delete') || 'Delete',
-          style: 'destructive',
-          onPress: () => deleteCategoryMutation.mutate(item.id!),
-        },
+        { text: t('delete') || 'Delete', style: 'destructive', onPress: () => deleteCategoryMutation.mutate(item.id!) },
       ]
     );
+  };
+
+  const handleAISuggestCategory = async () => {
+    if (!description.trim()) return;
+    setIsSuggestingCategory(true);
+    try {
+      const result = await api.ai.smartParse({ text: description });
+      if (result.category && result.category !== 'other') {
+        const catKey = result.category.toLowerCase().replace(/\s+/g, '_');
+        const match = categoryOptions.find((c) => c.name.toLowerCase() === catKey);
+        if (match) {
+          setCategory(match.name);
+          showToast(t('aiSuggestCategory') || `AI suggested: ${match.name}`, 'success');
+        } else {
+          setCategory(result.category);
+          showToast(t('aiSuggestCategory') || `AI suggested: ${result.category}`, 'success');
+        }
+      }
+    } catch {} finally {
+      setIsSuggestingCategory(false);
+    }
   };
 
   const currencyDisplay = getCurrencyDisplay(currency);
@@ -259,90 +335,62 @@ export default function AddTransactionScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
+    <ScreenContainer edges={isDesktop ? [] : ['top']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
+        style={{ flex: 1 }}
         keyboardVerticalOffset={Platform.OS === 'ios' ? Math.max(insets.top, 12) : 0}
       >
         <ScrollView
-          className="flex-1"
+          style={{ flex: 1 }}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           contentContainerStyle={{
-            padding: isDesktop ? 32 : 16,
+            padding: isDesktop ? 32 : theme.spacing.lg,
             maxWidth: isDesktop ? 800 : undefined,
             alignSelf: isDesktop ? 'center' : undefined,
             width: '100%',
             paddingBottom: bottomPadding,
           }}
         >
-          <Text
-            className="font-semibold text-foreground mb-6"
-            style={{ fontSize: isDesktop ? 24 : 22 }}
-          >
+          <H2 style={{ marginBottom: theme.spacing.xxl, fontSize: isDesktop ? 24 : 22 }}>
             {t('addTransaction') || 'Add Transaction'}
-          </Text>
+          </H2>
 
           <FormError message={error} />
 
           {/* Desktop: Two column layout for type and amount */}
-          <View
-            style={{
-              flexDirection: isDesktop ? 'row' : 'column',
-              gap: isDesktop ? 24 : 0,
-            }}
-          >
+          <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: isDesktop ? 24 : 0 }}>
             {/* Transaction Type */}
-            <View className="mb-5" style={{ flex: isDesktop ? 1 : undefined }}>
-              <Text className="text-muted-foreground text-sm mb-2">{t('transactionType') || 'Transaction Type'}</Text>
-              <View className="flex-row gap-2">
-                <Pressable
-                  onPress={() => setType('debit')}
-                  style={{ cursor: 'pointer' }}
-                  className={`flex-1 p-3.5 rounded-lg flex-row items-center justify-center border ${
-                    type === 'debit' ? 'bg-foreground border-foreground' : 'bg-card border-border'
-                  }`}
-                >
-                  <TrendingDown
-                    size={18}
-                    color={type === 'debit' ? colors.primaryForeground : colors.danger}
-                  />
-                  <Text
-                    className={`font-medium ml-2 text-sm ${
-                      type === 'debit' ? 'text-background' : 'text-foreground'
-                    }`}
+            <View style={{ marginBottom: theme.spacing.xl, flex: isDesktop ? 1 : undefined }}>
+              <Caption style={{ marginBottom: theme.spacing.sm }}>{t('transactionType') || 'Transaction Type'}</Caption>
+              <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+                <TypeButton $active={type === 'debit'} onPress={() => setType('debit')}>
+                  <TrendingDown size={18} color={type === 'debit' ? theme.colors.primaryForeground : theme.colors.danger} />
+                  <BodyMedium
+                    $color={type === 'debit' ? theme.colors.background : theme.colors.foreground}
+                    style={{ marginLeft: theme.spacing.sm, fontSize: 14 }}
                   >
                     {t('expense') || 'Expense'}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setType('credit')}
-                  style={{ cursor: 'pointer' }}
-                  className={`flex-1 p-3.5 rounded-lg flex-row items-center justify-center border ${
-                    type === 'credit' ? 'bg-foreground border-foreground' : 'bg-card border-border'
-                  }`}
-                >
-                  <TrendingUp
-                    size={18}
-                    color={type === 'credit' ? colors.primaryForeground : colors.success}
-                  />
-                  <Text
-                    className={`font-medium ml-2 text-sm ${
-                      type === 'credit' ? 'text-background' : 'text-foreground'
-                    }`}
+                  </BodyMedium>
+                </TypeButton>
+                <TypeButton $active={type === 'credit'} onPress={() => setType('credit')}>
+                  <TrendingUp size={18} color={type === 'credit' ? theme.colors.primaryForeground : theme.colors.success} />
+                  <BodyMedium
+                    $color={type === 'credit' ? theme.colors.background : theme.colors.foreground}
+                    style={{ marginLeft: theme.spacing.sm, fontSize: 14 }}
                   >
                     {t('income') || 'Income'}
-                  </Text>
-                </Pressable>
+                  </BodyMedium>
+                </TypeButton>
               </View>
             </View>
 
             {/* Amount */}
-            <View className="mb-5" style={{ flex: isDesktop ? 1 : undefined }}>
-              <Text className="text-muted-foreground text-sm mb-2">{t('amount') || 'Amount'}</Text>
-              <View className="bg-muted border border-border rounded-lg flex-row items-center px-4">
-                <Text className="text-xl text-muted-foreground mr-2">
+            <View style={{ marginBottom: theme.spacing.xl, flex: isDesktop ? 1 : undefined }}>
+              <Caption style={{ marginBottom: theme.spacing.sm }}>{t('amount') || 'Amount'}</Caption>
+              <AmountContainer>
+                <Text style={{ fontSize: 20, color: theme.colors.mutedForeground, marginRight: theme.spacing.sm }}>
                   {currencyDisplay.symbol}
                 </Text>
                 <TextInput
@@ -350,77 +398,53 @@ export default function AddTransactionScreen() {
                   onChangeText={setAmount}
                   keyboardType="decimal-pad"
                   placeholder="0.00"
-                  placeholderTextColor={colors.mutedForeground}
-                  selectionColor={colors.accent}
-                  cursorColor={colors.accent}
+                  placeholderTextColor={theme.colors.mutedForeground}
+                  selectionColor={theme.colors.accent}
+                  cursorColor={theme.colors.accent}
                   style={{
-                    flex: 1,
-                    padding: 14,
-                    fontSize: 20,
-                    fontWeight: '600',
-                    color: colors.foreground,
-                    outlineStyle: 'none',
+                    flex: 1, padding: 14, fontSize: 20, fontFamily: 'Inter_600SemiBold',
+                    color: theme.colors.foreground, outlineStyle: 'none',
                   } as any}
                 />
-              </View>
+              </AmountContainer>
             </View>
           </View>
 
           {/* Currency */}
-          <View className="mb-5">
-            <Text className="text-muted-foreground text-sm mb-2">{t('currency') || 'Currency'}</Text>
+          <View style={{ marginBottom: theme.spacing.xl }}>
+            <Caption style={{ marginBottom: theme.spacing.sm }}>{t('currency') || 'Currency'}</Caption>
             {isDesktop ? (
-              <View className="flex-row flex-wrap gap-2">
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
                 {CURRENCIES.map((code) => {
                   const display = getCurrencyDisplay(code);
                   return (
-                    <Pressable
-                      key={code}
-                      onPress={() => setCurrency(code)}
-                      style={{ cursor: 'pointer', minHeight: 44 }}
-                      className={`px-3 py-2 rounded-md flex-row items-center border ${
-                        currency === code ? 'bg-foreground border-foreground' : 'bg-secondary border-border'
-                      }`}
-                    >
-                      <Text className="mr-1 text-sm">{display.flag || '🌐'}</Text>
-                      <Text
-                        className={`text-sm ${
-                          currency === code
-                            ? 'text-background font-medium'
-                            : 'text-foreground'
-                        }`}
+                    <CurrencyChip key={code} $active={currency === code} onPress={() => setCurrency(code)}>
+                      <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || '🌐'}</Text>
+                      <BodyMedium
+                        $color={currency === code ? theme.colors.background : theme.colors.foreground}
+                        style={{ fontSize: 14 }}
                       >
                         {code}
-                      </Text>
-                    </Pressable>
+                      </BodyMedium>
+                    </CurrencyChip>
                   );
                 })}
               </View>
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View className="flex-row gap-2">
+                <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
                   {CURRENCIES.map((code) => {
                     const display = getCurrencyDisplay(code);
                     return (
-                      <Pressable
-                        key={code}
-                        onPress={() => setCurrency(code)}
-                        style={{ cursor: 'pointer', minHeight: 44 }}
-                        className={`px-3 py-2 rounded-md flex-row items-center border ${
-                          currency === code ? 'bg-foreground border-foreground' : 'bg-secondary border-border'
-                        }`}
-                      >
-                        <Text className="mr-1 text-sm">{display.flag || '🌐'}</Text>
-                        <Text
-                          className={`text-sm ${
-                            currency === code
-                              ? 'text-background font-medium'
-                              : 'text-foreground'
-                          }`}
+                      <CurrencyChip key={code} $active={currency === code} onPress={() => setCurrency(code)}>
+                        <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || '🌐'}</Text>
+                        <BodyMedium
+                          $color={currency === code ? theme.colors.background : theme.colors.foreground}
+                          style={{ fontSize: 14 }}
                         >
                           {code}
-                        </Text>
-                      </Pressable>
+                        </BodyMedium>
+                      </CurrencyChip>
                     );
                   })}
                 </View>
@@ -429,265 +453,236 @@ export default function AddTransactionScreen() {
           </View>
 
           {/* Optional wallet currency conversion */}
-          <View className="mb-5 bg-card border border-border rounded-lg p-4">
-            <View className="flex-row items-center justify-between mb-3">
-              <View className="flex-1 pr-3">
-                <Text className="text-foreground font-semibold text-sm">
-                  {t('convertCurrency')}
-                </Text>
-                <Text className="text-muted-foreground text-xs mt-1">
-                  {`${t('walletCurrency')} (${t('optional')})`}
-                </Text>
+          <SectionCard>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
+              <View style={{ flex: 1, paddingRight: theme.spacing.md }}>
+                <BodyMedium style={{ fontSize: 14 }}>{t('convertCurrency')}</BodyMedium>
+                <Caption style={{ marginTop: 4 }}>{`${t('walletCurrency')} (${t('optional')})`}</Caption>
               </View>
-              <Toggle
-                value={enableTargetConversion}
-                onValueChange={setEnableTargetConversion}
-              />
+              <Toggle value={enableTargetConversion} onValueChange={setEnableTargetConversion} />
             </View>
 
             {enableTargetConversion ? (
               <>
-                <Text className="text-muted-foreground text-xs mb-2">
-                  {t('selectWalletCurrency')}
-                </Text>
+                <Caption style={{ marginBottom: theme.spacing.sm }}>{t('selectWalletCurrency')}</Caption>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View className="flex-row gap-2">
+                  <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
                     {availableWalletCurrencies.map((code) => {
                       const display = getCurrencyDisplay(code);
                       const isSelected = walletCurrency === code;
-                      const isSameAsTransactionCurrency = code === currency;
+                      const isSame = code === currency;
                       return (
-                        <Pressable
-                          key={code}
-                          onPress={() => setWalletCurrency(code)}
-                          style={{ cursor: 'pointer', minHeight: 44 }}
-                          className={`px-3 py-2 rounded-md flex-row items-center border ${
-                            isSelected
-                              ? 'bg-foreground border-foreground'
-                              : isSameAsTransactionCurrency
-                                ? 'bg-secondary/70 border-border opacity-60'
-                                : 'bg-secondary border-border'
-                          }`}
-                        >
-                          <Text className="mr-1 text-sm">{display.flag || '🌐'}</Text>
-                          <Text
-                            className={`text-sm ${
-                              isSelected
-                                ? 'text-background font-medium'
-                                : 'text-foreground'
-                            }`}
+                        <CurrencyChip key={code} $active={isSelected} $dim={isSame} onPress={() => setWalletCurrency(code)}>
+                          <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || '🌐'}</Text>
+                          <BodyMedium
+                            $color={isSelected ? theme.colors.background : theme.colors.foreground}
+                            style={{ fontSize: 14 }}
                           >
                             {code}
-                          </Text>
-                        </Pressable>
+                          </BodyMedium>
+                        </CurrencyChip>
                       );
                     })}
                   </View>
                 </ScrollView>
 
-                {walletCurrency === currency ? (
-                  <Text className="text-muted-foreground text-xs mt-3">
-                    {t('selectWalletCurrency')}
-                  </Text>
-                ) : null}
+                {walletCurrency === currency && (
+                  <Caption style={{ marginTop: theme.spacing.md }}>{t('selectWalletCurrency')}</Caption>
+                )}
 
-                {shouldFetchConversionPreview ? (
-                  <View className="mt-3 bg-secondary/40 border border-border rounded-lg p-3">
-                    <Text className="text-foreground text-sm font-semibold mb-2">
-                      {t('conversionPreview')}
-                    </Text>
+                {shouldFetchConversionPreview && (
+                  <View style={{
+                    marginTop: theme.spacing.md,
+                    backgroundColor: theme.colors.secondary + '66',
+                    borderWidth: 1, borderColor: theme.colors.border,
+                    borderRadius: theme.radii.md, padding: theme.spacing.md,
+                  }}>
+                    <BodyMedium style={{ fontSize: 14, marginBottom: theme.spacing.sm }}>{t('conversionPreview')}</BodyMedium>
                     {isLoadingConversionPreview ? (
-                      <View className="flex-row items-center">
-                        <ActivityIndicator size="small" color={colors.accent} />
-                        <Text className="text-muted-foreground text-xs ml-2">{t('converting')}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <ActivityIndicator size="small" color={theme.colors.accent} />
+                        <Caption style={{ marginLeft: theme.spacing.sm }}>{t('converting')}</Caption>
                       </View>
                     ) : isConversionPreviewError ? (
-                      <Text className="text-danger text-xs">{t('conversionFailed')}</Text>
+                      <Caption $color={theme.colors.danger}>{t('conversionFailed')}</Caption>
                     ) : conversionPreview ? (
                       <View>
-                        <Text className="text-muted-foreground text-xs">
-                          {`${formatCompactCurrency(parsedAmount, currency)} -> ${formatCompactCurrency(conversionPreview.result, walletCurrency)}`}
-                        </Text>
-                        <Text className="text-muted-foreground text-xs mt-1">
-                          {`${t('rate')}: 1 ${currency} = ${conversionPreview.rate.toFixed(4)} ${walletCurrency}`}
-                        </Text>
+                        <Caption>{`${formatCompactCurrency(parsedAmount, currency)} -> ${formatCompactCurrency(conversionPreview.result, walletCurrency)}`}</Caption>
+                        <Caption style={{ marginTop: 4 }}>{`${t('rate')}: 1 ${currency} = ${conversionPreview.rate.toFixed(4)} ${walletCurrency}`}</Caption>
                       </View>
                     ) : null}
                   </View>
-                ) : null}
+                )}
               </>
             ) : null}
-          </View>
+          </SectionCard>
 
-          {/* Category - Search + Manage */}
-          <View className="mb-5 bg-card border border-border rounded-lg p-4">
-            <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-muted-foreground text-sm">{t('category')}</Text>
-              {isLoadingCategories ? (
-                <ActivityIndicator size="small" color={colors.accent} />
-              ) : null}
+          {/* Category */}
+          <SectionCard>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
+              <Caption>{t('category')}</Caption>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {aiStatus?.configured && description.trim().length > 0 && (
+                  <Pressable
+                    onPress={handleAISuggestCategory}
+                    disabled={isSuggestingCategory}
+                    hitSlop={8}
+                    style={{ marginRight: theme.spacing.sm, flexDirection: 'row', alignItems: 'center', paddingHorizontal: theme.spacing.sm, paddingVertical: 4, borderRadius: theme.radii.md }}
+                  >
+                    {isSuggestingCategory ? (
+                      <ActivityIndicator size="small" color={theme.colors.accent} />
+                    ) : (
+                      <>
+                        <Sparkles size={14} color={theme.colors.accent} />
+                        <Text style={{ color: theme.colors.accent, fontSize: 11, fontFamily: 'Inter_600SemiBold', marginLeft: 3 }}>AI</Text>
+                      </>
+                    )}
+                  </Pressable>
+                )}
+                {isLoadingCategories && <ActivityIndicator size="small" color={theme.colors.accent} />}
+              </View>
             </View>
 
-            <View className="bg-secondary border border-border rounded-lg px-3 flex-row items-center mb-3">
-              <Search size={15} color={colors.secondaryForeground} />
+            <SearchContainer>
+              <Search size={15} color={theme.colors.secondaryForeground} />
               <TextInput
                 value={categorySearch}
                 onChangeText={setCategorySearch}
                 placeholder={t('searchCategories') || 'Search categories'}
-                placeholderTextColor={colors.mutedForeground}
-                selectionColor={colors.accent}
-                cursorColor={colors.accent}
+                placeholderTextColor={theme.colors.mutedForeground}
+                selectionColor={theme.colors.accent}
+                cursorColor={theme.colors.accent}
                 style={{
-                  flex: 1,
-                  paddingVertical: 10,
-                  paddingHorizontal: 10,
-                  color: colors.foreground,
-                  fontSize: 14,
-                  outlineStyle: 'none',
+                  flex: 1, paddingVertical: 10, paddingHorizontal: 10,
+                  color: theme.colors.foreground, fontSize: 14, outlineStyle: 'none',
                 } as any}
               />
-            </View>
+            </SearchContainer>
 
-            <View className="flex-row gap-2 mb-4">
-              <View className="flex-1 bg-secondary border border-border rounded-lg px-3">
+            <View style={{ flexDirection: 'row', gap: theme.spacing.sm, marginBottom: theme.spacing.lg }}>
+              <View style={{
+                flex: 1, backgroundColor: theme.colors.secondary,
+                borderWidth: 1, borderColor: theme.colors.border,
+                borderRadius: theme.radii.md, paddingHorizontal: theme.spacing.md,
+              }}>
                 <TextInput
                   value={newCategoryName}
                   onChangeText={setNewCategoryName}
                   placeholder={t('newCategoryName') || 'New category name'}
-                  placeholderTextColor={colors.mutedForeground}
-                  selectionColor={colors.accent}
-                  cursorColor={colors.accent}
+                  placeholderTextColor={theme.colors.mutedForeground}
+                  selectionColor={theme.colors.accent}
+                  cursorColor={theme.colors.accent}
                   style={{
-                    paddingVertical: 10,
-                    color: colors.foreground,
-                    fontSize: 14,
-                    outlineStyle: 'none',
+                    paddingVertical: 10, color: theme.colors.foreground,
+                    fontSize: 14, outlineStyle: 'none',
                   } as any}
                 />
               </View>
               <Pressable
                 onPress={handleCreateCategory}
                 disabled={createCategoryMutation.isPending}
-                style={{ cursor: 'pointer', minHeight: 44 }}
-                className={`px-3 rounded-lg flex-row items-center justify-center ${
-                  createCategoryMutation.isPending ? 'bg-secondary opacity-60' : 'bg-accent'
-                }`}
+                style={{
+                  minHeight: 44, paddingHorizontal: theme.spacing.md,
+                  borderRadius: theme.radii.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: createCategoryMutation.isPending ? theme.colors.secondary : theme.colors.accent,
+                  opacity: createCategoryMutation.isPending ? 0.6 : 1,
+                }}
               >
                 {createCategoryMutation.isPending ? (
-                  <ActivityIndicator size="small" color={colors.primaryForeground} />
+                  <ActivityIndicator size="small" color={theme.colors.primaryForeground} />
                 ) : (
                   <>
-                    <Plus size={14} color={colors.primaryForeground} />
-                    <Text className="text-accent-foreground font-semibold ml-1 text-xs">
+                    <Plus size={14} color={theme.colors.primaryForeground} />
+                    <BodyMedium $color={theme.colors.accentForeground} style={{ marginLeft: 4, fontSize: 12 }}>
                       {t('addCategory') || 'Add'}
-                    </Text>
+                    </BodyMedium>
                   </>
                 )}
               </Pressable>
             </View>
 
             {filteredCategoryOptions.length === 0 ? (
-              <View className="bg-secondary/30 border border-border/60 rounded-lg p-3">
-                <Text className="text-muted-foreground text-xs">
-                  {t('noCategoriesFound') || 'No categories found'}
-                </Text>
+              <View style={{
+                backgroundColor: theme.colors.secondary + '4D',
+                borderWidth: 1, borderColor: theme.colors.border + '99',
+                borderRadius: theme.radii.md, padding: theme.spacing.md,
+              }}>
+                <Caption>{t('noCategoriesFound') || 'No categories found'}</Caption>
               </View>
             ) : (
               <>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    flexWrap: 'wrap',
-                    gap: 8,
-                  }}
-                >
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                   {(showAllCategories || categorySearch.trim()
                     ? filteredCategoryOptions
                     : filteredCategoryOptions.slice(0, CATEGORY_PREVIEW_COUNT)
                   ).map((item) => {
                     const isSelected = category === item.name;
                     const canDelete = !item.is_default && !!item.id;
-
                     return (
-                      <Pressable
+                      <CategoryChip
                         key={`${item.id || 'default'}-${item.name}`}
+                        $active={isSelected}
                         onPress={() => setCategory(item.name)}
-                        style={{
-                          cursor: 'pointer',
-                          width: categoryCardWidth,
-                          minHeight: 44,
-                        }}
-                        className={`relative px-2 py-2.5 rounded-md items-center justify-center border ${
-                          isSelected ? 'bg-foreground border-foreground' : 'bg-secondary border-border'
-                        }`}
+                        style={{ width: categoryCardWidth }}
                       >
                         <CategoryIcon
                           category={item.name}
                           size={16}
-                          color={isSelected ? colors.primaryForeground : colors.secondaryForeground}
+                          color={isSelected ? theme.colors.primaryForeground : theme.colors.secondaryForeground}
                         />
-                        <Text
-                          className={`text-xs mt-1 ${isSelected ? 'text-background font-medium' : 'text-foreground'}`}
+                        <Caption
+                          $color={isSelected ? theme.colors.background : theme.colors.foreground}
+                          style={{ marginTop: 4, fontFamily: isSelected ? theme.typography.bodyMedium.fontFamily : theme.typography.caption.fontFamily }}
                           numberOfLines={1}
                         >
                           {resolveCategoryLabel(item.name)}
-                        </Text>
-
-                        {canDelete ? (
+                        </Caption>
+                        {canDelete && (
                           <Pressable
-                            onPress={(event) => {
-                              event.stopPropagation();
-                              handleDeleteCategory(item);
-                            }}
-                            style={{ cursor: 'pointer' }}
-                            className="absolute top-1 right-1 p-1"
+                            onPress={(event) => { event.stopPropagation(); handleDeleteCategory(item); }}
+                            style={{ position: 'absolute', top: 4, right: 4, padding: 4 }}
                             hitSlop={8}
                           >
-                            <Trash2 size={10} color={isSelected ? colors.primaryForeground : colors.danger} />
+                            <Trash2 size={10} color={isSelected ? theme.colors.primaryForeground : theme.colors.danger} />
                           </Pressable>
-                        ) : null}
-                      </Pressable>
+                        )}
+                      </CategoryChip>
                     );
                   })}
                 </View>
                 {!categorySearch.trim() && filteredCategoryOptions.length > CATEGORY_PREVIEW_COUNT && (
                   <Pressable
                     onPress={() => setShowAllCategories(!showAllCategories)}
-                    style={{ cursor: 'pointer', minHeight: 44, justifyContent: 'center' }}
-                    className="items-center mt-2"
+                    style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center', marginTop: theme.spacing.sm }}
                   >
-                    <Text className="text-accent text-sm font-medium">
+                    <BodyMedium $color={theme.colors.accent} style={{ fontSize: 14 }}>
                       {showAllCategories
                         ? (t('showLess') || 'Show less')
                         : (t('showAllCategories') || `Show all (${filteredCategoryOptions.length})`)}
-                    </Text>
+                    </BodyMedium>
                   </Pressable>
                 )}
               </>
             )}
-          </View>
+          </SectionCard>
 
           {/* Description */}
-          <View className="mb-6">
-            <Text className="text-muted-foreground text-sm mb-2">{t('description') || 'Description'}</Text>
+          <View style={{ marginBottom: theme.spacing.xxl }}>
+            <Caption style={{ marginBottom: theme.spacing.sm }}>{t('description') || 'Description'}</Caption>
             <TextInput
               value={description}
               onChangeText={setDescription}
               placeholder={t('descriptionPlaceholder')}
-              placeholderTextColor={colors.mutedForeground}
-              selectionColor={colors.accent}
-              cursorColor={colors.accent}
+              placeholderTextColor={theme.colors.mutedForeground}
+              selectionColor={theme.colors.accent}
+              cursorColor={theme.colors.accent}
               multiline
               style={{
-                backgroundColor: colors.secondary,
-                borderWidth: 1,
-                borderColor: colors.borderStrong,
-                borderRadius: 8,
-                padding: 14,
-                color: colors.foreground,
-                fontSize: 16,
-                minHeight: isDesktop ? 80 : 48,
-                textAlignVertical: 'top',
+                backgroundColor: theme.colors.secondary,
+                borderWidth: 1, borderColor: theme.colors.borderStrong,
+                borderRadius: theme.radii.md, padding: 14,
+                color: theme.colors.foreground, fontSize: 16,
+                minHeight: isDesktop ? 80 : 48, textAlignVertical: 'top',
                 outlineStyle: 'none',
               } as any}
             />
@@ -698,12 +693,12 @@ export default function AddTransactionScreen() {
             variant="accent"
             onPress={handleSubmit}
             isLoading={mutation.isPending}
-            leftIcon={<Check size={18} color={colors.primaryForeground} />}
+            leftIcon={<Check size={18} color={theme.colors.primaryForeground} />}
           >
             {t('saveTransaction') || 'Save Transaction'}
           </Button>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }

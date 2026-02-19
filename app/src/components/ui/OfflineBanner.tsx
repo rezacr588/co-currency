@@ -4,9 +4,12 @@ import { WifiOff, Wifi } from 'lucide-react-native';
 import * as Network from 'expo-network';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../context/LanguageContext';
+import { useTheme } from 'styled-components/native';
 
 export function OfflineBanner() {
   const { t } = useLanguage();
+  const theme = useTheme();
+  const colors = theme.colors;
   const insets = useSafeAreaInsets();
   const [isOnline, setIsOnline] = useState(true);
   const [showBanner, setShowBanner] = useState(false);
@@ -81,10 +84,13 @@ export function OfflineBanner() {
       }}
     >
       <View
-        className={`flex-row items-center justify-center py-2 px-4 ${
-          isOnline ? 'bg-success' : 'bg-danger'
-        }`}
         style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingVertical: 8,
+          paddingHorizontal: 16,
+          backgroundColor: isOnline ? colors.success : colors.danger,
           paddingTop: insets.top,
         }}
       >
@@ -93,7 +99,7 @@ export function OfflineBanner() {
         ) : (
           <WifiOff size={16} color="white" />
         )}
-        <Text className="text-white font-medium ml-2 text-sm">
+        <Text style={{ color: '#ffffff', fontFamily: 'Inter_500Medium', marginLeft: 8, fontSize: 14 }}>
           {isOnline ? t('backOnline') : t('youAreOffline')}
         </Text>
       </View>

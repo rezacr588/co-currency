@@ -34,7 +34,8 @@ import {
 } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { useTheme, useColors } from '../../src/context/ThemeContext';
+import { useTheme } from '../../src/context/ThemeContext';
+import { useTheme as useStyledTheme } from 'styled-components/native';
 import { haptics } from '../../src/utils/haptics';
 import { Button } from '../../src/components/ui/Button';
 import type {
@@ -46,7 +47,8 @@ import type {
 } from '../../src/types/challenge';
 
 function useDifficultyColors(): Record<ChallengeDifficulty, string> {
-  const colors = useColors();
+  const styledTheme = useStyledTheme();
+  const colors = styledTheme.colors;
   return {
     easy: colors.success,
     medium: colors.warning,
@@ -76,7 +78,8 @@ export default function ChallengesScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
-  const colors = useColors();
+  const styledTheme = useStyledTheme();
+  const colors = styledTheme.colors;
   const DIFFICULTY_COLORS = useDifficultyColors();
 
   const isDesktop = width >= 1024;
@@ -188,7 +191,7 @@ export default function ChallengesScreen() {
   const renderBrowseList = () => {
     if (browsePending) {
       return (
-        <View className="items-center py-8">
+        <View style={{ alignItems: 'center', paddingVertical: 32 }}>
           <ActivityIndicator color={colors.accent} />
         </View>
       );
@@ -197,9 +200,9 @@ export default function ChallengesScreen() {
     const challenges = browseData?.challenges || [];
     if (challenges.length === 0) {
       return (
-        <View className="bg-card border border-border p-8 rounded-xl items-center">
+        <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 32, borderRadius: 12, alignItems: 'center' }}>
           <Trophy size={48} color={colors.mutedForeground} />
-          <Text className="text-muted-foreground text-center mt-4">
+          <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 16 }}>
             {t('noChallenges') || 'No challenges available'}
           </Text>
         </View>
@@ -207,7 +210,7 @@ export default function ChallengesScreen() {
     }
 
     return (
-      <View className="gap-3">
+      <View style={{ gap: 12 }}>
         {challenges.map((challenge) => (
           <ChallengeCard
             key={challenge.id}
@@ -223,7 +226,7 @@ export default function ChallengesScreen() {
   const renderActiveList = () => {
     if (activePending) {
       return (
-        <View className="items-center py-8">
+        <View style={{ alignItems: 'center', paddingVertical: 32 }}>
           <ActivityIndicator color={colors.accent} />
         </View>
       );
@@ -232,16 +235,16 @@ export default function ChallengesScreen() {
     const challenges = activeData?.challenges || [];
     if (challenges.length === 0) {
       return (
-        <View className="bg-card border border-border p-8 rounded-xl items-center">
+        <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 32, borderRadius: 12, alignItems: 'center' }}>
           <Target size={48} color={colors.mutedForeground} />
-          <Text className="text-muted-foreground text-center mt-4">
+          <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 16 }}>
             {t('noActiveChallenges') || 'No active challenges'}
           </Text>
           <Pressable
             onPress={() => setTab('browse')}
-            className="bg-accent px-4 py-2 rounded-lg mt-4"
+            style={{ backgroundColor: colors.accent, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, marginTop: 16 }}
           >
-            <Text className="text-accent-foreground font-medium">
+            <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_500Medium' }}>
               {t('browseChallenges') || 'Browse Challenges'}
             </Text>
           </Pressable>
@@ -250,7 +253,7 @@ export default function ChallengesScreen() {
     }
 
     return (
-      <View className="gap-3">
+      <View style={{ gap: 12 }}>
         {challenges.map((uc) => (
           <ActiveChallengeCard
             key={uc.id}
@@ -266,7 +269,7 @@ export default function ChallengesScreen() {
   const renderHistoryList = () => {
     if (historyPending) {
       return (
-        <View className="items-center py-8">
+        <View style={{ alignItems: 'center', paddingVertical: 32 }}>
           <ActivityIndicator color={colors.accent} />
         </View>
       );
@@ -275,9 +278,9 @@ export default function ChallengesScreen() {
     const challenges = historyData?.challenges || [];
     if (challenges.length === 0) {
       return (
-        <View className="bg-card border border-border p-8 rounded-xl items-center">
+        <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 32, borderRadius: 12, alignItems: 'center' }}>
           <Clock size={48} color={colors.mutedForeground} />
-          <Text className="text-muted-foreground text-center mt-4">
+          <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 16 }}>
             {t('noChallengeHistory') || 'No challenge history yet'}
           </Text>
         </View>
@@ -285,7 +288,7 @@ export default function ChallengesScreen() {
     }
 
     return (
-      <View className="gap-3">
+      <View style={{ gap: 12 }}>
         {challenges.map((uc) => (
           <HistoryChallengeCard
             key={uc.id}
@@ -298,20 +301,20 @@ export default function ChallengesScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
       {/* Header */}
-      <View className="flex-row items-center justify-between p-4 border-b border-border">
-        <Pressable onPress={() => router.back()} className="p-2" hitSlop={12} style={({ pressed }) => [pressed && { opacity: 0.7 }]} accessibilityLabel={t('back') || 'Go back'} accessibilityRole="button">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <Pressable onPress={() => router.back()} hitSlop={12} style={({ pressed }) => [{ padding: 8 }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('back') || 'Go back'} accessibilityRole="button">
           <ArrowLeft size={24} color={iconColor} />
         </Pressable>
-        <Text className="text-xl font-bold text-foreground">
+        <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
           {t('challenges') || 'Challenges'}
         </Text>
-        <View className="w-10" />
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView
-        className="flex-1"
+        style={{ flex: 1 }}
         contentContainerStyle={{
           padding: 16,
           paddingBottom: bottomPadding,
@@ -320,42 +323,42 @@ export default function ChallengesScreen() {
       >
         {/* Stats Card */}
         {stats && (
-          <View className="bg-card border border-border p-4 rounded-xl mb-6">
-            <View className="flex-row items-center mb-4">
+          <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12, marginBottom: 24 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <Award size={24} color={colors.accent} />
-              <Text className="text-base font-semibold text-foreground ml-2">
+              <Text style={{ fontSize: 16, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginLeft: 8 }}>
                 {t('yourProgress') || 'Your Progress'}
               </Text>
             </View>
-            <View className="flex-row justify-between">
-              <View className="items-center flex-1">
-                <Text className="text-2xl font-bold text-accent">{stats.total_points}</Text>
-                <Text className="text-xs text-muted-foreground mt-0.5">
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <View style={{ alignItems: 'center', flex: 1 }}>
+                <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.accent }}>{stats.total_points}</Text>
+                <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
                   {t('points') || 'Points'}
                 </Text>
               </View>
-              <View className="items-center flex-1">
-                <Text className="text-2xl font-bold text-success">{stats.total_completed}</Text>
-                <Text className="text-xs text-muted-foreground mt-0.5">
+              <View style={{ alignItems: 'center', flex: 1 }}>
+                <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.success }}>{stats.total_completed}</Text>
+                <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
                   {t('completed') || 'Completed'}
                 </Text>
               </View>
-              <View className="items-center flex-1">
-                <View className="flex-row items-center">
+              <View style={{ alignItems: 'center', flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Flame size={16} color={colors.warning} />
-                  <Text className="text-2xl font-bold text-foreground ml-1">
+                  <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground, marginLeft: 4 }}>
                     {stats.current_streak}
                   </Text>
                 </View>
-                <Text className="text-xs text-muted-foreground mt-0.5">
+                <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
                   {t('streak') || 'Streak'}
                 </Text>
               </View>
-              <View className="items-center flex-1">
-                <Text className="text-2xl font-bold text-foreground">
+              <View style={{ alignItems: 'center', flex: 1 }}>
+                <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
                   {Math.round(stats.completion_rate)}%
                 </Text>
-                <Text className="text-xs text-muted-foreground mt-0.5">
+                <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
                   {t('winRate') || 'Win Rate'}
                 </Text>
               </View>
@@ -364,7 +367,7 @@ export default function ChallengesScreen() {
         )}
 
         {/* Tab Selector */}
-        <View className="flex-row gap-2 mb-4">
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
           {(['browse', 'active', 'history'] as const).map((tabKey) => (
             <Pressable
               key={tabKey}
@@ -372,16 +375,22 @@ export default function ChallengesScreen() {
                 haptics.selection();
                 setTab(tabKey);
               }}
-              className={`flex-1 p-3 rounded-lg border ${
-                tab === tabKey
-                  ? 'bg-foreground border-foreground'
-                  : 'bg-card border-border'
-              }`}
+              style={{
+                flex: 1,
+                padding: 12,
+                borderRadius: 8,
+                borderWidth: 1,
+                backgroundColor: tab === tabKey ? colors.foreground : colors.card,
+                borderColor: tab === tabKey ? colors.foreground : colors.border,
+              }}
             >
               <Text
-                className={`text-center text-sm font-medium ${
-                  tab === tabKey ? 'text-background' : 'text-foreground'
-                }`}
+                style={{
+                  textAlign: 'center',
+                  fontSize: 14,
+                  fontFamily: 'Inter_500Medium',
+                  color: tab === tabKey ? colors.background : colors.foreground,
+                }}
               >
                 {tabKey === 'browse'
                   ? t('browse') || 'Browse'
@@ -407,19 +416,18 @@ export default function ChallengesScreen() {
         onRequestClose={() => setShowDetailsModal(false)}
       >
         <Pressable
-          className="flex-1 bg-black/50 justify-end"
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
           onPress={() => setShowDetailsModal(false)}
         >
           <Pressable
-            className="bg-card rounded-t-3xl p-6"
+            style={{ backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}
             onPress={(e) => e.stopPropagation()}
           >
             {selectedChallenge && (
               <>
-                <View className="items-center mb-6">
+                <View style={{ alignItems: 'center', marginBottom: 24 }}>
                   <View
-                    className="w-16 h-16 rounded-full items-center justify-center mb-3"
-                    style={{ backgroundColor: `${DIFFICULTY_COLORS[selectedChallenge.difficulty]}20` }}
+                    style={{ width: 64, height: 64, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', marginBottom: 12, backgroundColor: `${DIFFICULTY_COLORS[selectedChallenge.difficulty]}20` }}
                   >
                     {getChallengeIcon(
                       selectedChallenge.icon,
@@ -427,54 +435,51 @@ export default function ChallengesScreen() {
                       32
                     )}
                   </View>
-                  <Text className="text-xl font-bold text-foreground text-center">
+                  <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground, textAlign: 'center' }}>
                     {selectedChallenge.name}
                   </Text>
-                  <View className="flex-row items-center mt-2 gap-2">
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 8 }}>
                     <View
-                      className="px-2 py-1 rounded"
-                      style={{ backgroundColor: `${DIFFICULTY_COLORS[selectedChallenge.difficulty]}30` }}
+                      style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, backgroundColor: `${DIFFICULTY_COLORS[selectedChallenge.difficulty]}30` }}
                     >
                       <Text
-                        className="text-xs font-medium capitalize"
-                        style={{ color: DIFFICULTY_COLORS[selectedChallenge.difficulty] }}
+                        style={{ fontSize: 12, fontFamily: 'Inter_500Medium', textTransform: 'capitalize', color: DIFFICULTY_COLORS[selectedChallenge.difficulty] }}
                       >
                         {selectedChallenge.difficulty}
                       </Text>
                     </View>
-                    <View className="flex-row items-center bg-muted px-2 py-1 rounded">
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.muted, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}>
                       <Clock size={12} color={colors.mutedForeground} />
-                      <Text className="text-xs text-muted-foreground ml-1">
+                      <Text style={{ fontSize: 12, color: colors.mutedForeground, marginLeft: 4 }}>
                         {selectedChallenge.duration_days} {t('days') || 'days'}
                       </Text>
                     </View>
-                    <View className="flex-row items-center bg-accent/20 px-2 py-1 rounded">
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.accent + '33', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}>
                       <Star size={12} color={colors.accent} />
-                      <Text className="text-xs text-accent ml-1">
+                      <Text style={{ fontSize: 12, color: colors.accent, marginLeft: 4 }}>
                         {selectedChallenge.points_reward} {t('pts') || 'pts'}
                       </Text>
                     </View>
                   </View>
                 </View>
 
-                <Text className="text-muted-foreground text-center mb-6">
+                <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginBottom: 24 }}>
                   {selectedChallenge.description}
                 </Text>
 
                 {selectedChallenge.user_status === 'active' ? (
-                  <View className="mb-4">
-                    <View className="flex-row justify-between mb-2">
-                      <Text className="text-muted-foreground text-sm">
+                  <View style={{ marginBottom: 16 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
                         {t('progress') || 'Progress'}
                       </Text>
-                      <Text className="text-foreground font-medium">
+                      <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>
                         {Math.round(selectedChallenge.user_progress || 0)}%
                       </Text>
                     </View>
-                    <View className="h-3 bg-muted rounded-full overflow-hidden">
+                    <View style={{ height: 12, backgroundColor: colors.muted, borderRadius: 9999, overflow: 'hidden' }}>
                       <View
-                        className="h-full bg-accent"
-                        style={{ width: `${selectedChallenge.user_progress || 0}%` }}
+                        style={{ height: '100%', backgroundColor: colors.accent, width: `${selectedChallenge.user_progress || 0}%` }}
                       />
                     </View>
                   </View>
@@ -523,22 +528,21 @@ function ChallengeCard({
   isDark: boolean;
 }) {
   const { t } = useLanguage();
-  const colors = useColors();
+  const styledTheme = useStyledTheme();
+  const colors = styledTheme.colors;
   const DIFFICULTY_COLORS = useDifficultyColors();
   const isActive = challenge.user_status === 'active';
 
   return (
     <Pressable
       onPress={onPress}
-      className="bg-card border border-border p-4 rounded-xl"
-      style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12 }, pressed && { opacity: 0.7 }]}
       accessibilityLabel={challenge.name}
       accessibilityRole="button"
     >
-      <View className="flex-row items-center">
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <View
-          className="w-12 h-12 rounded-full items-center justify-center mr-3"
-          style={{ backgroundColor: `${DIFFICULTY_COLORS[challenge.difficulty]}20` }}
+          style={{ width: 48, height: 48, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', marginRight: 12, backgroundColor: `${DIFFICULTY_COLORS[challenge.difficulty]}20` }}
         >
           {getChallengeIcon(
             challenge.icon,
@@ -546,48 +550,46 @@ function ChallengeCard({
             24
           )}
         </View>
-        <View className="flex-1">
-          <View className="flex-row items-center">
-            <Text className="text-foreground font-semibold flex-1" numberOfLines={1}>
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', flex: 1 }} numberOfLines={1}>
               {challenge.name}
             </Text>
             {challenge.is_featured && (
-              <View className="bg-accent/20 px-2 py-0.5 rounded ml-2">
-                <Text className="text-xs text-accent font-medium">{t('featured') || 'Featured'}</Text>
+              <View style={{ backgroundColor: colors.accent + '33', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginLeft: 8 }}>
+                <Text style={{ fontSize: 12, color: colors.accent, fontFamily: 'Inter_500Medium' }}>{t('featured') || 'Featured'}</Text>
               </View>
             )}
           </View>
-          <Text className="text-muted-foreground text-xs mt-0.5" numberOfLines={1}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 2 }} numberOfLines={1}>
             {challenge.description}
           </Text>
-          <View className="flex-row items-center mt-2 gap-3">
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 12 }}>
             <View
-              className="px-2 py-0.5 rounded"
-              style={{ backgroundColor: `${DIFFICULTY_COLORS[challenge.difficulty]}20` }}
+              style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, backgroundColor: `${DIFFICULTY_COLORS[challenge.difficulty]}20` }}
             >
               <Text
-                className="text-xs capitalize"
-                style={{ color: DIFFICULTY_COLORS[challenge.difficulty] }}
+                style={{ fontSize: 12, textTransform: 'capitalize', color: DIFFICULTY_COLORS[challenge.difficulty] }}
               >
                 {challenge.difficulty}
               </Text>
             </View>
-            <View className="flex-row items-center">
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Clock size={12} color={colors.mutedForeground} />
-              <Text className="text-xs text-muted-foreground ml-1">
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, marginLeft: 4 }}>
                 {challenge.duration_days}d
               </Text>
             </View>
-            <View className="flex-row items-center">
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Star size={12} color={colors.accent} />
-              <Text className="text-xs text-accent ml-1">
+              <Text style={{ fontSize: 12, color: colors.accent, marginLeft: 4 }}>
                 +{challenge.points_reward}
               </Text>
             </View>
           </View>
         </View>
         {isActive && (
-          <View className="bg-success/20 p-2 rounded-full ml-2">
+          <View style={{ backgroundColor: colors.success + '33', padding: 8, borderRadius: 9999, marginLeft: 8 }}>
             <Play size={16} color={colors.success} />
           </View>
         )}
@@ -595,14 +597,13 @@ function ChallengeCard({
 
       {/* Progress bar for active challenges */}
       {isActive && challenge.user_progress !== undefined && (
-        <View className="mt-3">
-          <View className="h-2 bg-muted rounded-full overflow-hidden">
+        <View style={{ marginTop: 12 }}>
+          <View style={{ height: 8, backgroundColor: colors.muted, borderRadius: 9999, overflow: 'hidden' }}>
             <View
-              className="h-full bg-accent"
-              style={{ width: `${challenge.user_progress}%` }}
+              style={{ height: '100%', backgroundColor: colors.accent, width: `${challenge.user_progress}%` }}
             />
           </View>
-          <Text className="text-xs text-muted-foreground mt-1 text-right">
+          <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 4, textAlign: 'right' }}>
             {Math.round(challenge.user_progress)}%
           </Text>
         </View>
@@ -622,7 +623,8 @@ function ActiveChallengeCard({
   isDark: boolean;
 }) {
   const { t } = useLanguage();
-  const colors = useColors();
+  const styledTheme = useStyledTheme();
+  const colors = styledTheme.colors;
   const DIFFICULTY_COLORS = useDifficultyColors();
   const challenge = userChallenge.challenge;
   if (!challenge) return null;
@@ -635,11 +637,10 @@ function ActiveChallengeCard({
     : Math.max(0, Math.ceil((endsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
 
   return (
-    <View className="bg-card border border-border p-4 rounded-xl">
-      <View className="flex-row items-center mb-3">
+    <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
         <View
-          className="w-12 h-12 rounded-full items-center justify-center mr-3"
-          style={{ backgroundColor: `${DIFFICULTY_COLORS[challenge.difficulty]}20` }}
+          style={{ width: 48, height: 48, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', marginRight: 12, backgroundColor: `${DIFFICULTY_COLORS[challenge.difficulty]}20` }}
         >
           {getChallengeIcon(
             challenge.icon,
@@ -647,17 +648,17 @@ function ActiveChallengeCard({
             24
           )}
         </View>
-        <View className="flex-1">
-          <Text className="text-foreground font-semibold" numberOfLines={1}>{challenge.name}</Text>
-          <View className="flex-row items-center mt-1">
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }} numberOfLines={1}>{challenge.name}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
             <Clock size={12} color={colors.mutedForeground} />
-            <Text className="text-muted-foreground text-xs ml-1">
+            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginLeft: 4 }}>
               {daysLeft} days left
             </Text>
             {userChallenge.streak_days > 0 && (
               <>
-                <Flame size={12} color={colors.warning} className="ml-3" />
-                <Text className="text-xs text-warning ml-1">
+                <Flame size={12} color={colors.warning} style={{ marginLeft: 12 }} />
+                <Text style={{ fontSize: 12, color: colors.warning, marginLeft: 4 }}>
                   {userChallenge.streak_days} day streak
                 </Text>
               </>
@@ -666,33 +667,31 @@ function ActiveChallengeCard({
         </View>
       </View>
 
-      <View className="mb-3">
-        <View className="flex-row justify-between mb-1">
-          <Text className="text-muted-foreground text-sm">Progress</Text>
-          <Text className="text-foreground font-medium">
+      <View style={{ marginBottom: 12 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>Progress</Text>
+          <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>
             {Math.round(userChallenge.progress)}%
           </Text>
         </View>
-        <View className="h-3 bg-muted rounded-full overflow-hidden">
+        <View style={{ height: 12, backgroundColor: colors.muted, borderRadius: 9999, overflow: 'hidden' }}>
           <View
-            className="h-full bg-accent"
-            style={{ width: `${userChallenge.progress}%` }}
+            style={{ height: '100%', backgroundColor: colors.accent, width: `${userChallenge.progress}%` }}
           />
         </View>
       </View>
 
-      <View className="flex-row justify-between items-center">
-        <View className="flex-row items-center bg-accent/20 px-2 py-1 rounded">
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.accent + '33', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}>
           <Star size={12} color={colors.accent} />
-          <Text className="text-xs text-accent ml-1">
+          <Text style={{ fontSize: 12, color: colors.accent, marginLeft: 4 }}>
             +{challenge.points_reward} pts on completion
           </Text>
         </View>
         <Pressable
           onPress={onAbandon}
-          className="p-2"
           hitSlop={8}
-          style={({ pressed }) => [{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]}
+          style={({ pressed }) => [{ padding: 8, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]}
           accessibilityLabel={t('abandonChallenge') || 'Abandon challenge'}
           accessibilityRole="button"
         >
@@ -711,7 +710,8 @@ function HistoryChallengeCard({
   userChallenge: UserChallenge;
   isDark: boolean;
 }) {
-  const colors = useColors();
+  const styledTheme = useStyledTheme();
+  const colors = styledTheme.colors;
   const DIFFICULTY_COLORS = useDifficultyColors();
   const challenge = userChallenge.challenge;
   if (!challenge) return null;
@@ -721,34 +721,32 @@ function HistoryChallengeCard({
   const StatusIcon = isCompleted ? CheckCircle : XCircle;
 
   return (
-    <View className="bg-card border border-border p-4 rounded-xl opacity-80">
-      <View className="flex-row items-center">
+    <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12, opacity: 0.8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <View
-          className="w-10 h-10 rounded-full items-center justify-center mr-3"
-          style={{ backgroundColor: `${statusColor}20` }}
+          style={{ width: 40, height: 40, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', marginRight: 12, backgroundColor: `${statusColor}20` }}
         >
           <StatusIcon size={20} color={statusColor} />
         </View>
-        <View className="flex-1">
-          <Text className="text-foreground font-semibold" numberOfLines={1}>{challenge.name}</Text>
-          <View className="flex-row items-center mt-1">
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }} numberOfLines={1}>{challenge.name}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
             <Text
-              className="text-xs capitalize"
-              style={{ color: statusColor }}
+              style={{ fontSize: 12, textTransform: 'capitalize', color: statusColor }}
             >
               {userChallenge.status}
             </Text>
             {isCompleted && (
-              <View className="flex-row items-center ml-3">
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
                 <Star size={12} color={colors.accent} />
-                <Text className="text-xs text-accent ml-1">
+                <Text style={{ fontSize: 12, color: colors.accent, marginLeft: 4 }}>
                   +{challenge.points_reward} pts
                 </Text>
               </View>
             )}
           </View>
         </View>
-        <Text className="text-xs text-muted-foreground">
+        <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
           {new Date(userChallenge.started_at).toLocaleDateString()}
         </Text>
       </View>

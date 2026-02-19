@@ -3,12 +3,14 @@ import { Link, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeftRight, Wallet, Target, BarChart3, Menu, Moon, Sun, User } from 'lucide-react-native';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { useTheme, useColors } from '../../src/context/ThemeContext';
+import { useTheme } from '../../src/context/ThemeContext';
+import { useTheme as useStyledTheme } from 'styled-components/native';
 
 export default function HomeScreen() {
   const { t } = useLanguage();
   const { isDark, toggleTheme } = useTheme();
-  const colors = useColors();
+  const styledTheme = useStyledTheme();
+  const colors = styledTheme.colors;
   const { width } = useWindowDimensions();
   const router = useRouter();
 
@@ -16,18 +18,18 @@ export default function HomeScreen() {
   const isTablet = width >= 768;
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
       {/* Desktop/Tablet Navbar */}
       {isTablet && (
-        <View className="bg-background border-b border-border px-6 py-4 flex-row items-center justify-between">
-          <Text className="text-xl font-semibold text-foreground">CoFinance</Text>
-          <View className="flex-row items-center gap-3">
+        <View style={{ backgroundColor: colors.background, borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 24, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={{ fontSize: 20, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>CoFinance</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <Link href="/converter" asChild>
-              <Pressable style={{ cursor: 'pointer' }} className="px-4 py-2">
-                <Text className="text-muted-foreground text-sm font-medium hover:text-foreground">{t('converterTitle')}</Text>
+              <Pressable style={{ cursor: 'pointer', paddingHorizontal: 16, paddingVertical: 8 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 14, fontFamily: 'Inter_500Medium' }}>{t('converterTitle')}</Text>
               </Pressable>
             </Link>
-            <Pressable onPress={toggleTheme} style={{ cursor: 'pointer' }} className="p-2 hover:bg-secondary rounded-md border border-border">
+            <Pressable onPress={toggleTheme} style={{ cursor: 'pointer', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: colors.border }}>
               {isDark ? (
                 <Sun size={18} color={colors.secondaryForeground} />
               ) : (
@@ -35,13 +37,13 @@ export default function HomeScreen() {
               )}
             </Pressable>
             <Link href="/login" asChild>
-              <Pressable style={{ cursor: 'pointer' }} className="border border-border px-4 py-2 rounded-md hover:bg-secondary">
-                <Text className="text-foreground text-sm font-medium">{t('login')}</Text>
+              <Pressable style={{ cursor: 'pointer', borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 }}>
+                <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_500Medium' }}>{t('login')}</Text>
               </Pressable>
             </Link>
             <Link href="/register" asChild>
-              <Pressable style={{ cursor: 'pointer' }} className="bg-foreground px-4 py-2 rounded-md">
-                <Text className="text-background text-sm font-semibold">{t('register')}</Text>
+              <Pressable style={{ cursor: 'pointer', backgroundColor: colors.foreground, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 }}>
+                <Text style={{ color: colors.background, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>{t('register')}</Text>
               </Pressable>
             </Link>
           </View>
@@ -49,7 +51,7 @@ export default function HomeScreen() {
       )}
 
       <ScrollView
-        className="flex-1"
+        style={{ flex: 1 }}
         contentContainerStyle={{
           padding: isDesktop ? 48 : 24,
           maxWidth: isDesktop ? 1200 : undefined,
@@ -59,9 +61,9 @@ export default function HomeScreen() {
       >
         {/* Mobile Header */}
         {!isTablet && (
-          <View className="flex-row items-center justify-between mb-6">
-            <Text className="text-xl font-semibold text-foreground">CoFinance</Text>
-            <Pressable onPress={toggleTheme} style={{ cursor: 'pointer' }} className="p-2 border border-border rounded-md">
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+            <Text style={{ fontSize: 20, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>CoFinance</Text>
+            <Pressable onPress={toggleTheme} style={{ cursor: 'pointer', padding: 8, borderWidth: 1, borderColor: colors.border, borderRadius: 6 }}>
               {isDark ? (
                 <Sun size={18} color={colors.secondaryForeground} />
               ) : (
@@ -73,20 +75,19 @@ export default function HomeScreen() {
 
         {/* Hero Section */}
         <View
-          className="items-center"
           style={{
+            alignItems: 'center',
             paddingVertical: isDesktop ? 80 : 48,
           }}
         >
           <Text
-            className="font-bold text-foreground mb-4 text-center"
-            style={{ fontSize: isDesktop ? 48 : 32, letterSpacing: -1 }}
+            style={{ fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 16, textAlign: 'center', fontSize: isDesktop ? 48 : 32, letterSpacing: -1 }}
           >
             CoFinance
           </Text>
           <Text
-            className="text-muted-foreground text-center mb-8"
             style={{
+              color: colors.mutedForeground, textAlign: 'center', marginBottom: 32,
               fontSize: isDesktop ? 18 : 15,
               maxWidth: isDesktop ? 500 : undefined,
               lineHeight: isDesktop ? 28 : 24,
@@ -97,15 +98,15 @@ export default function HomeScreen() {
 
           {/* Mobile CTA Buttons */}
           {!isTablet && (
-            <View className="flex-row gap-3">
+            <View style={{ flexDirection: 'row', gap: 12 }}>
               <Link href="/login" asChild>
-                <Pressable style={{ cursor: 'pointer' }} className="border border-border px-5 py-3 rounded-lg">
-                  <Text className="text-foreground font-medium text-sm">{t('login')}</Text>
+                <Pressable style={{ cursor: 'pointer', borderWidth: 1, borderColor: colors.border, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8 }}>
+                  <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium', fontSize: 14 }}>{t('login')}</Text>
                 </Pressable>
               </Link>
               <Link href="/register" asChild>
-                <Pressable style={{ cursor: 'pointer' }} className="bg-foreground px-5 py-3 rounded-lg">
-                  <Text className="text-background font-semibold text-sm">{t('register')}</Text>
+                <Pressable style={{ cursor: 'pointer', backgroundColor: colors.foreground, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8 }}>
+                  <Text style={{ color: colors.background, fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>{t('register')}</Text>
                 </Pressable>
               </Link>
             </View>
@@ -113,15 +114,15 @@ export default function HomeScreen() {
 
           {/* Desktop Hero CTA */}
           {isDesktop && (
-            <View className="flex-row gap-4 mt-4">
+            <View style={{ flexDirection: 'row', gap: 16, marginTop: 16 }}>
               <Link href="/register" asChild>
-                <Pressable style={{ cursor: 'pointer' }} className="bg-foreground px-8 py-4 rounded-lg">
-                  <Text className="text-background font-semibold">{t('getStarted') || 'Get Started'}</Text>
+                <Pressable style={{ cursor: 'pointer', backgroundColor: colors.foreground, paddingHorizontal: 32, paddingVertical: 16, borderRadius: 8 }}>
+                  <Text style={{ color: colors.background, fontFamily: 'Inter_600SemiBold' }}>{t('getStarted') || 'Get Started'}</Text>
                 </Pressable>
               </Link>
               <Link href="/converter" asChild>
-                <Pressable style={{ cursor: 'pointer' }} className="border border-border px-8 py-4 rounded-lg hover:bg-secondary">
-                  <Text className="text-foreground font-medium">{t('tryConverter')}</Text>
+                <Pressable style={{ cursor: 'pointer', borderWidth: 1, borderColor: colors.border, paddingHorizontal: 32, paddingVertical: 16, borderRadius: 8 }}>
+                  <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>{t('tryConverter')}</Text>
                 </Pressable>
               </Link>
             </View>
@@ -131,8 +132,7 @@ export default function HomeScreen() {
         {/* Features Grid */}
         <View style={{ marginTop: isDesktop ? 48 : 24 }}>
           <Text
-            className="font-semibold text-foreground mb-6 text-center"
-            style={{ fontSize: isDesktop ? 24 : 20 }}
+            style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginBottom: 24, textAlign: 'center', fontSize: isDesktop ? 24 : 20 }}
           >
             {t('features')}
           </Text>
@@ -174,15 +174,15 @@ export default function HomeScreen() {
 
         {/* CTA Section */}
         <View
-          className="items-center"
           style={{
+            alignItems: 'center',
             paddingVertical: isDesktop ? 64 : 48,
             marginTop: isDesktop ? 48 : 24,
           }}
         >
           <Link href="/converter" asChild>
-            <Pressable style={{ cursor: 'pointer' }} className="bg-accent px-6 py-3 rounded-lg">
-              <Text className="text-accent-foreground font-semibold">
+            <Pressable style={{ cursor: 'pointer', backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}>
+              <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold' }}>
                 {t('tryConverter')}
               </Text>
             </Pressable>
@@ -204,24 +204,26 @@ function FeatureCard({
   description: string;
   isDesktop: boolean;
 }) {
+  const styledTheme = useStyledTheme();
+  const colors = styledTheme.colors;
+
   return (
     <View
-      className="bg-card border border-border rounded-lg"
       style={{
+        backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 8,
         padding: isDesktop ? 24 : 20,
         width: isDesktop ? 240 : '100%',
         minWidth: isDesktop ? 240 : 150,
         flex: isDesktop ? undefined : 1,
       }}
     >
-      <View className="mb-3 bg-secondary p-2.5 rounded-md self-start">{icon}</View>
+      <View style={{ marginBottom: 12, backgroundColor: colors.secondary, padding: 10, borderRadius: 6, alignSelf: 'flex-start' }}>{icon}</View>
       <Text
-        className="font-medium text-foreground mb-1.5"
-        style={{ fontSize: isDesktop ? 16 : 15 }}
+        style={{ fontFamily: 'Inter_500Medium', color: colors.foreground, marginBottom: 6, fontSize: isDesktop ? 16 : 15 }}
       >
         {title}
       </Text>
-      <Text className="text-muted-foreground" style={{ fontSize: isDesktop ? 13 : 13, lineHeight: 20 }}>
+      <Text style={{ color: colors.mutedForeground, fontSize: isDesktop ? 13 : 13, lineHeight: 20 }}>
         {description}
       </Text>
     </View>

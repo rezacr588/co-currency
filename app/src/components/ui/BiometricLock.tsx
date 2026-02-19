@@ -3,13 +3,14 @@ import { useState, useEffect, useRef } from 'react';
 import { Lock, Fingerprint, ScanFace } from 'lucide-react-native';
 import { useSettings } from '../../context/SettingsContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { useColors } from '../../context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { haptics } from '../../utils/haptics';
 
 export function BiometricLock() {
   const { isLocked, unlock, biometricType } = useSettings();
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasAttempted = useRef(false);
@@ -49,20 +50,19 @@ export function BiometricLock() {
 
   return (
     <View
-      className="absolute inset-0 z-50 items-center justify-center"
-      style={{ elevation: 999, backgroundColor: colors.background }}
+      style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, zIndex: 50, alignItems: 'center', justifyContent: 'center', elevation: 999, backgroundColor: colors.background }}
     >
-      <View className="items-center px-8">
+      <View style={{ alignItems: 'center', paddingHorizontal: 32 }}>
         {/* Lock Icon */}
-        <View style={{ backgroundColor: colors.accentMuted + '33' }} className="p-6 rounded-full mb-6">
+        <View style={{ backgroundColor: colors.accentMuted + '33', padding: 24, borderRadius: 9999, marginBottom: 24 }}>
           <Lock size={48} color={colors.accent} />
         </View>
 
         {/* Title */}
-        <Text className="text-2xl font-bold mb-2" style={{ color: colors.foreground }}>
+        <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', marginBottom: 8, color: colors.foreground }}>
           CoFinance
         </Text>
-        <Text className="text-center mb-8" style={{ color: colors.mutedForeground }}>
+        <Text style={{ textAlign: 'center', marginBottom: 32, color: colors.mutedForeground }}>
           {t('appLocked') || 'App is locked for your security'}
         </Text>
 
@@ -70,17 +70,23 @@ export function BiometricLock() {
         <Pressable
           onPress={handleUnlock}
           disabled={isAuthenticating}
-          style={{ cursor: 'pointer', backgroundColor: colors.accent }}
-          className={`px-8 py-4 rounded-xl flex-row items-center ${
-            isAuthenticating ? 'opacity-50' : ''
-          }`}
+          style={{
+            cursor: 'pointer',
+            backgroundColor: colors.accent,
+            paddingHorizontal: 32,
+            paddingVertical: 16,
+            borderRadius: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            opacity: isAuthenticating ? 0.5 : 1,
+          }}
         >
           {isAuthenticating ? (
             <ActivityIndicator color={colors.accentForeground} size="small" />
           ) : (
             <>
               <BiometricIcon size={24} color={colors.accentForeground} />
-              <Text className="font-semibold ml-3 text-lg" style={{ color: colors.accentForeground }}>
+              <Text style={{ fontFamily: 'Inter_600SemiBold', marginLeft: 12, fontSize: 18, color: colors.accentForeground }}>
                 {t('unlockWith') || 'Unlock with'} {biometricType || 'Biometrics'}
               </Text>
             </>
@@ -89,14 +95,14 @@ export function BiometricLock() {
 
         {/* Error Message */}
         {error && (
-          <Text className="mt-4 text-center" style={{ color: colors.danger }}>
+          <Text style={{ marginTop: 16, textAlign: 'center', color: colors.danger }}>
             {error}
           </Text>
         )}
 
         {/* Retry hint */}
         {!isAuthenticating && (
-          <Text className="text-sm mt-6" style={{ color: colors.mutedForeground }}>
+          <Text style={{ fontSize: 14, marginTop: 24, color: colors.mutedForeground }}>
             {t('tapToRetry') || 'Tap the button to try again'}
           </Text>
         )}

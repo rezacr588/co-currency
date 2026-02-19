@@ -2,6 +2,7 @@ import { useEffect, useState as useStateToast } from 'react';
 import { View, Text, Pressable, Animated, Keyboard, Platform } from 'react-native';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react-native';
 import { ICON_SIZES } from '../../constants/icons';
+import { useTheme } from 'styled-components/native';
 
 type ToastVariant = 'success' | 'error' | 'warning' | 'info';
 
@@ -13,24 +14,20 @@ interface ToastProps {
   onDismiss: () => void;
 }
 
-const variantStyles: Record<ToastVariant, { bg: string; icon: typeof CheckCircle; color: string }> = {
+const variantConfig: Record<ToastVariant, { icon: typeof CheckCircle; color: string }> = {
   success: {
-    bg: 'bg-success/90',
     icon: CheckCircle,
     color: 'rgb(255, 255, 255)',
   },
   error: {
-    bg: 'bg-danger/90',
     icon: AlertCircle,
     color: 'rgb(255, 255, 255)',
   },
   warning: {
-    bg: 'bg-warning/90',
     icon: AlertTriangle,
     color: 'rgb(15, 26, 42)',
   },
   info: {
-    bg: 'bg-primary/90',
     icon: Info,
     color: '#09090b',
   },
@@ -43,9 +40,18 @@ export function Toast({
   duration = 3000,
   onDismiss,
 }: ToastProps) {
-  const styles = variantStyles[variant];
-  const Icon = styles.icon;
+  const theme = useTheme();
+  const colors = theme.colors;
+  const config = variantConfig[variant];
+  const Icon = config.icon;
   const [keyboardHeight, setKeyboardHeight] = useStateToast(0);
+
+  const variantBgColors: Record<ToastVariant, string> = {
+    success: colors.success + 'e6',
+    error: colors.danger + 'e6',
+    warning: colors.warning + 'e6',
+    info: colors.primary + 'e6',
+  };
 
   useEffect(() => {
     if (visible && duration > 0) {
@@ -67,18 +73,17 @@ export function Toast({
   const bottomOffset = keyboardHeight > 0 ? keyboardHeight + 16 : 80;
 
   return (
-    <View className="absolute left-4 right-4 z-50" style={{ bottom: bottomOffset }}>
-      <View className={`${styles.bg} p-4 rounded-xl flex-row items-center shadow-lg`}>
-        <Icon size={ICON_SIZES.default} color={styles.color} />
+    <View style={{ position: 'absolute', left: 16, right: 16, zIndex: 50, bottom: bottomOffset }}>
+      <View style={{ backgroundColor: variantBgColors[variant], padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 }}>
+        <Icon size={ICON_SIZES.default} color={config.color} />
         <Text
-          className="flex-1 mx-3 font-medium"
-          style={{ color: styles.color }}
+          style={{ flex: 1, marginHorizontal: 12, fontFamily: 'Inter_500Medium', color: config.color }}
           numberOfLines={2}
         >
           {message}
         </Text>
-        <Pressable onPress={onDismiss} className="p-1">
-          <X size={ICON_SIZES.md} color={styles.color} />
+        <Pressable onPress={onDismiss} style={{ padding: 4 }}>
+          <X size={ICON_SIZES.md} color={config.color} />
         </Pressable>
       </View>
     </View>

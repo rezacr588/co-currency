@@ -6,7 +6,7 @@ import { Wallet, Calendar, ChevronLeft, ChevronRight } from 'lucide-react-native
 import Svg, { Circle } from 'react-native-svg';
 import { api } from '../../../src/api';
 import { useLanguage } from '../../../src/context/LanguageContext';
-import { useColors } from '../../../src/context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency, formatNumber } from '../../../src/utils/format';
 import { CATEGORY_COLORS } from '../../../src/constants/icons';
 import {
@@ -60,7 +60,8 @@ function MonthYearPicker({
   nextYearLabel: string;
   t: (key: string) => string;
 }) {
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const [viewYear, setViewYear] = useState(selectedYear);
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
@@ -74,27 +75,27 @@ function MonthYearPicker({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable
-        className="flex-1 bg-black/60 justify-center items-center"
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' }}
         onPress={onClose}
       >
         <Pressable
-          className="bg-card rounded-2xl p-6 mx-6 w-full max-w-sm"
+          style={{ backgroundColor: colors.card, borderRadius: 16, padding: 24, marginHorizontal: 24, width: '100%', maxWidth: 384 }}
           onPress={(e) => e.stopPropagation()}
         >
           {/* Year selector */}
-          <View className="flex-row items-center justify-between mb-6">
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
             <Pressable
               onPress={() => setViewYear(viewYear - 1)}
-              className="p-2 rounded-lg bg-secondary"
+              style={{ padding: 8, borderRadius: 8, backgroundColor: colors.secondary }}
               accessibilityRole="button"
               accessibilityLabel={previousYearLabel}
             >
               <ChevronLeft size={20} color={colors.secondaryForeground} />
             </Pressable>
-            <Text className="text-foreground text-xl font-bold">{viewYear}</Text>
+            <Text style={{ color: colors.foreground, fontSize: 20, fontFamily: 'Inter_700Bold' }}>{viewYear}</Text>
             <Pressable
               onPress={() => viewYear < currentYear && setViewYear(viewYear + 1)}
-              className={`p-2 rounded-lg ${viewYear >= currentYear ? 'opacity-30' : 'bg-secondary'}`}
+              style={{ padding: 8, borderRadius: 8, backgroundColor: viewYear >= currentYear ? 'transparent' : colors.secondary, opacity: viewYear >= currentYear ? 0.3 : 1 }}
               disabled={viewYear >= currentYear}
               accessibilityRole="button"
               accessibilityLabel={nextYearLabel}
@@ -104,7 +105,7 @@ function MonthYearPicker({
           </View>
 
           {/* Month grid */}
-          <View className="flex-row flex-wrap gap-2">
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {monthLabels.map((monthLabel, index) => {
               const monthNum = index + 1;
               const isSelected = selectedYear === viewYear && selectedMonth === monthNum;
@@ -116,24 +117,31 @@ function MonthYearPicker({
                   key={`${monthLabel}-${monthNum}`}
                   onPress={() => !isFuture && onSelect(viewYear, monthNum)}
                   disabled={isFuture}
-                  style={{ width: '31%' }}
-                  className={`py-3 rounded-xl items-center ${
-                    isSelected
-                      ? 'bg-accent'
+                  style={{
+                    width: '31%',
+                    paddingVertical: 12,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    backgroundColor: isSelected
+                      ? colors.accent
                       : isCurrentMonth
-                        ? 'bg-accent/20 border border-accent'
+                        ? colors.accent + '33'
                         : isFuture
-                          ? 'bg-secondary/30 opacity-40'
-                          : 'bg-secondary'
-                  }`}
+                          ? colors.secondary + '4D'
+                          : colors.secondary,
+                    borderWidth: isCurrentMonth && !isSelected ? 1 : 0,
+                    borderColor: isCurrentMonth ? colors.accent : 'transparent',
+                    opacity: isFuture ? 0.4 : 1,
+                  }}
                   accessibilityRole="button"
                   accessibilityLabel={monthLabel}
                   accessibilityState={{ selected: isSelected, disabled: isFuture }}
                 >
                   <Text
-                    className={`font-medium ${
-                      isSelected ? 'text-background' : isFuture ? 'text-muted-foreground' : 'text-foreground'
-                    }`}
+                    style={{
+                      fontFamily: 'Inter_500Medium',
+                      color: isSelected ? colors.background : isFuture ? colors.mutedForeground : colors.foreground,
+                    }}
                   >
                     {monthLabel}
                   </Text>
@@ -145,11 +153,11 @@ function MonthYearPicker({
           {/* Close button */}
           <Pressable
             onPress={onClose}
-            className="mt-6 bg-secondary py-3 rounded-xl items-center"
+            style={{ marginTop: 24, backgroundColor: colors.secondary, paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}
             accessibilityRole="button"
             accessibilityLabel={t('close')}
           >
-            <Text className="text-foreground font-medium">{t('close')}</Text>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>{t('close')}</Text>
           </Pressable>
         </Pressable>
       </Pressable>
@@ -183,7 +191,8 @@ function DateRangeSelector({
   nextYearLabel: string;
   t: (key: string) => string;
 }) {
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const [showPicker, setShowPicker] = useState(false);
 
   const presets: { key: DatePreset; labelKey: string }[] = [
@@ -196,18 +205,18 @@ function DateRangeSelector({
   ];
 
   return (
-    <View className="mb-6">
+    <View style={{ marginBottom: 24 }}>
       {/* Current Selection & Calendar Button */}
-      <View className="flex-row items-center justify-between mb-3">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <Pressable
           onPress={() => setShowPicker(true)}
-          className="flex-row items-center bg-card border border-border px-4 py-2.5 rounded-xl"
+          style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 }}
           accessibilityRole="button"
           accessibilityLabel={selectDateRangeLabel}
         >
           <Calendar size={18} color={colors.accent} />
-          <Text className="text-foreground font-semibold ml-2">{dateLabel}</Text>
-          <ChevronRight size={16} color={colors.mutedForeground} className="ml-1" />
+          <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>{dateLabel}</Text>
+          <ChevronRight size={16} color={colors.mutedForeground} style={{ marginLeft: 4 }} />
         </Pressable>
       </View>
 
@@ -221,19 +230,24 @@ function DateRangeSelector({
           <Pressable
             key={preset.key}
             onPress={() => onPresetChange(preset.key)}
-            className={`px-4 py-2 rounded-full ${
-              selectedPreset === preset.key
-                ? 'bg-accent'
-                : 'bg-secondary border border-border'
-            }`}
+            style={{
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              borderRadius: 9999,
+              backgroundColor: selectedPreset === preset.key ? colors.accent : colors.secondary,
+              borderWidth: selectedPreset === preset.key ? 0 : 1,
+              borderColor: colors.border,
+            }}
             accessibilityRole="button"
             accessibilityLabel={t(preset.labelKey)}
             accessibilityState={{ selected: selectedPreset === preset.key }}
           >
             <Text
-              className={`text-sm font-medium ${
-                selectedPreset === preset.key ? 'text-background' : 'text-foreground'
-              }`}
+              style={{
+                fontSize: 14,
+                fontFamily: 'Inter_500Medium',
+                color: selectedPreset === preset.key ? colors.background : colors.foreground,
+              }}
             >
               {t(preset.labelKey)}
             </Text>
@@ -270,7 +284,8 @@ function RingChart({
   centerLabel: string;
   centerValue: string;
 }) {
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const total = segments.reduce((sum, s) => sum + s.value, 0);
 
   const size = 160;
@@ -293,8 +308,8 @@ function RingChart({
   if (total === 0) return null;
 
   return (
-    <View className="items-center">
-      <View style={{ width: size, height: size }} className="items-center justify-center">
+    <View style={{ alignItems: 'center' }}>
+      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
         <Svg width={size} height={size}>
           {/* Background ring */}
           <Circle
@@ -323,19 +338,18 @@ function RingChart({
             />
           ))}
         </Svg>
-        <View className="absolute items-center justify-center">
-          <Text className="text-muted-foreground text-xs">{centerLabel}</Text>
-          <Text className="text-foreground text-lg font-bold">{centerValue}</Text>
+        <View style={{ position: 'absolute', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{centerLabel}</Text>
+          <Text style={{ color: colors.foreground, fontSize: 18, fontFamily: 'Inter_700Bold' }}>{centerValue}</Text>
         </View>
       </View>
-      <View className="flex-row flex-wrap justify-center gap-3 mt-4">
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12, marginTop: 16 }}>
         {segments.slice(0, 4).map((segment, index) => (
-          <View key={index} className="flex-row items-center">
+          <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
             <View
-              style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: segment.color }}
-              className="mr-1"
+              style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: segment.color, marginRight: 4 }}
             />
-            <Text className="text-muted-foreground text-xs">
+            <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
               {segment.label} ({formatNumber((segment.value / total) * 100, 0)}%)
             </Text>
           </View>
@@ -347,7 +361,8 @@ function RingChart({
 
 export default function ReportsScreen() {
   const { t, language } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
@@ -444,9 +459,9 @@ export default function ReportsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
       <ScrollView
-        className="flex-1"
+        style={{ flex: 1 }}
         contentContainerStyle={{
           padding: isDesktop ? 32 : 24,
           maxWidth: 1400,
@@ -458,24 +473,24 @@ export default function ReportsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <Text className="text-xl font-bold text-foreground mb-4">{t('reportsAndStats')}</Text>
+        <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 16 }}>{t('reportsAndStats')}</Text>
 
         {/* Net Worth Card (always visible) */}
         {networth && !networthError && (
-          <View className="bg-card p-4 rounded-xl mb-6">
-            <View className="flex-row items-center mb-4">
-              <View className="bg-accent/20 p-2 rounded-lg mr-3">
+          <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 12, marginBottom: 24 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
                 <Wallet size={20} color={colors.accent} />
               </View>
-              <Text className="text-muted-foreground">{t('netWorth')}</Text>
+              <Text style={{ color: colors.mutedForeground }}>{t('netWorth')}</Text>
             </View>
-            <Text className="text-2xl font-bold text-accent mb-4">
+            <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.accent, marginBottom: 16 }}>
               {formatCompactCurrency(networth.total_balance, networth.currency)}
             </Text>
 
             {networth.balances && networth.balances.length > 0 && (
-              <View className="mt-2">
-                <Text className="text-muted-foreground text-sm mb-3">{t('balanceDistribution')}</Text>
+              <View style={{ marginTop: 8 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 12 }}>{t('balanceDistribution')}</Text>
                 <RingChart
                   segments={networth.balances.slice(0, 5).map((b) => ({
                     value: b.balance_in_base,

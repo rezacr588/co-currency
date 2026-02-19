@@ -1,6 +1,6 @@
 import { forwardRef, useId } from 'react';
 import { View, Text, TextInput, TextInputProps, AccessibilityInfo } from 'react-native';
-import { useColors } from '../../context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -21,14 +21,15 @@ export const Input = forwardRef<TextInput, InputProps>(
       hint,
       leftIcon,
       rightIcon,
-      className = '',
       accessibilityHint,
       required,
+      style: inputStyle,
       ...props
     },
     ref
   ) => {
-    const colors = useColors();
+    const theme = useTheme();
+    const colors = theme.colors;
     const id = useId();
 
     // Build accessibility label
@@ -41,31 +42,36 @@ export const Input = forwardRef<TextInput, InputProps>(
       .join(', ');
 
     return (
-      <View className="w-full" accessible={false}>
+      <View style={{ width: '100%' }} accessible={false}>
         {label && (
           <Text
-            className="text-sm text-muted-foreground mb-2"
+            style={{ fontSize: 14, color: colors.mutedForeground, marginBottom: 8 }}
             accessibilityRole="text"
             nativeID={`${id}-label`}
           >
             {label}
-            {required && <Text className="text-danger"> *</Text>}
+            {required && <Text style={{ color: colors.danger }}> *</Text>}
           </Text>
         )}
         <View
-          className={`
-            bg-card rounded-xl flex-row items-center px-4
-            ${error ? 'border border-danger' : ''}
-          `}
+          style={{
+            backgroundColor: colors.card,
+            borderRadius: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 16,
+            borderWidth: error ? 1 : 0,
+            borderColor: error ? colors.danger : undefined,
+          }}
         >
           {leftIcon && (
-            <View className="mr-3" accessibilityElementsHidden>
+            <View style={{ marginRight: 12 }} accessibilityElementsHidden>
               {leftIcon}
             </View>
           )}
           <TextInput
             ref={ref}
-            className={`flex-1 py-4 text-foreground ${className}`}
+            style={[{ flex: 1, paddingVertical: 16, color: colors.foreground }, inputStyle]}
             placeholderTextColor={colors.placeholder}
             accessibilityLabel={accessibilityLabel}
             accessibilityHint={accessibilityHint || hint}
@@ -76,14 +82,14 @@ export const Input = forwardRef<TextInput, InputProps>(
             {...props}
           />
           {rightIcon && (
-            <View className="ml-3" accessibilityElementsHidden>
+            <View style={{ marginLeft: 12 }} accessibilityElementsHidden>
               {rightIcon}
             </View>
           )}
         </View>
         {error && (
           <Text
-            className="text-sm text-danger mt-1"
+            style={{ fontSize: 14, color: colors.danger, marginTop: 4 }}
             accessibilityRole="alert"
             accessibilityLiveRegion="polite"
           >
@@ -92,7 +98,7 @@ export const Input = forwardRef<TextInput, InputProps>(
         )}
         {hint && !error && (
           <Text
-            className="text-sm text-muted-foreground mt-1"
+            style={{ fontSize: 14, color: colors.mutedForeground, marginTop: 4 }}
             accessibilityRole="text"
             nativeID={`${id}-hint`}
           >

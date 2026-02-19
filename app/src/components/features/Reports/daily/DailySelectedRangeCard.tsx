@@ -1,4 +1,5 @@
 import { Text, View } from 'react-native';
+import { useTheme } from 'styled-components/native';
 import { StyledCategoryIcon } from '../../../../constants/icons';
 import { formatCompactCurrency, getTransactionCurrency } from '../../../../utils/format';
 import { formatDateKey } from '../../../../utils/dateRange';
@@ -32,31 +33,34 @@ export function DailySelectedRangeCard({
   selectedTransactions,
   reportCurrency,
 }: DailySelectedRangeCardProps) {
+  const theme = useTheme();
+  const colors = theme.colors;
+
   return (
-    <View className="bg-card p-5 rounded-xl">
-      <View className="flex-row items-center justify-between mb-3">
-        <Text className="text-foreground font-semibold">{t('selectedRange')}</Text>
-        <Text className="text-muted-foreground text-xs">{selectedBucketRange}</Text>
+    <View style={{ backgroundColor: colors.card, padding: 20, borderRadius: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('selectedRange')}</Text>
+        <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{selectedBucketRange}</Text>
       </View>
 
       {selectedBucket ? (
         <>
-          <Text className="text-muted-foreground text-xs mb-3">
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 12 }}>
             {selectedBucket.txCount} {t('transactionsCount')}
           </Text>
 
-          <View className="bg-secondary/35 border border-border rounded-xl p-4 mb-4">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-muted-foreground text-xs">{t('totalIncome')}</Text>
-              <Text className="text-success font-semibold">{formatCompactCurrency(selectedBucket.income, reportCurrency)}</Text>
+          <View style={{ backgroundColor: colors.secondary + '59', borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('totalIncome')}</Text>
+              <Text style={{ color: colors.success, fontFamily: 'Inter_600SemiBold' }}>{formatCompactCurrency(selectedBucket.income, reportCurrency)}</Text>
             </View>
-            <View className="flex-row items-center justify-between mt-2">
-              <Text className="text-muted-foreground text-xs">{t('totalExpenses')}</Text>
-              <Text className="text-danger font-semibold">{formatCompactCurrency(selectedBucket.expenses, reportCurrency)}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('totalExpenses')}</Text>
+              <Text style={{ color: colors.danger, fontFamily: 'Inter_600SemiBold' }}>{formatCompactCurrency(selectedBucket.expenses, reportCurrency)}</Text>
             </View>
-            <View className="flex-row items-center justify-between mt-2 pt-2 border-t border-border/60">
-              <Text className="text-muted-foreground text-xs">{t('net')}</Text>
-              <Text className={`font-bold ${selectedBucket.net >= 0 ? 'text-success' : 'text-danger'}`}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border + '99' }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('net')}</Text>
+              <Text style={{ fontFamily: 'Inter_700Bold', color: selectedBucket.net >= 0 ? colors.success : colors.danger }}>
                 {selectedBucket.net >= 0 ? '+' : ''}
                 {formatCompactCurrency(selectedBucket.net, reportCurrency)}
               </Text>
@@ -64,18 +68,18 @@ export function DailySelectedRangeCard({
           </View>
 
           {selectedBucket.excludedCount > 0 ? (
-            <Text className="text-accent text-xs mb-3">
+            <Text style={{ color: colors.accent, fontSize: 12, marginBottom: 12 }}>
               {`${t('excludedFromTotalsNotice')}: ${selectedBucket.excludedCount}`}
             </Text>
           ) : null}
 
           {selectedTransactions.length > 0 ? (
-            <View className="gap-2">
+            <View style={{ gap: 8 }}>
               {selectedTransactions.map((item) => {
                 const tx = item.transaction;
                 return (
-                  <View key={tx.id} className="rounded-lg border border-border/60 bg-secondary/20 p-3 flex-row items-center justify-between">
-                    <View className="flex-row items-center flex-1 pr-3">
+                  <View key={tx.id} style={{ borderRadius: 8, borderWidth: 1, borderColor: colors.border + '99', backgroundColor: colors.secondary + '33', padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 12 }}>
                       <StyledCategoryIcon
                         category={tx.category || 'other'}
                         size={12}
@@ -83,16 +87,16 @@ export function DailySelectedRangeCard({
                         borderRadius={4}
                         padding={4}
                       />
-                      <View className="ml-2 flex-1">
-                        <Text className="text-foreground text-xs font-medium" numberOfLines={1}>
+                      <View style={{ marginLeft: 8, flex: 1 }}>
+                        <Text style={{ color: colors.foreground, fontSize: 12, fontFamily: 'Inter_500Medium' }} numberOfLines={1}>
                           {tx.description || tx.category || t('transactions')}
                         </Text>
-                        <Text className="text-muted-foreground text-xs" numberOfLines={1}>
+                        <Text style={{ color: colors.mutedForeground, fontSize: 12 }} numberOfLines={1}>
                           {formatDateKey(new Date(tx.created_at))}
                         </Text>
                       </View>
                     </View>
-                    <Text className={`text-xs font-semibold ${tx.type === 'credit' ? 'text-success' : 'text-danger'}`}>
+                    <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', color: tx.type === 'credit' ? colors.success : colors.danger }}>
                       {tx.type === 'credit' ? '+' : '-'}
                       {renderTransactionAmount(item, reportCurrency)}
                     </Text>
@@ -101,11 +105,11 @@ export function DailySelectedRangeCard({
               })}
             </View>
           ) : (
-            <Text className="text-muted-foreground text-sm">{t('noActivity')}</Text>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>{t('noActivity')}</Text>
           )}
         </>
       ) : (
-        <Text className="text-muted-foreground text-sm">{t('noDataAvailable')}</Text>
+        <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>{t('noDataAvailable')}</Text>
       )}
     </View>
   );

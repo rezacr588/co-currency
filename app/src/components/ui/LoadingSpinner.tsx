@@ -1,4 +1,5 @@
 import { ActivityIndicator, View, Text } from 'react-native';
+import { useTheme } from 'styled-components/native';
 
 interface LoadingSpinnerProps {
   size?: 'small' | 'large';
@@ -13,25 +14,28 @@ export function LoadingSpinner({
   text,
   fullScreen = false,
 }: LoadingSpinnerProps) {
+  const theme = useTheme();
+  const colors = theme.colors;
+
   const content = (
     <>
       <ActivityIndicator size={size} color={color} />
       {text && (
-        <Text className="text-muted-foreground mt-4">{text}</Text>
+        <Text style={{ color: colors.mutedForeground, marginTop: 16 }}>{text}</Text>
       )}
     </>
   );
 
   if (fullScreen) {
     return (
-      <View className="flex-1 bg-background items-center justify-center">
+      <View style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }}>
         {content}
       </View>
     );
   }
 
   return (
-    <View className="items-center justify-center p-8">
+    <View style={{ alignItems: 'center', justifyContent: 'center', padding: 32 }}>
       {content}
     </View>
   );

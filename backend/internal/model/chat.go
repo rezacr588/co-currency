@@ -29,6 +29,10 @@ type ChatMessage struct {
 type ChatRequest struct {
 	ConversationID string `json:"conversation_id,omitempty"`
 	Message        string `json:"message"`
+	// File attachment (populated from multipart form, not JSON)
+	FileData     []byte `json:"-"`
+	FileMimeType string `json:"-"`
+	FileName     string `json:"-"`
 }
 
 // ChatResponse represents the response from the AI

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   TextInput,
   Pressable,
   KeyboardAvoidingView,
@@ -14,17 +13,39 @@ import { Link, useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react-native';
+import styled, { useTheme } from 'styled-components/native';
 import { useAuth } from '../../src/context/AuthContext';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { useColors } from '../../src/context/ThemeContext';
 import { api } from '../../src/api';
 import { LinkedInIcon, GoogleIcon } from '../../src/constants/icons';
 import { Button } from '../../src/components/ui/Button';
 import { FormError } from '../../src/components/ui/FormError';
+import { H2, Caption } from '../../src/components/ui/styled';
+
+const ScreenContainer = styled(SafeAreaView)`
+  flex: 1;
+  background-color: ${({ theme }) => theme.colors.background};
+`;
+
+const InputRow = styled.View`
+  background-color: ${({ theme }) => theme.colors.muted};
+  border-radius: ${({ theme }) => theme.radii.md}px;
+  flex-direction: row;
+  align-items: center;
+  padding-horizontal: ${({ theme }) => theme.spacing.lg}px;
+  border-width: 1px;
+  border-color: ${({ theme }) => theme.colors.border};
+`;
+
+const Divider = styled.View`
+  height: 1px;
+  flex: 1;
+  background-color: ${({ theme }) => theme.colors.border};
+`;
 
 export default function RegisterScreen() {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
   const { register, handleOAuthCallback } = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams<{ error?: string }>();
@@ -40,23 +61,18 @@ export default function RegisterScreen() {
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Responsive: max width for form on larger screens
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
   const formMaxWidth = isTablet ? 400 : '100%';
 
   useEffect(() => {
-    if (params.error) {
-      setError(params.error);
-    }
+    if (params.error) setError(params.error);
   }, [params.error]);
 
-  // Handle deep link for OAuth callback
   const isMountedRef = useRef(true);
 
   useEffect(() => {
     isMountedRef.current = true;
-
     const handleDeepLink = async (event: { url: string }) => {
       const url = event.url;
       if (url.includes('/auth/callback')) {
@@ -67,7 +83,6 @@ export default function RegisterScreen() {
           const token = urlParams.get('token');
           const refreshToken = urlParams.get('refresh_token');
           const errorParam = urlParams.get('error');
-
           if (errorParam) {
             if (isMountedRef.current) setError(errorParam);
           } else if (token && refreshToken) {
@@ -75,54 +90,27 @@ export default function RegisterScreen() {
             if (isMountedRef.current) router.replace('/(app)/(tabs)');
           }
         } catch (err) {
-          if (isMountedRef.current) {
-            setError(err instanceof Error ? err.message : 'OAuth failed');
-          }
+          if (isMountedRef.current) setError(err instanceof Error ? err.message : 'OAuth failed');
         } finally {
           if (isMountedRef.current) setIsOAuthLoading(false);
         }
       }
     };
-
     const subscription = Linking.addEventListener('url', handleDeepLink);
-
-    Linking.getInitialURL()
-      .then((url) => {
-        if (url && isMountedRef.current) {
-          handleDeepLink({ url });
-        }
-      })
-      .catch((err) => {
-        if (isMountedRef.current) {
-          console.warn('Failed to get initial URL:', err);
-        }
-      });
-
-    return () => {
-      isMountedRef.current = false;
-      subscription.remove();
-    };
+    Linking.getInitialURL().then((url) => {
+      if (url && isMountedRef.current) handleDeepLink({ url });
+    }).catch((err) => {
+      if (isMountedRef.current) console.warn('Failed to get initial URL:', err);
+    });
+    return () => { isMountedRef.current = false; subscription.remove(); };
   }, [handleOAuthCallback, router]);
 
   const handleRegister = async () => {
-    if (!name || !email || !password || !confirmPassword) {
-      setError(t('fillAllFields'));
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError(t('passwordsDoNotMatch'));
-      return;
-    }
-
-    if (password.length < 8) {
-      setError(t('passwordTooShort'));
-      return;
-    }
-
+    if (!name || !email || !password || !confirmPassword) { setError(t('fillAllFields')); return; }
+    if (password !== confirmPassword) { setError(t('passwordsDoNotMatch')); return; }
+    if (password.length < 8) { setError(t('passwordTooShort')); return; }
     setIsLoading(true);
     setError('');
-
     try {
       await register({ name, email, password });
       router.replace('/(app)/(tabs)');
@@ -166,170 +154,103 @@ export default function RegisterScreen() {
   };
 
   const isSubmitting = isLoading || isOAuthLoading;
+  const inputStyle = {
+    flex: 1, padding: 14, color: theme.colors.foreground,
+    fontSize: 15, outlineStyle: 'none',
+  } as any;
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
-      >
+    <ScreenContainer edges={isDesktop ? [] : ['top']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView
-          className="flex-1"
+          style={{ flex: 1 }}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{
-            flexGrow: 1,
-            justifyContent: 'center',
-            alignItems: 'center',
+            flexGrow: 1, justifyContent: 'center', alignItems: 'center',
             padding: isDesktop ? 32 : 24,
             paddingBottom: (isDesktop ? 32 : 24) + insets.bottom,
           }}
         >
-          {/* Form Container - Centered with max width */}
           <View style={{ width: '100%', maxWidth: formMaxWidth }}>
-          <View className="items-center mb-8">
-            <Text className="text-2xl font-semibold text-foreground mb-2">{t('createAccount')}</Text>
-            <Text className="text-muted-foreground text-center text-sm">{t('registerSubtitle')}</Text>
-          </View>
-
-          <FormError message={error} />
-
-          <View className="gap-4">
-            {/* Google OAuth Button */}
-            <Button
-              variant="primary"
-              onPress={handleGoogleLogin}
-              disabled={isSubmitting}
-              isLoading={isOAuthLoading}
-              leftIcon={<GoogleIcon size={18} />}
-            >
-              {t('signUpWithGoogle') || 'Sign up with Google'}
-            </Button>
-
-            {/* LinkedIn OAuth Button */}
-            <Button
-              variant="outline"
-              onPress={handleLinkedInLogin}
-              disabled={isSubmitting}
-              leftIcon={<LinkedInIcon size={18} color={colors.secondaryForeground} />}
-            >
-              {t('signUpWithLinkedIn') || 'Sign up with LinkedIn'}
-            </Button>
-
-            {/* Divider */}
-            <View className="flex-row items-center my-3">
-              <View className="flex-1 h-px bg-border" />
-              <Text className="text-muted-foreground mx-4 text-xs uppercase tracking-wider">{t('or') || 'or'}</Text>
-              <View className="flex-1 h-px bg-border" />
+            <View style={{ alignItems: 'center', marginBottom: theme.spacing.xxxl }}>
+              <H2 style={{ marginBottom: theme.spacing.sm }}>{t('createAccount')}</H2>
+              <Caption style={{ textAlign: 'center' }}>{t('registerSubtitle')}</Caption>
             </View>
 
-            {/* Name Input */}
-            <Text className="text-xs text-muted-foreground">{t('name')}</Text>
-            <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
-              <User size={18} color={colors.mutedForeground} />
-              <TextInput
-                className="flex-1 p-3.5 text-foreground"
-                style={{ outlineStyle: 'none', fontSize: 15 } as any}
-                placeholder={t('name')}
-                placeholderTextColor={colors.placeholder}
-                value={name}
-                onChangeText={setName}
-                autoComplete="name"
-                textContentType="name"
-                autoCapitalize="words"
-                editable={!isSubmitting}
-                returnKeyType="next"
-              />
+            <FormError message={error} />
+
+            <View style={{ gap: theme.spacing.lg }}>
+              <Button variant="primary" onPress={handleGoogleLogin} disabled={isSubmitting} isLoading={isOAuthLoading} leftIcon={<GoogleIcon size={18} />}>
+                {t('signUpWithGoogle') || 'Sign up with Google'}
+              </Button>
+
+              <Button variant="outline" onPress={handleLinkedInLogin} disabled={isSubmitting} leftIcon={<LinkedInIcon size={18} color={theme.colors.secondaryForeground} />}>
+                {t('signUpWithLinkedIn') || 'Sign up with LinkedIn'}
+              </Button>
+
+              {/* Divider */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: theme.spacing.md }}>
+                <Divider />
+                <Caption style={{ marginHorizontal: theme.spacing.lg, textTransform: 'uppercase', letterSpacing: 1 }}>{t('or') || 'or'}</Caption>
+                <Divider />
+              </View>
+
+              {/* Name */}
+              <Caption>{t('name')}</Caption>
+              <InputRow>
+                <User size={18} color={theme.colors.mutedForeground} />
+                <TextInput placeholder={t('name')} placeholderTextColor={theme.colors.placeholder} value={name} onChangeText={setName}
+                  autoComplete="name" textContentType="name" autoCapitalize="words" editable={!isSubmitting} returnKeyType="next"
+                  selectionColor={theme.colors.accent} cursorColor={theme.colors.accent} style={inputStyle} />
+              </InputRow>
+
+              {/* Email */}
+              <Caption>{t('email')}</Caption>
+              <InputRow>
+                <Mail size={18} color={theme.colors.mutedForeground} />
+                <TextInput placeholder={t('email')} placeholderTextColor={theme.colors.placeholder} value={email} onChangeText={setEmail}
+                  keyboardType="email-address" autoComplete="email" textContentType="emailAddress" autoCapitalize="none" autoCorrect={false}
+                  editable={!isSubmitting} returnKeyType="next" selectionColor={theme.colors.accent} cursorColor={theme.colors.accent} style={inputStyle} />
+              </InputRow>
+
+              {/* Password */}
+              <Caption>{t('password')}</Caption>
+              <InputRow>
+                <Lock size={18} color={theme.colors.mutedForeground} />
+                <TextInput placeholder={t('password')} placeholderTextColor={theme.colors.placeholder} value={password} onChangeText={setPassword}
+                  secureTextEntry={!showPassword} autoComplete="password" textContentType="password" autoCapitalize="none"
+                  editable={!isSubmitting} returnKeyType="next" selectionColor={theme.colors.accent} cursorColor={theme.colors.accent} style={inputStyle} />
+                <Pressable onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
+                  {showPassword ? <EyeOff size={18} color={theme.colors.mutedForeground} /> : <Eye size={18} color={theme.colors.mutedForeground} />}
+                </Pressable>
+              </InputRow>
+
+              {/* Confirm Password */}
+              <Caption>{t('confirmPassword')}</Caption>
+              <InputRow>
+                <Lock size={18} color={theme.colors.mutedForeground} />
+                <TextInput placeholder={t('confirmPassword')} placeholderTextColor={theme.colors.placeholder} value={confirmPassword} onChangeText={setConfirmPassword}
+                  secureTextEntry={!showPassword} autoComplete="password" textContentType="password" autoCapitalize="none"
+                  editable={!isSubmitting} returnKeyType="done" selectionColor={theme.colors.accent} cursorColor={theme.colors.accent} style={inputStyle} />
+              </InputRow>
+
+              <Button variant="accent" isLoading={isLoading} onPress={handleRegister} disabled={isSubmitting}>
+                {t('register')}
+              </Button>
             </View>
 
-            {/* Email Input */}
-            <Text className="text-xs text-muted-foreground">{t('email')}</Text>
-            <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
-              <Mail size={18} color={colors.mutedForeground} />
-              <TextInput
-                className="flex-1 p-3.5 text-foreground"
-                style={{ outlineStyle: 'none', fontSize: 15 } as any}
-                placeholder={t('email')}
-                placeholderTextColor={colors.placeholder}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoComplete="email"
-                textContentType="emailAddress"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isSubmitting}
-                returnKeyType="next"
-              />
+            {/* Login Link */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: theme.spacing.xxxl }}>
+              <Caption>{t('haveAccount')} </Caption>
+              <Link href="/login" asChild>
+                <Pressable>
+                  <Caption $color={theme.colors.foreground} style={{ fontFamily: theme.typography.bodyMedium.fontFamily }}>{t('login')}</Caption>
+                </Pressable>
+              </Link>
             </View>
-
-            {/* Password Input */}
-            <Text className="text-xs text-muted-foreground">{t('password')}</Text>
-            <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
-              <Lock size={18} color={colors.mutedForeground} />
-              <TextInput
-                className="flex-1 p-3.5 text-foreground"
-                style={{ outlineStyle: 'none', fontSize: 15 } as any}
-                placeholder={t('password')}
-                placeholderTextColor={colors.placeholder}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoComplete="password"
-                textContentType="password"
-                autoCapitalize="none"
-                editable={!isSubmitting}
-                returnKeyType="next"
-              />
-              <Pressable
-                onPress={() => setShowPassword(!showPassword)}
-                style={{ cursor: 'pointer', padding: 4 }}
-              >
-                {showPassword ? (
-                  <EyeOff size={18} color={colors.mutedForeground} />
-                ) : (
-                  <Eye size={18} color={colors.mutedForeground} />
-                )}
-              </Pressable>
-            </View>
-
-            {/* Confirm Password Input */}
-            <Text className="text-xs text-muted-foreground">{t('confirmPassword')}</Text>
-            <View className="bg-muted rounded-lg flex-row items-center px-4 border border-border">
-              <Lock size={18} color={colors.mutedForeground} />
-              <TextInput
-                className="flex-1 p-3.5 text-foreground"
-                style={{ outlineStyle: 'none', fontSize: 15 } as any}
-                placeholder={t('confirmPassword')}
-                placeholderTextColor={colors.placeholder}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showPassword}
-                autoComplete="password"
-                textContentType="password"
-                autoCapitalize="none"
-                editable={!isSubmitting}
-                returnKeyType="done"
-              />
-            </View>
-
-            {/* Register Button */}
-            <Button variant="accent" isLoading={isLoading} onPress={handleRegister} disabled={isSubmitting}>
-              {t('register')}
-            </Button>
-          </View>
-
-          {/* Login Link */}
-          <View className="flex-row justify-center mt-8">
-            <Text className="text-muted-foreground text-sm">{t('haveAccount')} </Text>
-            <Link href="/login" asChild>
-              <Pressable style={{ cursor: 'pointer' }}>
-                <Text className="text-foreground font-medium text-sm">{t('login')}</Text>
-              </Pressable>
-            </Link>
-          </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }

@@ -5,6 +5,7 @@ import { AlertCircle, TrendingDown, TrendingUp, PieChart } from 'lucide-react-na
 import { api } from '../../../api';
 import { StyledCategoryIcon } from '../../../constants/icons';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency } from '../../../utils/format';
 import { DailyReportHeader } from './daily/DailyReportHeader';
 import { DailySelectedRangeCard } from './daily/DailySelectedRangeCard';
@@ -26,6 +27,8 @@ function formatBucketRange(bucket: ChartBucket, formatter: Intl.DateTimeFormat):
 
 export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
   const { t, language } = useLanguage();
+  const theme = useTheme();
+  const colors = theme.colors;
 
   // Derive primary currency from wallet balances (highest balance)
   const { data: balancesData } = useQuery({
@@ -52,18 +55,18 @@ export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
 
   if (report.isPending) {
     return (
-      <View className="items-center justify-center py-8">
-        <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
+      <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 32 }}>
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
 
   if (report.isError) {
     return (
-      <View className="bg-card p-6 rounded-xl items-center">
-        <AlertCircle size={48} color="rgb(220, 38, 38)" />
-        <Text className="text-foreground font-semibold mt-4 text-lg">{t('failedToLoadReport')}</Text>
-        <Text className="text-muted-foreground mt-2 text-center">{t('checkConnection')}</Text>
+      <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, alignItems: 'center' }}>
+        <AlertCircle size={48} color={colors.danger} />
+        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginTop: 16, fontSize: 18 }}>{t('failedToLoadReport')}</Text>
+        <Text style={{ color: colors.mutedForeground, marginTop: 8, textAlign: 'center' }}>{t('checkConnection')}</Text>
       </View>
     );
   }
@@ -86,38 +89,38 @@ export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
         truncated={report.truncated}
       />
 
-      <View className="mb-6" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-        <View className="bg-success/10 border border-success/30 rounded-xl p-4" style={{ width: isTablet ? '48.5%' : '48%' }}>
-          <View className="flex-row items-center mb-1">
-            <TrendingUp size={16} color="rgb(16, 185, 129)" />
-            <Text className="text-muted-foreground text-xs ml-2">{t('totalIncome')}</Text>
+      <View style={{ marginBottom: 24, flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+        <View style={{ backgroundColor: colors.success + '1a', borderWidth: 1, borderColor: colors.success + '4d', borderRadius: 12, padding: 16, width: isTablet ? '48.5%' : '48%' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+            <TrendingUp size={16} color={colors.success} />
+            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginLeft: 8 }}>{t('totalIncome')}</Text>
           </View>
-          <Text className="text-success text-lg font-bold">
+          <Text style={{ color: colors.success, fontSize: 18, fontFamily: 'Inter_700Bold' }}>
             {formatCompactCurrency(report.totals.income, report.reportCurrency)}
           </Text>
         </View>
 
-        <View className="bg-danger/10 border border-danger/30 rounded-xl p-4" style={{ width: isTablet ? '48.5%' : '48%' }}>
-          <View className="flex-row items-center mb-1">
-            <TrendingDown size={16} color="rgb(220, 38, 38)" />
-            <Text className="text-muted-foreground text-xs ml-2">{t('totalExpenses')}</Text>
+        <View style={{ backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', borderRadius: 12, padding: 16, width: isTablet ? '48.5%' : '48%' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+            <TrendingDown size={16} color={colors.danger} />
+            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginLeft: 8 }}>{t('totalExpenses')}</Text>
           </View>
-          <Text className="text-danger text-lg font-bold">
+          <Text style={{ color: colors.danger, fontSize: 18, fontFamily: 'Inter_700Bold' }}>
             {formatCompactCurrency(report.totals.expenses, report.reportCurrency)}
           </Text>
         </View>
 
-        <View className="bg-secondary/45 border border-border rounded-xl p-4" style={{ width: isTablet ? '48.5%' : '48%' }}>
-          <Text className="text-muted-foreground text-xs mb-1">{t('net')}</Text>
-          <Text className={`text-lg font-bold ${report.totals.net >= 0 ? 'text-success' : 'text-danger'}`}>
+        <View style={{ backgroundColor: colors.secondary + '73', borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 16, width: isTablet ? '48.5%' : '48%' }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>{t('net')}</Text>
+          <Text style={{ fontSize: 18, fontFamily: 'Inter_700Bold', color: report.totals.net >= 0 ? colors.success : colors.danger }}>
             {report.totals.net >= 0 ? '+' : ''}
             {formatCompactCurrency(report.totals.net, report.reportCurrency)}
           </Text>
         </View>
 
-        <View className="bg-accent/10 border border-accent/25 rounded-xl p-4" style={{ width: isTablet ? '48.5%' : '48%' }}>
-          <Text className="text-muted-foreground text-xs mb-1">{t('avgDaily')}</Text>
-          <Text className={`text-lg font-bold ${report.averageDailyNet >= 0 ? 'text-success' : 'text-danger'}`}>
+        <View style={{ backgroundColor: colors.accent + '1a', borderWidth: 1, borderColor: colors.accent + '40', borderRadius: 12, padding: 16, width: isTablet ? '48.5%' : '48%' }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>{t('avgDaily')}</Text>
+          <Text style={{ fontSize: 18, fontFamily: 'Inter_700Bold', color: report.averageDailyNet >= 0 ? colors.success : colors.danger }}>
             {report.averageDailyNet >= 0 ? '+' : ''}
             {formatCompactCurrency(report.averageDailyNet, report.reportCurrency)}
           </Text>
@@ -126,18 +129,21 @@ export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
 
       {/* Period Comparison & Top Categories */}
       {(report.comparedToLast !== 0 || report.topCategories.length > 0) && (
-        <View className="bg-card border border-border p-5 rounded-xl mb-6">
+        <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 20, borderRadius: 12, marginBottom: 24 }}>
           {report.comparedToLast !== 0 && (
-            <View className="flex-row items-center mb-3">
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
               {report.comparedToLast <= 0 ? (
                 <TrendingDown size={16} color="#22c55e" />
               ) : (
                 <TrendingUp size={16} color="#ef4444" />
               )}
               <Text
-                className={`text-sm font-semibold ml-2 ${
-                  report.comparedToLast <= 0 ? 'text-success' : 'text-danger'
-                }`}
+                style={{
+                  fontSize: 14,
+                  fontFamily: 'Inter_600SemiBold',
+                  marginLeft: 8,
+                  color: report.comparedToLast <= 0 ? colors.success : colors.danger,
+                }}
               >
                 {`${report.comparedToLast < 0 ? '' : '+'}${Math.round(report.comparedToLast)}% ${t('vsPreviousPeriod') || 'vs previous period'}`}
               </Text>
@@ -146,15 +152,15 @@ export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
 
           {report.topCategories.length > 0 && (
             <View>
-              <View className="flex-row items-center mb-3">
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                 <PieChart size={14} color="#a1a1aa" />
-                <Text className="text-muted-foreground text-xs font-medium ml-2">
+                <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_500Medium', marginLeft: 8 }}>
                   {t('topCategories') || 'Top Categories'}
                 </Text>
               </View>
               {report.topCategories.map((cat) => (
-                <View key={cat.category} className="flex-row items-center justify-between mb-2">
-                  <View className="flex-row items-center flex-1">
+                <View key={cat.category} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                     <StyledCategoryIcon
                       category={cat.category}
                       size={12}
@@ -162,13 +168,13 @@ export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
                       borderRadius={4}
                       padding={4}
                     />
-                    <Text className="text-foreground text-sm ml-2 capitalize">{cat.category}</Text>
+                    <Text style={{ color: colors.foreground, fontSize: 14, marginLeft: 8, textTransform: 'capitalize' }}>{cat.category}</Text>
                   </View>
-                  <View className="flex-row items-center">
-                    <Text className="text-foreground text-sm font-semibold mr-2">
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold', marginRight: 8 }}>
                       {formatCompactCurrency(cat.amount, report.reportCurrency)}
                     </Text>
-                    <Text className="text-muted-foreground text-xs">
+                    <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
                       {Math.round(cat.percentage)}%
                     </Text>
                   </View>

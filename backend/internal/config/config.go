@@ -38,10 +38,14 @@ type Config struct {
 	FrontendURL string `env:"FRONTEND_URL" envDefault:"http://localhost:5173"`
 
 	// AI Service settings
-	AIProvider     string `env:"AI_PROVIDER" envDefault:"googleai"` // googleai, openai, cerebras
+	AIProvider     string `env:"AI_PROVIDER" envDefault:"googleai"` // googleai, openai, cerebras, groq
 	AIAPIKey       string `env:"AI_API_KEY" envDefault:""`
-	AIModel        string `env:"AI_MODEL" envDefault:""`           // Model name (e.g., gpt-oss-120b for Cerebras)
-	AICloudProject string `env:"AI_CLOUD_PROJECT" envDefault:""` // Google Cloud project ID
+	AIModel        string `env:"AI_MODEL" envDefault:""`             // Model name (e.g., llama-3.3-70b-versatile for Groq)
+	AIVisionModel  string `env:"AI_VISION_MODEL" envDefault:""`     // Vision model (auto-detected per provider if empty)
+	AICloudProject string `env:"AI_CLOUD_PROJECT" envDefault:""`    // Google Cloud project ID
+
+	// News settings
+	NewsCacheTTL time.Duration `env:"NEWS_CACHE_TTL" envDefault:"30m"`
 
 	// Qdrant Vector Database
 	QdrantURL     string `env:"QDRANT_URL" envDefault:""`

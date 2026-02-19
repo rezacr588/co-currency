@@ -4,12 +4,15 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../../src/context/AuthContext';
 import { isValidJWT } from '../../../src/utils/validation';
+import { useTheme } from 'styled-components/native';
 
 export default function GoogleCallbackScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ token?: string; refresh_token?: string; error?: string }>();
   const { handleOAuthCallback } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const theme = useTheme();
+  const colors = theme.colors;
 
   useEffect(() => {
     async function handleCallback() {
@@ -51,17 +54,17 @@ export default function GoogleCallbackScreen() {
   }, [params, handleOAuthCallback, router]);
 
   return (
-    <SafeAreaView className="flex-1 bg-background items-center justify-center">
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }}>
       {error ? (
-        <View className="items-center p-6">
-          <Text className="text-danger text-lg font-semibold mb-2">Authentication Failed</Text>
-          <Text className="text-muted-foreground text-center">{error}</Text>
-          <Text className="text-muted-foreground text-sm mt-4">Redirecting to login...</Text>
+        <View style={{ alignItems: 'center', padding: 24 }}>
+          <Text style={{ color: colors.danger, fontSize: 18, fontFamily: 'Inter_600SemiBold', marginBottom: 8 }}>Authentication Failed</Text>
+          <Text style={{ color: colors.mutedForeground, textAlign: 'center' }}>{error}</Text>
+          <Text style={{ color: colors.mutedForeground, fontSize: 14, marginTop: 16 }}>Redirecting to login...</Text>
         </View>
       ) : (
-        <View className="items-center">
+        <View style={{ alignItems: 'center' }}>
           <ActivityIndicator size="large" color="rgb(212, 175, 55)" />
-          <Text className="text-foreground mt-4">Completing Google sign in...</Text>
+          <Text style={{ color: colors.foreground, marginTop: 16 }}>Completing Google sign in...</Text>
         </View>
       )}
     </SafeAreaView>

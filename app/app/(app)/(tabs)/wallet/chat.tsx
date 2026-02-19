@@ -34,7 +34,9 @@ import {
 } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
-import { useColors } from '../../../../src/context/ThemeContext';
+import { useTheme } from 'styled-components/native';
+import { AttachmentButton, AttachmentPreview, useAttachmentPicker } from '../../../../src/components/features/Chat';
+import { VoiceRecorder } from '../../../../src/components/features/Chat';
 import type { ChatMessage, Conversation, ConversationWithMessages } from '../../../../src/api/chat';
 import type { SmartParseResponse } from '../../../../src/types/wallet';
 import type { ConversionResult } from '../../../../src/types/currency';
@@ -130,7 +132,8 @@ type PendingAction =
 
 export default function AIChatScreen() {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const router = useRouter();
   const queryClient = useQueryClient();
   const { questions: suggestedQuestions, actions: suggestedActions } = useSuggestedPrompts();
@@ -165,6 +168,8 @@ export default function AIChatScreen() {
   const [editCurrency, setEditCurrency] = useState('USD');
   const [editDescription, setEditDescription] = useState('');
 
+  const { attachment, isRecordingVoice, showPicker: showAttachmentPicker, clearAttachment, handleVoiceComplete, cancelVoice } = useAttachmentPicker();
+
   const scrollViewRef = useRef<FlatList<ChatMessage>>(null);
   const isNearBottomRef = useRef(true);
   const pendingMutationRef = useRef(false);
@@ -180,21 +185,21 @@ export default function AIChatScreen() {
     heading1: {
       color: colors.foreground,
       fontSize: 20,
-      fontWeight: '700',
+      fontFamily: 'Inter_700Bold',
       marginTop: 12,
       marginBottom: 8,
     },
     heading2: {
       color: colors.foreground,
       fontSize: 18,
-      fontWeight: '600',
+      fontFamily: 'Inter_600SemiBold',
       marginTop: 10,
       marginBottom: 6,
     },
     heading3: {
       color: colors.foreground,
       fontSize: 16,
-      fontWeight: '600',
+      fontFamily: 'Inter_600SemiBold',
       marginTop: 8,
       marginBottom: 4,
     },
@@ -207,7 +212,7 @@ export default function AIChatScreen() {
     },
     strong: {
       color: colors.foreground,
-      fontWeight: '700',
+      fontFamily: 'Inter_700Bold',
     },
     em: {
       color: colors.foreground,
@@ -290,7 +295,7 @@ export default function AIChatScreen() {
     },
     th: {
       color: colors.foreground,
-      fontWeight: '600',
+      fontFamily: 'Inter_600SemiBold',
       padding: 8,
       borderColor: colors.secondary,
     },
@@ -346,10 +351,13 @@ export default function AIChatScreen() {
         ? activeConversationId
         : undefined;
 
-      return api.chat.sendMessage({
+      const result = await api.chat.sendMessage({
         conversation_id: realConversationId,
         message: msg,
+        file: attachment || undefined,
       });
+      clearAttachment();
+      return result;
     },
     onMutate: async (msg) => {
       pendingMutationRef.current = true;
@@ -912,33 +920,37 @@ export default function AIChatScreen() {
 
   const renderSidebar = () => (
     <View
-      className="bg-card border-r border-border flex-col"
       style={{
+        backgroundColor: colors.card,
+        borderRightWidth: 1,
+        borderRightColor: colors.border,
+        flexDirection: 'column',
         width: isDesktop ? 288 : 240,
         height: '100%',
       }}
     >
-      <View className="p-4 border-b border-border">
+      <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <Pressable
           onPress={handleNewConversation}
-          className="bg-primary p-3 rounded-xl flex-row items-center justify-center"
-          style={{ cursor: 'pointer' }}
+          style={({ pressed }) => [{ backgroundColor: colors.primary, padding: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]}
         >
           <Plus size={20} color={colors.primaryForeground} />
-          <Text className="text-primary-foreground font-semibold ml-2">{t('newConversation')}</Text>
+          <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>{t('newConversation')}</Text>
         </Pressable>
       </View>
-      <ScrollView className="flex-1 p-2">
+      <ScrollView style={{ flex: 1, padding: 8 }}>
         {conversations.map((conv) => (
           <Pressable
             key={conv.id}
             onPress={() => handleSelectConversation(conv.id)}
-            className={`flex-row items-center p-3 rounded-xl mb-1 ${
-              conv.id === activeConversationId
-                ? 'bg-primary/20'
-                : 'active:bg-secondary/50'
-            }`}
-            style={{ cursor: 'pointer' }}
+            style={({ pressed }) => [{
+              flexDirection: 'row',
+              alignItems: 'center',
+              padding: 12,
+              borderRadius: 12,
+              marginBottom: 4,
+              backgroundColor: conv.id === activeConversationId ? colors.primary + '33' : 'transparent',
+            }, pressed && { opacity: 0.7 }]}
           >
             <MessageCircle
               size={16}
@@ -949,11 +961,13 @@ export default function AIChatScreen() {
               }
             />
             <Text
-              className={`flex-1 ml-2 text-sm ${
-                conv.id === activeConversationId
-                  ? 'text-accent font-medium'
-                  : 'text-foreground'
-              }`}
+              style={{
+                flex: 1,
+                marginLeft: 8,
+                fontSize: 14,
+                color: conv.id === activeConversationId ? colors.accent : colors.foreground,
+                fontFamily: conv.id === activeConversationId ? 'Inter_500Medium' : undefined,
+              }}
               numberOfLines={1}
             >
               {conv.title}
@@ -974,9 +988,8 @@ export default function AIChatScreen() {
                   ]
                 );
               }}
-              className="p-2"
               hitSlop={10}
-              style={{ cursor: 'pointer' }}
+              style={({ pressed }) => [{ padding: 8 }, pressed && { opacity: 0.7 }]}
             >
               <Trash2 size={16} color={colors.danger} />
             </Pressable>
@@ -987,40 +1000,37 @@ export default function AIChatScreen() {
   );
 
   const renderWelcome = () => (
-    <View className="flex-1 items-center justify-center p-6">
-      <View className="w-16 h-16 rounded-2xl bg-primary items-center justify-center mb-4">
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <View style={{ width: 64, height: 64, borderRadius: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
         <Sparkles size={32} color={colors.primaryForeground} />
       </View>
-      <Text className="text-xl font-bold text-foreground text-center mb-2">
+      <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground, textAlign: 'center', marginBottom: 8 }}>
         {t('aiWelcome')}
       </Text>
-      <Text className="text-muted-foreground text-center mb-6 max-w-md">
+      <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginBottom: 24, maxWidth: 448 }}>
         {t('aiWelcomeDesc')}
       </Text>
-      <View className="flex-row flex-wrap justify-center gap-2 mb-5">
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginBottom: 20 }}>
         {suggestedActions.map((action, i) => (
           <Pressable
             key={i}
             onPress={() => setMessage(action)}
-            className="bg-secondary border border-border px-4 py-2 rounded-full"
-            style={{ cursor: 'pointer' }}
+            style={({ pressed }) => [{ backgroundColor: colors.secondary, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 9999 }, pressed && { opacity: 0.7 }]}
           >
-            <Text className="text-foreground text-sm">{action}</Text>
+            <Text style={{ color: colors.foreground, fontSize: 14 }}>{action}</Text>
           </Pressable>
         ))}
       </View>
       <View
-        className="flex-row flex-wrap justify-center gap-2"
-        style={{ maxWidth: contentMaxWidth ?? 500 }}
+        style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, maxWidth: contentMaxWidth ?? 500 }}
       >
         {suggestedQuestions.map((q, i) => (
           <Pressable
             key={i}
             onPress={() => setMessage(q)}
-            className="bg-card border border-border px-4 py-2 rounded-full active:border-accent"
-            style={{ cursor: 'pointer' }}
+            style={({ pressed }) => [{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 9999 }, pressed && { opacity: 0.7 }]}
           >
-            <Text className="text-foreground text-sm">{q}</Text>
+            <Text style={{ color: colors.foreground, fontSize: 14 }}>{q}</Text>
           </Pressable>
         ))}
       </View>
@@ -1031,17 +1041,17 @@ export default function AIChatScreen() {
     const listEmptyContent = () => {
       if (loadingMessages && activeConversationId) {
         return (
-          <View className="items-center py-8">
+          <View style={{ alignItems: 'center', paddingVertical: 32 }}>
             <ActivityIndicator size="large" color={colors.accent} />
           </View>
         );
       }
       if (!aiConfigured) {
         return (
-          <View className="bg-card border border-border rounded-2xl p-6 items-center">
+          <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 24, alignItems: 'center' }}>
             <Sparkles size={24} color={colors.accent} />
-            <Text className="text-foreground font-semibold mt-3">AI assistant is offline</Text>
-            <Text className="text-muted-foreground text-sm text-center mt-2">
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginTop: 12 }}>AI assistant is offline</Text>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, textAlign: 'center', marginTop: 8 }}>
               The server is missing an AI configuration. Please add an AI_API_KEY and redeploy.
             </Text>
           </View>
@@ -1053,22 +1063,22 @@ export default function AIChatScreen() {
     const footerContent = isTyping || pendingAction ? (
       <View style={{ gap: 16 }}>
         {isTyping && (
-          <View className="flex-row justify-start" style={{ width: '100%' }}>
-            <View className="bg-card px-4 py-3 rounded-2xl rounded-bl-sm" style={{ maxWidth: '90%' }}>
-              <View className="flex-row" style={{ gap: 4 }}>
-                <View className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
-                <View className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
-                <View className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-start', width: '100%' }}>
+            <View style={{ backgroundColor: colors.card, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, borderBottomLeftRadius: 4, maxWidth: '90%' }}>
+              <View style={{ flexDirection: 'row', gap: 4 }}>
+                <View style={{ width: 8, height: 8, backgroundColor: colors.mutedForeground, borderRadius: 9999 }} />
+                <View style={{ width: 8, height: 8, backgroundColor: colors.mutedForeground, borderRadius: 9999 }} />
+                <View style={{ width: 8, height: 8, backgroundColor: colors.mutedForeground, borderRadius: 9999 }} />
               </View>
             </View>
           </View>
         )}
 
         {pendingAction && (
-          <View className="flex-row justify-start" style={{ width: '100%' }}>
-            <View className="bg-card border border-border rounded-2xl px-4 py-3" style={{ maxWidth: '90%' }}>
-                <View className="flex-row items-center justify-between mb-2">
-                  <Text className="text-sm font-semibold text-foreground">
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-start', width: '100%' }}>
+            <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, maxWidth: '90%' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
                     {pendingAction.kind === 'transaction'
                       ? 'Transaction assistant'
                       : pendingAction.kind === 'recurring'
@@ -1088,9 +1098,9 @@ export default function AIChatScreen() {
                 </View>
 
                 {pendingAction.status === 'loading' && (
-                  <View className="flex-row items-center">
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <ActivityIndicator size="small" color={colors.accent} />
-                    <Text className="text-sm text-muted-foreground ml-2">
+                    <Text style={{ fontSize: 14, color: colors.mutedForeground, marginLeft: 8 }}>
                       {pendingAction.kind === 'transaction' || pendingAction.kind === 'recurring' || pendingAction.kind === 'goal_contribution'
                         ? 'Analyzing…'
                         : 'Fetching rate…'}
@@ -1099,7 +1109,7 @@ export default function AIChatScreen() {
                 )}
 
                 {pendingAction.status === 'error' && (
-                  <Text className="text-sm text-danger">
+                  <Text style={{ fontSize: 14, color: colors.danger }}>
                     {pendingAction.error || 'Something went wrong.'}
                   </Text>
                 )}
@@ -1109,41 +1119,40 @@ export default function AIChatScreen() {
                     {!editMode ? (
                       <>
                         {/* Preview Mode */}
-                        <View className="bg-muted border border-border rounded-xl p-3 mb-3">
-                          <View className="flex-row items-center justify-between mb-2">
-                            <View className={`px-2 py-1 rounded ${pendingAction.parsed.type === 'credit' ? 'bg-success/20' : 'bg-danger/20'}`}>
-                              <Text className={`text-xs font-semibold ${pendingAction.parsed.type === 'credit' ? 'text-success' : 'text-danger'}`}>
+                        <View style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12, marginBottom: 12 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, backgroundColor: pendingAction.parsed.type === 'credit' ? colors.success + '33' : colors.danger + '33' }}>
+                              <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', color: pendingAction.parsed.type === 'credit' ? colors.success : colors.danger }}>
                                 {pendingAction.parsed.type === 'credit' ? 'Income' : 'Expense'}
                               </Text>
                             </View>
-                            <Text className="text-sm font-bold text-foreground">
+                            <Text style={{ fontSize: 14, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
                               {pendingAction.parsed.currency} {pendingAction.parsed.amount.toFixed(2)}
                             </Text>
                           </View>
-                          <Text className="text-xs text-muted-foreground mb-1">
+                          <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 4 }}>
                             {pendingAction.parsed.description}
                           </Text>
                           {pendingAction.parsed.category && pendingAction.parsed.category !== 'other' && (
-                            <Text className="text-xs text-accent">
+                            <Text style={{ fontSize: 12, color: colors.accent }}>
                               Category: {pendingAction.parsed.category}
                             </Text>
                           )}
                           {pendingAction.parsed.confidence < 0.8 && (
-                            <View className="mt-2 bg-warning/10 p-2 rounded">
-                              <Text className="text-xs text-warning">
+                            <View style={{ marginTop: 8, backgroundColor: colors.warning + '1A', padding: 8, borderRadius: 4 }}>
+                              <Text style={{ fontSize: 12, color: colors.warning }}>
                                 Low confidence ({(pendingAction.parsed.confidence * 100).toFixed(0)}%) - Please verify details
                               </Text>
                             </View>
                           )}
                         </View>
-                        <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                           <Pressable
                             onPress={() => applyParsedMutation.mutate(pendingAction.parsed!)}
                             disabled={applyParsedMutation.isPending}
-                            className={`bg-primary px-4 py-2 rounded-lg ${applyParsedMutation.isPending ? 'opacity-50' : ''}`}
-                            style={{ cursor: 'pointer' }}
+                            style={({ pressed }) => [{ backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, opacity: applyParsedMutation.isPending ? 0.5 : pressed ? 0.7 : 1 }]}
                           >
-                            <Text className="text-primary-foreground text-sm font-semibold">
+                            <Text style={{ color: colors.primaryForeground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>
                               {applyParsedMutation.isPending ? 'Adding...' : 'Add transaction'}
                             </Text>
                           </Pressable>
@@ -1155,81 +1164,74 @@ export default function AIChatScreen() {
                               setEditDescription(pendingAction.parsed!.description);
                               setEditMode(true);
                             }}
-                            className="bg-secondary px-4 py-2 rounded-lg border border-border"
-                            style={{ cursor: 'pointer' }}
+                            style={({ pressed }) => [{ backgroundColor: colors.secondary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.border }, pressed && { opacity: 0.7 }]}
                           >
-                            <Text className="text-foreground text-sm font-semibold">Edit</Text>
+                            <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>Edit</Text>
                           </Pressable>
                           <Pressable
                             onPress={() => setPendingAction(null)}
-                            className="px-4 py-2"
-                            style={{ cursor: 'pointer' }}
+                            style={({ pressed }) => [{ paddingHorizontal: 16, paddingVertical: 8 }, pressed && { opacity: 0.7 }]}
                           >
-                            <Text className="text-muted-foreground text-sm">Dismiss</Text>
+                            <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>Dismiss</Text>
                           </Pressable>
                         </View>
                       </>
                     ) : (
                       <>
                         {/* Edit Mode */}
-                        <View className="mb-3">
-                          <Text className="text-xs text-muted-foreground mb-2">Type</Text>
-                          <View className="flex-row" style={{ gap: 8 }}>
+                        <View style={{ marginBottom: 12 }}>
+                          <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 8 }}>Type</Text>
+                          <View style={{ flexDirection: 'row', gap: 8 }}>
                             <Pressable
                               onPress={() => setEditType('debit')}
-                              className={`flex-1 p-2 rounded-lg border ${editType === 'debit' ? 'bg-danger/20 border-danger' : 'bg-muted border-border'}`}
-                              style={{ cursor: 'pointer' }}
+                              style={({ pressed }) => [{ flex: 1, padding: 8, borderRadius: 8, borderWidth: 1, backgroundColor: editType === 'debit' ? colors.danger + '33' : colors.muted, borderColor: editType === 'debit' ? colors.danger : colors.border }, pressed && { opacity: 0.7 }]}
                             >
-                              <Text className={`text-xs text-center font-semibold ${editType === 'debit' ? 'text-danger' : 'text-muted-foreground'}`}>
+                              <Text style={{ fontSize: 12, textAlign: 'center', fontFamily: 'Inter_600SemiBold', color: editType === 'debit' ? colors.danger : colors.mutedForeground }}>
                                 Expense
                               </Text>
                             </Pressable>
                             <Pressable
                               onPress={() => setEditType('credit')}
-                              className={`flex-1 p-2 rounded-lg border ${editType === 'credit' ? 'bg-success/20 border-success' : 'bg-muted border-border'}`}
-                              style={{ cursor: 'pointer' }}
+                              style={({ pressed }) => [{ flex: 1, padding: 8, borderRadius: 8, borderWidth: 1, backgroundColor: editType === 'credit' ? colors.success + '33' : colors.muted, borderColor: editType === 'credit' ? colors.success : colors.border }, pressed && { opacity: 0.7 }]}
                             >
-                              <Text className={`text-xs text-center font-semibold ${editType === 'credit' ? 'text-success' : 'text-muted-foreground'}`}>
+                              <Text style={{ fontSize: 12, textAlign: 'center', fontFamily: 'Inter_600SemiBold', color: editType === 'credit' ? colors.success : colors.mutedForeground }}>
                                 Income
                               </Text>
                             </Pressable>
                           </View>
                         </View>
-                        <View className="flex-row mb-3" style={{ gap: 8 }}>
+                        <View style={{ flexDirection: 'row', marginBottom: 12, gap: 8 }}>
                           <View style={{ flex: 2 }}>
-                            <Text className="text-xs text-muted-foreground mb-1">Amount</Text>
+                            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 4 }}>Amount</Text>
                             <TextInput
                               value={editAmount}
                               onChangeText={setEditAmount}
                               keyboardType="decimal-pad"
-                              className="bg-muted border border-border rounded-lg px-3 py-2 text-foreground text-sm"
-                              style={{ outlineStyle: 'none' } as any}
+                              style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, color: colors.foreground, fontSize: 14, outlineStyle: 'none' } as any}
                               placeholderTextColor={colors.mutedForeground}
                             />
                           </View>
                           <View style={{ flex: 1 }}>
-                            <Text className="text-xs text-muted-foreground mb-1">Currency</Text>
+                            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 4 }}>Currency</Text>
                             <TextInput
                               value={editCurrency}
                               onChangeText={(text) => setEditCurrency(text.toUpperCase())}
                               maxLength={3}
-                              className="bg-muted border border-border rounded-lg px-3 py-2 text-foreground text-sm"
-                              style={{ outlineStyle: 'none' } as any}
+                              style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, color: colors.foreground, fontSize: 14, outlineStyle: 'none' } as any}
                               placeholderTextColor={colors.mutedForeground}
                             />
                           </View>
                         </View>
-                        <View className="mb-3">
-                          <Text className="text-xs text-muted-foreground mb-1">Description</Text>
+                        <View style={{ marginBottom: 12 }}>
+                          <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 4 }}>Description</Text>
                           <TextInput
                             value={editDescription}
                             onChangeText={setEditDescription}
-                            className="bg-muted border border-border rounded-lg px-3 py-2 text-foreground text-sm"
-                            style={{ outlineStyle: 'none' } as any}
+                            style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, color: colors.foreground, fontSize: 14, outlineStyle: 'none' } as any}
                             placeholderTextColor={colors.mutedForeground}
                           />
                         </View>
-                        <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                           <Pressable
                             onPress={() => {
                               const parsedAmount = parseFloat(editAmount);
@@ -1249,19 +1251,17 @@ export default function AIChatScreen() {
                               setEditMode(false);
                             }}
                             disabled={applyParsedMutation.isPending}
-                            className={`bg-primary px-4 py-2 rounded-lg ${applyParsedMutation.isPending ? 'opacity-50' : ''}`}
-                            style={{ cursor: 'pointer' }}
+                            style={({ pressed }) => [{ backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, opacity: applyParsedMutation.isPending ? 0.5 : pressed ? 0.7 : 1 }]}
                           >
-                            <Text className="text-primary-foreground text-sm font-semibold">
+                            <Text style={{ color: colors.primaryForeground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>
                               {applyParsedMutation.isPending ? 'Adding...' : 'Confirm & Add'}
                             </Text>
                           </Pressable>
                           <Pressable
                             onPress={() => setEditMode(false)}
-                            className="bg-secondary px-4 py-2 rounded-lg border border-border"
-                            style={{ cursor: 'pointer' }}
+                            style={({ pressed }) => [{ backgroundColor: colors.secondary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.border }, pressed && { opacity: 0.7 }]}
                           >
-                            <Text className="text-foreground text-sm font-semibold">Cancel</Text>
+                            <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>Cancel</Text>
                           </Pressable>
                         </View>
                       </>
@@ -1272,72 +1272,75 @@ export default function AIChatScreen() {
                 {/* Recurring Transaction Card */}
                 {pendingAction.kind === 'recurring' && pendingAction.status === 'ready' && pendingAction.parsed && (
                   <>
-                    <View className="bg-muted border border-border rounded-xl p-3 mb-3">
-                      <View className="flex-row items-center justify-between mb-2">
-                        <View className={`px-2 py-1 rounded ${pendingAction.parsed.type === 'credit' ? 'bg-success/20' : 'bg-danger/20'}`}>
-                          <Text className={`text-xs font-semibold ${pendingAction.parsed.type === 'credit' ? 'text-success' : 'text-danger'}`}>
+                    <View style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12, marginBottom: 12 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, backgroundColor: pendingAction.parsed.type === 'credit' ? colors.success + '33' : colors.danger + '33' }}>
+                          <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', color: pendingAction.parsed.type === 'credit' ? colors.success : colors.danger }}>
                             {pendingAction.parsed.type === 'credit' ? 'Recurring Income' : 'Recurring Expense'}
                           </Text>
                         </View>
-                        <Text className="text-sm font-bold text-foreground">
+                        <Text style={{ fontSize: 14, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
                           {pendingAction.parsed.currency} {pendingAction.parsed.amount.toFixed(2)}
                         </Text>
                       </View>
-                      <Text className="text-xs text-muted-foreground mb-2">
+                      <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 8 }}>
                         {pendingAction.parsed.description}
                       </Text>
                       {pendingAction.parsed.category && pendingAction.parsed.category !== 'other' && (
-                        <Text className="text-xs text-accent">
+                        <Text style={{ fontSize: 12, color: colors.accent }}>
                           Category: {pendingAction.parsed.category}
                         </Text>
                       )}
                     </View>
                     {/* Frequency selector */}
-                    <View className="mb-3">
-                      <Text className="text-xs text-muted-foreground mb-2">Frequency</Text>
-                      <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                    <View style={{ marginBottom: 12 }}>
+                      <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 8 }}>Frequency</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                         {['daily', 'weekly', 'monthly', 'yearly'].map((freq) => (
                           <Pressable
                             key={freq}
                             onPress={() => setPendingAction(prev =>
                               prev?.kind === 'recurring' ? { ...prev, selectedFrequency: freq } : prev
                             )}
-                            className={`px-3 py-2 rounded-lg border ${
-                              pendingAction.selectedFrequency === freq
-                                ? 'bg-primary/20 border-primary'
-                                : 'bg-muted border-border'
-                            }`}
-                            style={{ cursor: 'pointer' }}
+                            style={({ pressed }) => [{
+                              paddingHorizontal: 12,
+                              paddingVertical: 8,
+                              borderRadius: 8,
+                              borderWidth: 1,
+                              backgroundColor: pendingAction.selectedFrequency === freq ? colors.primary + '33' : colors.muted,
+                              borderColor: pendingAction.selectedFrequency === freq ? colors.primary : colors.border,
+                            }, pressed && { opacity: 0.7 }]}
                           >
-                            <Text className={`text-xs font-medium capitalize ${
-                              pendingAction.selectedFrequency === freq ? 'text-accent' : 'text-foreground'
-                            }`}>
+                            <Text style={{
+                              fontSize: 12,
+                              fontFamily: 'Inter_500Medium',
+                              textTransform: 'capitalize',
+                              color: pendingAction.selectedFrequency === freq ? colors.accent : colors.foreground,
+                            }}>
                               {freq}
                             </Text>
                           </Pressable>
                         ))}
                       </View>
                     </View>
-                    <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                       <Pressable
                         onPress={() => applyRecurringMutation.mutate({
                           parsed: pendingAction.parsed!,
                           frequency: pendingAction.selectedFrequency || 'monthly',
                         })}
                         disabled={applyRecurringMutation.isPending}
-                        className={`bg-primary px-4 py-2 rounded-lg ${applyRecurringMutation.isPending ? 'opacity-50' : ''}`}
-                        style={{ cursor: 'pointer' }}
+                        style={({ pressed }) => [{ backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, opacity: applyRecurringMutation.isPending ? 0.5 : pressed ? 0.7 : 1 }]}
                       >
-                        <Text className="text-primary-foreground text-sm font-semibold">
+                        <Text style={{ color: colors.primaryForeground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>
                           {applyRecurringMutation.isPending ? 'Creating...' : 'Create recurring'}
                         </Text>
                       </Pressable>
                       <Pressable
                         onPress={() => setPendingAction(null)}
-                        className="px-4 py-2"
-                        style={{ cursor: 'pointer' }}
+                        style={({ pressed }) => [{ paddingHorizontal: 16, paddingVertical: 8 }, pressed && { opacity: 0.7 }]}
                       >
-                        <Text className="text-muted-foreground text-sm">Dismiss</Text>
+                        <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>Dismiss</Text>
                       </Pressable>
                     </View>
                   </>
@@ -1346,46 +1349,50 @@ export default function AIChatScreen() {
                 {/* Goal Contribution Card */}
                 {pendingAction.kind === 'goal_contribution' && pendingAction.status === 'ready' && pendingAction.parsed && (
                   <>
-                    <View className="bg-muted border border-border rounded-xl p-3 mb-3">
-                      <View className="flex-row items-center justify-between mb-2">
-                        <View className="px-2 py-1 rounded bg-accent/20">
-                          <Text className="text-xs font-semibold text-accent">Goal Contribution</Text>
+                    <View style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12, marginBottom: 12 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, backgroundColor: colors.accent + '33' }}>
+                          <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', color: colors.accent }}>Goal Contribution</Text>
                         </View>
-                        <Text className="text-sm font-bold text-foreground">
+                        <Text style={{ fontSize: 14, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
                           {pendingAction.parsed.currency} {pendingAction.parsed.amount.toFixed(2)}
                         </Text>
                       </View>
                       {pendingAction.parsed.goal_name && (
-                        <Text className="text-xs text-muted-foreground">
+                        <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
                           Detected goal: {pendingAction.parsed.goal_name}
                         </Text>
                       )}
                     </View>
                     {/* Goal selector */}
                     {pendingAction.goals && pendingAction.goals.length > 0 ? (
-                      <View className="mb-3">
-                        <Text className="text-xs text-muted-foreground mb-2">Select goal to contribute to</Text>
+                      <View style={{ marginBottom: 12 }}>
+                        <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 8 }}>Select goal to contribute to</Text>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                          <View className="flex-row" style={{ gap: 8 }}>
+                          <View style={{ flexDirection: 'row', gap: 8 }}>
                             {pendingAction.goals.map((goal) => (
                               <Pressable
                                 key={goal.id}
                                 onPress={() => setPendingAction(prev =>
                                   prev?.kind === 'goal_contribution' ? { ...prev, selectedGoalId: goal.id } : prev
                                 )}
-                                className={`px-3 py-2 rounded-lg border ${
-                                  pendingAction.selectedGoalId === goal.id
-                                    ? 'bg-primary/20 border-primary'
-                                    : 'bg-muted border-border'
-                                }`}
-                                style={{ cursor: 'pointer' }}
+                                style={({ pressed }) => [{
+                                  paddingHorizontal: 12,
+                                  paddingVertical: 8,
+                                  borderRadius: 8,
+                                  borderWidth: 1,
+                                  backgroundColor: pendingAction.selectedGoalId === goal.id ? colors.primary + '33' : colors.muted,
+                                  borderColor: pendingAction.selectedGoalId === goal.id ? colors.primary : colors.border,
+                                }, pressed && { opacity: 0.7 }]}
                               >
-                                <Text className={`text-xs font-medium ${
-                                  pendingAction.selectedGoalId === goal.id ? 'text-accent' : 'text-foreground'
-                                }`}>
+                                <Text style={{
+                                  fontSize: 12,
+                                  fontFamily: 'Inter_500Medium',
+                                  color: pendingAction.selectedGoalId === goal.id ? colors.accent : colors.foreground,
+                                }}>
                                   {goal.name}
                                 </Text>
-                                <Text className="text-xs text-muted-foreground">
+                                <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
                                   {goal.currency} {goal.current_amount.toFixed(0)} / {goal.target_amount.toFixed(0)}
                                 </Text>
                               </Pressable>
@@ -1394,13 +1401,13 @@ export default function AIChatScreen() {
                         </ScrollView>
                       </View>
                     ) : (
-                      <View className="mb-3 bg-warning/10 p-2 rounded">
-                        <Text className="text-xs text-warning">
+                      <View style={{ marginBottom: 12, backgroundColor: colors.warning + '1A', padding: 8, borderRadius: 4 }}>
+                        <Text style={{ fontSize: 12, color: colors.warning }}>
                           No goals found. Create a goal first to contribute.
                         </Text>
                       </View>
                     )}
-                    <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                       <Pressable
                         onPress={() => {
                           if (!pendingAction.selectedGoalId) {
@@ -1414,21 +1421,17 @@ export default function AIChatScreen() {
                           });
                         }}
                         disabled={applyGoalContributionMutation.isPending || !pendingAction.selectedGoalId}
-                        className={`bg-primary px-4 py-2 rounded-lg ${
-                          applyGoalContributionMutation.isPending || !pendingAction.selectedGoalId ? 'opacity-50' : ''
-                        }`}
-                        style={{ cursor: 'pointer' }}
+                        style={({ pressed }) => [{ backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, opacity: applyGoalContributionMutation.isPending || !pendingAction.selectedGoalId ? 0.5 : pressed ? 0.7 : 1 }]}
                       >
-                        <Text className="text-primary-foreground text-sm font-semibold">
+                        <Text style={{ color: colors.primaryForeground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>
                           {applyGoalContributionMutation.isPending ? 'Contributing...' : 'Contribute'}
                         </Text>
                       </Pressable>
                       <Pressable
                         onPress={() => setPendingAction(null)}
-                        className="px-4 py-2"
-                        style={{ cursor: 'pointer' }}
+                        style={({ pressed }) => [{ paddingHorizontal: 16, paddingVertical: 8 }, pressed && { opacity: 0.7 }]}
                       >
-                        <Text className="text-muted-foreground text-sm">Dismiss</Text>
+                        <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>Dismiss</Text>
                       </Pressable>
                     </View>
                   </>
@@ -1436,16 +1439,16 @@ export default function AIChatScreen() {
 
                 {pendingAction.kind === 'convert' && pendingAction.status === 'ready' && pendingAction.result && (
                   <>
-                    <View className="bg-muted border border-border rounded-xl p-3 mb-3">
-                      <Text className="text-sm font-semibold text-foreground">
+                    <View style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12, marginBottom: 12 }}>
+                      <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
                         {pendingAction.amount} {pendingAction.from} →{' '}
                         {formatNumber(pendingAction.result.result, 2)} {pendingAction.to}
                       </Text>
-                      <Text className="text-xs text-muted-foreground mt-1">
+                      <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 4 }}>
                         Rate: {formatNumber(pendingAction.result.rate, 4)} {pendingAction.to}/{pendingAction.from}
                       </Text>
                     </View>
-                    <View className="flex-row" style={{ gap: 8 }}>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
                       <Pressable
                         onPress={() =>
                           walletConvertMutation.mutate({
@@ -1454,19 +1457,17 @@ export default function AIChatScreen() {
                             amount: pendingAction.amount,
                           })
                         }
-                        className="bg-primary px-4 py-2 rounded-lg"
-                        style={{ cursor: 'pointer' }}
+                        style={({ pressed }) => [{ backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }, pressed && { opacity: 0.7 }]}
                       >
-                        <Text className="text-primary-foreground text-sm font-semibold">
+                        <Text style={{ color: colors.primaryForeground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>
                           Convert in wallet
                         </Text>
                       </Pressable>
                       <Pressable
                         onPress={() => setPendingAction(null)}
-                        className="bg-secondary px-4 py-2 rounded-lg border border-border"
-                        style={{ cursor: 'pointer' }}
+                        style={({ pressed }) => [{ backgroundColor: colors.secondary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.border }, pressed && { opacity: 0.7 }]}
                       >
-                        <Text className="text-foreground text-sm font-semibold">Dismiss</Text>
+                        <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>Dismiss</Text>
                       </Pressable>
                     </View>
                   </>
@@ -1474,21 +1475,20 @@ export default function AIChatScreen() {
 
                 {pendingAction.kind === 'rate' && pendingAction.status === 'ready' && pendingAction.result && (
                   <>
-                    <Text className="text-sm font-semibold text-foreground">
+                    <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
                       1 {pendingAction.from} = {formatNumber(pendingAction.result.rate, 4)} {pendingAction.to}
                     </Text>
                     <Pressable
                       onPress={() => setPendingAction(null)}
-                      className="bg-secondary px-3 py-2 rounded-lg border border-border mt-3 self-start"
-                      style={{ cursor: 'pointer' }}
+                      style={({ pressed }) => [{ backgroundColor: colors.secondary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.border, marginTop: 12, alignSelf: 'flex-start' }, pressed && { opacity: 0.7 }]}
                     >
-                      <Text className="text-foreground text-sm font-semibold">Dismiss</Text>
+                      <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>Dismiss</Text>
                     </Pressable>
                   </>
                 )}
 
                 {pendingAction.status === 'done' && (
-                  <Text className="text-sm text-success">
+                  <Text style={{ fontSize: 14, color: colors.success }}>
                     {pendingAction.kind === 'transaction'
                       ? t('transactionAdded') || 'Transaction added.'
                       : pendingAction.kind === 'recurring'
@@ -1562,34 +1562,33 @@ export default function AIChatScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top', 'bottom']}>
       <KeyboardAvoidingView
-        className="flex-1"
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? Math.max(insets.top, 12) : 0}
       >
-        <View className="flex-1 flex-row">
+        <View style={{ flex: 1, flexDirection: 'row' }}>
           {/* Sidebar for Desktop */}
           {showSidebar && renderSidebar()}
 
           {/* Main Chat Area */}
-          <View className="flex-1 flex-col">
+          <View style={{ flex: 1, flexDirection: 'column' }}>
             {/* Header */}
             <View
-              className="flex-row items-center justify-between p-4 border-b border-border bg-card"
-              style={contentWidthStyle}
+              style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.card }, contentWidthStyle]}
             >
-              <View className="flex-row items-center">
-                <View className="w-8 h-8 rounded-full bg-primary items-center justify-center">
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 32, height: 32, borderRadius: 9999, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
                   <Bot size={16} color={colors.primaryForeground} />
                 </View>
-                <Text className="font-semibold text-foreground ml-3">{t('aiAdvisor')}</Text>
+                <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginLeft: 12 }}>{t('aiAdvisor')}</Text>
               </View>
               <Pressable
                 onPress={handleNewConversation}
-                className="bg-muted px-3 py-1.5 rounded-full"
+                style={{ backgroundColor: colors.muted, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999 }}
               >
-                <Text className="text-xs text-muted-foreground">{t('newChat') || 'New Chat'}</Text>
+                <Text style={{ fontSize: 12, color: colors.mutedForeground }}>{t('newChat') || 'New Chat'}</Text>
               </Pressable>
             </View>
 
@@ -1599,34 +1598,34 @@ export default function AIChatScreen() {
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  className="border-b border-border"
+                  style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}
                   contentContainerStyle={{ padding: 12, gap: 8 }}
                 >
                   <Pressable
                     onPress={handleNewConversation}
-                    className="bg-primary px-4 py-2 rounded-full flex-row items-center"
-                    style={{ cursor: 'pointer' }}
+                    style={({ pressed }) => [{ backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 9999, flexDirection: 'row', alignItems: 'center' }, pressed && { opacity: 0.7 }]}
                   >
                     <Plus size={16} color={colors.primaryForeground} />
-                    <Text className="text-primary-foreground text-sm ml-1">{t('newConversation')}</Text>
+                    <Text style={{ color: colors.primaryForeground, fontSize: 14, marginLeft: 4 }}>{t('newConversation')}</Text>
                   </Pressable>
                   {conversations.map((conv) => (
                     <Pressable
                       key={conv.id}
                       onPress={() => handleSelectConversation(conv.id)}
-                      className={`px-4 py-2 rounded-full ${
-                        conv.id === activeConversationId
-                          ? 'bg-primary/20 border border-accent'
-                          : 'bg-card'
-                      }`}
-                      style={{ cursor: 'pointer' }}
+                      style={({ pressed }) => [{
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 9999,
+                        backgroundColor: conv.id === activeConversationId ? colors.primary + '33' : colors.card,
+                        borderWidth: conv.id === activeConversationId ? 1 : 0,
+                        borderColor: conv.id === activeConversationId ? colors.accent : undefined,
+                      }, pressed && { opacity: 0.7 }]}
                     >
                       <Text
-                        className={`text-sm ${
-                          conv.id === activeConversationId
-                            ? 'text-accent'
-                            : 'text-foreground'
-                        }`}
+                        style={{
+                          fontSize: 14,
+                          color: conv.id === activeConversationId ? colors.accent : colors.foreground,
+                        }}
                         numberOfLines={1}
                       >
                         {conv.title.length > 20 ? conv.title.slice(0, 20) + '...' : conv.title}
@@ -1642,13 +1641,12 @@ export default function AIChatScreen() {
 
             {/* Input */}
             <View
-              className="p-4 border-t border-border bg-card"
-              style={{ paddingBottom: Math.max(insets.bottom, 12) }}
+              style={{ padding: 16, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.card, paddingBottom: Math.max(insets.bottom, 12) }}
             >
               {sendError && (
-                <View className="bg-danger-muted border border-danger/20 p-3 rounded-lg mb-3">
+                <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger + '33', padding: 12, borderRadius: 8, marginBottom: 12 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Text className="text-danger text-xs" style={{ flex: 1 }}>{sendError}</Text>
+                    <Text style={{ color: colors.danger, fontSize: 12, flex: 1 }}>{sendError}</Text>
                     {lastFailedMessage && (
                       <Pressable
                         onPress={handleRetry}
@@ -1664,7 +1662,7 @@ export default function AIChatScreen() {
                         }}
                       >
                         <RotateCcw size={12} color={colors.danger} />
-                        <Text style={{ color: colors.danger, fontSize: 11, fontWeight: '600', marginLeft: 4 }}>
+                        <Text style={{ color: colors.danger, fontSize: 11, fontFamily: 'Inter_600SemiBold', marginLeft: 4 }}>
                           {t('retry') || 'Retry'}
                         </Text>
                       </Pressable>
@@ -1673,7 +1671,24 @@ export default function AIChatScreen() {
                 </View>
               )}
 
-              <View className="flex-row items-center" style={{ gap: 12 }}>
+              {/* Voice Recording UI */}
+              {isRecordingVoice && (
+                <VoiceRecorder
+                  onRecordingComplete={handleVoiceComplete}
+                  onCancel={cancelVoice}
+                />
+              )}
+
+              {/* Attachment Preview */}
+              {attachment && !isRecordingVoice && (
+                <AttachmentPreview attachment={attachment} onRemove={clearAttachment} />
+              )}
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {/* Attachment Button */}
+                {!isRecordingVoice && (
+                  <AttachmentButton onPress={showAttachmentPicker} />
+                )}
                 {/* Tap to open input modal */}
                 <View style={{ flex: 1 }}>
                   <Pressable
@@ -1709,10 +1724,12 @@ export default function AIChatScreen() {
                 <Pressable
                   onPress={() => handleSend()}
                   disabled={!message.trim() || message.length > MAX_MESSAGE_LENGTH || sendMessageMutation.isPending}
-                  className={`bg-primary p-3 rounded-xl ${
-                    !message.trim() || message.length > MAX_MESSAGE_LENGTH || sendMessageMutation.isPending ? 'opacity-50' : ''
-                  }`}
-                  style={{ cursor: 'pointer' }}
+                  style={({ pressed }) => [{
+                    backgroundColor: colors.primary,
+                    padding: 12,
+                    borderRadius: 12,
+                    opacity: !message.trim() || message.length > MAX_MESSAGE_LENGTH || sendMessageMutation.isPending ? 0.5 : pressed ? 0.7 : 1,
+                  }]}
                 >
                   {sendMessageMutation.isPending ? (
                     <ActivityIndicator size="small" color={colors.primaryForeground} />
@@ -1751,7 +1768,7 @@ export default function AIChatScreen() {
                     >
                       <X size={24} color={colors.secondaryForeground} />
                     </Pressable>
-                    <Text style={{ color: colors.foreground, fontSize: 17, fontWeight: '600' }}>
+                    <Text style={{ color: colors.foreground, fontSize: 17, fontFamily: 'Inter_600SemiBold' }}>
                       {t('typeMessage')}
                     </Text>
                     <Pressable
@@ -1771,7 +1788,7 @@ export default function AIChatScreen() {
                     >
                       <Text style={{
                         color: message.trim() && message.length <= MAX_MESSAGE_LENGTH ? colors.primaryForeground : colors.mutedForeground,
-                        fontWeight: '600',
+                        fontFamily: 'Inter_600SemiBold',
                       }}>
                         {t('send') || 'Send'}
                       </Text>

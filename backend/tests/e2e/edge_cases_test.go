@@ -116,15 +116,8 @@ func TestE2E_Wallet_EdgeCases(t *testing.T) {
 	ts := SetupTestServer(t)
 	defer ts.Cleanup()
 
-	// Setup user
-	email := "wallet_edge@example.com"
-	resp, _ := ts.POST("/api/v1/auth/register", model.RegisterRequest{
-		Email:    email,
-		Password: "password123",
-	}, "")
-	var auth model.AuthResponse
-	parseResponse(resp, &auth)
-	token := auth.Token
+	// Setup user (register or login if already exists)
+	token := ts.registerOrLogin(t, "wallet_edge@example.com", "password123")
 
 	// Credit some initial balance
 	ts.POST("/api/v1/wallet/transaction", model.TransactionRequest{
@@ -241,9 +234,9 @@ func TestE2E_Wallet_EdgeCases(t *testing.T) {
 	// Test: Transactions with invalid pagination
 	t.Run("Transactions_InvalidPagination", func(t *testing.T) {
 		resp, _ := ts.GET("/api/v1/wallet/transactions?limit=-1&offset=-1", token)
-		// Should handle gracefully with defaults
-		if resp.StatusCode != http.StatusOK {
-			t.Errorf("Expected 200 with default pagination, got %d", resp.StatusCode)
+		// API validates pagination params and rejects invalid values
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Errorf("Expected 400 for invalid pagination, got %d", resp.StatusCode)
 		}
 	})
 }
@@ -314,20 +307,14 @@ func TestE2E_AI_EdgeCases(t *testing.T) {
 
 	// Test: Apply parsed with invalid data
 	t.Run("ApplyParsed_InvalidType", func(t *testing.T) {
-		// First register a user
-		email := "ai_edge@example.com"
-		resp, _ := ts.POST("/api/v1/auth/register", model.RegisterRequest{
-			Email:    email,
-			Password: "password123",
-		}, "")
-		var auth model.AuthResponse
-		parseResponse(resp, &auth)
+		// Register or login user
+		token := ts.registerOrLogin(t, "ai_edge@example.com", "password123")
 
-		resp, _ = ts.POST("/api/v1/ai/apply-parsed", model.ApplyParsedRequest{
+		resp, _ := ts.POST("/api/v1/ai/apply-parsed", model.ApplyParsedRequest{
 			Amount:   10,
 			Currency: "USD",
 			Type:     "invalid",
-		}, auth.Token)
+		}, token)
 		if resp.StatusCode != http.StatusBadRequest {
 			t.Errorf("Expected 400 for invalid type, got %d", resp.StatusCode)
 		}
@@ -416,15 +403,8 @@ func TestE2E_Concurrent_Transactions(t *testing.T) {
 	ts := SetupTestServer(t)
 	defer ts.Cleanup()
 
-	// Setup user with balance
-	email := "concurrent@example.com"
-	resp, _ := ts.POST("/api/v1/auth/register", model.RegisterRequest{
-		Email:    email,
-		Password: "password123",
-	}, "")
-	var auth model.AuthResponse
-	parseResponse(resp, &auth)
-	token := auth.Token
+	// Setup user with balance (register or login if already exists)
+	token := ts.registerOrLogin(t, "concurrent@example.com", "password123")
 
 	// Credit initial balance
 	ts.POST("/api/v1/wallet/transaction", model.TransactionRequest{
@@ -432,6 +412,19 @@ func TestE2E_Concurrent_Transactions(t *testing.T) {
 		Amount:   1000,
 		Currency: "USD",
 	}, token)
+
+	// Get balance before concurrent debits
+	var startBalance float64
+	{
+		resp, _ := ts.GET("/api/v1/wallet/balances", token)
+		var result map[string][]model.WalletBalance
+		parseResponse(resp, &result)
+		for _, b := range result["balances"] {
+			if b.Currency == "USD" {
+				startBalance = b.Balance
+			}
+		}
+	}
 
 	// Test: Multiple concurrent debits
 	t.Run("Concurrent_Debits", func(t *testing.T) {
@@ -458,13 +451,13 @@ func TestE2E_Concurrent_Transactions(t *testing.T) {
 		var result map[string][]model.WalletBalance
 		parseResponse(resp, &result)
 
+		expectedBalance := startBalance - 100 // 10 debits * $10 each
 		for _, b := range result["balances"] {
 			if b.Currency == "USD" {
-				// Should be 1000 - (10 * 10) = 900
-				if b.Balance != 900 {
-					t.Errorf("Expected balance 900 after concurrent debits, got %f", b.Balance)
+				if b.Balance != expectedBalance {
+					t.Errorf("Expected balance %.2f after concurrent debits, got %.2f", expectedBalance, b.Balance)
 				}
-				t.Logf("Final balance after concurrent debits: %.2f", b.Balance)
+				t.Logf("Final balance after concurrent debits: %.2f (started at %.2f)", b.Balance, startBalance)
 			}
 		}
 	})

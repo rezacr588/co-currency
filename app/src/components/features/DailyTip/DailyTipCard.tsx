@@ -3,6 +3,7 @@ import { View, Text, Pressable } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Lightbulb, X, RefreshCw } from 'lucide-react-native';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useTheme } from 'styled-components/native';
 import { getTodaysTip, getRandomTip, type FinancialTip } from '../../../data/financialTips';
 import { haptics } from '../../../utils/haptics';
 
@@ -16,6 +17,8 @@ interface DailyTipCardProps {
 
 export function DailyTipCard({ compact = false, showDismiss = true, onDismiss }: DailyTipCardProps) {
   const { t } = useLanguage();
+  const theme = useTheme();
+  const colors = theme.colors;
   const [tip, setTip] = useState<FinancialTip | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,16 +82,15 @@ export function DailyTipCard({ compact = false, showDismiss = true, onDismiss }:
 
   if (compact) {
     return (
-      <View className="bg-card border border-border p-4 rounded-xl">
-        <View className="flex-row items-center">
+      <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View
-            className="w-10 h-10 rounded-full items-center justify-center mr-3"
-            style={{ backgroundColor: `${categoryColor}20` }}
+            style={{ width: 40, height: 40, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', marginRight: 12, backgroundColor: `${categoryColor}20` }}
           >
             <Lightbulb size={20} color={categoryColor} />
           </View>
-          <View className="flex-1">
-            <Text className="text-foreground font-medium text-sm" numberOfLines={2}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium', fontSize: 14 }} numberOfLines={2}>
               {tip.tip}
             </Text>
           </View>
@@ -96,10 +98,9 @@ export function DailyTipCard({ compact = false, showDismiss = true, onDismiss }:
             <Pressable
               onPress={handleDismiss}
               hitSlop={10}
-              style={{ cursor: 'pointer' }}
-              className="p-1"
+              style={{ cursor: 'pointer', padding: 4 }}
             >
-              <X size={16} color="#71717a" />
+              <X size={16} color={colors.mutedForeground} />
             </Pressable>
           )}
         </View>
@@ -108,60 +109,56 @@ export function DailyTipCard({ compact = false, showDismiss = true, onDismiss }:
   }
 
   return (
-    <View className="bg-card border border-border p-5 rounded-xl">
+    <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 20, borderRadius: 12 }}>
       {/* Header */}
-      <View className="flex-row items-center justify-between mb-3">
-        <View className="flex-row items-center">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View
-            className="w-10 h-10 rounded-full items-center justify-center mr-3"
-            style={{ backgroundColor: `${categoryColor}20` }}
+            style={{ width: 40, height: 40, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', marginRight: 12, backgroundColor: `${categoryColor}20` }}
           >
             <Lightbulb size={20} color={categoryColor} />
           </View>
           <View>
-            <Text className="text-base font-semibold text-foreground">
+            <Text style={{ fontSize: 16, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
               {t('dailyTip') || 'Daily Tip'}
             </Text>
-            <View className="flex-row items-center">
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View
-                className="w-2 h-2 rounded-full mr-2"
-                style={{ backgroundColor: categoryColor }}
+                style={{ width: 8, height: 8, borderRadius: 9999, marginRight: 8, backgroundColor: categoryColor }}
               />
-              <Text className="text-xs text-muted-foreground capitalize">
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, textTransform: 'capitalize' }}>
                 {tip.category}
               </Text>
             </View>
           </View>
         </View>
-        <View className="flex-row items-center">
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Pressable
             onPress={handleRefresh}
             hitSlop={10}
-            style={{ cursor: 'pointer' }}
-            className="p-2"
+            style={{ cursor: 'pointer', padding: 8 }}
           >
-            <RefreshCw size={16} color="#71717a" />
+            <RefreshCw size={16} color={colors.mutedForeground} />
           </Pressable>
           {showDismiss && (
             <Pressable
               onPress={handleDismiss}
               hitSlop={10}
-              style={{ cursor: 'pointer' }}
-              className="p-2"
+              style={{ cursor: 'pointer', padding: 8 }}
             >
-              <X size={16} color="#71717a" />
+              <X size={16} color={colors.mutedForeground} />
             </Pressable>
           )}
         </View>
       </View>
 
       {/* Tip Content */}
-      <View className="bg-muted/50 p-4 rounded-lg">
-        <Text className="text-foreground font-medium text-base mb-1">
+      <View style={{ backgroundColor: colors.muted + '80', padding: 16, borderRadius: 8 }}>
+        <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium', fontSize: 16, marginBottom: 4 }}>
           {tip.tip}
         </Text>
         {tip.detail && (
-          <Text className="text-muted-foreground text-sm leading-relaxed">
+          <Text style={{ color: colors.mutedForeground, fontSize: 14, lineHeight: 20 }}>
             {tip.detail}
           </Text>
         )}

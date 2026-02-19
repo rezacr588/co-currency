@@ -16,7 +16,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, ArrowLeft, X, PieChart, AlertTriangle } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { useColors } from '../../src/context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency, formatNumber } from '../../src/utils/format';
 import { StyledCategoryIcon, CATEGORY_COLORS, getCategoryBackground, CategoryIcon } from '../../src/constants/icons';
 import { useToast } from '../../src/components/ui/Toast';
@@ -30,7 +30,8 @@ const PERIODS = ['monthly', 'yearly'] as const;
 
 export default function BudgetsScreen() {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const router = useRouter();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
@@ -40,7 +41,6 @@ export default function BudgetsScreen() {
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
 
-  // Grid columns based on screen size
   const getGridColumns = () => {
     if (isDesktop) return 3;
     if (isTablet) return 2;
@@ -62,22 +62,22 @@ export default function BudgetsScreen() {
   const budgets = data?.budgets || [];
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
       {/* Header */}
-      <View className="flex-row items-center justify-between p-4 border-b border-border" style={{ maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
-        <View className="flex-row items-center">
-          <Pressable onPress={() => router.back()} className="p-2 mr-2" style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('back') || 'Go back'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Pressable onPress={() => router.back()} style={({ pressed }) => [{ cursor: 'pointer', padding: 8, marginRight: 8 }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('back') || 'Go back'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <ArrowLeft size={24} color={colors.foreground} />
           </Pressable>
-          <Text className="text-xl font-bold text-foreground">{t('budgets')}</Text>
+          <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('budgets')}</Text>
         </View>
-        <Pressable onPress={() => setShowForm(true)} className="bg-primary p-2.5 rounded-full" style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('createBudget') || 'Create Budget'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Pressable onPress={() => setShowForm(true)} style={({ pressed }) => [{ cursor: 'pointer', backgroundColor: colors.primary, padding: 10, borderRadius: 9999 }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('createBudget') || 'Create Budget'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Plus size={22} color={colors.primaryForeground} />
         </Pressable>
       </View>
 
       <ScrollView
-        className="flex-1"
+        style={{ flex: 1 }}
         contentContainerStyle={{
           padding: isDesktop ? 32 : 16,
           maxWidth: 1400,
@@ -88,23 +88,22 @@ export default function BudgetsScreen() {
         keyboardDismissMode="on-drag"
       >
         {isError ? (
-          <View className="bg-danger-muted border border-danger/20 p-6 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
-            <Text className="text-danger font-medium mb-2">{t('failedToLoadBudgets') || 'Failed to load budgets'}</Text>
+          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger + '33', padding: 24, borderRadius: 12, alignItems: 'center', maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
+            <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium', marginBottom: 8 }}>{t('failedToLoadBudgets') || 'Failed to load budgets'}</Text>
             <Pressable
               onPress={() => refetch()}
-              className="bg-danger/20 px-4 py-2 rounded-lg"
-              style={{ cursor: 'pointer' }}
+              style={{ backgroundColor: colors.danger + '33', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, cursor: 'pointer' }}
             >
-              <Text className="text-danger font-medium">{t('retry') || 'Retry'}</Text>
+              <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium' }}>{t('retry') || 'Retry'}</Text>
             </Pressable>
           </View>
         ) : isPending ? (
           <SkeletonList count={3} ItemComponent={SkeletonCard} />
         ) : budgets.length === 0 ? (
-          <View className="bg-card border border-border p-6 rounded-xl items-center" style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
+          <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 24, borderRadius: 12, alignItems: 'center', maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
             <PieChart size={48} color={colors.placeholder} />
-            <Text className="text-lg font-semibold text-foreground mt-4">{t('noBudgets')}</Text>
-            <Text className="text-muted-foreground text-center mt-2">{t('noBudgetsDescription')}</Text>
+            <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginTop: 16 }}>{t('noBudgets')}</Text>
+            <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 8 }}>{t('noBudgetsDescription')}</Text>
           </View>
         ) : (
           <View style={{
@@ -131,18 +130,21 @@ export default function BudgetsScreen() {
 
 function BudgetCard({ budget }: { budget: any }) {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const progressPercent = Math.min(budget.progress, 100);
   const categoryColor = CATEGORY_COLORS[budget.category.toLowerCase()] || colors.accent;
 
   return (
-    <View className="bg-card border border-border p-4 rounded-xl">
-      <View className="flex-row items-center justify-between mb-3">
-        <View className="flex-row items-center">
+    <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           {budget.is_over_budget || budget.is_near_limit ? (
             <View
-              className="p-2 rounded-lg mr-3"
               style={{
+                padding: 8,
+                borderRadius: 8,
+                marginRight: 12,
                 backgroundColor: budget.is_over_budget ? `${colors.danger}26` : `${colors.accent}26`,
               }}
             >
@@ -152,7 +154,7 @@ function BudgetCard({ budget }: { budget: any }) {
               />
             </View>
           ) : (
-            <View className="mr-3">
+            <View style={{ marginRight: 12 }}>
               <StyledCategoryIcon
                 category={budget.category}
                 size={22}
@@ -163,22 +165,23 @@ function BudgetCard({ budget }: { budget: any }) {
             </View>
           )}
           <View>
-            <Text className="text-lg font-semibold text-foreground capitalize" numberOfLines={1}>{budget.category}</Text>
-            <Text className="text-muted-foreground text-sm">{t(budget.period)}</Text>
+            <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, textTransform: 'capitalize' }} numberOfLines={1}>{budget.category}</Text>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>{t(budget.period)}</Text>
           </View>
         </View>
         {budget.is_over_budget && (
-          <View className="bg-danger/20 px-2 py-1 rounded">
-            <Text className="text-danger text-xs font-semibold">{t('overBudget')}</Text>
+          <View style={{ backgroundColor: colors.danger + '33', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}>
+            <Text style={{ color: colors.danger, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>{t('overBudget')}</Text>
           </View>
         )}
       </View>
 
       {/* Progress Bar */}
-      <View className="h-3 bg-secondary rounded-full mb-2 overflow-hidden">
+      <View style={{ height: 12, backgroundColor: colors.secondary, borderRadius: 9999, marginBottom: 8, overflow: 'hidden' }}>
         <View
-          className="h-full rounded-full"
           style={{
+            height: '100%',
+            borderRadius: 9999,
             width: `${Math.min(progressPercent, 100)}%`,
             backgroundColor: budget.is_over_budget
               ? colors.danger
@@ -189,31 +192,31 @@ function BudgetCard({ budget }: { budget: any }) {
         />
       </View>
 
-      <View className="flex-row items-center justify-between">
-        <Text className="text-muted-foreground text-sm" numberOfLines={1}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={{ color: colors.mutedForeground, fontSize: 14 }} numberOfLines={1}>
           {formatCompactCurrency(budget.spent, budget.currency)} / {formatCompactCurrency(budget.amount, budget.currency)}
         </Text>
-        <Text className={`text-sm ${budget.is_over_budget ? 'text-danger font-semibold' : 'text-foreground font-medium'}`}>
+        <Text style={{ fontSize: 14, color: budget.is_over_budget ? colors.danger : colors.foreground, fontFamily: budget.is_over_budget ? 'Inter_600SemiBold' : 'Inter_500Medium' }}>
           {formatNumber(progressPercent, 0)}% {budget.is_over_budget ? `(${t('overBudget')})` : ''}
         </Text>
       </View>
 
-      <View className="flex-row justify-between mt-3 pt-3 border-t border-border">
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
         <View>
-          <Text className="text-muted-foreground text-xs">{t('remaining')}</Text>
-          <Text className={`font-semibold ${budget.remaining >= 0 ? 'text-success' : 'text-danger'}`}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('remaining')}</Text>
+          <Text style={{ fontFamily: 'Inter_600SemiBold', color: budget.remaining >= 0 ? colors.success : colors.danger }}>
             {formatCompactCurrency(Math.max(0, budget.remaining), budget.currency)}
           </Text>
         </View>
         <View>
-          <Text className="text-muted-foreground text-xs">{t('dailyAllowance')}</Text>
-          <Text className="text-foreground font-semibold">
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('dailyAllowance')}</Text>
+          <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
             {formatCompactCurrency(budget.daily_allowance, budget.currency)}
           </Text>
         </View>
         <View>
-          <Text className="text-muted-foreground text-xs">{t('daysLeft')}</Text>
-          <Text className="text-foreground font-semibold">{budget.remaining_days}</Text>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('daysLeft')}</Text>
+          <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{budget.remaining_days}</Text>
         </View>
       </View>
     </View>
@@ -222,7 +225,8 @@ function BudgetCard({ budget }: { budget: any }) {
 
 function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { width } = useWindowDimensions();
@@ -237,7 +241,6 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
     mutationFn: (data: CreateBudgetRequest) => api.budgets.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
-      // Check for new badges in background
       api.badges.check().then(() => {
         queryClient.invalidateQueries({ queryKey: ['badges'] });
       }).catch(() => {});
@@ -270,16 +273,16 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
-        <View className="flex-row items-center justify-between p-4 border-b border-border">
-          <Text className="text-xl font-bold text-foreground">{t('createBudget')}</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('createBudget')}</Text>
           <Pressable onPress={onClose} style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <X size={24} color={colors.placeholder} />
           </Pressable>
         </View>
 
         <ScrollView
-          className="flex-1"
+          style={{ flex: 1 }}
           keyboardDismissMode="on-drag"
           contentContainerStyle={{
             padding: isDesktop ? 32 : 16,
@@ -290,9 +293,9 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
         >
           <FormError message={error} />
 
-          <View className="mb-6">
-            <Text className="text-muted-foreground mb-2">{t('category')}</Text>
-            <View className="flex-row flex-wrap gap-2">
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>{t('category')}</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {CATEGORIES.map((cat) => {
                 const isSelected = category === cat;
                 const catColor = CATEGORY_COLORS[cat.toLowerCase()] || colors.placeholder;
@@ -307,18 +310,23 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
                       backgroundColor: bgColor,
                       borderWidth: isSelected ? 0 : 1,
                       borderColor: isSelected ? 'transparent' : getCategoryBackground(cat, 0.25),
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 12,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
                     }}
-                    className="px-4 py-2 rounded-xl flex-row items-center gap-2"
                   >
                     <CategoryIcon
                       category={cat}
                       size={16}
-                      color={isSelected ? 'white' : catColor}
+                      color={isSelected ? '#ffffff' : catColor}
                     />
                     <Text
                       style={{
-                        color: isSelected ? 'white' : catColor,
-                        fontWeight: isSelected ? '600' : '500',
+                        color: isSelected ? '#ffffff' : catColor,
+                        fontFamily: isSelected ? 'Inter_600SemiBold' : 'Inter_500Medium',
                       }}
                     >
                       {t(cat) || cat}
@@ -329,11 +337,10 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
             </View>
           </View>
 
-          <View className="mb-6">
-            <Text className="text-muted-foreground mb-2">{t('amount')}</Text>
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>{t('amount')}</Text>
             <TextInput
-              className="bg-card p-4 rounded-xl text-foreground text-lg"
-              style={{ outlineStyle: 'none' } as any}
+              style={{ backgroundColor: colors.card, padding: 16, borderRadius: 12, color: colors.foreground, fontSize: 18, outlineStyle: 'none' } as any}
               value={amount}
               onChangeText={setAmount}
               keyboardType="decimal-pad"
@@ -342,17 +349,16 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
             />
           </View>
 
-          <View className="mb-6">
-            <Text className="text-muted-foreground mb-2">{t('period')}</Text>
-            <View className="flex-row gap-3">
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>{t('period')}</Text>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
               {PERIODS.map((p) => (
                 <Pressable
                   key={p}
                   onPress={() => setPeriod(p)}
-                  className={`flex-1 p-4 rounded-xl items-center ${period === p ? 'bg-accent' : 'bg-card'}`}
-                  style={{ cursor: 'pointer' }}
+                  style={{ flex: 1, padding: 16, borderRadius: 12, alignItems: 'center', backgroundColor: period === p ? colors.accent : colors.card, cursor: 'pointer' }}
                 >
-                  <Text className={period === p ? 'text-accent-foreground font-semibold' : 'text-foreground'}>
+                  <Text style={{ color: period === p ? colors.accentForeground : colors.foreground, fontFamily: period === p ? 'Inter_600SemiBold' : undefined }}>
                     {t(p)}
                   </Text>
                 </Pressable>

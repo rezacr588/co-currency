@@ -20,6 +20,7 @@ type AIHandler struct {
 	walletService    *service.WalletService
 	recurringService *service.RecurringService
 	goalService      *service.GoalService
+	adviceService    *service.AdviceService
 }
 
 // NewAIHandler creates a new AIHandler
@@ -38,6 +39,34 @@ func (h *AIHandler) SetRecurringService(recurringService *service.RecurringServi
 // SetGoalService sets the goal service (for dependency injection)
 func (h *AIHandler) SetGoalService(goalService *service.GoalService) {
 	h.goalService = goalService
+}
+
+// SetAdviceService sets the advice service (for dependency injection)
+func (h *AIHandler) SetAdviceService(adviceService *service.AdviceService) {
+	h.adviceService = adviceService
+}
+
+// GetPersonalizedAdvice handles GET /api/v1/ai/advice
+func (h *AIHandler) GetPersonalizedAdvice(w http.ResponseWriter, r *http.Request) {
+	if h.adviceService == nil {
+		httputil.ServiceUnavailableWithContext(r.Context(), w, "advice service not configured")
+		return
+	}
+
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	lang := r.URL.Query().Get("lang")
+
+	advice, err := h.adviceService.GetAdvice(r.Context(), userID, lang)
+	if err != nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate advice", err)
+		return
+	}
+
+	httputil.Success(w, advice)
 }
 
 // ParseReceipt handles POST /api/v1/ai/parse-receipt

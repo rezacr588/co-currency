@@ -145,13 +145,53 @@ func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req model.ChatRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "Invalid request body", err)
-		return
+	contentType := r.Header.Get("Content-Type")
+
+	if strings.HasPrefix(contentType, "multipart/form-data") {
+		// Parse multipart form (max 10MB)
+		if err := r.ParseMultipartForm(10 << 20); err != nil {
+			httputil.BadRequestWithContext(r.Context(), w, "Failed to parse multipart form", err)
+			return
+		}
+		req.Message = r.FormValue("message")
+		req.ConversationID = r.FormValue("conversation_id")
+
+		// Handle file attachment
+		file, header, err := r.FormFile("file")
+		if err == nil {
+			defer file.Close()
+			fileData := make([]byte, header.Size)
+			if _, err := file.Read(fileData); err != nil {
+				httputil.BadRequestWithContext(r.Context(), w, "Failed to read file", err)
+				return
+			}
+			req.FileData = fileData
+			req.FileMimeType = header.Header.Get("Content-Type")
+			req.FileName = header.Filename
+
+			// Validate MIME type
+			validTypes := []string{"image/", "application/pdf", "text/csv", "audio/"}
+			isValid := false
+			for _, prefix := range validTypes {
+				if strings.HasPrefix(req.FileMimeType, prefix) {
+					isValid = true
+					break
+				}
+			}
+			if !isValid {
+				httputil.BadRequestWithContext(r.Context(), w, "Unsupported file type: "+req.FileMimeType, nil)
+				return
+			}
+		}
+	} else {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			httputil.BadRequestWithContext(r.Context(), w, "Invalid request body", err)
+			return
+		}
 	}
 
-	if req.Message == "" {
-		httputil.BadRequestWithContext(r.Context(), w, "Message is required", nil)
+	if req.Message == "" && len(req.FileData) == 0 {
+		httputil.BadRequestWithContext(r.Context(), w, "Message or file is required", nil)
 		return
 	}
 
@@ -167,7 +207,53 @@ func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 		userName = user.Name
 	}
 
-	// TODO: Populate tokens_used field from AI provider response for usage tracking and billing
+	// Handle file attachment - process based on type
+	if len(req.FileData) > 0 {
+		if strings.HasPrefix(req.FileMimeType, "image/") {
+			// For images, use vision model to analyze
+			result, err := h.chatService.GetAIService().ParseReceipt(r.Context(), req.FileData, req.FileMimeType)
+			if err != nil {
+				log.Warn().Err(err).Msg("Failed to analyze image with vision model")
+				// Append note about image to message
+				if req.Message == "" {
+					req.Message = "[User attached an image that could not be analyzed]"
+				}
+			} else {
+				// Append extracted info to the message
+				imgContext := fmt.Sprintf("\n\n[Attached image analysis: Amount=%.2f %s, Type=%s, Description=%s]",
+					result.Amount, result.Currency, result.Type, result.Description)
+				req.Message += imgContext
+			}
+		} else if strings.HasPrefix(req.FileMimeType, "audio/") {
+			// For audio, transcribe first
+			transcript, err := h.chatService.GetAIService().TranscribeAudio(r.Context(), req.FileData, req.FileMimeType)
+			if err != nil {
+				log.Warn().Err(err).Msg("Failed to transcribe audio")
+				if req.Message == "" {
+					req.Message = "[User sent a voice message that could not be transcribed]"
+				}
+			} else {
+				if req.Message == "" {
+					req.Message = transcript
+				} else {
+					req.Message += "\n\n[Voice message transcript: " + transcript + "]"
+				}
+			}
+		} else if req.FileMimeType == "text/csv" {
+			// For CSV, read content and include in message
+			csvContent := string(req.FileData)
+			lines := strings.Split(csvContent, "\n")
+			if len(lines) > 50 {
+				lines = lines[:50]
+			}
+			csvPreview := strings.Join(lines, "\n")
+			req.Message += "\n\n[Attached CSV data (first 50 rows):\n" + csvPreview + "]"
+		} else if req.FileMimeType == "application/pdf" {
+			// For PDF, include a note (full extraction would need pdfcpu)
+			req.Message += "\n\n[User attached a PDF document: " + req.FileName + "]"
+		}
+	}
+
 	response, err := h.chatService.Chat(r.Context(), userID, userName, req.ConversationID, req.Message)
 	if err != nil {
 		switch {

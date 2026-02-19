@@ -17,13 +17,14 @@ import {
   ChevronLeft,
 } from 'lucide-react-native';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { useColors } from '../../src/context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { LinkedInIcon } from '../../src/constants/icons';
 import { getVersionInfo } from '../../src/utils/version';
 
 export default function AboutScreen() {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const router = useRouter();
   const { width } = useWindowDimensions();
   const versionInfo = getVersionInfo();
@@ -49,83 +50,81 @@ export default function AboutScreen() {
     { Icon: Languages, label: t('multiLanguage') || 'Multi-Language', desc: t('multiLangDesc') || '4 languages' },
   ];
 
-  const techStack = ['React Native', 'Expo', 'TypeScript', 'Go', 'PostgreSQL', 'NativeWind'];
+  const techStack = ['React Native', 'Expo', 'TypeScript', 'Go', 'PostgreSQL', 'Styled Components'];
 
   const openLinkedIn = () => {
     Linking.openURL('https://www.linkedin.com/in/reza-zeraat-6628781b3/');
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <ScrollView className="flex-1" contentContainerClassName="p-4 pb-8">
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
         {/* Header */}
-        <View className="flex-row items-center mb-6">
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
           <Pressable
             onPress={() => router.back()}
-            style={{ cursor: 'pointer' }}
-            className="p-2 mr-2"
+            style={{ cursor: 'pointer', padding: 8, marginRight: 8 }}
           >
             <ChevronLeft size={24} color={colors.placeholder} />
           </Pressable>
-          <Text className="text-2xl font-bold text-foreground">
+          <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
             {t('aboutUs') || 'About Us'}
           </Text>
         </View>
 
         <View style={{ maxWidth: isLargeScreen ? 800 : '100%', alignSelf: 'center', width: '100%' }}>
           {/* Description */}
-          <Text className="text-muted-foreground text-center mb-6">
+          <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginBottom: 24 }}>
             {t('aboutUsDescription') || 'Your complete personal finance companion'}
           </Text>
 
           {/* Mission Banner */}
-          <View className="bg-primary rounded-2xl p-6 mb-6">
-            <Text className="text-primary-foreground text-center text-lg font-medium">
+          <View style={{ backgroundColor: colors.primary, borderRadius: 16, padding: 24, marginBottom: 24 }}>
+            <Text style={{ color: colors.primaryForeground, textAlign: 'center', fontSize: 18, fontFamily: 'Inter_500Medium' }}>
               {t('missionDescription') || 'Empowering you to take control of your finances across currencies and borders'}
             </Text>
           </View>
 
           {/* Quick Features */}
-          <View className="flex-row justify-around mb-6">
+          <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 24 }}>
             {quickFeatures.map((feature) => (
-              <View key={feature.label} className="items-center p-4 bg-card rounded-xl border border-border flex-1 mx-1">
+              <View key={feature.label} style={{ alignItems: 'center', padding: 16, backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, flex: 1, marginHorizontal: 4 }}>
                 <feature.Icon size={24} color={colors.accent} />
-                <Text className="text-sm font-medium text-foreground mt-2">{feature.label}</Text>
+                <Text style={{ fontSize: 14, fontFamily: 'Inter_500Medium', color: colors.foreground, marginTop: 8 }}>{feature.label}</Text>
               </View>
             ))}
           </View>
 
           {/* Founder Card */}
-          <View className="bg-card rounded-2xl border border-border p-6 mb-6">
-            <View className={`${isLargeScreen ? 'flex-row items-center' : ''}`}>
+          <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 24, marginBottom: 24 }}>
+            <View style={isLargeScreen ? { flexDirection: 'row', alignItems: 'center' } : undefined}>
               {/* Profile Image */}
-              <View className={`${isLargeScreen ? 'mr-5' : 'items-center mb-4'}`}>
+              <View style={isLargeScreen ? { marginRight: 20 } : { alignItems: 'center', marginBottom: 16 }}>
                 <Image
                   source={{ uri: 'https://media.licdn.com/dms/image/v2/D4E03AQF3hRqdwxserA/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1718006654218?e=1741219200&v=beta&t=5WdFxbGJfEfF2X5lqSwJXrwf3Fn6z7l5o5rZbKFGbhk' }}
-                  className="w-24 h-24 rounded-full"
-                  style={{ borderWidth: 4, borderColor: colors.accentMuted }}
+                  style={{ width: 96, height: 96, borderRadius: 9999, borderWidth: 4, borderColor: colors.accentMuted }}
                 />
               </View>
 
               {/* Info */}
-              <View className={`flex-1 ${isLargeScreen ? '' : 'items-center'}`}>
-                <View className={`flex-row items-center gap-2 mb-1 ${isLargeScreen ? '' : 'justify-center'}`}>
-                  <Text className="text-xl font-bold text-foreground">Reza Zeraat</Text>
-                  <View className="bg-primary/20 px-2 py-0.5 rounded-full">
-                    <Text className="text-xs font-semibold text-primary">
+              <View style={[{ flex: 1 }, !isLargeScreen ? { alignItems: 'center' } : undefined]}>
+                <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }, !isLargeScreen ? { justifyContent: 'center' } : undefined]}>
+                  <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>Reza Zeraat</Text>
+                  <View style={{ backgroundColor: colors.primary + '33', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9999 }}>
+                    <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', color: colors.primary }}>
                       {t('coFounder') || 'Founder'}
                     </Text>
                   </View>
                 </View>
-                <Text className="text-muted-foreground text-sm mb-3">
+                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 12 }}>
                   Full Stack Developer & ML Engineer
                 </Text>
 
                 {/* Skills */}
-                <View className="flex-row flex-wrap gap-1 mb-4">
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 16 }}>
                   {['React', 'TypeScript', 'Go', 'Python', 'ML'].map((skill) => (
-                    <View key={skill} className="bg-muted px-2 py-0.5 rounded">
-                      <Text className="text-xs text-muted-foreground">{skill}</Text>
+                    <View key={skill} style={{ backgroundColor: colors.muted, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
+                      <Text style={{ fontSize: 12, color: colors.mutedForeground }}>{skill}</Text>
                     </View>
                   ))}
                 </View>
@@ -133,11 +132,10 @@ export default function AboutScreen() {
                 {/* LinkedIn Button */}
                 <Pressable
                   onPress={openLinkedIn}
-                  style={{ cursor: 'pointer' }}
-                  className="bg-[#0077B5] px-4 py-2 rounded-lg flex-row items-center justify-center"
+                  style={{ cursor: 'pointer', backgroundColor: '#0077B5', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
                 >
                   <LinkedInIcon size={16} color="white" />
-                  <Text className="text-white font-medium ml-2">
+                  <Text style={{ color: 'white', fontFamily: 'Inter_500Medium', marginLeft: 8 }}>
                     {t('viewLinkedIn') || 'View LinkedIn'}
                   </Text>
                 </Pressable>
@@ -146,8 +144,8 @@ export default function AboutScreen() {
           </View>
 
           {/* App Features */}
-          <View className="mb-6">
-            <Text className="text-xl font-bold text-foreground text-center mb-4">
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground, textAlign: 'center', marginBottom: 16 }}>
               {t('appFeatures') || 'App Features'}
             </Text>
             <View
@@ -160,15 +158,14 @@ export default function AboutScreen() {
               {appFeatures.map((feature) => (
                 <View
                   key={feature.label}
-                  style={{ width: `${100 / featureColumns - 2}%` }}
-                  className="p-4 bg-card rounded-xl border border-border"
+                  style={{ width: `${100 / featureColumns - 2}%`, padding: 16, backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border }}
                 >
-                  <View className="items-center">
+                  <View style={{ alignItems: 'center' }}>
                     <feature.Icon size={24} color={colors.accent} />
-                    <Text className="text-sm font-semibold text-foreground mt-2 text-center">
+                    <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginTop: 8, textAlign: 'center' }}>
                       {feature.label}
                     </Text>
-                    <Text className="text-xs text-muted-foreground text-center mt-1">
+                    <Text style={{ fontSize: 12, color: colors.mutedForeground, textAlign: 'center', marginTop: 4 }}>
                       {feature.desc}
                     </Text>
                   </View>
@@ -178,29 +175,29 @@ export default function AboutScreen() {
           </View>
 
           {/* Tech Stack */}
-          <View className="items-center">
-            <Text className="text-sm text-muted-foreground mb-3">
+          <View style={{ alignItems: 'center' }}>
+            <Text style={{ fontSize: 14, color: colors.mutedForeground, marginBottom: 12 }}>
               {t('builtWith') || 'Built with'}
             </Text>
-            <View className="flex-row flex-wrap justify-center gap-2">
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 }}>
               {techStack.map((tech) => (
-                <View key={tech} className="bg-muted px-3 py-1.5 rounded-lg">
-                  <Text className="text-sm text-muted-foreground">{tech}</Text>
+                <View key={tech} style={{ backgroundColor: colors.muted, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 14, color: colors.mutedForeground }}>{tech}</Text>
                 </View>
               ))}
             </View>
           </View>
 
           {/* Version Info */}
-          <View className="items-center mt-8 pt-6 border-t border-border">
-            <Text className="text-lg font-semibold text-foreground mb-2">
+          <View style={{ alignItems: 'center', marginTop: 32, paddingTop: 24, borderTopWidth: 1, borderTopColor: colors.border }}>
+            <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginBottom: 8 }}>
               CoFinance
             </Text>
-            <Text className="text-sm text-muted-foreground">
+            <Text style={{ fontSize: 14, color: colors.mutedForeground }}>
               {versionInfo.displayVersion}
             </Text>
             {versionInfo.updateId && (
-              <Text className="text-xs text-muted-foreground/60 mt-1">
+              <Text style={{ fontSize: 12, color: colors.mutedForeground + '99', marginTop: 4 }}>
                 Update: {versionInfo.updateId.substring(0, 8)}
               </Text>
             )}

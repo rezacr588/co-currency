@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: 36,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: '#fafafa',
     letterSpacing: 1,
   },
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   tagline: {
     fontSize: 16,
     color: '#d4af37',
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
   },
   bottomBar: {
     position: 'absolute',

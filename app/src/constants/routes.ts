@@ -21,7 +21,7 @@ export const ROUTES = {
   walletAdd: '/(app)/(tabs)/wallet/add',
   walletHistory: '/(app)/(tabs)/wallet/history',
   walletConvert: '/(app)/(tabs)/wallet/convert',
-  walletAI: '/(app)/(tabs)/wallet/ai',
+  walletChat: '/(app)/(tabs)/wallet/chat',
   goals: '/(app)/(tabs)/goals',
   reports: '/(app)/(tabs)/reports',
 

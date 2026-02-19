@@ -116,6 +116,10 @@ export async function clearAuthToken(): Promise<void> {
   ]);
 }
 
+interface FetchAPIOptions extends RequestInit {
+  isFormData?: boolean;
+}
+
 interface RetryOptions {
   maxRetries?: number;
   baseDelay?: number;
@@ -179,10 +183,11 @@ async function refreshAuthToken(): Promise<boolean> {
 
 async function fetchWithRetry<T>(
   url: string,
-  options?: RequestInit,
+  options?: FetchAPIOptions,
   retryOptions: RetryOptions = {}
 ): Promise<T> {
   const { maxRetries = 1, baseDelay = 1000, maxDelay = 10000 } = retryOptions;
+  const isFormData = options?.isFormData ?? false;
 
   // Ensure tokens are loaded before first request
   await loadTokens();
@@ -194,14 +199,18 @@ async function fetchWithRetry<T>(
       const token = getAuthToken();
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
+      const headers: Record<string, string> = {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options?.headers as Record<string, string> ?? {}),
+      };
+      // Don't set Content-Type for FormData — let the browser set it with boundary
+      if (!isFormData) {
+        headers['Content-Type'] = 'application/json';
+      }
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...options?.headers,
-        },
+        headers,
       });
       clearTimeout(timeoutId);
 
@@ -266,6 +275,6 @@ async function fetchWithRetry<T>(
   throw lastError || new Error('API request failed');
 }
 
-export async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
+export async function fetchAPI<T>(endpoint: string, options?: FetchAPIOptions): Promise<T> {
   return fetchWithRetry<T>(`${API_BASE}${endpoint}`, options);
 }

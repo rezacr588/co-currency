@@ -1,7 +1,7 @@
 import { forwardRef, useCallback } from 'react';
 import { Pressable, Text, ActivityIndicator, PressableProps, View, GestureResponderEvent } from 'react-native';
 import { haptics } from '../../utils/haptics';
-import { useColors } from '../../context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'outline' | 'accent';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -18,36 +18,10 @@ interface ButtonProps extends PressableProps {
   accessibilityHint?: string;
 }
 
-const variantStyles: Record<ButtonVariant, string> = {
-  primary: 'bg-primary active:bg-primary-hover',
-  secondary: 'bg-secondary active:bg-secondary/80',
-  ghost: 'bg-transparent active:bg-secondary/50',
-  danger: 'bg-danger active:bg-danger/80',
-  success: 'bg-success active:bg-success/80',
-  outline: 'bg-transparent border border-border active:bg-secondary/50',
-  accent: 'bg-accent active:bg-accent-hover',
-};
-
-const variantTextStyles: Record<ButtonVariant, string> = {
-  primary: 'text-primary-foreground',
-  secondary: 'text-foreground',
-  ghost: 'text-foreground',
-  danger: 'text-white',
-  success: 'text-white',
-  outline: 'text-foreground',
-  accent: 'text-accent-foreground',
-};
-
-const sizeStyles: Record<ButtonSize, string> = {
-  sm: 'px-3 py-2',
-  md: 'px-4 py-3',
-  lg: 'px-6 py-4',
-};
-
-const textSizeStyles: Record<ButtonSize, string> = {
-  sm: 'text-sm',
-  md: 'text-base',
-  lg: 'text-lg',
+const sizeConfig: Record<ButtonSize, { px: number; py: number; fontSize: number }> = {
+  sm: { px: 12, py: 8, fontSize: 14 },
+  md: { px: 16, py: 12, fontSize: 16 },
+  lg: { px: 24, py: 16, fontSize: 18 },
 };
 
 export const Button = forwardRef<View, ButtonProps>(
@@ -60,16 +34,17 @@ export const Button = forwardRef<View, ButtonProps>(
       rightIcon,
       children,
       disabled,
-      className = '',
       hapticFeedback = true,
       onPress,
       accessibilityHint,
       accessibilityLabel,
+      style,
       ...props
     },
     ref
   ) => {
-    const colors = useColors();
+    const theme = useTheme();
+    const colors = theme.colors;
     const isDisabled = disabled || isLoading;
 
     const handlePress = useCallback(
@@ -87,6 +62,28 @@ export const Button = forwardRef<View, ButtonProps>(
       accessibilityLabel ||
       (typeof children === 'string' ? children : undefined);
 
+    const variantBgColors: Record<ButtonVariant, string> = {
+      primary: colors.primary,
+      secondary: colors.secondary,
+      ghost: 'transparent',
+      danger: colors.danger,
+      success: colors.success,
+      outline: 'transparent',
+      accent: colors.accent,
+    };
+
+    const variantTextColors: Record<ButtonVariant, string> = {
+      primary: colors.primaryForeground,
+      secondary: colors.foreground,
+      ghost: colors.foreground,
+      danger: '#ffffff',
+      success: '#ffffff',
+      outline: colors.foreground,
+      accent: colors.accentForeground,
+    };
+
+    const sizeVal = sizeConfig[size];
+
     return (
       <Pressable
         ref={ref}
@@ -99,13 +96,21 @@ export const Button = forwardRef<View, ButtonProps>(
           disabled: isDisabled,
           busy: isLoading,
         }}
-        className={`
-          flex-row items-center justify-center rounded-xl
-          ${variantStyles[variant]}
-          ${sizeStyles[size]}
-          ${isDisabled ? 'opacity-40' : ''}
-          ${className}
-        `}
+        style={[
+          {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 12,
+            backgroundColor: variantBgColors[variant],
+            paddingHorizontal: sizeVal.px,
+            paddingVertical: sizeVal.py,
+            opacity: isDisabled ? 0.4 : 1,
+            borderWidth: variant === 'outline' ? 1 : 0,
+            borderColor: variant === 'outline' ? colors.border : undefined,
+          },
+          ...(Array.isArray(style) ? (style as any[]) : typeof style === 'object' && style ? [style] : []),
+        ]}
         {...props}
       >
         {isLoading ? (
@@ -119,13 +124,13 @@ export const Button = forwardRef<View, ButtonProps>(
           />
         ) : (
           <>
-            {leftIcon && <View className="mr-2">{leftIcon}</View>}
+            {leftIcon && <View style={{ marginRight: 8 }}>{leftIcon}</View>}
             <Text
-              className={`font-semibold ${variantTextStyles[variant]} ${textSizeStyles[size]}`}
+              style={{ fontFamily: 'Inter_600SemiBold', color: variantTextColors[variant], fontSize: sizeVal.fontSize }}
             >
               {children}
             </Text>
-            {rightIcon && <View className="ml-2">{rightIcon}</View>}
+            {rightIcon && <View style={{ marginLeft: 8 }}>{rightIcon}</View>}
           </>
         )}
       </Pressable>

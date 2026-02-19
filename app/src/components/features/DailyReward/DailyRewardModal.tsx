@@ -12,6 +12,7 @@ import { Gift, Star, Sparkles, X, ChevronUp } from 'lucide-react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useTheme } from 'styled-components/native';
 import { useToast } from '../../ui/Toast';
 import { haptics } from '../../../utils/haptics';
 
@@ -23,6 +24,8 @@ interface DailyRewardModalProps {
 
 export function DailyRewardModal({ onClose }: DailyRewardModalProps) {
   const { t } = useLanguage();
+  const theme = useTheme();
+  const colors = theme.colors;
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [visible, setVisible] = useState(false);
@@ -125,25 +128,24 @@ export function DailyRewardModal({ onClose }: DailyRewardModalProps) {
       onRequestClose={handleClose}
     >
       <Pressable
-        className="flex-1 bg-black/70 items-center justify-center p-6"
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center', padding: 24 }}
         onPress={handleClose}
       >
         <Pressable
-          className="bg-card rounded-3xl p-6 w-full max-w-sm"
+          style={{ backgroundColor: colors.card, borderRadius: 24, padding: 24, width: '100%', maxWidth: 384 }}
           onPress={(e) => e.stopPropagation()}
         >
           {/* Close button */}
           <Pressable
             onPress={handleClose}
-            className="absolute top-4 right-4 p-2 z-10"
+            style={{ position: 'absolute', top: 16, right: 16, padding: 8, zIndex: 10, cursor: 'pointer' }}
             hitSlop={10}
-            style={{ cursor: 'pointer' }}
           >
-            <X size={20} color="#71717a" />
+            <X size={20} color={colors.mutedForeground} />
           </Pressable>
 
           {/* Content */}
-          <View className="items-center">
+          <View style={{ alignItems: 'center' }}>
             {/* Icon */}
             <Animated.View
               style={[
@@ -152,17 +154,17 @@ export function DailyRewardModal({ onClose }: DailyRewardModalProps) {
                 },
               ]}
             >
-              <View className="w-20 h-20 rounded-full bg-accent/20 items-center justify-center mb-4">
+              <View style={{ width: 80, height: 80, borderRadius: 9999, backgroundColor: colors.accent + '33', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
                 {showAnimation ? (
-                  <Sparkles size={40} color="rgb(212, 175, 55)" />
+                  <Sparkles size={40} color={colors.accent} />
                 ) : (
-                  <Gift size={40} color="rgb(212, 175, 55)" />
+                  <Gift size={40} color={colors.accent} />
                 )}
               </View>
             </Animated.View>
 
             {/* Title */}
-            <Text className="text-xl font-bold text-foreground mb-2">
+            <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 8 }}>
               {claimed
                 ? t('rewardClaimed') || 'Reward Claimed!'
                 : t('dailyReward') || 'Daily Reward'}
@@ -170,36 +172,36 @@ export function DailyRewardModal({ onClose }: DailyRewardModalProps) {
 
             {/* Streak info */}
             {isLoadingStatus ? (
-              <ActivityIndicator color="rgb(212, 175, 55)" className="my-4" />
+              <ActivityIndicator color={colors.accent} style={{ marginVertical: 16 }} />
             ) : status ? (
-              <View className="items-center mb-4">
-                <View className="flex-row items-center mb-2">
+              <View style={{ alignItems: 'center', marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                   <Star size={16} color="#f59e0b" fill="#f59e0b" />
-                  <Text className="text-muted-foreground ml-1">
+                  <Text style={{ color: colors.mutedForeground, marginLeft: 4 }}>
                     {status.consecutive_days} {t('dayStreak') || 'day streak'}
                   </Text>
                 </View>
 
                 {claimed && claimMutation.data ? (
-                  <View className="bg-accent/20 px-6 py-3 rounded-xl">
-                    <Text className="text-accent text-2xl font-bold text-center">
+                  <View style={{ backgroundColor: colors.accent + '33', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}>
+                    <Text style={{ color: colors.accent, fontSize: 24, fontFamily: 'Inter_700Bold', textAlign: 'center' }}>
                       +{claimMutation.data.reward.xp_awarded} XP
                     </Text>
                     {claimMutation.data.leveled_up && (
-                      <View className="flex-row items-center justify-center mt-2">
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8 }}>
                         <ChevronUp size={16} color="#22c55e" />
-                        <Text className="text-success font-medium ml-1">
+                        <Text style={{ color: colors.success, fontFamily: 'Inter_500Medium', marginLeft: 4 }}>
                           {t('levelUp') || 'Level Up!'} {claimMutation.data.new_level}
                         </Text>
                       </View>
                     )}
                   </View>
                 ) : (
-                  <View className="bg-muted px-6 py-3 rounded-xl">
-                    <Text className="text-foreground text-lg font-semibold text-center">
+                  <View style={{ backgroundColor: colors.muted, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}>
+                    <Text style={{ color: colors.foreground, fontSize: 18, fontFamily: 'Inter_600SemiBold', textAlign: 'center' }}>
                       +{status.next_reward_xp} XP
                     </Text>
-                    <Text className="text-muted-foreground text-sm text-center">
+                    <Text style={{ color: colors.mutedForeground, fontSize: 14, textAlign: 'center' }}>
                       {t('availableToday') || 'Available today'}
                     </Text>
                   </View>
@@ -208,7 +210,7 @@ export function DailyRewardModal({ onClose }: DailyRewardModalProps) {
             ) : null}
 
             {/* Weekly streak preview */}
-            <View className="flex-row mb-6">
+            <View style={{ flexDirection: 'row', marginBottom: 24 }}>
               {[1, 2, 3, 4, 5, 6, 7].map((day) => {
                 const consecutiveDays = status?.consecutive_days || 0;
                 const isCompleted = day <= consecutiveDays;
@@ -217,18 +219,28 @@ export function DailyRewardModal({ onClose }: DailyRewardModalProps) {
                 return (
                   <View
                     key={day}
-                    className={`w-8 h-8 rounded-full items-center justify-center mx-1 ${
-                      isCompleted
-                        ? 'bg-accent'
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 9999,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginHorizontal: 4,
+                      backgroundColor: isCompleted
+                        ? colors.accent
                         : isCurrent
-                        ? 'bg-accent/30 border-2 border-accent'
-                        : 'bg-muted'
-                    }`}
+                        ? colors.accent + '4d'
+                        : colors.muted,
+                      borderWidth: isCurrent ? 2 : 0,
+                      borderColor: isCurrent ? colors.accent : 'transparent',
+                    }}
                   >
                     <Text
-                      className={`text-xs font-bold ${
-                        isCompleted ? 'text-accent-foreground' : 'text-muted-foreground'
-                      }`}
+                      style={{
+                        fontSize: 12,
+                        fontFamily: 'Inter_700Bold',
+                        color: isCompleted ? colors.accentForeground : colors.mutedForeground,
+                      }}
                     >
                       {day}
                     </Text>
@@ -242,15 +254,20 @@ export function DailyRewardModal({ onClose }: DailyRewardModalProps) {
               <Pressable
                 onPress={handleClaim}
                 disabled={claimMutation.isPending || status?.claimed_today}
-                style={{ cursor: 'pointer' }}
-                className={`w-full bg-accent p-4 rounded-xl items-center ${
-                  claimMutation.isPending || status?.claimed_today ? 'opacity-50' : ''
-                }`}
+                style={{
+                  cursor: 'pointer',
+                  width: '100%',
+                  backgroundColor: colors.accent,
+                  padding: 16,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  opacity: claimMutation.isPending || status?.claimed_today ? 0.5 : 1,
+                }}
               >
                 {claimMutation.isPending ? (
                   <ActivityIndicator color="#09090b" />
                 ) : (
-                  <Text className="text-accent-foreground font-bold text-lg">
+                  <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_700Bold', fontSize: 18 }}>
                     {status?.claimed_today
                       ? t('alreadyClaimed') || 'Already Claimed Today'
                       : t('claimReward') || 'Claim Reward'}
@@ -260,10 +277,9 @@ export function DailyRewardModal({ onClose }: DailyRewardModalProps) {
             ) : (
               <Pressable
                 onPress={handleClose}
-                style={{ cursor: 'pointer' }}
-                className="w-full bg-muted p-4 rounded-xl items-center"
+                style={{ cursor: 'pointer', width: '100%', backgroundColor: colors.muted, padding: 16, borderRadius: 12, alignItems: 'center' }}
               >
-                <Text className="text-foreground font-medium">
+                <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>
                   {t('continue') || 'Continue'}
                 </Text>
               </Pressable>

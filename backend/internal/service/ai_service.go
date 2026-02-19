@@ -1,15 +1,20 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rs/zerolog/log"
@@ -23,14 +28,18 @@ type AIService struct {
 	llm          llms.Model
 	llmOnce      sync.Once
 	llmErr       error
+	visionLLM    llms.Model
+	visionOnce   sync.Once
+	visionErr    error
 	provider     string
 	apiKey       string
 	model        string
+	visionModel  string
 	cloudProject string
 }
 
 // NewAIService creates a new AIService with the specified provider
-func NewAIService(provider, apiKey, model, cloudProject string) (*AIService, error) {
+func NewAIService(provider, apiKey, model, visionModel, cloudProject string) (*AIService, error) {
 	if apiKey == "" {
 		return nil, errors.New("AI_API_KEY is required")
 	}
@@ -42,6 +51,8 @@ func NewAIService(provider, apiKey, model, cloudProject string) (*AIService, err
 			p = "cerebras"
 		} else if strings.HasPrefix(apiKey, "sk-") {
 			p = "openai"
+		} else if strings.HasPrefix(apiKey, "gsk_") {
+			p = "groq"
 		}
 	}
 
@@ -50,6 +61,7 @@ func NewAIService(provider, apiKey, model, cloudProject string) (*AIService, err
 		provider:     p,
 		apiKey:       apiKey,
 		model:        model,
+		visionModel:  visionModel,
 		cloudProject: cloudProject,
 	}, nil
 }
@@ -78,6 +90,16 @@ func (s *AIService) getLLM(ctx context.Context) (llms.Model, error) {
 				openai.WithToken(s.apiKey),
 				openai.WithModel("gpt-4o-mini"),
 			)
+		case "groq":
+			model := s.model
+			if model == "" {
+				model = "llama-3.3-70b-versatile"
+			}
+			llm, err = openai.New(
+				openai.WithToken(s.apiKey),
+				openai.WithBaseURL("https://api.groq.com/openai/v1"),
+				openai.WithModel(model),
+			)
 		case "googleai", "gemini", "":
 			opts := []googleai.Option{
 				googleai.WithAPIKey(s.apiKey),
@@ -88,7 +110,7 @@ func (s *AIService) getLLM(ctx context.Context) (llms.Model, error) {
 			}
 			llm, err = googleai.New(ctx, opts...)
 		default:
-			s.llmErr = fmt.Errorf("unsupported AI provider: %s (supported: cerebras, openai, googleai/gemini)", s.provider)
+			s.llmErr = fmt.Errorf("unsupported AI provider: %s (supported: groq, cerebras, openai, googleai/gemini)", s.provider)
 			return
 		}
 
@@ -104,6 +126,63 @@ func (s *AIService) getLLM(ctx context.Context) (llms.Model, error) {
 		return nil, s.llmErr
 	}
 	return s.llm, nil
+}
+
+// getVisionLLM returns an LLM instance configured for vision/image tasks
+func (s *AIService) getVisionLLM(ctx context.Context) (llms.Model, error) {
+	s.visionOnce.Do(func() {
+		var llm llms.Model
+		var err error
+
+		switch s.provider {
+		case "groq":
+			model := s.visionModel
+			if model == "" {
+				model = "llama-3.2-90b-vision-preview"
+			}
+			llm, err = openai.New(
+				openai.WithToken(s.apiKey),
+				openai.WithBaseURL("https://api.groq.com/openai/v1"),
+				openai.WithModel(model),
+			)
+		case "openai":
+			model := s.visionModel
+			if model == "" {
+				model = "gpt-4o-mini"
+			}
+			llm, err = openai.New(
+				openai.WithToken(s.apiKey),
+				openai.WithModel(model),
+			)
+		case "googleai", "gemini", "":
+			model := s.visionModel
+			if model == "" {
+				model = "gemini-1.5-flash"
+			}
+			opts := []googleai.Option{
+				googleai.WithAPIKey(s.apiKey),
+				googleai.WithDefaultModel(model),
+			}
+			if s.cloudProject != "" {
+				opts = append(opts, googleai.WithCloudProject(s.cloudProject))
+			}
+			llm, err = googleai.New(ctx, opts...)
+		default:
+			// Cerebras doesn't support vision, fall back to text LLM
+			llm, err = s.getLLM(ctx)
+		}
+
+		if err != nil {
+			s.visionErr = fmt.Errorf("initializing vision LLM: %w", err)
+			return
+		}
+		s.visionLLM = llm
+	})
+
+	if s.visionErr != nil {
+		return nil, s.visionErr
+	}
+	return s.visionLLM, nil
 }
 
 const receiptPromptTemplate = `Analyze this receipt or invoice %s. Extract the following information and return ONLY a valid JSON object (no markdown, no explanation):
@@ -137,9 +216,9 @@ func (s *AIService) ParseReceipt(ctx context.Context, imageData []byte, mimeType
 		return nil, errors.New("image data is required")
 	}
 
-	llm, err := s.getLLM(ctx)
+	llm, err := s.getVisionLLM(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("getting LLM: %w", err)
+		return nil, fmt.Errorf("getting vision LLM: %w", err)
 	}
 
 	prompt := buildReceiptPrompt("image", "")
@@ -353,6 +432,72 @@ func inferCategory(description string) string {
 		}
 	}
 	return "other"
+}
+
+// TranscribeAudio transcribes audio using Groq's Whisper API or falls back to describing the audio
+func (s *AIService) TranscribeAudio(ctx context.Context, audioData []byte, mimeType string) (string, error) {
+	if s.provider != "groq" {
+		return "", fmt.Errorf("audio transcription requires Groq provider (current: %s)", s.provider)
+	}
+
+	// Use Groq's OpenAI-compatible transcription endpoint
+	// Build multipart form request
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	// Add model field
+	if err := writer.WriteField("model", "whisper-large-v3"); err != nil {
+		return "", fmt.Errorf("writing model field: %w", err)
+	}
+
+	// Add audio file
+	ext := "m4a"
+	if strings.Contains(mimeType, "wav") {
+		ext = "wav"
+	} else if strings.Contains(mimeType, "mp3") || strings.Contains(mimeType, "mpeg") {
+		ext = "mp3"
+	} else if strings.Contains(mimeType, "webm") {
+		ext = "webm"
+	}
+	part, err := writer.CreateFormFile("file", "audio."+ext)
+	if err != nil {
+		return "", fmt.Errorf("creating form file: %w", err)
+	}
+	if _, err := part.Write(audioData); err != nil {
+		return "", fmt.Errorf("writing audio data: %w", err)
+	}
+
+	if err := writer.Close(); err != nil {
+		return "", fmt.Errorf("closing writer: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.groq.com/openai/v1/audio/transcriptions", body)
+	if err != nil {
+		return "", fmt.Errorf("creating request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+s.apiKey)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("transcription request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		return "", fmt.Errorf("transcription API returned status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var result struct {
+		Text string `json:"text"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("parsing transcription response: %w", err)
+	}
+
+	return result.Text, nil
 }
 
 // IsConfigured returns true if the AI service is properly configured

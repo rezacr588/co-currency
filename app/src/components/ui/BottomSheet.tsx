@@ -6,7 +6,7 @@ import GorhomBottomSheet, {
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
 import { X } from 'lucide-react-native';
-import { useColors } from '../../context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 
 interface BottomSheetProps {
   title?: string;
@@ -27,7 +27,8 @@ export const BottomSheet = forwardRef<GorhomBottomSheet, BottomSheetProps>(
     },
     ref
   ) => {
-    const colors = useColors();
+    const theme = useTheme();
+    const colors = theme.colors;
     const snapPoints = useMemo(
       () => customSnapPoints || ['25%', '50%'],
       [customSnapPoints]

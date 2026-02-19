@@ -12,8 +12,18 @@ import type {
 import type { RecurringTransaction, Goal } from '../types/goal';
 import { fetchAPI } from './base';
 
+export interface PersonalizedAdvice {
+  title: string;
+  detail: string;
+  category: string;
+  is_ai: boolean;
+}
+
 export const ai = {
   getStatus: () => fetchAPI<{ configured: boolean; provider?: string }>('/ai/status'),
+
+  getAdvice: (lang?: string) =>
+    fetchAPI<PersonalizedAdvice>(`/ai/advice${lang ? `?lang=${lang}` : ''}`),
 
   parseReceipt: (data: AIParseRequest) =>
     fetchAPI<AIParseResponse>('/ai/parse-text', {

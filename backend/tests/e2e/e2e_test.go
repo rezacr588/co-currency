@@ -68,7 +68,7 @@ func SetupTestServer(t *testing.T) *TestServer {
 	// Initialize AI service (optional)
 	var aiService *service.AIService
 	if cfg.AIAPIKey != "" {
-		aiService, _ = service.NewAIService(cfg.AIProvider, cfg.AIAPIKey, cfg.AIModel, cfg.AICloudProject)
+		aiService, _ = service.NewAIService(cfg.AIProvider, cfg.AIAPIKey, cfg.AIModel, cfg.AIVisionModel, cfg.AICloudProject)
 	}
 
 	// Initialize Reports service
@@ -151,6 +151,44 @@ func (ts *TestServer) GET(path string, token string) (*http.Response, error) {
 func parseResponse(resp *http.Response, v interface{}) error {
 	defer resp.Body.Close()
 	return json.NewDecoder(resp.Body).Decode(v)
+}
+
+// registerOrLogin registers a user and returns the auth token.
+// If the user already exists, it falls back to login.
+func (ts *TestServer) registerOrLogin(t *testing.T, email, password string) string {
+	t.Helper()
+
+	resp, err := ts.POST("/api/v1/auth/register", model.RegisterRequest{
+		Email:    email,
+		Password: password,
+	}, "")
+	if err != nil {
+		t.Fatalf("Failed to register: %v", err)
+	}
+
+	if resp.StatusCode == http.StatusCreated {
+		var auth model.AuthResponse
+		parseResponse(resp, &auth)
+		return auth.Token
+	}
+	resp.Body.Close()
+
+	// Registration failed (user exists), try login
+	resp, err = ts.POST("/api/v1/auth/login", model.LoginRequest{
+		Email:    email,
+		Password: password,
+	}, "")
+	if err != nil {
+		t.Fatalf("Failed to login: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Login failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var auth model.AuthResponse
+	parseResponse(resp, &auth)
+	return auth.Token
 }
 
 // ============================================

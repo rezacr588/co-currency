@@ -1,19 +1,20 @@
-import { View, Text } from 'react-native';
+import { View, Text, ViewStyle } from 'react-native';
 import { Globe } from 'lucide-react-native';
 import { getCurrencyDisplay } from '../../utils/format';
 import { ICON_SIZES, ICON_COLOR_MUTED } from '../../constants/icons';
+import { useTheme } from 'styled-components/native';
 
 interface CurrencyBadgeProps {
   code: string;
   showCode?: boolean;
   size?: 'sm' | 'md' | 'lg';
-  className?: string;
+  style?: ViewStyle;
 }
 
 const sizeStyles = {
-  sm: { flag: 'text-base', code: 'text-xs', padding: 'px-2 py-1' },
-  md: { flag: 'text-xl', code: 'text-sm', padding: 'px-3 py-2' },
-  lg: { flag: 'text-2xl', code: 'text-base', padding: 'px-4 py-3' },
+  sm: { flagFontSize: 16, codeFontSize: 12, paddingHorizontal: 8, paddingVertical: 4 },
+  md: { flagFontSize: 20, codeFontSize: 14, paddingHorizontal: 12, paddingVertical: 8 },
+  lg: { flagFontSize: 24, codeFontSize: 16, paddingHorizontal: 16, paddingVertical: 12 },
 };
 
 // Map badge sizes to icon sizes
@@ -27,22 +28,34 @@ export function CurrencyBadge({
   code,
   showCode = true,
   size = 'md',
-  className = '',
+  style,
 }: CurrencyBadgeProps) {
+  const theme = useTheme();
+  const colors = theme.colors;
   const display = getCurrencyDisplay(code);
   const styles = sizeStyles[size];
 
   return (
     <View
-      className={`bg-card rounded-lg flex-row items-center ${styles.padding} ${className}`}
+      style={[
+        {
+          backgroundColor: colors.card,
+          borderRadius: 8,
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: styles.paddingHorizontal,
+          paddingVertical: styles.paddingVertical,
+        },
+        style,
+      ]}
     >
       {display.flag ? (
-        <Text className={styles.flag}>{display.flag}</Text>
+        <Text style={{ fontSize: styles.flagFontSize }}>{display.flag}</Text>
       ) : (
         <Globe size={badgeIconSizes[size]} color={ICON_COLOR_MUTED} />
       )}
       {showCode && (
-        <Text className={`text-foreground font-semibold ml-2 ${styles.code}`}>
+        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginLeft: 8, fontSize: styles.codeFontSize }}>
           {code}
         </Text>
       )}

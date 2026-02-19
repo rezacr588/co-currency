@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { View, ViewProps, Animated, DimensionValue } from 'react-native';
+import { useTheme } from 'styled-components/native';
 
 interface SkeletonProps extends ViewProps {
   width?: DimensionValue;
@@ -14,9 +15,10 @@ export function Skeleton({
   borderRadius,
   variant = 'rectangular',
   style,
-  className = '',
   ...props
 }: SkeletonProps) {
+  const theme = useTheme();
+  const colors = theme.colors;
   const animatedValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -57,9 +59,9 @@ export function Skeleton({
 
   return (
     <Animated.View
-      className={`bg-secondary ${className}`}
       style={[
         {
+          backgroundColor: colors.secondary,
           width,
           height,
           borderRadius: getRadius(),
@@ -73,29 +75,33 @@ export function Skeleton({
 }
 
 // Pre-built skeleton layouts
-export function SkeletonCard({ className = '' }: { className?: string }) {
+export function SkeletonCard() {
+  const theme = useTheme();
+  const colors = theme.colors;
   return (
-    <View className={`bg-card p-4 rounded-xl ${className}`}>
-      <View className="flex-row items-center mb-4">
+    <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
         <Skeleton variant="circular" width={40} height={40} />
-        <View className="ml-3 flex-1">
-          <Skeleton width="60%" height={16} className="mb-2" />
+        <View style={{ marginLeft: 12, flex: 1 }}>
+          <Skeleton width="60%" height={16} style={{ marginBottom: 8 }} />
           <Skeleton width="40%" height={12} />
         </View>
       </View>
-      <Skeleton width="100%" height={12} className="mb-2" />
+      <Skeleton width="100%" height={12} style={{ marginBottom: 8 }} />
       <Skeleton width="80%" height={12} />
     </View>
   );
 }
 
-export function SkeletonTransaction({ className = '' }: { className?: string }) {
+export function SkeletonTransaction() {
+  const theme = useTheme();
+  const colors = theme.colors;
   return (
-    <View className={`bg-card p-4 rounded-xl flex-row items-center justify-between ${className}`}>
-      <View className="flex-row items-center flex-1">
+    <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
         <Skeleton variant="circular" width={40} height={40} />
-        <View className="ml-3 flex-1">
-          <Skeleton width="70%" height={14} className="mb-2" />
+        <View style={{ marginLeft: 12, flex: 1 }}>
+          <Skeleton width="70%" height={14} style={{ marginBottom: 8 }} />
           <Skeleton width="40%" height={12} />
         </View>
       </View>
@@ -104,13 +110,15 @@ export function SkeletonTransaction({ className = '' }: { className?: string }) 
   );
 }
 
-export function SkeletonBalance({ className = '' }: { className?: string }) {
+export function SkeletonBalance() {
+  const theme = useTheme();
+  const colors = theme.colors;
   return (
-    <View className={`bg-card p-4 rounded-xl flex-row items-center justify-between ${className}`}>
-      <View className="flex-row items-center">
+    <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Skeleton variant="circular" width={40} height={40} />
-        <View className="ml-3">
-          <Skeleton width={60} height={18} className="mb-2" />
+        <View style={{ marginLeft: 12 }}>
+          <Skeleton width={60} height={18} style={{ marginBottom: 8 }} />
           <Skeleton width={40} height={12} />
         </View>
       </View>
@@ -119,18 +127,20 @@ export function SkeletonBalance({ className = '' }: { className?: string }) {
   );
 }
 
-export function SkeletonGoalCard({ className = '' }: { className?: string }) {
+export function SkeletonGoalCard() {
+  const theme = useTheme();
+  const colors = theme.colors;
   return (
-    <View className={`bg-card p-4 rounded-xl ${className}`}>
-      <View className="flex-row items-center justify-between mb-3">
-        <View className="flex-row items-center flex-1">
+    <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
           <Skeleton variant="circular" width={36} height={36} />
-          <Skeleton width="50%" height={16} className="ml-3" />
+          <Skeleton width="50%" height={16} style={{ marginLeft: 12 }} />
         </View>
         <Skeleton width={50} height={20} borderRadius={12} />
       </View>
-      <Skeleton width="100%" height={8} borderRadius={4} className="mb-2" />
-      <View className="flex-row justify-between">
+      <Skeleton width="100%" height={8} borderRadius={4} style={{ marginBottom: 8 }} />
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <Skeleton width={80} height={12} />
         <Skeleton width={60} height={12} />
       </View>
@@ -138,7 +148,7 @@ export function SkeletonGoalCard({ className = '' }: { className?: string }) {
   );
 }
 
-export function SkeletonList({ count = 3, ItemComponent = SkeletonCard }: { count?: number; ItemComponent?: React.ComponentType<{ className?: string }> }) {
+export function SkeletonList({ count = 3, ItemComponent = SkeletonCard }: { count?: number; ItemComponent?: React.ComponentType }) {
   return (
     <View style={{ gap: 12 }}>
       {Array.from({ length: count }).map((_, index) => (

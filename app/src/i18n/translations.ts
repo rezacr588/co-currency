@@ -787,6 +787,44 @@ export const translations = {
     unusualTransactions: 'unusual transactions this week',
     tapToViewAnomalies: 'View in Reports for details',
     categoryAvg: 'Category avg',
+
+    // Smart Advice
+    smartAdvice: 'Smart Advice',
+    personalizedAdvice: 'Personalized Advice',
+    askForMore: 'Ask AI for more',
+    aiPowered: 'AI Powered',
+
+    // Financial News
+    financialNews: 'Financial News',
+    readMore: 'Read more',
+    newsSource: 'Source',
+
+    // Quick Notes on Dashboard
+    quickNotes: 'Quick Notes',
+    viewAllNotes: 'View all',
+    noNotesYet: 'No notes yet',
+    addNote: 'Add a note',
+
+    // AI Quick Actions
+    analyzeSpending: 'Analyze spending',
+    budgetCheck: 'Budget check',
+    goalAdvice: 'Goal advice',
+    aiSuggestCategory: 'AI suggested category',
+
+    // File Upload / Chat Attachments
+    attachFile: 'Attach File',
+    takePhoto: 'Take Photo',
+    chooseFromLibrary: 'Choose from Library',
+    chooseDocument: 'Choose Document',
+    voiceMessage: 'Voice Message',
+    recording: 'Recording...',
+    stopRecording: 'Stop recording',
+    cancelRecording: 'Cancel recording',
+    sendingFile: 'Sending file...',
+    fileAttached: 'File attached',
+    unsupportedFileType: 'Unsupported file type',
+    fileTooLarge: 'File too large',
+    audioTranscribing: 'Transcribing audio...',
   },
   fa: {
     // Header
@@ -1574,6 +1612,44 @@ export const translations = {
     unusualTransactions: 'تراکنش غیرعادی این هفته',
     tapToViewAnomalies: 'برای جزئیات گزارش‌ها را ببینید',
     categoryAvg: 'میانگین دسته',
+
+    // Smart Advice
+    smartAdvice: 'مشاوره هوشمند',
+    personalizedAdvice: 'مشاوره شخصی‌سازی شده',
+    askForMore: 'از هوش مصنوعی بیشتر بپرسید',
+    aiPowered: 'مبتنی بر هوش مصنوعی',
+
+    // Financial News
+    financialNews: 'اخبار مالی',
+    readMore: 'بیشتر بخوانید',
+    newsSource: 'منبع',
+
+    // Quick Notes on Dashboard
+    quickNotes: 'یادداشت‌های سریع',
+    viewAllNotes: 'مشاهده همه',
+    noNotesYet: 'هنوز یادداشتی ندارید',
+    addNote: 'افزودن یادداشت',
+
+    // AI Quick Actions
+    analyzeSpending: 'تحلیل هزینه‌ها',
+    budgetCheck: 'بررسی بودجه',
+    goalAdvice: 'مشاوره هدف',
+    aiSuggestCategory: 'دسته پیشنهادی هوش مصنوعی',
+
+    // File Upload / Chat Attachments
+    attachFile: 'پیوست فایل',
+    takePhoto: 'عکس گرفتن',
+    chooseFromLibrary: 'انتخاب از گالری',
+    chooseDocument: 'انتخاب سند',
+    voiceMessage: 'پیام صوتی',
+    recording: 'در حال ضبط...',
+    stopRecording: 'توقف ضبط',
+    cancelRecording: 'لغو ضبط',
+    sendingFile: 'در حال ارسال فایل...',
+    fileAttached: 'فایل پیوست شد',
+    unsupportedFileType: 'نوع فایل پشتیبانی نمی‌شود',
+    fileTooLarge: 'فایل بسیار بزرگ است',
+    audioTranscribing: 'در حال رونویسی صوت...',
   },
   ar: {
     // Header
@@ -2361,6 +2437,44 @@ export const translations = {
     unusualTransactions: 'معاملات غير عادية هذا الأسبوع',
     tapToViewAnomalies: 'عرض التفاصيل في التقارير',
     categoryAvg: 'معدل الفئة',
+
+    // Smart Advice
+    smartAdvice: 'نصيحة ذكية',
+    personalizedAdvice: 'نصيحة مخصصة',
+    askForMore: 'اسأل الذكاء الاصطناعي للمزيد',
+    aiPowered: 'مدعوم بالذكاء الاصطناعي',
+
+    // Financial News
+    financialNews: 'أخبار مالية',
+    readMore: 'اقرأ المزيد',
+    newsSource: 'المصدر',
+
+    // Quick Notes on Dashboard
+    quickNotes: 'ملاحظات سريعة',
+    viewAllNotes: 'عرض الكل',
+    noNotesYet: 'لا ملاحظات بعد',
+    addNote: 'إضافة ملاحظة',
+
+    // AI Quick Actions
+    analyzeSpending: 'تحليل الإنفاق',
+    budgetCheck: 'فحص الميزانية',
+    goalAdvice: 'نصيحة الهدف',
+    aiSuggestCategory: 'فئة مقترحة من الذكاء الاصطناعي',
+
+    // File Upload / Chat Attachments
+    attachFile: 'إرفاق ملف',
+    takePhoto: 'التقاط صورة',
+    chooseFromLibrary: 'اختيار من المكتبة',
+    chooseDocument: 'اختيار مستند',
+    voiceMessage: 'رسالة صوتية',
+    recording: 'جاري التسجيل...',
+    stopRecording: 'إيقاف التسجيل',
+    cancelRecording: 'إلغاء التسجيل',
+    sendingFile: 'جاري إرسال الملف...',
+    fileAttached: 'تم إرفاق الملف',
+    unsupportedFileType: 'نوع ملف غير مدعوم',
+    fileTooLarge: 'الملف كبير جداً',
+    audioTranscribing: 'جاري نسخ الصوت...',
   },
   tr: {
     // Header
@@ -3152,6 +3266,44 @@ export const translations = {
     unusualTransactions: 'olağandışı işlem bu hafta',
     tapToViewAnomalies: 'Detaylar için Raporlar\'a gidin',
     categoryAvg: 'Kategori ort',
+
+    // Smart Advice
+    smartAdvice: 'Akıllı Tavsiye',
+    personalizedAdvice: 'Kişiselleştirilmiş Tavsiye',
+    askForMore: 'Yapay zekaya daha fazla sor',
+    aiPowered: 'Yapay Zeka Destekli',
+
+    // Financial News
+    financialNews: 'Finansal Haberler',
+    readMore: 'Devamını oku',
+    newsSource: 'Kaynak',
+
+    // Quick Notes on Dashboard
+    quickNotes: 'Hızlı Notlar',
+    viewAllNotes: 'Tümünü gör',
+    noNotesYet: 'Henüz not yok',
+    addNote: 'Not ekle',
+
+    // AI Quick Actions
+    analyzeSpending: 'Harcama analizi',
+    budgetCheck: 'Bütçe kontrolü',
+    goalAdvice: 'Hedef tavsiyesi',
+    aiSuggestCategory: 'Yapay zeka kategori önerisi',
+
+    // File Upload / Chat Attachments
+    attachFile: 'Dosya Ekle',
+    takePhoto: 'Fotoğraf Çek',
+    chooseFromLibrary: 'Galeriden Seç',
+    chooseDocument: 'Belge Seç',
+    voiceMessage: 'Sesli Mesaj',
+    recording: 'Kaydediliyor...',
+    stopRecording: 'Kaydı durdur',
+    cancelRecording: 'Kaydı iptal et',
+    sendingFile: 'Dosya gönderiliyor...',
+    fileAttached: 'Dosya eklendi',
+    unsupportedFileType: 'Desteklenmeyen dosya türü',
+    fileTooLarge: 'Dosya çok büyük',
+    audioTranscribing: 'Ses yazıya dönüştürülüyor...',
   },
 } as const;
 

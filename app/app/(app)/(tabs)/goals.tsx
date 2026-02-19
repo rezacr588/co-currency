@@ -15,9 +15,9 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Target, CheckCircle, X, DollarSign, Calendar, Pencil, Trash2 } from 'lucide-react-native';
+import { useTheme } from 'styled-components/native';
 import { api } from '../../../src/api';
 import { useLanguage } from '../../../src/context/LanguageContext';
-import { useColors } from '../../../src/context/ThemeContext';
 import { formatCompactCurrency, formatDate } from '../../../src/utils/format';
 import { trackPositiveAction, maybeRequestReview } from '../../../src/utils/review';
 import { haptics } from '../../../src/utils/haptics';
@@ -45,7 +45,8 @@ const GOAL_CATEGORIES = [
 
 export default function GoalsScreen() {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -127,9 +128,9 @@ export default function GoalsScreen() {
   const cardWidth = getCardWidth();
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
       <ScrollView
-        className="flex-1"
+        style={{ flex: 1 }}
         contentContainerStyle={{
           padding: isDesktop ? 32 : 16,
           maxWidth: 1400,
@@ -140,13 +141,12 @@ export default function GoalsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         keyboardDismissMode="on-drag"
       >
-        <View className="flex-row items-center justify-between mb-6">
-          <Text className="text-xl font-bold text-foreground">{t('financialGoals')}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+          <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('financialGoals')}</Text>
           <Pressable
             onPress={() => setShowForm(true)}
-            className="bg-foreground p-2.5 rounded-lg"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [{ backgroundColor: colors.foreground, padding: 10, borderRadius: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
             accessibilityLabel={t('createGoal') || 'Create Goal'}
             accessibilityRole="button"
           >
@@ -155,39 +155,37 @@ export default function GoalsScreen() {
         </View>
 
         {isError ? (
-          <View className="bg-danger-muted border border-danger/20 p-6 rounded-xl items-center" style={{ maxWidth: isDesktop ? 500 : '100%', alignSelf: 'center', width: '100%' }}>
-            <Text className="text-danger font-medium mb-2">{t('failedToLoadGoals') || 'Failed to load goals'}</Text>
+          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger + '33', padding: 24, borderRadius: 12, alignItems: 'center', maxWidth: isDesktop ? 500 : '100%', alignSelf: 'center', width: '100%' }}>
+            <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium', marginBottom: 8 }}>{t('failedToLoadGoals') || 'Failed to load goals'}</Text>
             <Pressable
               onPress={() => refetch()}
-              className="bg-danger/20 px-4 py-2 rounded-lg"
-              style={{ cursor: 'pointer' }}
+              style={{ backgroundColor: colors.danger + '33', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, cursor: 'pointer' }}
             >
-              <Text className="text-danger font-medium">{t('retry') || 'Retry'}</Text>
+              <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium' }}>{t('retry') || 'Retry'}</Text>
             </Pressable>
           </View>
         ) : isPending ? (
           <SkeletonList count={3} ItemComponent={SkeletonGoalCard} />
         ) : goals.length === 0 ? (
-          <View className="bg-card border border-border p-8 rounded-xl items-center" style={{ maxWidth: isDesktop ? 500 : '100%', alignSelf: 'center', width: '100%' }}>
+          <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 32, borderRadius: 12, alignItems: 'center', maxWidth: isDesktop ? 500 : '100%', alignSelf: 'center', width: '100%' }}>
             <Target size={48} color={colors.subtleForeground} />
-            <Text className="text-base font-medium text-foreground mt-4">{t('noGoals')}</Text>
-            <Text className="text-muted-foreground text-center mt-2 text-sm">
+            <Text style={{ fontSize: 16, fontFamily: 'Inter_500Medium', color: colors.foreground, marginTop: 16 }}>{t('noGoals')}</Text>
+            <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 8, fontSize: 14 }}>
               {t('noGoalsDescription')}
             </Text>
             <Pressable
               onPress={() => setShowForm(true)}
-              className="bg-accent px-5 py-3 rounded-lg mt-4"
-              style={{ cursor: 'pointer' }}
+              style={{ backgroundColor: colors.accent, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8, marginTop: 16, cursor: 'pointer' }}
             >
-              <Text className="text-accent-foreground font-semibold text-sm">{t('createGoal')}</Text>
+              <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>{t('createGoal')}</Text>
             </Pressable>
           </View>
         ) : (
           <>
             {/* Active Goals */}
             {activeGoals.length > 0 && (
-              <View className="mb-6">
-                <Text className="text-base font-medium text-foreground mb-4">
+              <View style={{ marginBottom: 24 }}>
+                <Text style={{ fontSize: 16, fontFamily: 'Inter_500Medium', color: colors.foreground, marginBottom: 16 }}>
                   {t('activeGoals')} ({activeGoals.length})
                 </Text>
                 <View style={{
@@ -210,7 +208,7 @@ export default function GoalsScreen() {
             {/* Completed Goals */}
             {completedGoals.length > 0 && (
               <View>
-                <Text className="text-base font-medium text-foreground mb-4">
+                <Text style={{ fontSize: 16, fontFamily: 'Inter_500Medium', color: colors.foreground, marginBottom: 16 }}>
                   {t('completedGoals')} ({completedGoals.length})
                 </Text>
                 <View style={{
@@ -258,7 +256,8 @@ interface GoalCardProps {
 
 function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const queryClient = useQueryClient();
   const [showContribute, setShowContribute] = useState(false);
   const [amount, setAmount] = useState('');
@@ -322,31 +321,30 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
   ];
 
   const cardContent = (
-    <View className="bg-card border border-border p-4 rounded-lg">
-      <View className="flex-row items-center mb-3">
-        <View className="bg-secondary p-2 rounded-md mr-3">
+    <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 6, marginRight: 12 }}>
           {goal.is_completed ? (
             <CheckCircle size={20} color={colors.success} />
           ) : (
             <GoalIcon category={goal.category || 'other'} size={20} color={colors.secondaryForeground} />
           )}
         </View>
-        <View className="flex-1">
-          <Text className="text-base font-medium text-foreground" numberOfLines={1}>{goal.name}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 16, fontFamily: 'Inter_500Medium', color: colors.foreground }} numberOfLines={1}>{goal.name}</Text>
           {goal.category && (
-            <Text className="text-muted-foreground text-xs" numberOfLines={1}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 12 }} numberOfLines={1}>
               {t(goal.category as any) || goal.category}
             </Text>
           )}
         </View>
         {/* Desktop: inline action buttons */}
         {isDesktop && (
-          <View className="flex-row items-center gap-1">
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <Pressable
               onPress={() => onEdit(goal)}
-              className="p-2"
               hitSlop={10}
-              style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [{ padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
               accessibilityLabel={t('editGoal') || 'Edit Goal'}
               accessibilityRole="button"
             >
@@ -354,9 +352,8 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
             </Pressable>
             <Pressable
               onPress={() => onDelete(goal)}
-              className="p-2"
               hitSlop={10}
-              style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [{ padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
               accessibilityLabel={t('deleteGoal') || 'Delete Goal'}
               accessibilityRole="button"
             >
@@ -367,43 +364,41 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
       </View>
 
       {/* Progress Bar */}
-      <View className="h-1.5 bg-secondary rounded-full mb-2">
+      <View style={{ height: 6, backgroundColor: colors.secondary, borderRadius: 9999, marginBottom: 8 }}>
         <View
-          className={`h-full rounded-full ${goal.is_completed ? 'bg-success' : 'bg-foreground'}`}
-          style={{ width: `${progressPercent}%` }}
+          style={{ height: '100%', borderRadius: 9999, backgroundColor: goal.is_completed ? colors.success : colors.foreground, width: `${progressPercent}%` }}
         />
       </View>
 
-      <View className="flex-row items-center justify-between">
-        <Text className="text-muted-foreground text-sm">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
           {formatCompactCurrency(goal.current_amount, goal.currency)} /{' '}
           {formatCompactCurrency(goal.target_amount, goal.currency)}
         </Text>
         <Text
-          className={`text-sm font-medium ${goal.is_completed ? 'text-success' : 'text-foreground'}`}
+          style={{ fontSize: 14, fontFamily: 'Inter_500Medium', color: goal.is_completed ? colors.success : colors.foreground }}
         >
           {progressPercent.toFixed(0)}%
         </Text>
       </View>
 
       {goal.deadline && (
-        <Text className="text-muted-foreground text-xs mt-2" numberOfLines={1}>
+        <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 8 }} numberOfLines={1}>
           {t('deadline')}: {formatDate(goal.deadline)}
         </Text>
       )}
 
       {/* Contribute section */}
       {!goal.is_completed && (
-        <View className="mt-3 pt-3 border-t border-border">
+        <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
           {showContribute ? (
             <View>
               {contributeError ? (
-                <Text className="text-danger text-xs mb-2">{contributeError}</Text>
+                <Text style={{ color: colors.danger, fontSize: 12, marginBottom: 8 }}>{contributeError}</Text>
               ) : null}
-              <View className="flex-row items-center gap-2">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <TextInput
-                  className="flex-1 bg-muted border border-border p-2.5 rounded-md text-foreground text-sm"
-                  style={{ outlineStyle: 'none' } as any}
+                  style={{ flex: 1, backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 10, borderRadius: 6, color: colors.foreground, fontSize: 14, outlineStyle: 'none' } as any}
                   value={amount}
                   onChangeText={(text) => {
                     setAmount(text);
@@ -416,8 +411,7 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
                 <Pressable
                   onPress={handleContribute}
                   disabled={contributeMutation.isPending}
-                  className="bg-foreground p-2.5 rounded-md"
-                  style={{ cursor: 'pointer' }}
+                  style={{ backgroundColor: colors.foreground, padding: 10, borderRadius: 6, cursor: 'pointer' }}
                 >
                   {contributeMutation.isPending ? (
                     <ActivityIndicator size="small" color={colors.primaryForeground} />
@@ -425,7 +419,7 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
                     <Plus size={18} color={colors.primaryForeground} />
                   )}
                 </Pressable>
-                <Pressable onPress={() => { setShowContribute(false); setContributeError(''); }} className="bg-secondary p-2.5 rounded-md" hitSlop={6} style={{ cursor: 'pointer' }}>
+                <Pressable onPress={() => { setShowContribute(false); setContributeError(''); }} hitSlop={6} style={{ backgroundColor: colors.secondary, padding: 10, borderRadius: 6, cursor: 'pointer' }}>
                   <X size={18} color={colors.mutedForeground} />
                 </Pressable>
               </View>
@@ -433,12 +427,11 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
           ) : (
             <Pressable
               onPress={() => setShowContribute(true)}
-              className="bg-secondary border border-border p-2.5 rounded-md items-center"
-              style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [{ backgroundColor: colors.secondary, borderWidth: 1, borderColor: colors.border, padding: 10, borderRadius: 6, alignItems: 'center', cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
               accessibilityLabel={t('contribute') || 'Contribute'}
               accessibilityRole="button"
             >
-              <Text className="text-foreground font-medium text-sm">{t('contribute')}</Text>
+              <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium', fontSize: 14 }}>{t('contribute')}</Text>
             </Pressable>
           )}
         </View>
@@ -458,7 +451,8 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
 
 function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
@@ -528,16 +522,16 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
-        <View className="flex-row items-center justify-between p-4 border-b border-border">
-          <Text className="text-lg font-semibold text-foreground">{t('createGoal')}</Text>
-          <Pressable onPress={onClose} hitSlop={8} style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} className="p-2 bg-secondary rounded-full" accessibilityLabel={t('close') || 'Close'} accessibilityRole="button">
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>{t('createGoal')}</Text>
+          <Pressable onPress={onClose} hitSlop={8} style={({ pressed }) => [{ padding: 8, backgroundColor: colors.secondary, borderRadius: 9999, cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button">
             <X size={18} color={colors.secondaryForeground} />
           </Pressable>
         </View>
 
         <ScrollView
-          className="flex-1"
+          style={{ flex: 1 }}
           keyboardDismissMode="on-drag"
           contentContainerStyle={{
             padding: isDesktop ? 32 : 16,
@@ -548,11 +542,10 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
         >
           <FormError message={error} />
 
-          <View className="mb-5">
-            <Text className="text-muted-foreground text-sm mb-2">{t('goalName')}</Text>
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('goalName')}</Text>
             <TextInput
-              className="bg-muted border border-border p-3.5 rounded-lg text-foreground"
-              style={{ outlineStyle: 'none' } as any}
+              style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 8, color: colors.foreground, outlineStyle: 'none' } as any}
               value={name}
               onChangeText={setName}
               placeholder="Emergency Fund, Vacation, etc."
@@ -560,12 +553,11 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
             />
           </View>
 
-          <View className="mb-5">
-            <Text className="text-muted-foreground text-sm mb-2">{t('targetAmount')}</Text>
-            <View className="flex-row gap-2">
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('targetAmount')}</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
               <TextInput
-                className="flex-1 bg-muted border border-border p-3.5 rounded-lg text-foreground text-lg"
-                style={{ outlineStyle: 'none' } as any}
+                style={{ flex: 1, backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 8, color: colors.foreground, fontSize: 18, outlineStyle: 'none' } as any}
                 value={targetAmount}
                 onChangeText={setTargetAmount}
                 keyboardType="decimal-pad"
@@ -574,25 +566,32 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
               />
               <Pressable
                 onPress={() => setShowCurrencyPicker(true)}
-                className="bg-secondary border border-border px-4 rounded-lg items-center justify-center"
-                style={{ cursor: 'pointer' }}
+                style={{ backgroundColor: colors.secondary, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
               >
-                <Text className="text-foreground font-medium">{currency}</Text>
+                <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>{currency}</Text>
               </Pressable>
             </View>
           </View>
 
-          <View className="mb-5">
-            <Text className="text-muted-foreground text-sm mb-2">{t('category')}</Text>
-            <View className="flex-row flex-wrap gap-2">
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('category')}</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {GOAL_CATEGORIES.map((cat) => (
                 <Pressable
                   key={cat}
                   onPress={() => setCategory(cat)}
-                  className={`px-3 py-2 rounded-md flex-row items-center border ${
-                    category === cat ? 'bg-foreground border-foreground' : 'bg-secondary border-border'
-                  }`}
-                  style={{ cursor: 'pointer', minHeight: 44 }}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 6,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    backgroundColor: category === cat ? colors.foreground : colors.secondary,
+                    borderColor: category === cat ? colors.foreground : colors.border,
+                    cursor: 'pointer',
+                    minHeight: 44,
+                  }}
                 >
                   <GoalIcon
                     category={cat}
@@ -600,9 +599,12 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
                     color={category === cat ? colors.primaryForeground : colors.secondaryForeground}
                   />
                   <Text
-                    className={`ml-2 text-sm ${
-                      category === cat ? 'text-background font-medium' : 'text-foreground'
-                    }`}
+                    style={{
+                      marginLeft: 8,
+                      fontSize: 14,
+                      color: category === cat ? colors.background : colors.foreground,
+                      fontFamily: category === cat ? 'Inter_500Medium' : undefined,
+                    }}
                   >
                     {t(cat) || cat}
                   </Text>
@@ -611,11 +613,10 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
             </View>
           </View>
 
-          <View className="mb-6">
-            <Text className="text-muted-foreground text-sm mb-2">{t('deadline')} ({t('optional')})</Text>
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('deadline')} ({t('optional')})</Text>
             <TextInput
-              className="bg-muted border border-border p-3.5 rounded-lg text-foreground"
-              style={{ outlineStyle: 'none' } as any}
+              style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 8, color: colors.foreground, outlineStyle: 'none' } as any}
               value={deadline}
               onChangeText={setDeadline}
               placeholder="YYYY-MM-DD"
@@ -642,7 +643,8 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
 
 function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goal; onClose: () => void }) {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
@@ -703,16 +705,16 @@ function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goa
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView className="flex-1 bg-background" edges={isDesktop ? [] : ['top']}>
-        <View className="flex-row items-center justify-between p-4 border-b border-border">
-          <Text className="text-lg font-semibold text-foreground">{t('editGoal') || 'Edit Goal'}</Text>
-          <Pressable onPress={onClose} hitSlop={8} style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} className="p-2 bg-secondary rounded-full" accessibilityLabel={t('close') || 'Close'} accessibilityRole="button">
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>{t('editGoal') || 'Edit Goal'}</Text>
+          <Pressable onPress={onClose} hitSlop={8} style={({ pressed }) => [{ padding: 8, backgroundColor: colors.secondary, borderRadius: 9999, cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button">
             <X size={18} color={colors.secondaryForeground} />
           </Pressable>
         </View>
 
         <ScrollView
-          className="flex-1"
+          style={{ flex: 1 }}
           keyboardDismissMode="on-drag"
           contentContainerStyle={{
             padding: isDesktop ? 32 : 16,
@@ -723,11 +725,10 @@ function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goa
         >
           <FormError message={error} />
 
-          <View className="mb-5">
-            <Text className="text-muted-foreground text-sm mb-2">{t('goalName')}</Text>
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('goalName')}</Text>
             <TextInput
-              className="bg-muted border border-border p-3.5 rounded-lg text-foreground"
-              style={{ outlineStyle: 'none' } as any}
+              style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 8, color: colors.foreground, outlineStyle: 'none' } as any}
               value={name}
               onChangeText={setName}
               placeholder="Emergency Fund, Vacation, etc."
@@ -735,38 +736,45 @@ function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goa
             />
           </View>
 
-          <View className="mb-5">
-            <Text className="text-muted-foreground text-sm mb-2">{t('targetAmount')}</Text>
-            <View className="flex-row gap-2">
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('targetAmount')}</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
               <TextInput
-                className="flex-1 bg-muted border border-border p-3.5 rounded-lg text-foreground text-lg"
-                style={{ outlineStyle: 'none' } as any}
+                style={{ flex: 1, backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 8, color: colors.foreground, fontSize: 18, outlineStyle: 'none' } as any}
                 value={targetAmount}
                 onChangeText={setTargetAmount}
                 keyboardType="decimal-pad"
                 placeholder="0.00"
                 placeholderTextColor={colors.subtleForeground}
               />
-              <View className="bg-secondary border border-border px-4 rounded-lg items-center justify-center">
-                <Text className="text-muted-foreground font-medium">{goal.currency}</Text>
+              <View style={{ backgroundColor: colors.secondary, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_500Medium' }}>{goal.currency}</Text>
               </View>
             </View>
-            <Text className="text-muted-foreground text-xs mt-1">
+            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 4 }}>
               {t('currentProgress') || 'Current progress'}: {formatCompactCurrency(goal.current_amount, goal.currency)}
             </Text>
           </View>
 
-          <View className="mb-5">
-            <Text className="text-muted-foreground text-sm mb-2">{t('category')}</Text>
-            <View className="flex-row flex-wrap gap-2">
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('category')}</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {GOAL_CATEGORIES.map((cat) => (
                 <Pressable
                   key={cat}
                   onPress={() => setCategory(cat)}
-                  className={`px-3 py-2 rounded-md flex-row items-center border ${
-                    category === cat ? 'bg-foreground border-foreground' : 'bg-secondary border-border'
-                  }`}
-                  style={{ cursor: 'pointer', minHeight: 44 }}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 6,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    backgroundColor: category === cat ? colors.foreground : colors.secondary,
+                    borderColor: category === cat ? colors.foreground : colors.border,
+                    cursor: 'pointer',
+                    minHeight: 44,
+                  }}
                 >
                   <GoalIcon
                     category={cat}
@@ -774,9 +782,12 @@ function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goa
                     color={category === cat ? colors.primaryForeground : colors.secondaryForeground}
                   />
                   <Text
-                    className={`ml-2 text-sm ${
-                      category === cat ? 'text-background font-medium' : 'text-foreground'
-                    }`}
+                    style={{
+                      marginLeft: 8,
+                      fontSize: 14,
+                      color: category === cat ? colors.background : colors.foreground,
+                      fontFamily: category === cat ? 'Inter_500Medium' : undefined,
+                    }}
                   >
                     {t(cat) || cat}
                   </Text>
@@ -785,11 +796,10 @@ function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goa
             </View>
           </View>
 
-          <View className="mb-6">
-            <Text className="text-muted-foreground text-sm mb-2">{t('deadline')} ({t('optional')})</Text>
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('deadline')} ({t('optional')})</Text>
             <TextInput
-              className="bg-muted border border-border p-3.5 rounded-lg text-foreground"
-              style={{ outlineStyle: 'none' } as any}
+              style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 8, color: colors.foreground, outlineStyle: 'none' } as any}
               value={deadline}
               onChangeText={setDeadline}
               placeholder="YYYY-MM-DD"

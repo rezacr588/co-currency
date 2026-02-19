@@ -39,10 +39,10 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       return (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <AlertTriangle size={48} color="#ef4444" />
-          <Text style={{ fontSize: 18, fontWeight: '600', marginTop: 16, color: '#fafafa' }}>
+          <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', marginTop: 16, color: '#fafafa' }}>
             Something went wrong
           </Text>
-          <Text style={{ fontSize: 14, color: '#71717a', marginTop: 8, textAlign: 'center' }}>
+          <Text style={{ fontSize: 14, color: '#a1a1aa', marginTop: 8, textAlign: 'center' }}>
             {this.state.error?.message || 'An unexpected error occurred'}
           </Text>
           <Pressable
@@ -56,7 +56,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
               cursor: 'pointer',
             }}
           >
-            <Text style={{ color: '#09090b', fontWeight: '600' }}>Try Again</Text>
+            <Text style={{ color: '#09090b', fontFamily: 'Inter_600SemiBold' }}>Try Again</Text>
           </Pressable>
         </View>
       );

@@ -1,6 +1,7 @@
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useCallback, useMemo } from 'react';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useTheme } from 'styled-components/native';
 import { haptics } from '../../../utils/haptics';
 import { formatCompactCurrency } from '../../../utils/format';
 
@@ -41,6 +42,8 @@ export function CalendarHeatMap({
   currency = 'USD',
 }: CalendarHeatMapProps) {
   const { t } = useLanguage();
+  const theme = useTheme();
+  const colors = theme.colors;
 
   // Create a map of date -> data
   const dataMap = useMemo(() => {
@@ -119,13 +122,13 @@ export function CalendarHeatMap({
   );
 
   return (
-    <View className="bg-card border border-border p-4 rounded-xl">
+    <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12 }}>
       {/* Title */}
-      <View className="flex-row items-center justify-between mb-4">
-        <Text className="text-base font-semibold text-foreground">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <Text style={{ fontSize: 16, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
           {t('spendingCalendar') || 'Spending Calendar'}
         </Text>
-        <Text className="text-xs text-muted-foreground">
+        <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
           {t('last12Weeks') || 'Last 12 weeks'}
         </Text>
       </View>
@@ -134,12 +137,13 @@ export function CalendarHeatMap({
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View>
           {/* Month labels */}
-          <View className="flex-row mb-1" style={{ paddingLeft: 24 }}>
+          <View style={{ flexDirection: 'row', marginBottom: 4, paddingLeft: 24 }}>
             {monthLabels.map((label, idx) => (
               <Text
                 key={idx}
-                className="text-xs text-muted-foreground"
                 style={{
+                  fontSize: 12,
+                  color: colors.mutedForeground,
                   position: 'absolute',
                   left: 24 + label.offset,
                 }}
@@ -149,9 +153,9 @@ export function CalendarHeatMap({
             ))}
           </View>
 
-          <View className="flex-row mt-4">
+          <View style={{ flexDirection: 'row', marginTop: 16 }}>
             {/* Weekday labels */}
-            <View className="mr-2">
+            <View style={{ marginRight: 8 }}>
               {WEEKDAYS.map((day, idx) => (
                 <View
                   key={day}
@@ -162,14 +166,14 @@ export function CalendarHeatMap({
                   }}
                 >
                   {idx % 2 === 1 && (
-                    <Text className="text-xs text-muted-foreground">{day[0]}</Text>
+                    <Text style={{ fontSize: 12, color: colors.mutedForeground }}>{day[0]}</Text>
                   )}
                 </View>
               ))}
             </View>
 
             {/* Days grid */}
-            <View className="flex-row">
+            <View style={{ flexDirection: 'row' }}>
               {calendarData.map((week, weekIdx) => (
                 <View key={weekIdx} style={{ marginRight: DAY_GAP }}>
                   {week.map((day, dayIdx) => {
@@ -207,8 +211,8 @@ export function CalendarHeatMap({
           </View>
 
           {/* Legend */}
-          <View className="flex-row items-center justify-end mt-4">
-            <Text className="text-xs text-muted-foreground mr-2">
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 16 }}>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginRight: 8 }}>
               {t('less') || 'Less'}
             </Text>
             {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => (
@@ -223,7 +227,7 @@ export function CalendarHeatMap({
                 }}
               />
             ))}
-            <Text className="text-xs text-muted-foreground ml-1">
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginLeft: 4 }}>
               {t('more') || 'More'}
             </Text>
           </View>
@@ -231,28 +235,28 @@ export function CalendarHeatMap({
       </ScrollView>
 
       {/* Summary */}
-      <View className="flex-row justify-between mt-4 pt-4 border-t border-border">
-        <View className="items-center flex-1">
-          <Text className="text-2xl font-bold text-foreground">
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border }}>
+        <View style={{ alignItems: 'center', flex: 1 }}>
+          <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
             {data.reduce((sum, d) => sum + d.count, 0)}
           </Text>
-          <Text className="text-xs text-muted-foreground">
+          <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
             {t('transactions') || 'Transactions'}
           </Text>
         </View>
-        <View className="items-center flex-1">
-          <Text className="text-2xl font-bold text-foreground">
+        <View style={{ alignItems: 'center', flex: 1 }}>
+          <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
             {formatCompactCurrency(data.reduce((sum, d) => sum + d.amount, 0), currency)}
           </Text>
-          <Text className="text-xs text-muted-foreground">
+          <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
             {t('totalSpent') || 'Total Spent'}
           </Text>
         </View>
-        <View className="items-center flex-1">
-          <Text className="text-2xl font-bold text-foreground">
+        <View style={{ alignItems: 'center', flex: 1 }}>
+          <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
             {data.filter((d) => d.amount > 0).length}
           </Text>
-          <Text className="text-xs text-muted-foreground">
+          <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
             {t('activeDays') || 'Active Days'}
           </Text>
         </View>

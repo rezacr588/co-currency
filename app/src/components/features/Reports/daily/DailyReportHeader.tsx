@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Calendar, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react-native';
+import { useTheme } from 'styled-components/native';
 import { TIMELINE_CONFIG, TIMELINE_PRESETS } from './constants';
 import type { TimelinePreset } from './types';
 
@@ -34,35 +35,38 @@ export function DailyReportHeader({
   excludedCurrencies,
   truncated,
 }: DailyReportHeaderProps) {
+  const theme = useTheme();
+  const colors = theme.colors;
+
   return (
-    <View className="bg-card p-5 rounded-xl mb-6">
-      <View className="flex-row items-center justify-between gap-3">
+    <View style={{ backgroundColor: colors.card, padding: 20, borderRadius: 12, marginBottom: 24 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <Pressable
           onPress={onPreviousWindow}
-          className="p-3 rounded-xl bg-secondary"
+          style={{ padding: 12, borderRadius: 12, backgroundColor: colors.secondary }}
           accessibilityRole="button"
           accessibilityLabel={t('previousPeriod')}
         >
           <ChevronLeft size={20} color="#a1a1aa" />
         </Pressable>
 
-        <View className="flex-1 bg-secondary/40 border border-border px-4 py-3 rounded-xl items-center">
-          <View className="flex-row items-center">
-            <Calendar size={16} color="rgb(212, 175, 55)" />
-            <Text className="text-foreground font-semibold ml-2">{timelineLabel}</Text>
+        <View style={{ flex: 1, backgroundColor: colors.secondary + '66', borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Calendar size={16} color={colors.accent} />
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>{timelineLabel}</Text>
           </View>
-          <Text className="text-muted-foreground text-xs mt-1">{rangeLabel}</Text>
-          <Text className="text-muted-foreground text-xs mt-1">
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 4 }}>{rangeLabel}</Text>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 4 }}>
             {(t('reportCurrency') || 'Report currency') + `: ${reportCurrency}`}
           </Text>
           {isCurrentWindow ? (
-            <Text className="text-accent text-xs mt-1">{t('currentPeriod')}</Text>
+            <Text style={{ color: colors.accent, fontSize: 12, marginTop: 4 }}>{t('currentPeriod')}</Text>
           ) : null}
         </View>
 
         <Pressable
           onPress={onNextWindow}
-          className={`p-3 rounded-xl ${isCurrentWindow ? 'bg-secondary/30 opacity-50' : 'bg-secondary'}`}
+          style={{ padding: 12, borderRadius: 12, backgroundColor: isCurrentWindow ? colors.secondary + '4d' : colors.secondary, opacity: isCurrentWindow ? 0.5 : 1 }}
           disabled={isCurrentWindow}
           accessibilityRole="button"
           accessibilityLabel={t('nextPeriod')}
@@ -82,14 +86,19 @@ export function DailyReportHeader({
             <Pressable
               key={preset}
               onPress={() => onTimelinePresetChange(preset)}
-              className={`px-3 py-2 rounded-full border ${
-                isSelected ? 'bg-accent border-accent' : 'bg-secondary border-border'
-              }`}
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 9999,
+                borderWidth: 1,
+                backgroundColor: isSelected ? colors.accent : colors.secondary,
+                borderColor: isSelected ? colors.accent : colors.border,
+              }}
               accessibilityRole="button"
               accessibilityLabel={t(TIMELINE_CONFIG[preset].translationKey)}
               accessibilityState={{ selected: isSelected }}
             >
-              <Text className={`text-xs font-semibold ${isSelected ? 'text-background' : 'text-foreground'}`}>
+              <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', color: isSelected ? colors.background : colors.foreground }}>
                 {t(TIMELINE_CONFIG[preset].translationKey)}
               </Text>
             </Pressable>
@@ -100,23 +109,23 @@ export function DailyReportHeader({
       {!isCurrentWindow ? (
         <Pressable
           onPress={onCurrentWindow}
-          className="mt-3 py-2.5 px-4 rounded-lg bg-accent/15 border border-accent/30 flex-row items-center justify-center"
+          style={{ marginTop: 12, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, backgroundColor: colors.accent + '26', borderWidth: 1, borderColor: colors.accent + '4d', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
           accessibilityRole="button"
           accessibilityLabel={t('goToCurrentPeriod')}
         >
-          <RotateCcw size={14} color="rgb(212, 175, 55)" />
-          <Text className="text-accent font-medium ml-2">{t('goToCurrentPeriod')}</Text>
+          <RotateCcw size={14} color={colors.accent} />
+          <Text style={{ color: colors.accent, fontFamily: 'Inter_500Medium', marginLeft: 8 }}>{t('goToCurrentPeriod')}</Text>
         </Pressable>
       ) : null}
 
       {excludedTransactionCount > 0 ? (
-        <Text className="text-accent text-xs mt-3">
+        <Text style={{ color: colors.accent, fontSize: 12, marginTop: 12 }}>
           {`${t('excludedFromTotalsNotice')}: ${excludedTransactionCount} (${excludedCurrencies.join(', ')})`}
         </Text>
       ) : null}
 
       {truncated ? (
-        <Text className="text-muted-foreground text-xs mt-1">
+        <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 4 }}>
           {t('dataLimitedNotice') || 'Large data range limited for performance.'}
         </Text>
       ) : null}

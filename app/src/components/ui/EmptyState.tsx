@@ -1,7 +1,7 @@
 import { View, Text } from 'react-native';
 import { LucideIcon } from 'lucide-react-native';
 import { ICON_SIZES } from '../../constants/icons';
-import { useColors } from '../../context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { Button } from './Button';
 
 type EmptyStateVariant = 'default' | 'compact' | 'fullscreen';
@@ -11,7 +11,7 @@ interface EmptyStateProps {
   title: string;
   description?: string;
   action?: React.ReactNode;
-  /** Button shorthand — renders an accent Button if provided */
+  /** Button shorthand -- renders an accent Button if provided */
   actionLabel?: string;
   onAction?: () => void;
   /** Icon size - defaults to 'xl' (48px) for empty states */
@@ -20,10 +20,10 @@ interface EmptyStateProps {
   variant?: EmptyStateVariant;
 }
 
-const variantPadding: Record<EmptyStateVariant, string> = {
-  default: 'p-8',
-  compact: 'p-5',
-  fullscreen: 'p-8 flex-1',
+const variantPadding: Record<EmptyStateVariant, number> = {
+  default: 32,
+  compact: 20,
+  fullscreen: 32,
 };
 
 export function EmptyState({
@@ -36,12 +36,20 @@ export function EmptyState({
   iconSize = 'xl',
   variant = 'default',
 }: EmptyStateProps) {
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const size = typeof iconSize === 'number' ? iconSize : ICON_SIZES[iconSize];
 
   return (
     <View
-      className={`bg-card rounded-xl items-center justify-center ${variantPadding[variant]}`}
+      style={{
+        backgroundColor: colors.card,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: variantPadding[variant],
+        flex: variant === 'fullscreen' ? 1 : undefined,
+      }}
     >
       <View
         style={{
@@ -54,20 +62,23 @@ export function EmptyState({
         <Icon size={size} color={colors.mutedForeground} />
       </View>
       <Text
-        className={`font-semibold text-foreground text-center ${
-          variant === 'compact' ? 'text-base' : 'text-lg'
-        }`}
+        style={{
+          fontFamily: 'Inter_600SemiBold',
+          color: colors.foreground,
+          textAlign: 'center',
+          fontSize: variant === 'compact' ? 16 : 18,
+        }}
       >
         {title}
       </Text>
       {description && (
-        <Text className="text-muted-foreground text-center mt-2 text-sm">
+        <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 8, fontSize: 14 }}>
           {description}
         </Text>
       )}
-      {action && <View className="mt-5 w-full">{action}</View>}
+      {action && <View style={{ marginTop: 20, width: '100%' }}>{action}</View>}
       {!action && actionLabel && onAction && (
-        <View className="mt-5">
+        <View style={{ marginTop: 20 }}>
           <Button variant="accent" size="sm" onPress={onAction}>
             {actionLabel}
           </Button>

@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Calendar } from 'lucide-react-native';
+import { useTheme } from 'styled-components/native';
 import type { ChartBucket, TimelinePreset } from './types';
 
 interface DailyTimelineChartProps {
@@ -23,21 +24,24 @@ export function DailyTimelineChart({
   rangeLabel,
   formatBucketRange,
 }: DailyTimelineChartProps) {
+  const theme = useTheme();
+  const colors = theme.colors;
+
   return (
-    <View className="bg-card p-5 rounded-xl mb-6">
-      <View className="flex-row items-center justify-between mb-2">
-        <View className="flex-row items-center">
-          <View className="bg-secondary p-2 rounded-lg mr-3">
-            <Calendar size={18} color="rgb(148, 163, 184)" />
+    <View style={{ backgroundColor: colors.card, padding: 20, borderRadius: 12, marginBottom: 24 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginRight: 12 }}>
+            <Calendar size={18} color={colors.mutedForeground} />
           </View>
           <View>
-            <Text className="text-foreground font-semibold">{t('dailyTimeline')}</Text>
-            <Text className="text-muted-foreground text-xs">{rangeLabel}</Text>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('dailyTimeline')}</Text>
+            <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{rangeLabel}</Text>
           </View>
         </View>
       </View>
 
-      <Text className="text-muted-foreground text-xs mb-3">{t('tapBarForDetails')}</Text>
+      <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 12 }}>{t('tapBarForDetails')}</Text>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
         {chartBuckets.map((bucket, index) => {
@@ -50,26 +54,46 @@ export function DailyTimelineChart({
             <Pressable
               key={bucket.key}
               onPress={() => onSelectBucket(index)}
-              className={`items-center rounded-lg px-1 py-1 ${isSelected ? 'bg-accent/10 border border-accent/30' : ''}`}
-              style={{ width: timelinePreset === '30D' ? 40 : timelinePreset === '7D' ? 56 : 62 }}
+              style={{
+                alignItems: 'center',
+                borderRadius: 8,
+                paddingHorizontal: 4,
+                paddingVertical: 4,
+                width: timelinePreset === '30D' ? 40 : timelinePreset === '7D' ? 56 : 62,
+                ...(isSelected ? { backgroundColor: colors.accent + '1a', borderWidth: 1, borderColor: colors.accent + '4d' } : {}),
+              }}
               accessibilityRole="button"
               accessibilityLabel={`${t('selectedRange')}: ${bucketRangeText}. ${bucket.txCount} ${t('transactionsCount')}`}
               accessibilityState={{ selected: isSelected }}
             >
               <View style={{ height: 104, flexDirection: 'row', alignItems: 'flex-end', gap: 2 }}>
                 <View
-                  className={`w-2 rounded-t ${bucket.income > 0 ? 'bg-success' : 'bg-secondary/50'}`}
-                  style={{ height: incomeHeight }}
+                  style={{
+                    width: 8,
+                    borderTopLeftRadius: 4,
+                    borderTopRightRadius: 4,
+                    backgroundColor: bucket.income > 0 ? colors.success : colors.secondary + '80',
+                    height: incomeHeight,
+                  }}
                 />
                 <View
-                  className={`w-2 rounded-t ${bucket.expenses > 0 ? 'bg-danger' : 'bg-secondary/50'}`}
-                  style={{ height: expenseHeight }}
+                  style={{
+                    width: 8,
+                    borderTopLeftRadius: 4,
+                    borderTopRightRadius: 4,
+                    backgroundColor: bucket.expenses > 0 ? colors.danger : colors.secondary + '80',
+                    height: expenseHeight,
+                  }}
                 />
               </View>
               <Text
-                className={`text-[10px] mt-1 text-center ${
-                  bucket.isCurrentBucket ? 'text-accent font-semibold' : 'text-muted-foreground'
-                }`}
+                style={{
+                  fontSize: 10,
+                  marginTop: 4,
+                  textAlign: 'center',
+                  color: bucket.isCurrentBucket ? colors.accent : colors.mutedForeground,
+                  fontFamily: bucket.isCurrentBucket ? 'Inter_600SemiBold' : undefined,
+                }}
                 numberOfLines={1}
               >
                 {bucket.label}
@@ -79,14 +103,14 @@ export function DailyTimelineChart({
         })}
       </ScrollView>
 
-      <View className="flex-row justify-center gap-4 mt-4">
-        <View className="flex-row items-center">
-          <View className="w-2 h-2 rounded-full bg-success mr-1" />
-          <Text className="text-muted-foreground text-xs">{t('income')}</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.success, marginRight: 4 }} />
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('income')}</Text>
         </View>
-        <View className="flex-row items-center">
-          <View className="w-2 h-2 rounded-full bg-danger mr-1" />
-          <Text className="text-muted-foreground text-xs">{t('expenses')}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.danger, marginRight: 4 }} />
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('expenses')}</Text>
         </View>
       </View>
     </View>

@@ -13,7 +13,7 @@ import { X, Pin, Check } from 'lucide-react-native';
 import type { Note, CreateNoteRequest, UpdateNoteRequest, NoteColor } from '../../../types/note';
 import { NOTE_COLORS } from '../../../types/note';
 import { useLanguage } from '../../../context/LanguageContext';
-import { useColors } from '../../../context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { Button } from '../../ui/Button';
 import { Toggle } from '../../ui/Toggle';
 
@@ -45,7 +45,8 @@ export function NoteFormModal({
   isLoading = false,
 }: NoteFormModalProps) {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
@@ -94,12 +95,14 @@ export function NoteFormModal({
       onRequestClose={onClose}
     >
       <Pressable
-        className="flex-1 bg-black/50 justify-end"
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
         onPress={onClose}
       >
         <Pressable
-          className="bg-card rounded-t-3xl"
           style={{
+            backgroundColor: colors.card,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
             maxHeight: '90%',
             width: isDesktop ? 500 : '100%',
             alignSelf: 'center',
@@ -111,22 +114,21 @@ export function NoteFormModal({
             contentContainerStyle={{ padding: 20 }}
           >
             {/* Header */}
-            <View className="flex-row items-center justify-between mb-6">
-              <Text className="text-xl font-bold text-foreground">
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+              <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
                 {isEditing ? (t('editNote') || 'Edit Note') : (t('newNote') || 'New Note')}
               </Text>
               <Pressable
                 onPress={onClose}
-                style={{ cursor: 'pointer' }}
-                className="p-2"
+                style={{ cursor: 'pointer', padding: 8 }}
               >
                 <X size={24} color={colors.placeholder} />
               </Pressable>
             </View>
 
             {/* Title Input */}
-            <View className="mb-4">
-              <Text className="text-muted-foreground text-sm mb-2">
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>
                 {t('title') || 'Title'} *
               </Text>
               <TextInput
@@ -151,8 +153,8 @@ export function NoteFormModal({
             </View>
 
             {/* Content Input */}
-            <View className="mb-4">
-              <Text className="text-muted-foreground text-sm mb-2">
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>
                 {t('content') || 'Content'}
               </Text>
               <TextInput
@@ -180,11 +182,11 @@ export function NoteFormModal({
             </View>
 
             {/* Color Picker */}
-            <View className="mb-4">
-              <Text className="text-muted-foreground text-sm mb-2">
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>
                 {t('color') || 'Color'}
               </Text>
-              <View className="flex-row flex-wrap gap-3">
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
                 {NOTE_COLORS.map((c) => (
                   <Pressable
                     key={c}
@@ -211,17 +213,23 @@ export function NoteFormModal({
 
             {/* Pin Toggle */}
             <View
-              className={`flex-row items-center justify-between p-4 rounded-lg mb-6 ${
-                isPinned ? 'bg-primary/20' : 'bg-muted'
-              }`}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: 16,
+                borderRadius: 8,
+                marginBottom: 24,
+                backgroundColor: isPinned ? colors.primary + '33' : colors.muted,
+              }}
             >
-              <View className="flex-row items-center">
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Pin
                   size={20}
                   color={isPinned ? colors.accent : colors.placeholder}
                   fill={isPinned ? colors.accent : 'transparent'}
                 />
-                <Text className="text-foreground ml-3">
+                <Text style={{ color: colors.foreground, marginLeft: 12 }}>
                   {t('pinNote') || 'Pin this note'}
                 </Text>
               </View>
@@ -229,10 +237,10 @@ export function NoteFormModal({
             </View>
 
             {/* Action Buttons */}
-            <View className="flex-row gap-3">
+            <View style={{ flexDirection: 'row', gap: 12 }}>
               <Button
                 variant="outline"
-                className="flex-1"
+                style={{ flex: 1 }}
                 onPress={onClose}
                 disabled={isLoading}
               >
@@ -240,7 +248,7 @@ export function NoteFormModal({
               </Button>
               <Button
                 variant="accent"
-                className="flex-1"
+                style={{ flex: 1 }}
                 onPress={handleSave}
                 disabled={!title.trim()}
                 isLoading={isLoading}

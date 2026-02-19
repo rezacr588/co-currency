@@ -1112,6 +1112,11 @@ func (s *AIChatService) getExchangeRates(ctx context.Context, baseCurrency strin
 	return rates
 }
 
+// GetAIService returns the underlying AI service for direct operations
+func (s *AIChatService) GetAIService() *AIService {
+	return s.aiService
+}
+
 // ListConversations returns all conversations for a user
 func (s *AIChatService) ListConversations(ctx context.Context, userID uuid.UUID) ([]model.ChatConversation, error) {
 	return s.chatRepo.ListConversations(ctx, userID)

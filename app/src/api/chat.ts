@@ -16,9 +16,17 @@ export interface Conversation {
   updated_at: string;
 }
 
+export interface ChatAttachment {
+  uri: string;
+  mimeType: string;
+  name: string;
+  size?: number;
+}
+
 export interface ChatRequest {
   conversation_id?: string;
   message: string;
+  file?: ChatAttachment;
 }
 
 export interface ChatResponse {
@@ -50,9 +58,25 @@ export const chat = {
       method: 'DELETE',
     }),
 
-  sendMessage: (data: ChatRequest) =>
-    fetchAPI<ChatResponse>('/ai/chat', {
+  sendMessage: (data: ChatRequest) => {
+    if (data.file) {
+      const formData = new FormData();
+      formData.append('message', data.message);
+      if (data.conversation_id) formData.append('conversation_id', data.conversation_id);
+      formData.append('file', {
+        uri: data.file.uri,
+        type: data.file.mimeType,
+        name: data.file.name,
+      } as any);
+      return fetchAPI<ChatResponse>('/ai/chat', {
+        method: 'POST',
+        body: formData as any,
+        isFormData: true,
+      });
+    }
+    return fetchAPI<ChatResponse>('/ai/chat', {
       method: 'POST',
-      body: JSON.stringify(data),
-    }),
+      body: JSON.stringify({ conversation_id: data.conversation_id, message: data.message }),
+    });
+  },
 };

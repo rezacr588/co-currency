@@ -15,7 +15,7 @@ import { getCurrencyDisplay } from '../../utils/format';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ICON_SIZES, ICON_COLOR_MUTED } from '../../constants/icons';
 import { haptics } from '../../utils/haptics';
-import { useColors } from '../../context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 
 interface CurrencyPickerProps {
   visible: boolean;
@@ -32,7 +32,8 @@ export function CurrencyPicker({
   selectedCurrency,
   title = 'Select Currency',
 }: CurrencyPickerProps) {
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const [search, setSearch] = useState('');
 
   const { data: currencies, isPending } = useQuery({
@@ -55,21 +56,21 @@ export function CurrencyPicker({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView className="flex-1 bg-background">
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         {/* Header */}
-        <View className="flex-row items-center justify-between p-4 border-b border-border">
-          <Text className="text-xl font-bold text-foreground">{title}</Text>
-          <Pressable onPress={onClose} className="p-2">
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{title}</Text>
+          <Pressable onPress={onClose} style={{ padding: 8 }}>
             <X size={ICON_SIZES.default} color={ICON_COLOR_MUTED} />
           </Pressable>
         </View>
 
         {/* Search */}
-        <View className="p-4">
-          <View className="bg-card rounded-xl flex-row items-center px-4">
+        <View style={{ padding: 16 }}>
+          <View style={{ backgroundColor: colors.card, borderRadius: 12, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
             <Search size={ICON_SIZES.md} color={ICON_COLOR_MUTED} />
             <TextInput
-              className="flex-1 py-3 px-3 text-foreground"
+              style={{ flex: 1, paddingVertical: 12, paddingHorizontal: 12, color: colors.foreground }}
               placeholder="Search currency..."
               placeholderTextColor={colors.placeholder}
               value={search}
@@ -88,7 +89,7 @@ export function CurrencyPicker({
             data={filteredCurrencies}
             keyExtractor={(item) => item.code}
             contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
-            ItemSeparatorComponent={() => <View className="h-2" />}
+            ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
             renderItem={({ item }) => {
               const display = getCurrencyDisplay(item.code);
               const isSelected = item.code === selectedCurrency;
@@ -96,32 +97,39 @@ export function CurrencyPicker({
               return (
                 <Pressable
                   onPress={() => handleSelect(item.code)}
-                  className={`p-4 rounded-xl flex-row items-center ${
-                    isSelected ? 'bg-accent' : 'bg-card'
-                  }`}
+                  style={{
+                    padding: 16,
+                    borderRadius: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: isSelected ? colors.accent : colors.card,
+                  }}
                 >
-                  <Text className="text-2xl mr-3">{display.flag || '🌐'}</Text>
-                  <View className="flex-1">
+                  <Text style={{ fontSize: 24, marginRight: 12 }}>{display.flag || '🌐'}</Text>
+                  <View style={{ flex: 1 }}>
                     <Text
-                      className={`font-semibold ${
-                        isSelected ? 'text-accent-foreground' : 'text-foreground'
-                      }`}
+                      style={{
+                        fontFamily: 'Inter_600SemiBold',
+                        color: isSelected ? colors.accentForeground : colors.foreground,
+                      }}
                     >
                       {item.code}
                     </Text>
                     <Text
-                      className={`text-sm ${
-                        isSelected ? 'text-accent-foreground/70' : 'text-muted-foreground'
-                      }`}
+                      style={{
+                        fontSize: 14,
+                        color: isSelected ? colors.accentForeground + 'b3' : colors.mutedForeground,
+                      }}
                       numberOfLines={1}
                     >
                       {item.name}
                     </Text>
                   </View>
                   <Text
-                    className={`mr-2 ${
-                      isSelected ? 'text-accent-foreground' : 'text-muted-foreground'
-                    }`}
+                    style={{
+                      marginRight: 8,
+                      color: isSelected ? colors.accentForeground : colors.mutedForeground,
+                    }}
                   >
                     {display.symbol}
                   </Text>
@@ -130,8 +138,8 @@ export function CurrencyPicker({
               );
             }}
             ListEmptyComponent={
-              <View className="items-center py-8">
-                <Text className="text-muted-foreground">No currencies found</Text>
+              <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+                <Text style={{ color: colors.mutedForeground }}>No currencies found</Text>
               </View>
             }
           />

@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Calendar, BarChart3, PieChart, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react-native';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
-import { useColors } from '../../../context/ThemeContext';
+import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency, formatNumber } from '../../../utils/format';
 import { safeMax } from '../../../utils/dateRange';
 import { CATEGORY_COLORS, StyledCategoryIcon } from '../../../constants/icons';
@@ -24,44 +24,43 @@ export function ComparisonBarChart({
   currency: string;
   t: (key: string) => string;
 }) {
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   const maxValue = Math.max(income, expenses);
   const incomePercent = maxValue > 0 ? (income / maxValue) * 100 : 0;
   const expensePercent = maxValue > 0 ? (expenses / maxValue) * 100 : 0;
 
   return (
-    <View className="gap-4">
+    <View style={{ gap: 16 }}>
       <View>
-        <View className="flex-row items-center justify-between mb-1">
-          <View className="flex-row items-center">
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <TrendingUp size={14} color={colors.success} />
-            <Text className="text-foreground text-sm ml-1">{t('income')}</Text>
+            <Text style={{ color: colors.foreground, fontSize: 14, marginLeft: 4 }}>{t('income')}</Text>
           </View>
-          <Text className="text-success text-sm font-medium">
+          <Text style={{ color: colors.success, fontSize: 14, fontFamily: 'Inter_500Medium' }}>
             {formatCompactCurrency(income, currency)}
           </Text>
         </View>
-        <View className="h-4 bg-secondary rounded-full overflow-hidden">
+        <View style={{ height: 16, backgroundColor: colors.secondary, borderRadius: 9999, overflow: 'hidden' }}>
           <View
-            className="h-full rounded-full bg-success"
-            style={{ width: `${incomePercent}%` }}
+            style={{ height: '100%', borderRadius: 9999, backgroundColor: colors.success, width: `${incomePercent}%` }}
           />
         </View>
       </View>
       <View>
-        <View className="flex-row items-center justify-between mb-1">
-          <View className="flex-row items-center">
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <TrendingUp size={14} color={colors.danger} style={{ transform: [{ rotate: '180deg' }] }} />
-            <Text className="text-foreground text-sm ml-1">{t('expenses')}</Text>
+            <Text style={{ color: colors.foreground, fontSize: 14, marginLeft: 4 }}>{t('expenses')}</Text>
           </View>
-          <Text className="text-danger text-sm font-medium">
+          <Text style={{ color: colors.danger, fontSize: 14, fontFamily: 'Inter_500Medium' }}>
             {formatCompactCurrency(expenses, currency)}
           </Text>
         </View>
-        <View className="h-4 bg-secondary rounded-full overflow-hidden">
+        <View style={{ height: 16, backgroundColor: colors.secondary, borderRadius: 9999, overflow: 'hidden' }}>
           <View
-            className="h-full rounded-full bg-danger"
-            style={{ width: `${expensePercent}%` }}
+            style={{ height: '100%', borderRadius: 9999, backgroundColor: colors.danger, width: `${expensePercent}%` }}
           />
         </View>
       </View>
@@ -82,9 +81,10 @@ export function HorizontalBarChart({
   valueKey: string;
   formatValue?: (value: number) => string;
 }) {
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
   return (
-    <View className="gap-3">
+    <View style={{ gap: 12 }}>
       {data.map((item, index) => {
         const value = item[valueKey];
         const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
@@ -92,16 +92,17 @@ export function HorizontalBarChart({
 
         return (
           <View key={index}>
-            <View className="flex-row items-center justify-between mb-1">
-              <Text className="text-foreground text-sm capitalize">{item[labelKey]}</Text>
-              <Text className="text-muted-foreground text-sm">
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <Text style={{ color: colors.foreground, fontSize: 14, textTransform: 'capitalize' }}>{item[labelKey]}</Text>
+              <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
                 {formatValue ? formatValue(value) : value}
               </Text>
             </View>
-            <View className="h-3 bg-secondary rounded-full overflow-hidden">
+            <View style={{ height: 12, backgroundColor: colors.secondary, borderRadius: 9999, overflow: 'hidden' }}>
               <View
-                className="h-full rounded-full"
                 style={{
+                  height: '100%',
+                  borderRadius: 9999,
                   width: `${Math.min(percentage, 100)}%`,
                   backgroundColor: color,
                 }}
@@ -123,42 +124,42 @@ export function TrendsChart({
 }) {
   if (!data || data.length === 0) return null;
 
+  const theme = useTheme();
+  const colors = theme.colors;
   const maxValue = data.length > 0 ? Math.max(...data.map((d) => Math.max(d.income, d.expenses))) : 0;
 
   return (
     <View>
-      <View className="flex-row items-end justify-between gap-2" style={{ height: 100 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, height: 100 }}>
         {data.slice(-6).map((item, index) => {
           const incomeHeight = maxValue > 0 ? (item.income / maxValue) * 80 : 0;
           const expenseHeight = maxValue > 0 ? (item.expenses / maxValue) * 80 : 0;
 
           return (
-            <View key={index} className="flex-1 items-center">
-              <View className="flex-row gap-1 items-end" style={{ height: 80 }}>
+            <View key={index} style={{ flex: 1, alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', gap: 4, alignItems: 'flex-end', height: 80 }}>
                 <View
-                  className="w-2 rounded-t bg-success"
-                  style={{ height: Math.max(incomeHeight, 2) }}
+                  style={{ width: 8, borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: colors.success, height: Math.max(incomeHeight, 2) }}
                 />
                 <View
-                  className="w-2 rounded-t bg-danger"
-                  style={{ height: Math.max(expenseHeight, 2) }}
+                  style={{ width: 8, borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: colors.danger, height: Math.max(expenseHeight, 2) }}
                 />
               </View>
-              <Text className="text-muted-foreground text-xs mt-1">
+              <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 4 }}>
                 {item.period.split('-')[1] || item.period}
               </Text>
             </View>
           );
         })}
       </View>
-      <View className="flex-row justify-center gap-4 mt-3">
-        <View className="flex-row items-center">
-          <View className="w-2 h-2 rounded-full bg-success mr-1" />
-          <Text className="text-muted-foreground text-xs">{t('income')}</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.success, marginRight: 4 }} />
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('income')}</Text>
         </View>
-        <View className="flex-row items-center">
-          <View className="w-2 h-2 rounded-full bg-danger mr-1" />
-          <Text className="text-muted-foreground text-xs">{t('expenses')}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.danger, marginRight: 4 }} />
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('expenses')}</Text>
         </View>
       </View>
     </View>
@@ -185,7 +186,8 @@ export function MonthlyReportView({
   categoryCols,
 }: MonthlyReportViewProps) {
   const { t } = useLanguage();
-  const colors = useColors();
+  const theme = useTheme();
+  const colors = theme.colors;
 
   // Previous month for comparison
   const prevMonth = useMemo(() => {
@@ -243,7 +245,7 @@ export function MonthlyReportView({
 
   if (isPending) {
     return (
-      <View className="items-center justify-center py-8">
+      <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 32 }}>
         <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
@@ -251,10 +253,10 @@ export function MonthlyReportView({
 
   if (isMonthlyError) {
     return (
-      <View className="bg-card p-6 rounded-xl items-center">
+      <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, alignItems: 'center' }}>
         <AlertCircle size={48} color={colors.danger} />
-        <Text className="text-foreground font-semibold mt-4 text-lg">{t('failedToLoadReport')}</Text>
-        <Text className="text-muted-foreground mt-2 text-center">{t('checkConnection')}</Text>
+        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginTop: 16, fontSize: 18 }}>{t('failedToLoadReport')}</Text>
+        <Text style={{ color: colors.mutedForeground, marginTop: 8, textAlign: 'center' }}>{t('checkConnection')}</Text>
       </View>
     );
   }
@@ -263,12 +265,12 @@ export function MonthlyReportView({
     <View>
       {/* Monthly Summary Card */}
       {monthlyReport && (
-        <View className="bg-card p-6 rounded-xl mb-6">
-          <View className="flex-row items-center mb-4">
-            <View className="bg-secondary p-2 rounded-lg mr-3">
+        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginRight: 12 }}>
               <Calendar size={20} color={colors.placeholder} />
             </View>
-            <Text className="text-foreground font-semibold">{t('monthlySummary')}</Text>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('monthlySummary')}</Text>
           </View>
 
           <ComparisonBarChart
@@ -280,11 +282,16 @@ export function MonthlyReportView({
 
           {/* Month-over-Month Comparison */}
           {expenseChange !== null && (
-            <View className="flex-row items-center mt-4">
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16 }}>
               <View
-                className={`px-3 py-1.5 rounded-full flex-row items-center ${
-                  expenseChange <= 0 ? 'bg-success/20' : 'bg-danger/20'
-                }`}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 9999,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: expenseChange <= 0 ? colors.success + '33' : colors.danger + '33',
+                }}
               >
                 {expenseChange <= 0 ? (
                   <TrendingDown size={14} color={colors.success} />
@@ -292,9 +299,12 @@ export function MonthlyReportView({
                   <TrendingUp size={14} color={colors.danger} />
                 )}
                 <Text
-                  className={`text-sm font-semibold ml-1 ${
-                    expenseChange <= 0 ? 'text-success' : 'text-danger'
-                  }`}
+                  style={{
+                    fontSize: 14,
+                    fontFamily: 'Inter_600SemiBold',
+                    marginLeft: 4,
+                    color: expenseChange <= 0 ? colors.success : colors.danger,
+                  }}
                 >
                   {expenseChange > 0 ? '+' : ''}{formatNumber(expenseChange, 1)}% {t('vsLastMonth')}
                 </Text>
@@ -302,23 +312,27 @@ export function MonthlyReportView({
             </View>
           )}
 
-          <View className="flex-row gap-4 mt-6">
-            <View className="flex-1 bg-secondary/50 p-3 rounded-lg">
-              <Text className="text-muted-foreground text-xs mb-1">{t('net')}</Text>
+          <View style={{ flexDirection: 'row', gap: 16, marginTop: 24 }}>
+            <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>{t('net')}</Text>
               <Text
-                className={`text-lg font-bold ${
-                  monthlyReport.net >= 0 ? 'text-success' : 'text-danger'
-                }`}
+                style={{
+                  fontSize: 18,
+                  fontFamily: 'Inter_700Bold',
+                  color: monthlyReport.net >= 0 ? colors.success : colors.danger,
+                }}
               >
                 {`${monthlyReport.net >= 0 ? '+' : '-'}${formatCompactCurrency(Math.abs(monthlyReport.net), monthlyReport.currency)}`}
               </Text>
             </View>
-            <View className="flex-1 bg-secondary/50 p-3 rounded-lg">
-              <Text className="text-muted-foreground text-xs mb-1">{t('savingsRate')}</Text>
+            <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>{t('savingsRate')}</Text>
               <Text
-                className={`text-lg font-bold ${
-                  monthlyReport.savings_rate >= 0 ? 'text-success' : 'text-danger'
-                }`}
+                style={{
+                  fontSize: 18,
+                  fontFamily: 'Inter_700Bold',
+                  color: monthlyReport.savings_rate >= 0 ? colors.success : colors.danger,
+                }}
               >
                 {formatNumber(monthlyReport.savings_rate, 1)}%
               </Text>
@@ -329,37 +343,37 @@ export function MonthlyReportView({
 
       {/* Forecast Card */}
       {forecast && (
-        <View className="bg-card p-6 rounded-xl mb-6">
-          <View className="flex-row items-center mb-4">
-            <View className="bg-accent/20 p-2 rounded-lg mr-3">
+        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
               <TrendingUp size={20} color={colors.accent} />
             </View>
-            <Text className="text-foreground font-semibold">{t('forecast')}</Text>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('forecast')}</Text>
           </View>
 
           {forecast.days_until_zero > 0 ? (
-            <View className="gap-4">
-              <View className="flex-row gap-4">
-                <View className="flex-1 bg-secondary/50 p-3 rounded-lg">
-                  <Text className="text-muted-foreground text-xs mb-1">{t('avgDaily')} {t('income')}</Text>
-                  <Text className="text-success text-lg font-bold">
+            <View style={{ gap: 16 }}>
+              <View style={{ flexDirection: 'row', gap: 16 }}>
+                <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>{t('avgDaily')} {t('income')}</Text>
+                  <Text style={{ color: colors.success, fontSize: 18, fontFamily: 'Inter_700Bold' }}>
                     {formatCompactCurrency(forecast.avg_daily_income, forecast.currency)}
                   </Text>
                 </View>
-                <View className="flex-1 bg-secondary/50 p-3 rounded-lg">
-                  <Text className="text-muted-foreground text-xs mb-1">{t('avgDaily')} {t('expenses')}</Text>
-                  <Text className="text-danger text-lg font-bold">
+                <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>{t('avgDaily')} {t('expenses')}</Text>
+                  <Text style={{ color: colors.danger, fontSize: 18, fontFamily: 'Inter_700Bold' }}>
                     {formatCompactCurrency(forecast.avg_daily_spend, forecast.currency)}
                   </Text>
                 </View>
               </View>
 
               {forecast.net_daily_flow < 0 && (
-                <View className="bg-danger/10 border border-danger/30 p-4 rounded-xl flex-row items-center">
+                <View style={{ backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center' }}>
                   <AlertCircle size={20} color={colors.danger} />
-                  <View className="ml-3 flex-1">
-                    <Text className="text-foreground font-medium">{t('daysUntilZero')}</Text>
-                    <Text className="text-danger text-xl font-bold">
+                  <View style={{ marginLeft: 12, flex: 1 }}>
+                    <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>{t('daysUntilZero')}</Text>
+                    <Text style={{ color: colors.danger, fontSize: 20, fontFamily: 'Inter_700Bold' }}>
                       {forecast.days_until_zero} {t('days')}
                     </Text>
                   </View>
@@ -367,7 +381,7 @@ export function MonthlyReportView({
               )}
             </View>
           ) : (
-            <Text className="text-muted-foreground">{t('noForecastData')}</Text>
+            <Text style={{ color: colors.mutedForeground }}>{t('noForecastData')}</Text>
           )}
         </View>
       )}
@@ -380,13 +394,13 @@ export function MonthlyReportView({
 
       {/* Trends Chart */}
       {trendsReport && trendsReport.trends && trendsReport.trends.length > 0 && (
-        <View className="bg-card p-6 rounded-xl mb-6">
-          <View className="flex-row items-center mb-4">
-            <View className="bg-secondary p-2 rounded-lg mr-3">
+        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginRight: 12 }}>
               <BarChart3 size={20} color={colors.placeholder} />
             </View>
-            <Text className="text-foreground font-semibold">{t('incomeVsExpenses')}</Text>
-            <Text className="text-muted-foreground text-sm ml-2">
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('incomeVsExpenses')}</Text>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginLeft: 8 }}>
               ({trendsReport.months} {t('months')})
             </Text>
           </View>
@@ -396,20 +410,20 @@ export function MonthlyReportView({
 
       {/* Category Breakdown */}
       {isCategoryError && (
-        <View className="bg-danger/10 border border-danger/30 p-4 rounded-xl mb-6">
-          <Text className="text-danger text-sm">{t('failedToLoadCategories') || 'Failed to load category breakdown'}</Text>
+        <View style={{ backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', padding: 16, borderRadius: 12, marginBottom: 24 }}>
+          <Text style={{ color: colors.danger, fontSize: 14 }}>{t('failedToLoadCategories') || 'Failed to load category breakdown'}</Text>
         </View>
       )}
       {categoryReport && categoryReport.categories.length > 0 && (
-        <View className="bg-card p-6 rounded-xl">
-          <View className="flex-row items-center mb-4">
-            <View className="bg-secondary p-2 rounded-lg mr-3">
+        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginRight: 12 }}>
               <PieChart size={20} color={colors.placeholder} />
             </View>
-            <Text className="text-foreground font-semibold">{t('spendingByCategory')}</Text>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('spendingByCategory')}</Text>
           </View>
 
-          <View className="mb-6">
+          <View style={{ marginBottom: 24 }}>
             <HorizontalBarChart
               data={categoryReport.categories.slice(0, 6)}
               maxValue={safeMax(categoryReport.categories.map((c) => c.amount))}
@@ -430,14 +444,18 @@ export function MonthlyReportView({
               return (
                 <View
                   key={cat.category}
-                  className="bg-secondary/30 border border-border p-4 rounded-xl"
                   style={{
+                    backgroundColor: colors.secondary + '4d',
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    padding: 16,
+                    borderRadius: 12,
                     width: categoryCardWidth,
                     minWidth: categoryCols === 1 ? undefined : 200,
                   }}
                 >
-                  <View className="flex-row items-center justify-between mb-3">
-                    <View className="flex-row items-center">
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <StyledCategoryIcon
                         category={cat.category}
                         size={16}
@@ -445,28 +463,29 @@ export function MonthlyReportView({
                         borderRadius={6}
                         padding={6}
                       />
-                      <Text className="font-medium text-foreground capitalize ml-2">
+                      <Text style={{ fontFamily: 'Inter_500Medium', color: colors.foreground, textTransform: 'capitalize', marginLeft: 8 }}>
                         {cat.category}
                       </Text>
                     </View>
-                    <Text className="text-foreground font-semibold">
+                    <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
                       {formatCompactCurrency(cat.amount, categoryReport.currency)}
                     </Text>
                   </View>
-                  <View className="h-2 bg-secondary rounded-full overflow-hidden">
+                  <View style={{ height: 8, backgroundColor: colors.secondary, borderRadius: 9999, overflow: 'hidden' }}>
                     <View
-                      className="h-full rounded-full"
                       style={{
+                        height: '100%',
+                        borderRadius: 9999,
                         width: `${cat.percentage}%`,
                         backgroundColor: categoryColor,
                       }}
                     />
                   </View>
-                  <View className="flex-row justify-between mt-2">
-                    <Text className="text-muted-foreground text-sm">
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
                       {cat.count} {t('transactions')}
                     </Text>
-                    <Text className="text-muted-foreground text-sm">
+                    <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
                       {formatNumber(cat.percentage, 1)}%
                     </Text>
                   </View>
@@ -479,10 +498,10 @@ export function MonthlyReportView({
 
       {/* Empty State */}
       {!monthlyReport && !categoryReport && (
-        <View className="bg-card p-8 rounded-xl items-center">
+        <View style={{ backgroundColor: colors.card, padding: 32, borderRadius: 12, alignItems: 'center' }}>
           <BarChart3 size={48} color={colors.mutedForeground} />
-          <Text className="text-foreground font-semibold mt-4 text-lg">{t('noDataAvailable')}</Text>
-          <Text className="text-muted-foreground mt-2 text-center">
+          <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginTop: 16, fontSize: 18 }}>{t('noDataAvailable')}</Text>
+          <Text style={{ color: colors.mutedForeground, marginTop: 8, textAlign: 'center' }}>
             {t('addTransaction')}
           </Text>
         </View>
