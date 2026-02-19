@@ -122,10 +122,10 @@ export function TrendsChart({
   data: { period: string; income: number; expenses: number; net: number }[];
   t: (key: string) => string;
 }) {
-  if (!data || data.length === 0) return null;
-
   const theme = useTheme();
   const colors = theme.colors;
+
+  if (!data || data.length === 0) return null;
   const maxValue = data.length > 0 ? Math.max(...data.map((d) => Math.max(d.income, d.expenses))) : 0;
 
   return (

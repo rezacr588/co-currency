@@ -106,16 +106,16 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
             <StyledThemeWrapper>
-            <LanguageProvider>
-              <SettingsProvider>
-                <AuthProvider>
-                  <ToastProvider>
-                    <RootLayoutNav />
-                    <BiometricLock />
-                  </ToastProvider>
-                </AuthProvider>
-              </SettingsProvider>
-            </LanguageProvider>
+              <LanguageProvider>
+                <SettingsProvider>
+                  <AuthProvider>
+                    <ToastProvider>
+                      <RootLayoutNav />
+                      <BiometricLock />
+                    </ToastProvider>
+                  </AuthProvider>
+                </SettingsProvider>
+              </LanguageProvider>
             </StyledThemeWrapper>
           </ThemeProvider>
         </QueryClientProvider>
