@@ -8,8 +8,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+        sans: ['Plus Jakarta Sans', 'Vazirmatn', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['JetBrains Mono', 'Vazirmatn', 'ui-monospace', 'monospace'],
       },
       colors: {
         background: 'rgb(var(--background) / <alpha-value>)',

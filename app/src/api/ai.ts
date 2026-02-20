@@ -22,8 +22,13 @@ export interface PersonalizedAdvice {
 export const ai = {
   getStatus: () => fetchAPI<{ configured: boolean; provider?: string }>('/ai/status'),
 
-  getAdvice: (lang?: string) =>
-    fetchAPI<PersonalizedAdvice>(`/ai/advice${lang ? `?lang=${lang}` : ''}`),
+  getAdvice: (lang?: string, forceRefresh?: boolean) => {
+    const params = new URLSearchParams();
+    if (lang) params.append('lang', lang);
+    if (forceRefresh) params.append('refresh', 'true');
+    const queryString = params.toString();
+    return fetchAPI<PersonalizedAdvice>(`/ai/advice${queryString ? `?${queryString}` : ''}`);
+  },
 
   parseReceipt: (data: AIParseRequest) =>
     fetchAPI<AIParseResponse>('/ai/parse-text', {

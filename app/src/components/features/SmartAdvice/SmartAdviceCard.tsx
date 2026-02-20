@@ -27,10 +27,11 @@ export function SmartAdviceCard() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [dismissed, setDismissed] = useState(false);
+  const [refreshCount, setRefreshCount] = useState(0);
 
   const { data: advice, isPending, isError } = useQuery({
-    queryKey: ['ai', 'advice', language],
-    queryFn: () => api.ai.getAdvice(language),
+    queryKey: ['ai', 'advice', language, refreshCount],
+    queryFn: () => api.ai.getAdvice(language, refreshCount > 0),
     staleTime: 6 * 60 * 60 * 1000, // 6 hours
     retry: 1,
   });
@@ -51,13 +52,13 @@ export function SmartAdviceCard() {
   const handleDismiss = async () => {
     haptics.light();
     const today = new Date().toISOString().split('T')[0];
-    await AsyncStorage.setItem(DISMISSED_KEY, today).catch(() => {});
+    await AsyncStorage.setItem(DISMISSED_KEY, today).catch(() => { });
     setDismissed(true);
   };
 
   const handleRefresh = () => {
     haptics.light();
-    queryClient.invalidateQueries({ queryKey: ['ai', 'advice'] });
+    setRefreshCount(c => c + 1);
   };
 
   const handleAskAI = () => {

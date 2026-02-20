@@ -10,11 +10,17 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
+import {
+  Vazirmatn_400Regular,
+  Vazirmatn_500Medium,
+  Vazirmatn_600SemiBold,
+  Vazirmatn_700Bold,
+} from '@expo-google-fonts/vazirmatn';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider as SCThemeProvider, useTheme as useStyledTheme } from 'styled-components/native';
 import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
-import { LanguageProvider } from '../src/context/LanguageContext';
+import { LanguageProvider, useLanguage } from '../src/context/LanguageContext';
 import { AuthProvider } from '../src/context/AuthContext';
 import { SettingsProvider } from '../src/context/SettingsContext';
 import { ToastProvider } from '../src/components/ui/Toast';
@@ -41,7 +47,8 @@ const queryClient = new QueryClient({
 
 function StyledThemeWrapper({ children }: { children: ReactNode }) {
   const { isDark, colors } = useTheme();
-  const theme = buildTheme(colors, isDark);
+  const { isRTL } = useLanguage();
+  const theme = buildTheme(colors, isDark, isRTL);
   return <SCThemeProvider theme={theme}>{children}</SCThemeProvider>;
 }
 
@@ -55,6 +62,10 @@ function RootLayoutNav() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
+    Vazirmatn_400Regular,
+    Vazirmatn_500Medium,
+    Vazirmatn_600SemiBold,
+    Vazirmatn_700Bold,
   });
 
   // Check for OTA updates on app launch
@@ -104,9 +115,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-          <ThemeProvider>
-            <StyledThemeWrapper>
-              <LanguageProvider>
+          <LanguageProvider>
+            <ThemeProvider>
+              <StyledThemeWrapper>
                 <SettingsProvider>
                   <AuthProvider>
                     <ToastProvider>
@@ -115,9 +126,9 @@ export default function RootLayout() {
                     </ToastProvider>
                   </AuthProvider>
                 </SettingsProvider>
-              </LanguageProvider>
-            </StyledThemeWrapper>
-          </ThemeProvider>
+              </StyledThemeWrapper>
+            </ThemeProvider>
+          </LanguageProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

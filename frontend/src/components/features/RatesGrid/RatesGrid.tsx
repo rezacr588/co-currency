@@ -47,14 +47,14 @@ export function RatesGrid() {
             <p className="text-red-500 dark:text-red-400 text-sm">{t('failedToLoadRates')}</p>
           </div>
         ) : isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
             {Array.from({ length: 10 }).map((_, i) => (
               <SkeletonRateCard key={i} />
             ))}
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
               {displayedRates?.map((rate) => (
                 <RateCard key={rate.code} rate={rate} baseCurrency={baseCurrency} />
               ))}

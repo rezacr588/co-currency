@@ -70,74 +70,76 @@ export interface TypographyPreset {
   letterSpacing: number;
 }
 
-const fontFamily = Platform.select({
-  ios: 'Inter_400Regular',
-  android: 'Inter_400Regular',
-  default: 'Inter_400Regular',
-});
+export function buildTypography(isRTL: boolean) {
+  const fontFamily = Platform.select({
+    ios: isRTL ? 'Vazirmatn_400Regular' : 'Inter_400Regular',
+    android: isRTL ? 'Vazirmatn_400Regular' : 'Inter_400Regular',
+    default: isRTL ? 'Vazirmatn_400Regular' : 'Inter_400Regular',
+  });
 
-const fontFamilyMedium = Platform.select({
-  ios: 'Inter_500Medium',
-  android: 'Inter_500Medium',
-  default: 'Inter_500Medium',
-});
+  const fontFamilyMedium = Platform.select({
+    ios: isRTL ? 'Vazirmatn_500Medium' : 'Inter_500Medium',
+    android: isRTL ? 'Vazirmatn_500Medium' : 'Inter_500Medium',
+    default: isRTL ? 'Vazirmatn_500Medium' : 'Inter_500Medium',
+  });
 
-const fontFamilySemiBold = Platform.select({
-  ios: 'Inter_600SemiBold',
-  android: 'Inter_600SemiBold',
-  default: 'Inter_600SemiBold',
-});
+  const fontFamilySemiBold = Platform.select({
+    ios: isRTL ? 'Vazirmatn_600SemiBold' : 'Inter_600SemiBold',
+    android: isRTL ? 'Vazirmatn_600SemiBold' : 'Inter_600SemiBold',
+    default: isRTL ? 'Vazirmatn_600SemiBold' : 'Inter_600SemiBold',
+  });
 
-const fontFamilyBold = Platform.select({
-  ios: 'Inter_700Bold',
-  android: 'Inter_700Bold',
-  default: 'Inter_700Bold',
-});
+  const fontFamilyBold = Platform.select({
+    ios: isRTL ? 'Vazirmatn_700Bold' : 'Inter_700Bold',
+    android: isRTL ? 'Vazirmatn_700Bold' : 'Inter_700Bold',
+    default: isRTL ? 'Vazirmatn_700Bold' : 'Inter_700Bold',
+  });
 
-export const typography = {
-  h1: {
-    fontSize: 28,
-    fontFamily: fontFamilyBold!,
-    lineHeight: 34,
-    letterSpacing: -0.5,
-  },
-  h2: {
-    fontSize: 22,
-    fontFamily: fontFamilySemiBold!,
-    lineHeight: 28,
-    letterSpacing: -0.3,
-  },
-  h3: {
-    fontSize: 18,
-    fontFamily: fontFamilySemiBold!,
-    lineHeight: 24,
-    letterSpacing: -0.2,
-  },
-  body: {
-    fontSize: 15,
-    fontFamily: fontFamily!,
-    lineHeight: 22,
-    letterSpacing: 0,
-  },
-  bodyMedium: {
-    fontSize: 15,
-    fontFamily: fontFamilyMedium!,
-    lineHeight: 22,
-    letterSpacing: 0,
-  },
-  caption: {
-    fontSize: 12,
-    fontFamily: fontFamily!,
-    lineHeight: 16,
-    letterSpacing: 0.2,
-  },
-  label: {
-    fontSize: 11,
-    fontFamily: fontFamilySemiBold!,
-    lineHeight: 14,
-    letterSpacing: 0.8,
-  },
-} as const;
+  return {
+    h1: {
+      fontSize: 28,
+      fontFamily: fontFamilyBold!,
+      lineHeight: 34,
+      letterSpacing: -0.5,
+    },
+    h2: {
+      fontSize: 22,
+      fontFamily: fontFamilySemiBold!,
+      lineHeight: 28,
+      letterSpacing: -0.3,
+    },
+    h3: {
+      fontSize: 18,
+      fontFamily: fontFamilySemiBold!,
+      lineHeight: 24,
+      letterSpacing: -0.2,
+    },
+    body: {
+      fontSize: 15,
+      fontFamily: fontFamily!,
+      lineHeight: 22,
+      letterSpacing: 0,
+    },
+    bodyMedium: {
+      fontSize: 15,
+      fontFamily: fontFamilyMedium!,
+      lineHeight: 22,
+      letterSpacing: 0,
+    },
+    caption: {
+      fontSize: 12,
+      fontFamily: fontFamily!,
+      lineHeight: 16,
+      letterSpacing: 0.2,
+    },
+    label: {
+      fontSize: 11,
+      fontFamily: fontFamilySemiBold!,
+      lineHeight: 14,
+      letterSpacing: 0.8,
+    },
+  };
+}
 
 // ─── Gradients ───────────────────────────────────────────────
 const buildGradients = (colors: ColorPalette, isDark: boolean) => ({
@@ -170,23 +172,25 @@ const buildGlass = (isDark: boolean) => ({
 export interface AppTheme {
   colors: ColorPalette;
   isDark: boolean;
+  isRTL: boolean;
   spacing: typeof spacing;
   radii: typeof radii;
   shadows: ReturnType<typeof buildShadows>;
-  typography: typeof typography;
+  typography: ReturnType<typeof buildTypography>;
   gradients: ReturnType<typeof buildGradients>;
   animation: typeof animation;
   glass: ReturnType<typeof buildGlass>;
 }
 
-export function buildTheme(colors: ColorPalette, isDark: boolean): AppTheme {
+export function buildTheme(colors: ColorPalette, isDark: boolean, isRTL: boolean = false): AppTheme {
   return {
     colors,
     isDark,
+    isRTL,
     spacing,
     radii,
     shadows: buildShadows(isDark),
-    typography,
+    typography: buildTypography(isRTL),
     gradients: buildGradients(colors, isDark),
     animation,
     glass: buildGlass(isDark),

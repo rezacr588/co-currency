@@ -17,19 +17,32 @@ import (
 
 // AdviceService generates personalized financial advice using AI
 type AdviceService struct {
-	aiService  *AIService
-	walletRepo *repository.WalletRepository
-	userRepo   *repository.UserRepository
-	cache      *gocache.Cache
+	aiService       *AIService
+	walletRepo      *repository.WalletRepository
+	userRepo        *repository.UserRepository
+	exchangeService *ExchangeService
+	goalRepo        *repository.GoalRepository
+	budgetRepo      *repository.BudgetRepository
+	cache           *gocache.Cache
 }
 
 // NewAdviceService creates a new AdviceService
-func NewAdviceService(aiService *AIService, walletRepo *repository.WalletRepository, userRepo *repository.UserRepository) *AdviceService {
+func NewAdviceService(
+	aiService *AIService,
+	walletRepo *repository.WalletRepository,
+	userRepo *repository.UserRepository,
+	exchangeService *ExchangeService,
+	goalRepo *repository.GoalRepository,
+	budgetRepo *repository.BudgetRepository,
+) *AdviceService {
 	return &AdviceService{
-		aiService:  aiService,
-		walletRepo: walletRepo,
-		userRepo:   userRepo,
-		cache:      gocache.New(6*time.Hour, 10*time.Minute),
+		aiService:       aiService,
+		walletRepo:      walletRepo,
+		userRepo:        userRepo,
+		exchangeService: exchangeService,
+		goalRepo:        goalRepo,
+		budgetRepo:      budgetRepo,
+		cache:           gocache.New(6*time.Hour, 10*time.Minute),
 	}
 }
 
@@ -69,12 +82,15 @@ Rules:
 - Return ONLY the JSON, nothing else`
 
 // GetAdvice returns personalized financial advice for a user
-func (s *AdviceService) GetAdvice(ctx context.Context, userID uuid.UUID, lang string) (*model.PersonalizedAdvice, error) {
-	// Check cache
+func (s *AdviceService) GetAdvice(ctx context.Context, userID uuid.UUID, lang string, forceRefresh bool) (*model.PersonalizedAdvice, error) {
 	cacheKey := fmt.Sprintf("advice:%s:%s", userID.String(), lang)
-	if cached, found := s.cache.Get(cacheKey); found {
-		if advice, ok := cached.(*model.PersonalizedAdvice); ok {
-			return advice, nil
+
+	// Check cache
+	if !forceRefresh {
+		if cached, found := s.cache.Get(cacheKey); found {
+			if advice, ok := cached.(*model.PersonalizedAdvice); ok {
+				return advice, nil
+			}
 		}
 	}
 
@@ -105,13 +121,26 @@ func (s *AdviceService) generateAIAdvice(ctx context.Context, userID uuid.UUID, 
 	var totalBalance float64
 	var preferredCurrency string
 	for _, b := range balances {
-		totalBalance += b.Balance
 		if b.Balance > 0 && preferredCurrency == "" {
 			preferredCurrency = b.Currency
 		}
 	}
 	if preferredCurrency == "" {
 		preferredCurrency = "USD"
+	}
+
+	// Calculate cross-currency adjusted total balance
+	for _, b := range balances {
+		balanceInBase := b.Balance
+		if b.Currency != preferredCurrency {
+			if s.exchangeService != nil {
+				conversion, err := s.exchangeService.Convert(ctx, b.Currency, preferredCurrency, b.Balance)
+				if err == nil {
+					balanceInBase = conversion.Result
+				}
+			}
+		}
+		totalBalance += balanceInBase
 	}
 
 	// Get transactions for this month
@@ -124,19 +153,27 @@ func (s *AdviceService) generateAIAdvice(ctx context.Context, userID uuid.UUID, 
 	startOfLastMonth := startOfMonth.AddDate(0, -1, 0)
 
 	for _, tx := range transactions {
+		amount := tx.Amount
+		if tx.Currency != preferredCurrency && s.exchangeService != nil {
+			conversion, err := s.exchangeService.Convert(ctx, tx.Currency, preferredCurrency, tx.Amount)
+			if err == nil {
+				amount = conversion.Result
+			}
+		}
+
 		if tx.CreatedAt.After(startOfMonth) {
 			if tx.Type == "credit" {
-				monthlyIncome += tx.Amount
+				monthlyIncome += amount
 			} else if tx.Type == "debit" {
-				monthlyExpenses += tx.Amount
+				monthlyExpenses += amount
 				if tx.Category != "" {
-					categoryTotals[tx.Category] += tx.Amount
+					categoryTotals[tx.Category] += amount
 				}
 			}
 		}
 		if tx.CreatedAt.After(startOfLastMonth) && tx.CreatedAt.Before(startOfMonth) {
 			if tx.Type == "debit" {
-				lastMonthExpenses += tx.Amount
+				lastMonthExpenses += amount
 			}
 		}
 	}
@@ -165,7 +202,18 @@ func (s *AdviceService) generateAIAdvice(ctx context.Context, userID uuid.UUID, 
 		lang = "English"
 	}
 
-	prompt := fmt.Sprintf(advicePromptTemplate, totalBalance, preferredCurrency, monthlyIncome, monthlyExpenses, spendingTrend, catStr, 0, 0, lang)
+	// Get active budgets and goals counts
+	var activeGoals, activeBudgets int
+	if s.goalRepo != nil {
+		goals, _ := s.goalRepo.GetByUser(ctx, userID)
+		activeGoals = len(goals)
+	}
+	if s.budgetRepo != nil {
+		budgets, _ := s.budgetRepo.GetByUser(ctx, userID)
+		activeBudgets = len(budgets) // Usually all retrieved budgets are current/active
+	}
+
+	prompt := fmt.Sprintf(advicePromptTemplate, totalBalance, preferredCurrency, monthlyIncome, monthlyExpenses, spendingTrend, catStr, activeGoals, activeBudgets, lang)
 
 	response, err := llm.GenerateContent(ctx, []llms.MessageContent{
 		{

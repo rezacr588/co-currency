@@ -56,7 +56,7 @@ export function QuickConvert() {
         <CardTitle className="text-base">{t('quickConversions')}</CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2">
           {conversions.map((conv) => (
             <QuickConvertCard
               key={`${conv.from}-${conv.to}-${conv.amount}`}

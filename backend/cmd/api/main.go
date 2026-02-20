@@ -120,6 +120,8 @@ func main() {
 	var userRepo *repository.UserRepository
 	var walletRepo *repository.WalletRepository
 	var loanRepo *repository.LoanRepository
+	var goalRepo *repository.GoalRepository
+	var budgetRepo *repository.BudgetRepository
 
 	// Initialize IRR database (if DATABASE_URL is configured)
 	var irrDB *repository.IRRDatabase
@@ -274,7 +276,7 @@ func main() {
 	var aiChatService *service.AIChatService
 
 	if mainDB != nil {
-		goalRepo := repository.NewGoalRepository(mainDB)
+		goalRepo = repository.NewGoalRepository(mainDB)
 		goalService = service.NewGoalService(goalRepo)
 		log.Info().Msg("Goal service initialized")
 
@@ -289,7 +291,7 @@ func main() {
 		categoryService = service.NewCategoryService(categoryRepo)
 		log.Info().Msg("Category service initialized")
 
-		budgetRepo := repository.NewBudgetRepository(mainDB)
+		budgetRepo = repository.NewBudgetRepository(mainDB)
 		budgetService = service.NewBudgetService(budgetRepo)
 		log.Info().Msg("Budget service initialized")
 
@@ -427,7 +429,14 @@ func main() {
 	// Initialize advice service (requires AI + wallet)
 	var adviceService *service.AdviceService
 	if aiService != nil && walletRepo != nil {
-		adviceService = service.NewAdviceService(aiService, walletRepo, userRepo)
+		adviceService = service.NewAdviceService(
+			aiService,
+			walletRepo,
+			userRepo,
+			exchangeService,
+			goalRepo,
+			budgetRepo,
+		)
 		log.Info().Msg("Advice service initialized")
 	}
 

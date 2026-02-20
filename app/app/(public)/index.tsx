@@ -213,8 +213,8 @@ function FeatureCard({
         backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 8,
         padding: isDesktop ? 24 : 20,
         width: isDesktop ? 240 : '100%',
-        minWidth: isDesktop ? 240 : 150,
-        flex: isDesktop ? undefined : 1,
+        minWidth: isDesktop ? 240 : undefined,
+        flex: undefined,
       }}
     >
       <View style={{ marginBottom: 12, backgroundColor: colors.secondary, padding: 10, borderRadius: 6, alignSelf: 'flex-start' }}>{icon}</View>

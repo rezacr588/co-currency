@@ -30,11 +30,14 @@
     --accent-foreground: 15 26 42;
 
     /* Semantic Colors for Finance */
-    --success: 16 185 129;        /* Emerald - Positive/Income */
+    --success: 16 185 129;
+    /* Emerald - Positive/Income */
     --success-light: 209 250 229;
-    --danger: 220 38 38;          /* Red - Negative/Expenses */
+    --danger: 220 38 38;
+    /* Red - Negative/Expenses */
     --danger-light: 254 226 226;
-    --warning: 212 175 55;        /* Gold - Alerts */
+    --warning: 212 175 55;
+    /* Gold - Alerts */
     --warning-light: 253 248 227;
 
     /* Muted & Borders */
@@ -52,8 +55,8 @@
     --radius-lg: 0.75rem;
 
     /* Typography */
-    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    --font-sans: 'Plus Jakarta Sans', 'Vazirmatn', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Vazirmatn', ui-monospace, monospace;
   }
 
   * {
@@ -74,12 +77,18 @@
   }
 
   /* Typography Scale */
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-semibold tracking-tight;
   }
 }
 
 @layer components {
+
   /* ========== Card Components ========== */
   .card {
     @apply relative overflow-hidden rounded-2xl transition-all duration-300 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/60 shadow-lg hover:shadow-xl;
@@ -276,6 +285,7 @@
 }
 
 @layer utilities {
+
   /* ========== Typography Utilities ========== */
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-700 via-primary-600 to-accent-500 dark:from-primary-400 dark:via-primary-300 dark:to-accent-400;
@@ -372,43 +382,99 @@
 
 /* Animations */
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-10px) rotate(2deg); }
+
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-10px) rotate(2deg);
+  }
 }
 
 @keyframes pulse-glow {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.05); }
+
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
 }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes scale-in {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes slide-up {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes bounce-soft {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
 }
 
 @keyframes gradient-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 .animate-shimmer {
@@ -445,12 +511,29 @@
 }
 
 /* Staggered animations */
-.stagger-1 { animation-delay: 0.1s; }
-.stagger-2 { animation-delay: 0.2s; }
-.stagger-3 { animation-delay: 0.3s; }
-.stagger-4 { animation-delay: 0.4s; }
-.stagger-5 { animation-delay: 0.5s; }
-.stagger-6 { animation-delay: 0.6s; }
+.stagger-1 {
+  animation-delay: 0.1s;
+}
+
+.stagger-2 {
+  animation-delay: 0.2s;
+}
+
+.stagger-3 {
+  animation-delay: 0.3s;
+}
+
+.stagger-4 {
+  animation-delay: 0.4s;
+}
+
+.stagger-5 {
+  animation-delay: 0.5s;
+}
+
+.stagger-6 {
+  animation-delay: 0.6s;
+}
 
 /* Custom scrollbar - Light mode */
 .light ::-webkit-scrollbar {
@@ -502,10 +585,7 @@ input[type="number"] {
   padding-left: 2.5rem;
 }
 
-/* Font for Persian */
-[dir="rtl"] body {
-  font-family: 'Vazirmatn', 'Tahoma', 'Arial', sans-serif;
-}
+/* Removed old static RTL font declaration */
 
 /* Hover effects */
 .hover-lift {
@@ -570,7 +650,7 @@ input[type="number"] {
   .btn {
     @apply min-h-[44px];
   }
-  
+
   .btn-sm {
     @apply min-h-[36px] px-3 py-2;
   }
@@ -578,16 +658,13 @@ input[type="number"] {
 
 /* ========== Bottom Navigation Styles ========== */
 .bottom-nav {
-  @apply fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 
-         border-t border-slate-200 dark:border-slate-800 
-         flex items-center justify-around z-50;
+  @apply fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center justify-around z-50;
   padding-bottom: env(safe-area-inset-bottom);
   height: calc(64px + env(safe-area-inset-bottom));
 }
 
 .bottom-nav-item {
-  @apply flex flex-col items-center justify-center gap-0.5 py-2 px-3 
-         text-slate-500 dark:text-slate-400 transition-colors;
+  @apply flex flex-col items-center justify-center gap-0.5 py-2 px-3 text-slate-500 dark:text-slate-400 transition-colors;
 }
 
 .bottom-nav-item.active {
@@ -600,8 +677,13 @@ input[type="number"] {
 
 /* ========== Pull to Refresh Animation ========== */
 @keyframes pull-rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .pull-refresh-spinner {

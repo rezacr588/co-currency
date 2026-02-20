@@ -59,8 +59,9 @@ func (h *AIHandler) GetPersonalizedAdvice(w http.ResponseWriter, r *http.Request
 	}
 
 	lang := r.URL.Query().Get("lang")
+	forceRefresh := r.URL.Query().Get("refresh") == "true"
 
-	advice, err := h.adviceService.GetAdvice(r.Context(), userID, lang)
+	advice, err := h.adviceService.GetAdvice(r.Context(), userID, lang, forceRefresh)
 	if err != nil {
 		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate advice", err)
 		return
