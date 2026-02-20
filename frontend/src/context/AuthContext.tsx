@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { api, setAuthToken, setRefreshToken, getAuthToken, clearAuthToken, setOnAuthError } from '../api';
+import { api, setAuthToken, setRefreshToken, getAuthToken, clearAuthToken, setOnAuthError, setOnTokenRefresh } from '../api';
 import type { User, LoginRequest, RegisterRequest } from '../types/wallet';
 import { ROUTES } from '../constants/routes';
 
@@ -64,6 +64,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Cleanup on unmount
     return () => {
       setOnAuthError(null);
+    };
+  }, []);
+
+  // Handle token refresh - update profile silently
+  useEffect(() => {
+    setOnTokenRefresh(() => {
+      refreshProfile();
+    });
+
+    return () => {
+      setOnTokenRefresh(null);
     };
   }, []);
 

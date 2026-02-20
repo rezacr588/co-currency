@@ -27,6 +27,7 @@ var (
 type AuthService struct {
 	userRepo         *repository.UserRepository
 	refreshTokenRepo *repository.RefreshTokenRepository
+	emailService     *EmailService
 	jwtSecret        []byte
 	jwtExpiry        time.Duration
 	refreshExpiry    time.Duration
@@ -40,9 +41,10 @@ type JWTClaims struct {
 }
 
 // NewAuthService creates a new AuthService
-func NewAuthService(userRepo *repository.UserRepository, jwtSecret string) *AuthService {
+func NewAuthService(userRepo *repository.UserRepository, emailService *EmailService, jwtSecret string) *AuthService {
 	return &AuthService{
 		userRepo:      userRepo,
+		emailService:  emailService,
 		jwtSecret:     []byte(jwtSecret),
 		jwtExpiry:     1 * time.Hour,
 		refreshExpiry: 7 * 24 * time.Hour,
@@ -50,10 +52,11 @@ func NewAuthService(userRepo *repository.UserRepository, jwtSecret string) *Auth
 }
 
 // NewAuthServiceWithRefresh creates a new AuthService with refresh token support
-func NewAuthServiceWithRefresh(userRepo *repository.UserRepository, refreshTokenRepo *repository.RefreshTokenRepository, jwtSecret string) *AuthService {
+func NewAuthServiceWithRefresh(userRepo *repository.UserRepository, refreshTokenRepo *repository.RefreshTokenRepository, emailService *EmailService, jwtSecret string) *AuthService {
 	return &AuthService{
 		userRepo:         userRepo,
 		refreshTokenRepo: refreshTokenRepo,
+		emailService:     emailService,
 		jwtSecret:        []byte(jwtSecret),
 		jwtExpiry:        1 * time.Hour,
 		refreshExpiry:    7 * 24 * time.Hour,
@@ -301,6 +304,13 @@ func (s *AuthService) GeneratePasswordResetToken(ctx context.Context, email stri
 
 	if err := s.userRepo.SetPasswordResetToken(ctx, email, token, expiry); err != nil {
 		return "", fmt.Errorf("setting reset token: %w", err)
+	}
+
+	if s.emailService != nil {
+		if err := s.emailService.SendPasswordResetEmail(ctx, email, token); err != nil {
+			log.Error().Err(err).Str("email", email).Msg("Failed to send password reset email")
+			// We don't return the error to the user to avoid leaking email existence
+		}
 	}
 
 	return token, nil

@@ -22,6 +22,8 @@ type Config struct {
 
 	// JWT Authentication
 	JWTSecret string `env:"JWT_SECRET" envDefault:"change-me-in-production-to-a-secure-secret"`
+	// Email Provider
+	ResendAPIKey string `env:"RESEND_API_KEY" envDefault:""`
 	// Error handling
 	ExposeErrorDetails bool `env:"EXPOSE_ERROR_DETAILS" envDefault:"true"`
 

@@ -19,17 +19,17 @@ import (
 
 // AIChatService handles AI-powered financial advisor chat with full context
 type AIChatService struct {
-	aiService       *AIService
-	exchangeService *ExchangeService
-	chatRepo        *repository.ChatRepository
-	walletRepo      *repository.WalletRepository
-	goalRepo        *repository.GoalRepository
-	budgetRepo      *repository.BudgetRepository
-	userRepo        *repository.UserRepository
-	recurringRepo   *repository.RecurringRepository
-	memoryRepo      *repository.MemoryRepository
-	memoryService   *MemoryService // Semantic memory with Qdrant
-	loanRepo        *repository.LoanRepository
+	aiService        *AIService
+	exchangeService  *ExchangeService
+	chatRepo         *repository.ChatRepository
+	walletRepo       *repository.WalletRepository
+	goalRepo         *repository.GoalRepository
+	budgetRepo       *repository.BudgetRepository
+	userRepo         *repository.UserRepository
+	recurringRepo    *repository.RecurringRepository
+	memoryRepo       *repository.MemoryRepository
+	memoryService    *MemoryService // Semantic memory with Qdrant
+	loanRepo         *repository.LoanRepository
 	categoryRepo     *repository.CategoryRepository
 	reportsService   *ReportsService
 	subscriptionRepo *repository.SubscriptionRepository
@@ -189,12 +189,8 @@ func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName str
 	}
 
 	// Get user memories (long-term context) - use semantic search with current message
-	// TODO: Avoid logging memory content in production — it may contain sensitive financial data
-	memories, memErr := s.getUserMemories(ctx, userID, message)
-	if memErr != nil {
-		// Log but continue - memories are optional context
-		log.Warn().Err(memErr).Str("user_id", userID.String()).Msg("Failed to retrieve user memories for chat")
-	}
+	// Memories are optional context, so errors are ignored
+	memories, _ := s.getUserMemories(ctx, userID, message)
 
 	// Get exchange rates (use user's preferred currency or USD)
 	baseCurrency := financialContext.PreferredCurrency
@@ -313,11 +309,8 @@ func (s *AIChatService) ChatStream(
 	}
 
 	// Get user memories (long-term context) - use semantic search with current message
-	memories, memErr := s.getUserMemories(ctx, userID, message)
-	if memErr != nil {
-		// Log but continue - memories are optional context
-		log.Warn().Err(memErr).Str("user_id", userID.String()).Msg("Failed to retrieve user memories for stream chat")
-	}
+	// Memories are optional context, so errors are ignored
+	memories, _ := s.getUserMemories(ctx, userID, message)
 
 	// Get exchange rates (use user's preferred currency or USD)
 	baseCurrency := financialContext.PreferredCurrency
@@ -828,7 +821,11 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 
 // fetchFinancialContext performs the actual queries to gather financial data
 func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.UUID) (*model.FinancialContext, error) {
-	// TODO: Financial context should not be logged in production — it contains sensitive data
+	// Log context retrieval without exposing sensitive data
+	log.Debug().
+		Str("user_id", userID.String()).
+		Msg("Retrieved financial context for AI chat")
+
 	fctx := &model.FinancialContext{}
 	now := time.Now()
 

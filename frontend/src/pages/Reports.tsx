@@ -37,9 +37,8 @@ function formatReportCurrency(amount: number, currency: string): string {
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6'];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface ChartProps {
-  data: any[];
+  data: Array<{ name: string; value?: number; color?: string; income?: number; expenses?: number; net?: number }>;
   currency: string;
 }
 
@@ -236,16 +235,14 @@ export function Reports() {
                   onClick={() => setView('monthly')}
                   role="tab"
                   aria-selected={view === 'monthly'}
-                  className={`relative z-10 flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-semibold tracking-wide rounded-full transition-all ${
-                    view === 'monthly'
+                  className={`relative z-10 flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-semibold tracking-wide rounded-full transition-all ${view === 'monthly'
                       ? 'bg-white dark:bg-slate-950 text-slate-900 dark:text-white shadow-sm ring-1 ring-primary-500/30'
                       : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
+                    }`}
                 >
                   <span
-                    className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                      view === 'monthly' ? 'bg-primary-500' : 'bg-slate-300 dark:bg-slate-600'
-                    }`}
+                    className={`h-1.5 w-1.5 rounded-full transition-colors ${view === 'monthly' ? 'bg-primary-500' : 'bg-slate-300 dark:bg-slate-600'
+                      }`}
                   />
                   {t('monthly')}
                 </button>
@@ -253,16 +250,14 @@ export function Reports() {
                   onClick={() => setView('yearly')}
                   role="tab"
                   aria-selected={view === 'yearly'}
-                  className={`relative z-10 flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-semibold tracking-wide rounded-full transition-all ${
-                    view === 'yearly'
+                  className={`relative z-10 flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-semibold tracking-wide rounded-full transition-all ${view === 'yearly'
                       ? 'bg-white dark:bg-slate-950 text-slate-900 dark:text-white shadow-sm ring-1 ring-primary-500/30'
                       : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
+                    }`}
                 >
                   <span
-                    className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                      view === 'yearly' ? 'bg-primary-500' : 'bg-slate-300 dark:bg-slate-600'
-                    }`}
+                    className={`h-1.5 w-1.5 rounded-full transition-colors ${view === 'yearly' ? 'bg-primary-500' : 'bg-slate-300 dark:bg-slate-600'
+                      }`}
                   />
                   {t('yearly')}
                 </button>

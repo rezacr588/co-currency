@@ -598,7 +598,7 @@ func TestErrorDefinitions(t *testing.T) {
 
 // Test the actual NewAuthService constructor
 func TestNewAuthService(t *testing.T) {
-	service := NewAuthService(nil, "test-secret")
+	service := NewAuthService(nil, nil, "test-secret")
 
 	if service == nil {
 		t.Fatal("Expected service to be created")
@@ -615,7 +615,7 @@ func TestNewAuthService(t *testing.T) {
 
 // Test ValidateToken with the actual service
 func TestAuthService_ValidateToken_Real(t *testing.T) {
-	service := NewAuthService(nil, "test-secret-key-for-testing")
+	service := NewAuthService(nil, nil, "test-secret-key-for-testing")
 
 	// Generate a token manually
 	userID := uuid.New()
@@ -654,7 +654,7 @@ func TestAuthService_ValidateToken_Real(t *testing.T) {
 }
 
 func TestAuthService_ValidateToken_ExpiredToken(t *testing.T) {
-	service := NewAuthService(nil, "test-secret-key-for-testing")
+	service := NewAuthService(nil, nil, "test-secret-key-for-testing")
 
 	userID := uuid.New()
 	claims := &JWTClaims{
@@ -678,7 +678,7 @@ func TestAuthService_ValidateToken_ExpiredToken(t *testing.T) {
 }
 
 func TestAuthService_ValidateToken_InvalidSignature(t *testing.T) {
-	service := NewAuthService(nil, "test-secret-key-for-testing")
+	service := NewAuthService(nil, nil, "test-secret-key-for-testing")
 
 	userID := uuid.New()
 	claims := &JWTClaims{
@@ -701,7 +701,7 @@ func TestAuthService_ValidateToken_InvalidSignature(t *testing.T) {
 }
 
 func TestAuthService_ValidateToken_MalformedToken(t *testing.T) {
-	service := NewAuthService(nil, "test-secret-key-for-testing")
+	service := NewAuthService(nil, nil, "test-secret-key-for-testing")
 
 	_, err := service.ValidateToken("not-a-valid-jwt-token")
 	if !errors.Is(err, ErrInvalidToken) {
@@ -710,7 +710,7 @@ func TestAuthService_ValidateToken_MalformedToken(t *testing.T) {
 }
 
 func TestAuthService_ValidateToken_EmptyToken(t *testing.T) {
-	service := NewAuthService(nil, "test-secret-key-for-testing")
+	service := NewAuthService(nil, nil, "test-secret-key-for-testing")
 
 	_, err := service.ValidateToken("")
 	if !errors.Is(err, ErrInvalidToken) {
@@ -720,7 +720,7 @@ func TestAuthService_ValidateToken_EmptyToken(t *testing.T) {
 
 // Test NewAuthServiceWithRefresh
 func TestNewAuthServiceWithRefresh(t *testing.T) {
-	service := NewAuthServiceWithRefresh(nil, nil, "test-secret")
+	service := NewAuthServiceWithRefresh(nil, nil, nil, "test-secret")
 
 	if service == nil {
 		t.Fatal("Expected service to be created")
@@ -742,7 +742,7 @@ func TestNewAuthServiceWithRefresh(t *testing.T) {
 
 // Test RefreshToken without repository
 func TestAuthService_RefreshToken_NoRepository(t *testing.T) {
-	service := NewAuthService(nil, "test-secret")
+	service := NewAuthService(nil, nil, "test-secret")
 
 	_, err := service.RefreshToken(context.Background(), "some-token")
 	if err == nil {
@@ -756,7 +756,7 @@ func TestAuthService_RefreshToken_NoRepository(t *testing.T) {
 
 // Test Logout without repository
 func TestAuthService_Logout_NoRepository(t *testing.T) {
-	service := NewAuthService(nil, "test-secret")
+	service := NewAuthService(nil, nil, "test-secret")
 
 	err := service.Logout(context.Background(), "some-token")
 	if err != nil {
@@ -766,7 +766,7 @@ func TestAuthService_Logout_NoRepository(t *testing.T) {
 
 // Test LogoutAllDevices without repository
 func TestAuthService_LogoutAllDevices_NoRepository(t *testing.T) {
-	service := NewAuthService(nil, "test-secret")
+	service := NewAuthService(nil, nil, "test-secret")
 
 	err := service.LogoutAllDevices(context.Background(), uuid.New())
 	if err != nil {

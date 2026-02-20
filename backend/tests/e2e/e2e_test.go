@@ -55,7 +55,7 @@ func SetupTestServer(t *testing.T) *TestServer {
 	walletRepo := repository.NewWalletRepository(db)
 
 	// Initialize services
-	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
+	authService := service.NewAuthService(userRepo, nil, cfg.JWTSecret)
 
 	// Initialize exchange service for wallet
 	cache := repository.NewInMemoryCache(cfg.CacheTTL)
@@ -97,11 +97,11 @@ func SetupTestServer(t *testing.T) *TestServer {
 	server := httptest.NewServer(r)
 
 	return &TestServer{
-		Server:        server,
-		DB:            db,
-		AuthService:   authService,
-		WalletService: walletService,
-		AIService:     aiService,
+		Server:         server,
+		DB:             db,
+		AuthService:    authService,
+		WalletService:  walletService,
+		AIService:      aiService,
 		ReportsService: reportsService,
 	}
 }

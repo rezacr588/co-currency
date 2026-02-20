@@ -179,9 +179,12 @@ func main() {
 	var linkedInOAuthService *service.LinkedInOAuthService
 	var googleOAuthService *service.GoogleOAuthService
 	if userRepo != nil {
+		// Initialize EmailService
+		emailService := service.NewEmailService(cfg.ResendAPIKey, cfg.FrontendURL)
+
 		// Create refresh token repository for better token management
 		refreshTokenRepo := repository.NewRefreshTokenRepository(mainDB)
-		authService = service.NewAuthServiceWithRefresh(userRepo, refreshTokenRepo, cfg.JWTSecret)
+		authService = service.NewAuthServiceWithRefresh(userRepo, refreshTokenRepo, emailService, cfg.JWTSecret)
 		authMiddleware = middleware.NewAuth(authService)
 		log.Info().Msg("Authentication service initialized")
 

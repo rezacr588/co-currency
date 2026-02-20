@@ -48,5 +48,6 @@ export {
   getRefreshToken,
   clearAuthToken,
   setOnAuthError,
+  setOnTokenRefresh,
   loadTokens,
 } from './base';

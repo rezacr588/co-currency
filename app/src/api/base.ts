@@ -44,6 +44,14 @@ let refreshPromise: Promise<boolean> | null = null;
 type AuthErrorCallback = () => void;
 let onAuthErrorCallback: AuthErrorCallback | null = null;
 
+// Auth refresh callback - called when token is successfully refreshed
+type TokenRefreshCallback = () => void;
+let onTokenRefreshCallback: TokenRefreshCallback | null = null;
+
+export function setOnTokenRefresh(callback: TokenRefreshCallback | null) {
+  onTokenRefreshCallback = callback;
+}
+
 export function setOnAuthError(callback: AuthErrorCallback | null) {
   onAuthErrorCallback = callback;
 }
@@ -159,8 +167,12 @@ async function refreshAuthToken(): Promise<boolean> {
         if (data.refresh_token) {
           await setRefreshToken(data.refresh_token);
         }
-        // TODO: After successful token refresh, user profile data may be stale.
-        // Consider emitting an event or calling a callback to trigger profile refetch.
+        
+        // Notify application that token was refreshed
+        if (onTokenRefreshCallback) {
+          onTokenRefreshCallback();
+        }
+        
         return true;
       }
     } catch (error) {

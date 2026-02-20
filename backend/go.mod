@@ -55,6 +55,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/pkoukk/tiktoken-go v0.1.6 // indirect
+	github.com/resend/resend-go/v2 v2.28.0 // indirect
 	github.com/swaggo/files v1.0.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.51.0 // indirect

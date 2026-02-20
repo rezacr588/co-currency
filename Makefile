@@ -33,10 +33,12 @@ test-frontend:
 
 # Lint
 lint:
+	cd backend && if ! command -v golangci-lint &> /dev/null; then go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; fi
 	cd backend && golangci-lint run
 	cd frontend && npm run lint
 
 lint-backend:
+	cd backend && if ! command -v golangci-lint &> /dev/null; then go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; fi
 	cd backend && golangci-lint run
 
 lint-frontend:
