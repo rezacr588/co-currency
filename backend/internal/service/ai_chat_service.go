@@ -46,6 +46,8 @@ var (
 	promptInjectionPattern = regexp.MustCompile(`(?i)^(SYSTEM:|You are |Ignore previous|Forget all|Disregard|New instructions:|ASSISTANT:|<\|im_start\||<\|system\|)`)
 )
 
+type currencyConverterFunc func(ctx context.Context, from, to string, amount float64) (*model.ConversionResult, error)
+
 // sanitizeForPrompt sanitizes user-provided data before interpolation into the system prompt.
 // It strips characters that could be used for prompt injection and limits length.
 func sanitizeForPrompt(s string, maxLen int) string {
@@ -828,6 +830,8 @@ func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.U
 
 	fctx := &model.FinancialContext{}
 	now := time.Now()
+	rateCache := make(map[string]float64)
+	convertCurrency := s.contextCurrencyConverter()
 
 	// Set date context
 	fctx.TodayDate = now.Format("January 2, 2006")
@@ -852,18 +856,25 @@ func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.U
 				Currency: b.Currency,
 				Balance:  b.Balance,
 			})
-			fctx.TotalBalance += b.Balance
 		}
-		// Determine preferred currency (highest balance)
-		if len(fctx.Balances) > 0 {
-			maxBal := fctx.Balances[0]
-			for _, b := range fctx.Balances {
-				if b.Balance > maxBal.Balance {
-					maxBal = b
-				}
-			}
-			fctx.PreferredCurrency = maxBal.Currency
-		}
+		fctx.PreferredCurrency = selectPreferredCurrencyFromBalances(ctx, balances, rateCache, convertCurrency)
+	}
+
+	if fctx.PreferredCurrency == "" {
+		fctx.PreferredCurrency = "USD"
+	}
+
+	// Convert aggregate balance to preferred currency to avoid mixed-currency math.
+	for _, b := range fctx.Balances {
+		converted, _ := convertAmountWithRateCache(
+			ctx,
+			b.Balance,
+			b.Currency,
+			fctx.PreferredCurrency,
+			rateCache,
+			convertCurrency,
+		)
+		fctx.TotalBalance += converted
 	}
 
 	// Get transactions and calculate monthly stats
@@ -872,18 +883,34 @@ func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.U
 
 	transactions, err := s.walletRepo.GetTransactions(ctx, userID, 100, 0)
 	if err == nil {
+		if len(fctx.Balances) == 0 && len(transactions) > 0 {
+			currency := normalizeCurrencyCode(transactions[0].Currency)
+			if currency != "" {
+				fctx.PreferredCurrency = currency
+			}
+		}
+
 		categoryTotals := make(map[string]float64)
 
 		for i, tx := range transactions {
+			convertedAmount, _ := convertAmountWithRateCache(
+				ctx,
+				tx.Amount,
+				tx.Currency,
+				fctx.PreferredCurrency,
+				rateCache,
+				convertCurrency,
+			)
+
 			// This month
 			if tx.CreatedAt.After(startOfMonth) {
 				fctx.RecentTransactions++
 				if tx.Type == "credit" {
-					fctx.MonthlyIncome += tx.Amount
+					fctx.MonthlyIncome += convertedAmount
 				} else if tx.Type == "debit" {
-					fctx.MonthlyExpenses += tx.Amount
+					fctx.MonthlyExpenses += convertedAmount
 					if tx.Category != "" {
-						categoryTotals[tx.Category] += tx.Amount
+						categoryTotals[tx.Category] += convertedAmount
 					}
 				}
 			}
@@ -891,7 +918,7 @@ func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.U
 			// Last month (for trend)
 			if tx.CreatedAt.After(startOfLastMonth) && tx.CreatedAt.Before(startOfMonth) {
 				if tx.Type == "debit" {
-					fctx.LastMonthExpenses += tx.Amount
+					fctx.LastMonthExpenses += convertedAmount
 				}
 			}
 
@@ -1035,10 +1062,19 @@ func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.U
 				}
 				fctx.ActiveLoans = append(fctx.ActiveLoans, loanSummary)
 
+				convertedRemaining, _ := convertAmountWithRateCache(
+					ctx,
+					loan.RemainingAmount,
+					loan.Currency,
+					fctx.PreferredCurrency,
+					rateCache,
+					convertCurrency,
+				)
+
 				if loan.Type == model.LoanTypeBorrowed {
-					fctx.TotalDebt += loan.RemainingAmount
+					fctx.TotalDebt += convertedRemaining
 				} else {
-					fctx.TotalReceivable += loan.RemainingAmount
+					fctx.TotalReceivable += convertedRemaining
 				}
 			}
 			fctx.NetDebtPosition = fctx.TotalDebt - fctx.TotalReceivable
@@ -1046,6 +1082,122 @@ func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.U
 	}
 
 	return fctx, nil
+}
+
+func (s *AIChatService) contextCurrencyConverter() currencyConverterFunc {
+	if s.exchangeService == nil {
+		return nil
+	}
+	return s.exchangeService.Convert
+}
+
+func normalizeCurrencyCode(currency string) string {
+	return strings.ToUpper(strings.TrimSpace(currency))
+}
+
+func convertAmountWithRateCache(
+	ctx context.Context,
+	amount float64,
+	fromCurrency string,
+	toCurrency string,
+	rateCache map[string]float64,
+	convert currencyConverterFunc,
+) (float64, bool) {
+	from := normalizeCurrencyCode(fromCurrency)
+	to := normalizeCurrencyCode(toCurrency)
+
+	if amount == 0 {
+		return 0, true
+	}
+	if from == "" || to == "" || from == to {
+		return amount, true
+	}
+	if convert == nil {
+		return amount, false
+	}
+
+	cacheKey := from + "->" + to
+	if rate, found := rateCache[cacheKey]; found {
+		if rate > 0 {
+			return amount * rate, true
+		}
+		return amount, false
+	}
+
+	result, err := convert(ctx, from, to, 1.0)
+	if err != nil {
+		log.Debug().
+			Err(err).
+			Str("from_currency", from).
+			Str("to_currency", to).
+			Msg("Failed to fetch exchange rate for AI context aggregation")
+		rateCache[cacheKey] = 0
+		return amount, false
+	}
+
+	rate := result.Result
+	if rate <= 0 {
+		rate = result.Rate
+	}
+	if rate <= 0 {
+		rateCache[cacheKey] = 0
+		return amount, false
+	}
+
+	rateCache[cacheKey] = rate
+	return amount * rate, true
+}
+
+func selectPreferredCurrencyFromBalances(
+	ctx context.Context,
+	balances []model.WalletBalance,
+	rateCache map[string]float64,
+	convert currencyConverterFunc,
+) string {
+	if len(balances) == 0 {
+		return ""
+	}
+
+	maxRawBalance := balances[0].Balance
+	preferredRaw := normalizeCurrencyCode(balances[0].Currency)
+	for _, b := range balances[1:] {
+		if b.Balance > maxRawBalance {
+			maxRawBalance = b.Balance
+			preferredRaw = normalizeCurrencyCode(b.Currency)
+		}
+	}
+
+	// Prefer the currency with the highest USD-equivalent value when rates are available.
+	bestCurrency := ""
+	bestUSDEquivalent := 0.0
+	hasConverted := false
+	totalCurrencies := 0
+	convertibleCurrencies := 0
+	for _, b := range balances {
+		currency := normalizeCurrencyCode(b.Currency)
+		if currency == "" {
+			continue
+		}
+		totalCurrencies++
+		converted, ok := convertAmountWithRateCache(ctx, b.Balance, currency, "USD", rateCache, convert)
+		if !ok {
+			continue
+		}
+		convertibleCurrencies++
+		if !hasConverted || converted > bestUSDEquivalent {
+			hasConverted = true
+			bestUSDEquivalent = converted
+			bestCurrency = currency
+		}
+	}
+
+	if hasConverted && bestCurrency != "" && convertibleCurrencies == totalCurrencies {
+		return bestCurrency
+	}
+	if preferredRaw != "" {
+		return preferredRaw
+	}
+	return "USD"
 }
 
 // daysUntilEndOfMonth calculates days remaining in the current month

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Currency Converter backend is built with Go, following clean architecture principles with clear separation of concerns. It provides a REST API for currency conversion, exchange rates, and serves the frontend as static files.
+The CoFinance backend is built with Go, following clean architecture principles with clear separation of concerns. It provides a REST API for currency conversion, exchange rates, and serves the frontend as static files.
 
 ## Technology Stack
 

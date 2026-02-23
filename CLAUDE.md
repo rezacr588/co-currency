@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CoFinance (`github.com/rezacr588/currency-converter`) is a full-stack personal finance app: Go backend, React web frontend, and Expo/React Native mobile app. Features include multi-currency wallet, budgets, goals, recurring transactions, reports, AI chat advisor with vector memory, subscriptions, badges/XP gamification, and multi-language support (EN, FA, AR, TR with RTL).
+CoFinance (`github.com/rezacr588/cofinance`) is a full-stack personal finance app: Go backend, React web frontend, and Expo/React Native mobile app. Features include multi-currency wallet, budgets, goals, recurring transactions, reports, AI chat advisor with vector memory, subscriptions, badges/XP gamification, and multi-language support (EN, FA, AR, TR with RTL).
 
 ## Development Commands
 
@@ -356,7 +356,7 @@ make run-local   # Test production build locally on :8080
 ```
 
 **Koyeb** (use `koyeb` MCP server):
-- App: `terrible-moselle`, Service: `co-currency`
+- App: `terrible-moselle`, Service: `cofinance`
 - URL: https://terrible-moselle-airez-1828dc33.koyeb.app
 - Instance: free tier, region: Frankfurt, scaling: min=0 (scale to zero when idle), max=1
 

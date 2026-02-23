@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { readJSON, writeJSON } from '../../../utils/storage';
 
-const STORAGE_KEY = 'currency-converter-state';
+const STORAGE_KEY = 'cofinance-state';
 
 // Popular currency pairs
 const POPULAR_PAIRS = [
@@ -134,7 +134,7 @@ export function Converter() {
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-sm sm:text-lg font-bold text-slate-800 dark:text-white truncate">
-                    {t('currencyConverter') || 'Currency Converter'}
+                    {t('currencyConverter') || 'CoFinance'}
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     {t('statsCurrenciesLabel') || '160+ currencies'}

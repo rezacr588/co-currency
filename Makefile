@@ -12,7 +12,7 @@ dev-frontend:
 
 # Build
 build:
-	docker build -t currency-converter .
+	docker build -t cofinance .
 
 build-backend:
 	cd backend && go build -o bin/api ./cmd/api
@@ -51,18 +51,18 @@ install:
 
 # Deploy (Koyeb)
 deploy:
-	koyeb service redeploy currency-converter/currency-converter
+	koyeb service redeploy cofinance/cofinance
 
 logs:
-	koyeb service logs currency-converter/currency-converter
+	koyeb service logs cofinance/cofinance
 
 status:
-	koyeb service describe currency-converter/currency-converter
+	koyeb service describe cofinance/cofinance
 
 # Local production test
 run-local:
-	docker build -t currency-converter . && \
-	docker run -p 8080:8080 -e PORT=8080 -e ENVIRONMENT=production currency-converter
+	docker build -t cofinance . && \
+	docker run -p 8080:8080 -e PORT=8080 -e ENVIRONMENT=production cofinance
 
 # Clean
 clean:

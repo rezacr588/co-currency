@@ -1,4 +1,4 @@
-# Currency Converter Application - Complete Documentation
+# CoFinance Application - Complete Documentation
 
 ## Table of Contents
 1. [Overview](#overview)
@@ -16,7 +16,7 @@
 
 ## Overview
 
-**CoFinance** (co-currency) is a modern, real-time currency converter web application that provides exchange rates for 160+ currencies worldwide. The application is built with React, TypeScript, and Tailwind CSS, featuring a clean, responsive interface with dark mode support.
+**CoFinance** (cofinance) is a modern, real-time CoFinance web application that provides exchange rates for 160+ currencies worldwide. The application is built with React, TypeScript, and Tailwind CSS, featuring a clean, responsive interface with dark mode support.
 
 ### Tech Stack
 - **Frontend**: React 18 + TypeScript
@@ -29,7 +29,7 @@
 - **SEO**: React Helmet Async
 
 ### Repository
-- **GitHub**: rezacr588/co-currency
+- **GitHub**: rezacr588/cofinance
 - **Branch Pattern**: `claude/<feature-name>-<sessionId>`
 - **Main Branch**: (not specified, uses default)
 
@@ -63,12 +63,12 @@
 ### Project Structure
 
 ```
-co-currency/
+cofinance/
 ├── frontend/                    # React frontend application
 │   ├── src/
 │   │   ├── components/         # React components
 │   │   │   ├── features/       # Feature-specific components
-│   │   │   │   ├── Converter/  # Currency converter components
+│   │   │   │   ├── Converter/  # CoFinance components
 │   │   │   │   ├── ExchangeRates/
 │   │   │   │   ├── HistoricalRates/
 │   │   │   │   └── QuickConversions/
@@ -112,7 +112,7 @@ co-currency/
 
 ## Component Structure
 
-### 1. Converter Component (Main Currency Converter)
+### 1. Converter Component (Main CoFinance)
 
 **Location**: `/frontend/src/components/features/Converter/Converter.tsx`
 
@@ -172,7 +172,7 @@ interface ConverterState {
 }
 ```
 
-**Persistence**: localStorage with key `'currency-converter-state'`
+**Persistence**: localStorage with key `'cofinance-state'`
 
 #### Features
 
@@ -719,7 +719,7 @@ const debouncedAmount = useDebounce(amount, 150); // 150ms delay
 Converter state is saved/loaded from localStorage:
 
 ```typescript
-const STORAGE_KEY = 'currency-converter-state';
+const STORAGE_KEY = 'cofinance-state';
 
 function loadState(): ConverterState {
   try {
@@ -1050,8 +1050,8 @@ dist/
 **Commits**:
 1. ✅ `138c753` - feat: Add searchable currency dropdown to inline converter
 2. ✅ `713fedc` - chore: Remove unused component files
-3. ✅ `bdb481c` - refactor: Consolidate currency converter into single inline box
-4. ✅ `1f05f1a` - feat: Redesign currency converter with inline input layout
+3. ✅ `bdb481c` - refactor: Consolidate CoFinance into single inline box
+4. ✅ `1f05f1a` - feat: Redesign CoFinance with inline input layout
 
 **Key Changes**:
 - Unified single-box design for converter
@@ -1106,7 +1106,7 @@ npm run build
 **4. LocalStorage Full**
 ```javascript
 // Clear converter state
-localStorage.removeItem('currency-converter-state');
+localStorage.removeItem('cofinance-state');
 ```
 
 **5. Dark Mode Not Working**
@@ -1149,7 +1149,7 @@ git push -u origin claude/<branch-name>
 
 ## Contact & Links
 
-- **Repository**: https://github.com/rezacr588/co-currency
+- **Repository**: https://github.com/rezacr588/cofinance
 - **API**: https://www.frankfurter.app/
 - **Developer**: Reza (rezacr588)
 

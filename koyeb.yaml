@@ -1,10 +1,10 @@
 # Koyeb deployment configuration
 # This file can be used with: koyeb app init --config koyeb.yaml
 
-name: currency-converter
+name: cofinance
 
 service:
-  name: currency-converter
+  name: cofinance
   type: web
 
   git:

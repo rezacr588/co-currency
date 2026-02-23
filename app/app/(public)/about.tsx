@@ -39,7 +39,7 @@ export default function AboutScreen() {
   ];
 
   const appFeatures = [
-    { Icon: RefreshCw, label: t('currencyConverter') || 'Currency Converter', desc: t('converterDesc') || '160+ currencies' },
+    { Icon: RefreshCw, label: t('currencyConverter') || 'CoFinance', desc: t('converterDesc') || '160+ currencies' },
     { Icon: Wallet, label: t('multiCurrencyWallet') || 'Multi-Currency Wallet', desc: t('walletDesc') || 'Track balances' },
     { Icon: Target, label: t('financialGoals') || 'Financial Goals', desc: t('goalsDesc') || 'Save smarter' },
     { Icon: PieChart, label: t('budgets') || 'Budgets', desc: t('budgetDesc') || 'Control spending' },

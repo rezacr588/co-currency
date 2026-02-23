@@ -2,7 +2,7 @@
 
 A full-stack personal finance platform with multi-currency wallet, budgets, goals, AI financial advisor, reports, gamification, and multi-language support. Available as a web app and native mobile app (iOS/Android).
 
-[![CI](https://github.com/rezacr588/co-currency/actions/workflows/ci.yml/badge.svg)](https://github.com/rezacr588/co-currency/actions/workflows/ci.yml)
+[![CI](https://github.com/rezacr588/cofinance/actions/workflows/ci.yml/badge.svg)](https://github.com/rezacr588/cofinance/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ---
@@ -76,7 +76,7 @@ A full-stack personal finance platform with multi-currency wallet, budgets, goal
 ## Project Structure
 
 ```
-co-currency/
+cofinance/
 ├── backend/                # Go API server
 │   ├── cmd/api/            # Entry point + embedded static files
 │   ├── internal/
@@ -133,8 +133,8 @@ co-currency/
 
 ```bash
 # Clone and set up
-git clone https://github.com/rezacr588/currency-converter.git
-cd currency-converter
+git clone https://github.com/rezacr588/cofinance.git
+cd cofinance
 make install
 cp backend/.env.example backend/.env  # Configure environment
 

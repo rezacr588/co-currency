@@ -6,7 +6,7 @@ export const translations = {
 
     // About Us
     aboutUs: 'About Us',
-    aboutUsDescription: 'CoFinance is a modern currency converter providing real-time exchange rates for 160+ currencies worldwide.',
+    aboutUsDescription: 'CoFinance is a modern CoFinance providing real-time exchange rates for 160+ currencies worldwide.',
     coFounder: 'Co-Founder',
     viewLinkedIn: 'View LinkedIn Profile',
     ourMission: 'Our Mission',
@@ -21,7 +21,7 @@ export const translations = {
     featureGlobalDesc: '160+ currencies with multi-language support including English, Persian, Arabic, and Turkish.',
     teamMemberDesc: 'Full Stack Developer & ML Engineer with expertise in building scalable web applications and machine learning solutions.',
     appFeatures: 'App Features',
-    currencyConverter: 'Currency Converter',
+    currencyConverter: 'CoFinance',
     converterDesc: 'Convert 160+ currencies with real-time rates',
     multiCurrencyWallet: 'Multi-Currency Wallet',
     walletDesc: 'Track balances in multiple currencies',

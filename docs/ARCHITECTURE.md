@@ -44,7 +44,7 @@
 ## Directory Structure
 
 ```
-co-currency/
+cofinance/
 ├── backend/                 # Go Backend
 │   ├── cmd/api/            # Application entry point
 │   │   ├── main.go         # Server initialization

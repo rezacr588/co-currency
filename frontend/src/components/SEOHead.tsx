@@ -5,14 +5,14 @@ export function SEOHead() {
   const { language } = useLanguage();
 
   const titles: Record<string, string> = {
-    en: 'CoFinance - Real-Time Currency Converter | Exchange Rates for USD, EUR, GBP & More',
+    en: 'CoFinance - Real-Time CoFinance | Exchange Rates for USD, EUR, GBP & More',
     fa: 'کوفایننس - مبدل ارز لحظه‌ای | نرخ ارز دلار، یورو، پوند و بیشتر',
     ar: 'كوفايننس - محول العملات الفوري | أسعار صرف USD و EUR و GBP والمزيد',
     tr: 'CoFinance - Anlık Döviz Çevirici | USD, EUR, GBP ve Daha Fazlası',
   };
 
   const descriptions: Record<string, string> = {
-    en: 'CoFinance - Free online currency converter with real-time exchange rates. Convert between USD, EUR, GBP, JPY, IRR and 160+ world currencies. Fast, accurate, and easy to use.',
+    en: 'CoFinance - Free online CoFinance with real-time exchange rates. Convert between USD, EUR, GBP, JPY, IRR and 160+ world currencies. Fast, accurate, and easy to use.',
     fa: 'کوفایننس - مبدل ارز آنلاین رایگان با نرخ ارز لحظه‌ای. تبدیل بین دلار، یورو، پوند، ین، ریال و بیش از ۱۶۰ ارز جهانی.',
     ar: 'كوفايننس - محول عملات مجاني مع أسعار صرف فورية. تحويل بين أكثر من 160 عملة عالمية.',
     tr: 'CoFinance - Anlık döviz kurları ile ücretsiz online döviz çevirici. 160+ dünya para birimi arasında dönüştürün.',

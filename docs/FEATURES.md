@@ -6,7 +6,7 @@ CoFinance is an all-in-one personal finance application that combines currency c
 
 ## Current Features
 
-### 1. Currency Converter
+### 1. CoFinance
 - **160+ Currencies**: Convert between any of 160+ world currencies
 - **Real-time Rates**: Powered by European Central Bank data
 - **Special IRR Support**: Iranian Rial with dedicated data source
