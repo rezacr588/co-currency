@@ -36,6 +36,9 @@ func setupTestRouter() (*Handlers, *middleware.RateLimiter, *middleware.Auth) {
 		Auth:     handler.NewAuthHandler(nil),
 		Wallet:   handler.NewWalletHandler(nil),
 		AI:       handler.NewAIHandler(nil, nil),
+		Goal:     handler.NewGoalHandler(nil),
+		Task:     handler.NewTaskHandler(nil),
+		Todo:     handler.NewTodoHandler(nil),
 	}
 
 	rateLimiter := middleware.NewRateLimiter(cfg.RateLimitPerMin)
@@ -295,6 +298,48 @@ func TestRouter_AIApplyParsedEndpoint_Unauthorized(t *testing.T) {
 
 	if rr.Code != http.StatusUnauthorized {
 		t.Errorf("AI apply-parsed endpoint without auth status = %v, want %v", rr.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestRouter_GoalTypesEndpoint_Unauthorized(t *testing.T) {
+	handlers, rateLimiter, authMiddleware := setupTestRouter()
+	r := New(handlers, rateLimiter, authMiddleware, nil)
+
+	req := httptest.NewRequest("GET", "/api/v1/goals/types", nil)
+	rr := httptest.NewRecorder()
+
+	r.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("Goal types endpoint without auth status = %v, want %v", rr.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestRouter_TasksEndpoint_Unauthorized(t *testing.T) {
+	handlers, rateLimiter, authMiddleware := setupTestRouter()
+	r := New(handlers, rateLimiter, authMiddleware, nil)
+
+	req := httptest.NewRequest("GET", "/api/v1/tasks", nil)
+	rr := httptest.NewRecorder()
+
+	r.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("Tasks endpoint without auth status = %v, want %v", rr.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestRouter_TodoEndpoint_Unauthorized(t *testing.T) {
+	handlers, rateLimiter, authMiddleware := setupTestRouter()
+	r := New(handlers, rateLimiter, authMiddleware, nil)
+
+	req := httptest.NewRequest("GET", "/api/v1/todo", nil)
+	rr := httptest.NewRecorder()
+
+	r.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("Todo endpoint without auth status = %v, want %v", rr.Code, http.StatusUnauthorized)
 	}
 }
 

@@ -618,9 +618,9 @@ func (s *AIChatService) buildSystemPrompt(userName string, fctx *model.Financial
 		sb.WriteString("\n")
 	}
 
-	// Savings goals
+	// Goals
 	if len(fctx.SavingsGoals) > 0 {
-		sb.WriteString("## SAVINGS GOALS\n")
+		sb.WriteString("## GOALS\n")
 		for _, g := range fctx.SavingsGoals {
 			sb.WriteString(fmt.Sprintf("- %s: %.2f / %.2f (%.0f%% complete)\n", g.Name, g.Current, g.Target, g.Progress))
 		}

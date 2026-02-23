@@ -47,6 +47,10 @@ func (a *Auth) Middleware(next http.Handler) http.Handler {
 		}
 
 		tokenString := parts[1]
+		if a == nil || a.authService == nil {
+			httputil.ServiceUnavailableWithContext(r.Context(), w, "authentication service unavailable", nil)
+			return
+		}
 
 		// Validate token
 		claims, err := a.authService.ValidateToken(tokenString)

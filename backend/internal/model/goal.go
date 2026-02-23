@@ -6,14 +6,42 @@ import (
 	"github.com/google/uuid"
 )
 
-// Goal represents a financial goal
+type GoalType string
+
+const (
+	GoalTypeFinancial GoalType = "financial"
+	GoalTypePersonal  GoalType = "personal"
+	GoalTypeHealth    GoalType = "health"
+	GoalTypeLearning  GoalType = "learning"
+	GoalTypeCareer    GoalType = "career"
+	GoalTypeHabit     GoalType = "habit"
+	GoalTypeProject   GoalType = "project"
+	GoalTypeOther     GoalType = "other"
+)
+
+// GoalTypes represents all supported goal types.
+var GoalTypes = []GoalType{
+	GoalTypeFinancial,
+	GoalTypePersonal,
+	GoalTypeHealth,
+	GoalTypeLearning,
+	GoalTypeCareer,
+	GoalTypeHabit,
+	GoalTypeProject,
+	GoalTypeOther,
+}
+
+// Goal represents a flexible goal (financial or non-financial).
 type Goal struct {
 	ID            uuid.UUID  `json:"id"`
 	UserID        uuid.UUID  `json:"user_id"`
 	Name          string     `json:"name"`
+	Type          GoalType   `json:"type"`
+	Description   string     `json:"description,omitempty"`
 	TargetAmount  float64    `json:"target_amount"`
 	CurrentAmount float64    `json:"current_amount"`
-	Currency      string     `json:"currency"`
+	Currency      string     `json:"currency,omitempty"`
+	Unit          string     `json:"unit,omitempty"`
 	Category      string     `json:"category,omitempty"`
 	Deadline      *time.Time `json:"deadline,omitempty"`
 	CreatedAt     time.Time  `json:"created_at"`
@@ -37,21 +65,33 @@ func (g *Goal) IsCompleted() bool {
 	return g.CurrentAmount >= g.TargetAmount
 }
 
+// IsFinancial returns true when this goal is financial.
+func (g *Goal) IsFinancial() bool {
+	return g.Type == "" || g.Type == GoalTypeFinancial
+}
+
 // CreateGoalRequest represents a request to create a goal
 type CreateGoalRequest struct {
-	Name         string  `json:"name"`
-	TargetAmount float64 `json:"target_amount"`
-	Currency     string  `json:"currency"`
-	Category     string  `json:"category,omitempty"`
-	Deadline     string  `json:"deadline,omitempty"` // ISO date format
+	Type         GoalType `json:"type,omitempty"`
+	Name         string   `json:"name"`
+	Description  string   `json:"description,omitempty"`
+	TargetAmount float64  `json:"target_amount"`
+	Currency     string   `json:"currency,omitempty"`
+	Unit         string   `json:"unit,omitempty"`
+	Category     string   `json:"category,omitempty"`
+	Deadline     string   `json:"deadline,omitempty"` // ISO date format
 }
 
 // UpdateGoalRequest represents a request to update a goal
 type UpdateGoalRequest struct {
-	Name         *string  `json:"name,omitempty"`
-	TargetAmount *float64 `json:"target_amount,omitempty"`
-	Category     *string  `json:"category,omitempty"`
-	Deadline     *string  `json:"deadline,omitempty"` // ISO date format, empty string to remove
+	Type         *GoalType `json:"type,omitempty"`
+	Name         *string   `json:"name,omitempty"`
+	Description  *string   `json:"description,omitempty"`
+	TargetAmount *float64  `json:"target_amount,omitempty"`
+	Currency     *string   `json:"currency,omitempty"`
+	Unit         *string   `json:"unit,omitempty"`
+	Category     *string   `json:"category,omitempty"`
+	Deadline     *string   `json:"deadline,omitempty"` // ISO date format, empty string to remove
 }
 
 // ContributeToGoalRequest represents a request to contribute to a goal
@@ -70,5 +110,11 @@ var GoalCategories = []string{
 	"retirement",
 	"investment",
 	"debt_payoff",
+	"health",
+	"learning",
+	"career",
+	"habit",
+	"personal",
+	"project",
 	"other",
 }

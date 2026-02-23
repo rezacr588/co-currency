@@ -21,6 +21,8 @@ type Handlers struct {
 	AI            *handler.AIHandler
 	AIChat        *handler.AIChatHandler
 	Goal          *handler.GoalHandler
+	Todo          *handler.TodoHandler
+	Task          *handler.TaskHandler
 	Tag           *handler.TagHandler
 	Budget        *handler.BudgetHandler
 	Recurring     *handler.RecurringHandler
@@ -157,11 +159,35 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 				r.Use(authMiddleware.Middleware)
 				r.Get("/", h.Goal.GetGoals)
 				r.Post("/", h.Goal.CreateGoal)
+				r.Get("/types", h.Goal.GetGoalTypes)
 				r.Get("/categories", h.Goal.GetGoalCategories)
 				r.Get("/{id}", h.Goal.GetGoal)
 				r.Put("/{id}", h.Goal.UpdateGoal)
 				r.Delete("/{id}", h.Goal.DeleteGoal)
 				r.Post("/{id}/contribute", h.Goal.ContributeToGoal)
+			})
+		}
+
+		// Tasks routes (protected)
+		if h.Task != nil {
+			r.Route("/tasks", func(r chi.Router) {
+				r.Use(authMiddleware.Middleware)
+				r.Get("/", h.Task.GetTasks)
+				r.Post("/", h.Task.CreateTask)
+				r.Get("/statuses", h.Task.GetTaskStatuses)
+				r.Get("/priorities", h.Task.GetTaskPriorities)
+				r.Get("/{id}", h.Task.GetTask)
+				r.Put("/{id}", h.Task.UpdateTask)
+				r.Delete("/{id}", h.Task.DeleteTask)
+				r.Post("/{id}/complete", h.Task.CompleteTask)
+			})
+		}
+
+		// Unified todo list routes (protected)
+		if h.Todo != nil {
+			r.Route("/todo", func(r chi.Router) {
+				r.Use(authMiddleware.Middleware)
+				r.Get("/", h.Todo.GetTodoList)
 			})
 		}
 

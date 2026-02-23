@@ -248,8 +248,10 @@ func main() {
 		log.Info().Msg("AI_API_KEY not configured, AI features disabled")
 	}
 
-	// Initialize Phase 3 services (goals, tags, budgets, recurring, reports)
+	// Initialize Phase 3 services (goals, tasks, todo, tags, budgets, recurring, reports)
 	var goalService *service.GoalService
+	var taskService *service.TaskService
+	var todoService *service.TodoService
 	var tagService *service.TagService
 	var categoryService *service.CategoryService
 	var budgetService *service.BudgetService
@@ -282,6 +284,13 @@ func main() {
 		goalRepo = repository.NewGoalRepository(mainDB)
 		goalService = service.NewGoalService(goalRepo)
 		log.Info().Msg("Goal service initialized")
+
+		taskRepo := repository.NewTaskRepository(mainDB)
+		taskService = service.NewTaskService(taskRepo, goalRepo)
+		log.Info().Msg("Task service initialized")
+
+		todoService = service.NewTodoService(taskRepo, goalRepo)
+		log.Info().Msg("Todo service initialized")
 
 		tagRepo := repository.NewTagRepository(mainDB)
 		tagService = service.NewTagService(tagRepo)
@@ -469,6 +478,8 @@ func main() {
 
 	// Initialize Phase 3 handlers
 	var goalHandler *handler.GoalHandler
+	var taskHandler *handler.TaskHandler
+	var todoHandler *handler.TodoHandler
 	var tagHandler *handler.TagHandler
 	var budgetHandler *handler.BudgetHandler
 	var recurringHandler *handler.RecurringHandler
@@ -476,6 +487,12 @@ func main() {
 
 	if goalService != nil {
 		goalHandler = handler.NewGoalHandler(goalService)
+	}
+	if taskService != nil {
+		taskHandler = handler.NewTaskHandler(taskService)
+	}
+	if todoService != nil {
+		todoHandler = handler.NewTodoHandler(todoService)
 	}
 	if tagService != nil {
 		tagHandler = handler.NewTagHandler(tagService)
@@ -552,6 +569,8 @@ func main() {
 		AI:            aiHandler,
 		AIChat:        aiChatHandler,
 		Goal:          goalHandler,
+		Todo:          todoHandler,
+		Task:          taskHandler,
 		Tag:           tagHandler,
 		Budget:        budgetHandler,
 		Recurring:     recurringHandler,

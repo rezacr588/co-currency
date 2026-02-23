@@ -335,6 +335,10 @@ func (h *AIHandler) ApplyGoalContribution(w http.ResponseWriter, r *http.Request
 			httputil.BadRequestWithContext(r.Context(), w, "insufficient balance", err)
 			return
 		}
+		if errors.Is(err, service.ErrGoalContributionNotAllowed) {
+			httputil.BadRequestWithContext(r.Context(), w, err.Error(), err)
+			return
+		}
 		httputil.BadRequestWithContext(r.Context(), w, "failed to contribute to goal", err)
 		return
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -103,7 +104,11 @@ func (h *GoalHandler) CreateGoal(w http.ResponseWriter, r *http.Request) {
 
 	goal, err := h.goalService.CreateGoal(r.Context(), userID, &req)
 	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "failed to create goal")
+		if errors.Is(err, service.ErrInvalidGoalType) || isGoalValidationError(err) {
+			httputil.BadRequestWithContext(r.Context(), w, err.Error(), err)
+			return
+		}
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to create goal", err)
 		return
 	}
 
@@ -140,7 +145,11 @@ func (h *GoalHandler) UpdateGoal(w http.ResponseWriter, r *http.Request) {
 			httputil.NotFoundWithContext(r.Context(), w, "goal not found")
 			return
 		}
-		httputil.BadRequestWithContext(r.Context(), w, "failed to update goal")
+		if errors.Is(err, service.ErrInvalidGoalType) || isGoalValidationError(err) {
+			httputil.BadRequestWithContext(r.Context(), w, err.Error(), err)
+			return
+		}
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to update goal", err)
 		return
 	}
 
@@ -209,6 +218,10 @@ func (h *GoalHandler) ContributeToGoal(w http.ResponseWriter, r *http.Request) {
 			httputil.BadRequest(w, "insufficient balance")
 			return
 		}
+		if errors.Is(err, service.ErrGoalContributionNotAllowed) || isGoalValidationError(err) {
+			httputil.BadRequestWithContext(r.Context(), w, err.Error(), err)
+			return
+		}
 		httputil.BadRequestWithContext(r.Context(), w, "failed to contribute to goal")
 		return
 	}
@@ -226,4 +239,28 @@ func (h *GoalHandler) GetGoalCategories(w http.ResponseWriter, r *http.Request) 
 	httputil.Success(w, map[string]interface{}{
 		"categories": model.GoalCategories,
 	})
+}
+
+// GetGoalTypes handles GET /api/v1/goals/types
+func (h *GoalHandler) GetGoalTypes(w http.ResponseWriter, r *http.Request) {
+	httputil.Success(w, map[string]interface{}{
+		"types": model.GoalTypes,
+	})
+}
+
+func isGoalValidationError(err error) bool {
+	msg := err.Error()
+	for _, marker := range []string{
+		"name is required",
+		"name cannot be empty",
+		"target_amount must be positive",
+		"currency is required",
+		"invalid deadline format",
+		"amount must be positive",
+	} {
+		if strings.Contains(msg, marker) {
+			return true
+		}
+	}
+	return false
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,7 +12,12 @@ import (
 	"github.com/rezacr588/currency-converter/internal/repository"
 )
 
-// GoalService handles business logic for financial goals
+var (
+	ErrInvalidGoalType            = errors.New("invalid goal type")
+	ErrGoalContributionNotAllowed = errors.New("goal contributions are only available for financial goals")
+)
+
+// GoalService handles business logic for goals.
 type GoalService struct {
 	goalRepo *repository.GoalRepository
 }
@@ -52,28 +58,53 @@ func (s *GoalService) GetGoal(ctx context.Context, userID, goalID uuid.UUID) (*m
 // CreateGoal creates a new goal
 func (s *GoalService) CreateGoal(ctx context.Context, userID uuid.UUID, req *model.CreateGoalRequest) (*model.Goal, error) {
 	// Validate request
-	if req.Name == "" {
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
 		return nil, errors.New("name is required")
 	}
 	if req.TargetAmount <= 0 {
 		return nil, errors.New("target_amount must be positive")
 	}
-	if req.Currency == "" {
-		return nil, errors.New("currency is required")
+
+	goalType := req.Type
+	if goalType == "" {
+		goalType = model.GoalTypeFinancial
+	}
+	if !isValidGoalType(goalType) {
+		return nil, ErrInvalidGoalType
+	}
+
+	currency := strings.ToUpper(strings.TrimSpace(req.Currency))
+	unit := strings.TrimSpace(req.Unit)
+	if goalType == model.GoalTypeFinancial {
+		if currency == "" {
+			return nil, errors.New("currency is required for financial goals")
+		}
+		if unit == "" {
+			unit = currency
+		}
+	} else {
+		if unit == "" {
+			unit = "units"
+		}
 	}
 
 	goal := &model.Goal{
 		UserID:        userID,
-		Name:          req.Name,
+		Name:          name,
+		Type:          goalType,
+		Description:   strings.TrimSpace(req.Description),
 		TargetAmount:  req.TargetAmount,
 		CurrentAmount: 0,
-		Currency:      req.Currency,
-		Category:      req.Category,
+		Currency:      currency,
+		Unit:          unit,
+		Category:      strings.TrimSpace(req.Category),
 	}
 
 	// Parse deadline if provided
-	if req.Deadline != "" {
-		deadline, err := time.Parse("2006-01-02", req.Deadline)
+	deadlineText := strings.TrimSpace(req.Deadline)
+	if deadlineText != "" {
+		deadline, err := time.Parse("2006-01-02", deadlineText)
 		if err != nil {
 			return nil, errors.New("invalid deadline format, use YYYY-MM-DD")
 		}
@@ -98,9 +129,27 @@ func (s *GoalService) UpdateGoal(ctx context.Context, userID, goalID uuid.UUID, 
 		return nil, fmt.Errorf("getting goal: %w", err)
 	}
 
+	if req.Type != nil {
+		goalType := *req.Type
+		if goalType == "" {
+			goalType = model.GoalTypeFinancial
+		}
+		if !isValidGoalType(goalType) {
+			return nil, ErrInvalidGoalType
+		}
+		goal.Type = goalType
+	}
+
 	// Apply updates
-	if req.Name != nil && *req.Name != "" {
-		goal.Name = *req.Name
+	if req.Name != nil {
+		name := strings.TrimSpace(*req.Name)
+		if name == "" {
+			return nil, errors.New("name cannot be empty")
+		}
+		goal.Name = name
+	}
+	if req.Description != nil {
+		goal.Description = strings.TrimSpace(*req.Description)
 	}
 	if req.TargetAmount != nil {
 		if *req.TargetAmount <= 0 {
@@ -108,19 +157,41 @@ func (s *GoalService) UpdateGoal(ctx context.Context, userID, goalID uuid.UUID, 
 		}
 		goal.TargetAmount = *req.TargetAmount
 	}
+	if req.Currency != nil {
+		goal.Currency = strings.ToUpper(strings.TrimSpace(*req.Currency))
+	}
+	if req.Unit != nil {
+		goal.Unit = strings.TrimSpace(*req.Unit)
+	}
 	if req.Category != nil {
-		goal.Category = *req.Category
+		goal.Category = strings.TrimSpace(*req.Category)
 	}
 	if req.Deadline != nil {
-		if *req.Deadline == "" {
+		deadlineText := strings.TrimSpace(*req.Deadline)
+		if deadlineText == "" {
 			goal.Deadline = nil
 		} else {
-			deadline, err := time.Parse("2006-01-02", *req.Deadline)
+			deadline, err := time.Parse("2006-01-02", deadlineText)
 			if err != nil {
 				return nil, errors.New("invalid deadline format, use YYYY-MM-DD")
 			}
 			goal.Deadline = &deadline
 		}
+	}
+
+	if goal.Type == "" {
+		goal.Type = model.GoalTypeFinancial
+	}
+
+	if goal.IsFinancial() {
+		if strings.TrimSpace(goal.Currency) == "" {
+			return nil, errors.New("currency is required for financial goals")
+		}
+		if strings.TrimSpace(goal.Unit) == "" {
+			goal.Unit = goal.Currency
+		}
+	} else if strings.TrimSpace(goal.Unit) == "" {
+		goal.Unit = "units"
 	}
 
 	if err := s.goalRepo.Update(ctx, goal); err != nil {
@@ -159,6 +230,9 @@ func (s *GoalService) ContributeToGoal(ctx context.Context, userID, goalID uuid.
 		}
 		return nil, nil, fmt.Errorf("getting goal: %w", err)
 	}
+	if !goal.IsFinancial() || strings.TrimSpace(goal.Currency) == "" {
+		return nil, nil, ErrGoalContributionNotAllowed
+	}
 
 	// Contribute from wallet
 	updatedGoal, transaction, err := s.goalRepo.ContributeFromWallet(ctx, userID, goalID, req.Amount, goal.Currency)
@@ -170,4 +244,13 @@ func (s *GoalService) ContributeToGoal(ctx context.Context, userID, goalID uuid.
 	}
 
 	return updatedGoal, transaction, nil
+}
+
+func isValidGoalType(goalType model.GoalType) bool {
+	for _, valid := range model.GoalTypes {
+		if goalType == valid {
+			return true
+		}
+	}
+	return false
 }
