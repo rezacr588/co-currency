@@ -208,6 +208,7 @@ export const chat = {
         ? `${API_BASE}/ai/chat/stream?trace=1`
         : `${API_BASE}/ai/chat/stream`;
       xhr.open('POST', streamURL, true);
+      xhr.responseType = 'text';
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.setRequestHeader('Accept', 'text/event-stream');
       if (token) {
@@ -226,15 +227,15 @@ export const chat = {
       };
 
       xhr.onreadystatechange = () => {
-        if (xhr.readyState !== XMLHttpRequest.DONE) {
-          return;
-        }
-
         const responseText = xhr.responseText ?? '';
         if (responseText.length > lastProcessedIndex) {
           const chunk = responseText.slice(lastProcessedIndex);
           lastProcessedIndex = responseText.length;
           processIncoming(chunk);
+        }
+
+        if (xhr.readyState !== XMLHttpRequest.DONE) {
+          return;
         }
 
         if (xhr.status < 200 || xhr.status >= 300) {

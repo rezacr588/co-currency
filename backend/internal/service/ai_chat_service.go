@@ -376,6 +376,48 @@ func failChatWithError(
 	return err
 }
 
+func emitChunkedText(onChunk func(chunk string) error, text string) (int, int, error) {
+	if onChunk == nil || text == "" {
+		return 0, 0, nil
+	}
+
+	const chunkSize = 120
+	const minChunkSize = 40
+
+	runes := []rune(text)
+	chunkCount := 0
+	start := 0
+	for start < len(runes) {
+		end := start + chunkSize
+		if end > len(runes) {
+			end = len(runes)
+		} else {
+			split := -1
+			for i := end - 1; i >= start+minChunkSize; i-- {
+				switch runes[i] {
+				case ' ', '\n', '\t':
+					split = i + 1
+					i = start - 1
+				}
+			}
+			if split != -1 {
+				end = split
+			}
+		}
+
+		if end <= start {
+			end = start + 1
+		}
+		if err := onChunk(string(runes[start:end])); err != nil {
+			return chunkCount, len(runes), err
+		}
+		chunkCount++
+		start = end
+	}
+
+	return chunkCount, len(runes), nil
+}
+
 // Chat processes a user message and returns an AI response with full context
 func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName string, conversationID string, message string) (*model.ChatResponse, error) {
 	requestStartedAt := time.Now()
@@ -543,11 +585,12 @@ func (s *AIChatService) ChatStream(
 
 		// Stream the final response to the client
 		if onChunk != nil && aiResponse != "" {
-			streamChunkCount++
-			streamChars += len(aiResponse)
-			if err := onChunk(aiResponse); err != nil {
+			chunks, chars, err := emitChunkedText(onChunk, aiResponse)
+			if err != nil {
 				return nil, err
 			}
+			streamChunkCount += chunks
+			streamChars += chars
 		}
 	} else {
 		// No tool call — redo with streaming for better UX
@@ -591,11 +634,12 @@ func (s *AIChatService) ChatStream(
 		if aiResponse == "" {
 			aiResponse = response.Choices[0].Content
 			if onChunk != nil && aiResponse != "" {
-				streamChunkCount++
-				streamChars += len(aiResponse)
-				if err := onChunk(aiResponse); err != nil {
+				chunks, chars, err := emitChunkedText(onChunk, aiResponse)
+				if err != nil {
 					return nil, err
 				}
+				streamChunkCount += chunks
+				streamChars += chars
 			}
 		}
 
