@@ -33,8 +33,3 @@ func Trace(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
-
-// GetTraceIDFromContext extracts the trace ID from the request context
-func GetTraceIDFromContext(ctx context.Context) string {
-	return ctxkeys.GetTraceID(ctx)
-}

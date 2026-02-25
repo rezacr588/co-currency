@@ -40,6 +40,7 @@ type ChatResponse struct {
 	ConversationID string      `json:"conversation_id"`
 	Message        ChatMessage `json:"message"`
 	TokensUsed     int         `json:"tokens_used,omitempty"`
+	TraceID        string      `json:"trace_id,omitempty"`
 }
 
 // ConversationWithMessages represents a conversation with its messages
@@ -51,44 +52,44 @@ type ConversationWithMessages struct {
 // FinancialContext represents the user's financial data for AI context
 type FinancialContext struct {
 	// User info
-	UserName       string `json:"user_name"`
+	UserName          string `json:"user_name"`
 	PreferredCurrency string `json:"preferred_currency"`
-	AccountAgeDays int    `json:"account_age_days"`
+	AccountAgeDays    int    `json:"account_age_days"`
 
 	// Balances
-	TotalBalance       float64          `json:"total_balance"`
-	Balances           []CurrencyBalance `json:"balances"`
+	TotalBalance float64           `json:"total_balance"`
+	Balances     []CurrencyBalance `json:"balances"`
 
 	// Monthly overview
-	MonthlyIncome      float64            `json:"monthly_income"`
-	MonthlyExpenses    float64            `json:"monthly_expenses"`
-	TopCategories      []CategorySpending `json:"top_categories"`
+	MonthlyIncome   float64            `json:"monthly_income"`
+	MonthlyExpenses float64            `json:"monthly_expenses"`
+	TopCategories   []CategorySpending `json:"top_categories"`
 
 	// Budgets and Goals
-	ActiveBudgets      []BudgetSummary    `json:"active_budgets"`
-	SavingsGoals       []GoalSummary      `json:"savings_goals"`
+	ActiveBudgets []BudgetSummary `json:"active_budgets"`
+	SavingsGoals  []GoalSummary   `json:"savings_goals"`
 
 	// Activity
 	RecentTransactions    int                  `json:"recent_transactions"`
 	RecentTransactionList []TransactionSummary `json:"recent_transaction_list"`
 
 	// Patterns
-	RecurringItems     []RecurringSummary `json:"recurring_items"`
-	SpendingTrend      string             `json:"spending_trend"` // "increasing", "decreasing", "stable"
-	LastMonthExpenses  float64            `json:"last_month_expenses"`
+	RecurringItems    []RecurringSummary `json:"recurring_items"`
+	SpendingTrend     string             `json:"spending_trend"` // "increasing", "decreasing", "stable"
+	LastMonthExpenses float64            `json:"last_month_expenses"`
 
 	// Loans and Debts
-	ActiveLoans        []LoanSummaryForAI `json:"active_loans"`
-	TotalDebt          float64            `json:"total_debt"`         // Money user owes
-	TotalReceivable    float64            `json:"total_receivable"`   // Money owed to user
-	NetDebtPosition    float64            `json:"net_debt_position"`  // Positive = net debtor
+	ActiveLoans     []LoanSummaryForAI `json:"active_loans"`
+	TotalDebt       float64            `json:"total_debt"`        // Money user owes
+	TotalReceivable float64            `json:"total_receivable"`  // Money owed to user
+	NetDebtPosition float64            `json:"net_debt_position"` // Positive = net debtor
 
 	// Categories
-	Categories         []CategoryInfo `json:"categories"`
+	Categories []CategoryInfo `json:"categories"`
 
 	// Context
-	TodayDate          string `json:"today_date"`
-	DaysUntilMonthEnd  int    `json:"days_until_month_end"`
+	TodayDate         string `json:"today_date"`
+	DaysUntilMonthEnd int    `json:"days_until_month_end"`
 }
 
 // CategoryInfo represents a category for AI context
@@ -101,7 +102,7 @@ type CategoryInfo struct {
 // LoanSummaryForAI provides loan context for AI
 type LoanSummaryForAI struct {
 	Name            string  `json:"name"`
-	Type            string  `json:"type"`  // "borrowed" or "lent"
+	Type            string  `json:"type"` // "borrowed" or "lent"
 	RemainingAmount float64 `json:"remaining_amount"`
 	Currency        string  `json:"currency"`
 	Counterparty    string  `json:"counterparty,omitempty"`
@@ -159,16 +160,16 @@ type GoalSummary struct {
 type UserMemory struct {
 	ID        uuid.UUID `json:"id"`
 	UserID    uuid.UUID `json:"user_id"`
-	Category  string    `json:"category"`  // "preference", "goal", "habit", "insight", "fact"
-	Content   string    `json:"content"`   // The memory content
-	Source    string    `json:"source"`    // "user_stated", "ai_inferred", "system"
+	Category  string    `json:"category"` // "preference", "goal", "habit", "insight", "fact"
+	Content   string    `json:"content"`  // The memory content
+	Source    string    `json:"source"`   // "user_stated", "ai_inferred", "system"
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // ConversationSummary for AI context about past conversations
 type ConversationSummary struct {
-	Title       string `json:"title"`
-	Date        string `json:"date"`
+	Title         string `json:"title"`
+	Date          string `json:"date"`
 	TopicsSummary string `json:"topics_summary"`
 }

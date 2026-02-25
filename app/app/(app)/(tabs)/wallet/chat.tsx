@@ -18,9 +18,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Markdown from 'react-native-markdown-display';
 import {
-  ArrowLeft,
-  Bot,
-  User,
   Send,
   Plus,
   Trash2,
@@ -59,25 +56,6 @@ function getFriendlyErrorMessage(error: unknown): string {
     return 'Connection lost. Please check your internet and try again.';
   }
   return 'Something went wrong. Please try again.';
-}
-
-// These are populated with translations at render time via useSuggestedPrompts()
-function useSuggestedPrompts() {
-  const { t } = useLanguage();
-  return {
-    questions: [
-      t('suggestedQuestion1') || 'How am I doing financially?',
-      t('suggestedQuestion2') || 'What are my top spending categories?',
-      t('suggestedQuestion3') || 'Am I on track with my savings goals?',
-      t('suggestedQuestion4') || 'How can I save more money?',
-      t('suggestedQuestion5') || 'How much did I spend this month?',
-    ],
-    actions: [
-      t('suggestedAction1') || 'Add $12 coffee',
-      t('suggestedAction2') || 'Convert 100 USD to EUR',
-      t('suggestedAction3') || 'Rate USD to EUR',
-    ],
-  };
 }
 
 
@@ -134,7 +112,6 @@ export default function AIChatScreen() {
   const colors = theme.colors;
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { questions: suggestedQuestions, actions: suggestedActions } = useSuggestedPrompts();
   const { conversationId } = useLocalSearchParams<{ conversationId?: string }>();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -152,6 +129,7 @@ export default function AIChatScreen() {
 
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [streamingDraft, setStreamingDraft] = useState('');
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
@@ -171,13 +149,34 @@ export default function AIChatScreen() {
   const isNearBottomRef = useRef(true);
   const pendingMutationRef = useRef(false);
   const lastSentMessageRef = useRef<string>('');
+  const clearStreamingState = useCallback(() => {
+    setIsTyping(false);
+    setStreamingDraft('');
+  }, []);
+  const clearConversationTransientState = useCallback(() => {
+    setPendingAction(null);
+    setSendError(null);
+    setStreamingDraft('');
+  }, []);
+  const toMutationErrorMessage = useCallback(
+    (err: unknown, fallback: string) => (err instanceof Error ? err.message : fallback),
+    []
+  );
+  const updatePendingAction = useCallback(
+    (kind: PendingAction['kind'], patch: Partial<PendingAction>) => {
+      setPendingAction((current) =>
+        current && current.kind === kind ? ({ ...current, ...patch } as PendingAction) : current
+      );
+    },
+    []
+  );
 
   // Markdown styles for AI responses
   const markdownStyles = useMemo(() => StyleSheet.create({
     body: {
       color: colors.foreground,
       fontSize: 15,
-      lineHeight: 22,
+      lineHeight: 21,
     },
     heading1: {
       color: colors.foreground,
@@ -203,9 +202,9 @@ export default function AIChatScreen() {
     paragraph: {
       color: colors.foreground,
       fontSize: 15,
-      lineHeight: 22,
+      lineHeight: 21,
       marginTop: 0,
-      marginBottom: 8,
+      marginBottom: 6,
     },
     strong: {
       color: colors.foreground,
@@ -258,8 +257,8 @@ export default function AIChatScreen() {
     list_item: {
       color: colors.foreground,
       fontSize: 15,
-      lineHeight: 22,
-      marginBottom: 4,
+      lineHeight: 21,
+      marginBottom: 3,
     },
     bullet_list: {
       marginVertical: 4,
@@ -350,17 +349,57 @@ export default function AIChatScreen() {
         ? activeConversationId
         : undefined;
 
-      const result = await api.chat.sendMessage({
-        conversation_id: realConversationId,
-        message: msg,
-        file: attachment || undefined,
-      });
-      clearAttachment();
-      return result;
+      if (attachment) {
+        const result = await api.chat.sendMessageWithAttachment({
+          conversation_id: realConversationId,
+          message: msg,
+          file: attachment,
+        });
+        clearAttachment();
+        return result;
+      }
+
+      try {
+        const streamCallbacks: Parameters<typeof api.chat.sendMessageStream>[1] = {
+          onDelta: (event) => {
+            setIsTyping(false);
+            setStreamingDraft((prev) => prev + event.content);
+          },
+        };
+        if (__DEV__) {
+          streamCallbacks.onStart = (event) => {
+            if (event.trace_id) {
+              console.debug(`[AI trace] stream start: ${event.trace_id}`);
+            }
+          };
+          streamCallbacks.onTrace = (event) => {
+            console.debug('[AI trace]', event);
+          };
+          streamCallbacks.onDone = (event) => {
+            if (event.trace_id) {
+              console.debug(`[AI trace] stream done: ${event.trace_id}`);
+            }
+          };
+        }
+
+        const result = await api.chat.sendMessageStream(
+          {
+            conversation_id: realConversationId,
+            message: msg,
+          },
+          streamCallbacks
+        );
+        clearAttachment();
+        return result;
+      } catch (streamErr) {
+        setStreamingDraft('');
+        throw streamErr;
+      }
     },
     onMutate: async (msg) => {
       pendingMutationRef.current = true;
       setIsTyping(true);
+      setStreamingDraft('');
       setSendError(null);
       setLastFailedMessage(null);
       const now = new Date().toISOString();
@@ -427,7 +466,7 @@ export default function AIChatScreen() {
     onSuccess: (data, _msg, context) => {
       if (!data || !data.conversation_id || !data.message) {
         console.error('Invalid response from server:', data);
-        setIsTyping(false);
+        clearStreamingState();
         return;
       }
 
@@ -520,7 +559,7 @@ export default function AIChatScreen() {
 
       // Invalidate to get fresh data from server
       queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
-      setIsTyping(false);
+      clearStreamingState();
       pendingMutationRef.current = false;
       lastSentMessageRef.current = ''; // Clear saved message on success
     },
@@ -564,7 +603,7 @@ export default function AIChatScreen() {
         setMessage(lastSentMessageRef.current);
       }
       setSendError(getFriendlyErrorMessage(error));
-      setIsTyping(false);
+      clearStreamingState();
       pendingMutationRef.current = false;
     },
     onSettled: () => {
@@ -595,22 +634,13 @@ export default function AIChatScreen() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
-      setPendingAction((current) =>
-        current && current.kind === 'transaction'
-          ? { ...current, status: 'done' }
-          : current
-      );
+      updatePendingAction('transaction', { status: 'done' });
     },
     onError: (err) => {
-      setPendingAction((current) =>
-        current && current.kind === 'transaction'
-          ? {
-              ...current,
-              status: 'error',
-              error: err instanceof Error ? err.message : 'Could not add transaction',
-            }
-          : current
-      );
+      updatePendingAction('transaction', {
+        status: 'error',
+        error: toMutationErrorMessage(err, 'Could not add transaction'),
+      });
     },
   });
 
@@ -627,22 +657,13 @@ export default function AIChatScreen() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['recurring'] });
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
-      setPendingAction((current) =>
-        current && current.kind === 'recurring'
-          ? { ...current, status: 'done', result }
-          : current
-      );
+      updatePendingAction('recurring', { status: 'done', result });
     },
     onError: (err) => {
-      setPendingAction((current) =>
-        current && current.kind === 'recurring'
-          ? {
-              ...current,
-              status: 'error',
-              error: err instanceof Error ? err.message : 'Could not create recurring transaction',
-            }
-          : current
-      );
+      updatePendingAction('recurring', {
+        status: 'error',
+        error: toMutationErrorMessage(err, 'Could not create recurring transaction'),
+      });
     },
   });
 
@@ -656,22 +677,13 @@ export default function AIChatScreen() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['goals'] });
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
-      setPendingAction((current) =>
-        current && current.kind === 'goal_contribution'
-          ? { ...current, status: 'done', result }
-          : current
-      );
+      updatePendingAction('goal_contribution', { status: 'done', result });
     },
     onError: (err) => {
-      setPendingAction((current) =>
-        current && current.kind === 'goal_contribution'
-          ? {
-              ...current,
-              status: 'error',
-              error: err instanceof Error ? err.message : 'Could not contribute to goal',
-            }
-          : current
-      );
+      updatePendingAction('goal_contribution', {
+        status: 'error',
+        error: toMutationErrorMessage(err, 'Could not contribute to goal'),
+      });
     },
   });
 
@@ -684,22 +696,13 @@ export default function AIChatScreen() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
-      setPendingAction((current) =>
-        current && current.kind === 'convert'
-          ? { ...current, status: 'done' }
-          : current
-      );
+      updatePendingAction('convert', { status: 'done' });
     },
     onError: (err) => {
-      setPendingAction((current) =>
-        current && current.kind === 'convert'
-          ? {
-              ...current,
-              status: 'error',
-              error: err instanceof Error ? err.message : 'Conversion failed',
-            }
-          : current
-      );
+      updatePendingAction('convert', {
+        status: 'error',
+        error: toMutationErrorMessage(err, 'Conversion failed'),
+      });
     },
   });
 
@@ -713,11 +716,6 @@ export default function AIChatScreen() {
   const inputPlaceholder = attachment
     ? (t('addCaption') || 'Add optional caption...')
     : (t('typeMessage') || 'Type a message');
-  const showComposerPrompts = !hasTypedMessage && !attachment && !isRecordingVoice;
-  const composerPrompts = [
-    ...suggestedActions.slice(0, 2),
-    ...suggestedQuestions.slice(0, 2),
-  ];
 
   // Scroll to bottom on new messages
   const scrollToBottom = useCallback(() => {
@@ -740,7 +738,7 @@ export default function AIChatScreen() {
   useEffect(() => {
     const timeout = setTimeout(maybeAutoScroll, 80);
     return () => clearTimeout(timeout);
-  }, [messages, isTyping, activeConversationId, maybeAutoScroll]);
+  }, [messages, isTyping, streamingDraft, activeConversationId, maybeAutoScroll]);
 
 
   const handleSend = (overrideMessage?: string) => {
@@ -778,17 +776,15 @@ export default function AIChatScreen() {
     }
     // Just reset to show welcome screen - conversation will be created when user sends first message
     setActiveConversationId(null);
-    setPendingAction(null);
-    setSendError(null);
+    clearConversationTransientState();
     isNearBottomRef.current = true;
   };
 
   const handleSelectConversation = (id: string) => {
     if (sendMessageMutation.isPending) return; // Don't switch while sending
-    setIsTyping(false);
+    clearStreamingState();
     setActiveConversationId(id);
-    setPendingAction(null);
-    setSendError(null);
+    clearConversationTransientState();
     isNearBottomRef.current = true;
   };
 
@@ -1053,56 +1049,6 @@ export default function AIChatScreen() {
         <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginBottom: 20, maxWidth: 560, alignSelf: 'center', lineHeight: 22 }}>
           {t('aiWelcomeDesc') || 'Ask questions, attach receipts, or let me take actions like adding transactions and conversions.'}
         </Text>
-
-        <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_600SemiBold', marginBottom: 10 }}>
-          {t('quickActions') || 'QUICK ACTIONS'}
-        </Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-          {suggestedActions.map((action, i) => (
-            <Pressable
-              key={i}
-              onPress={() => setMessage(action)}
-              style={({ pressed }) => [
-                {
-                  backgroundColor: colors.primary + '16',
-                  borderWidth: 1,
-                  borderColor: colors.primary + '33',
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                  borderRadius: 9999,
-                },
-                pressed && { opacity: 0.72 },
-              ]}
-            >
-              <Text style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_500Medium' }}>{action}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_600SemiBold', marginBottom: 10 }}>
-          {t('suggestions') || 'SUGGESTIONS'}
-        </Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {suggestedQuestions.slice(0, 4).map((q, i) => (
-            <Pressable
-              key={i}
-              onPress={() => setMessage(q)}
-              style={({ pressed }) => [
-                {
-                  backgroundColor: colors.muted,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                  borderRadius: 9999,
-                },
-                pressed && { opacity: 0.72 },
-              ]}
-            >
-              <Text style={{ color: colors.foreground, fontSize: 13 }}>{q}</Text>
-            </Pressable>
-          ))}
-        </View>
       </View>
     </View>
   );
@@ -1130,25 +1076,31 @@ export default function AIChatScreen() {
       return renderWelcome();
     };
 
-    const footerContent = isTyping || pendingAction ? (
+    const footerContent = isTyping || pendingAction || streamingDraft ? (
       <View style={{ gap: 16 }}>
-        {isTyping && (
-          <View style={{ flexDirection: 'row', justifyContent: 'flex-start', width: '100%', alignItems: 'flex-end', gap: 8 }}>
+        {streamingDraft.length > 0 && (
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-start', width: '100%', alignItems: 'flex-start' }}>
             <View
               style={{
-                width: 28,
-                height: 28,
-                borderRadius: 9999,
-                backgroundColor: colors.primary + '22',
+                backgroundColor: colors.card,
                 borderWidth: 1,
-                borderColor: colors.primary + '44',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 2,
+                borderColor: colors.border,
+                paddingHorizontal: 13,
+                paddingVertical: 9,
+                borderRadius: 18,
+                borderBottomLeftRadius: 6,
+                maxWidth: Math.min(messageMaxWidth + 28, 560),
               }}
             >
-              <Bot size={14} color={colors.primary} />
+              <Markdown style={markdownStyles}>
+                {streamingDraft}
+              </Markdown>
             </View>
+          </View>
+        )}
+
+        {isTyping && !streamingDraft && (
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-start', width: '100%', alignItems: 'flex-end' }}>
             <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 18, borderBottomLeftRadius: 6, maxWidth: '90%' }}>
               <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6 }}>Thinking…</Text>
               <View style={{ flexDirection: 'row', gap: 4 }}>
@@ -1161,22 +1113,7 @@ export default function AIChatScreen() {
         )}
 
         {pendingAction && (
-          <View style={{ flexDirection: 'row', justifyContent: 'flex-start', width: '100%', alignItems: 'flex-start', gap: 8 }}>
-            <View
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 9999,
-                backgroundColor: colors.primary + '22',
-                borderWidth: 1,
-                borderColor: colors.primary + '44',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: 2,
-              }}
-            >
-              <Sparkles size={14} color={colors.primary} />
-            </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-start', width: '100%', alignItems: 'flex-start' }}>
             <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 18, paddingHorizontal: 16, paddingVertical: 12, maxWidth: '92%' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                   <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
@@ -1612,87 +1549,69 @@ export default function AIChatScreen() {
         ref={scrollViewRef}
         data={messages}
         keyExtractor={(item) => item.id}
-        renderItem={({ item: msg }) => (
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-              alignItems: 'flex-end',
-              gap: 8,
-              width: '100%',
-            }}
-          >
-            {msg.role !== 'user' && (
-              <View
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 9999,
-                  backgroundColor: colors.primary + '22',
-                  borderWidth: 1,
-                  borderColor: colors.primary + '44',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: 2,
-                }}
-              >
-                <Bot size={14} color={colors.primary} />
-              </View>
-            )}
+        renderItem={({ item: msg, index }) => {
+          const isUser = msg.role === 'user';
+          const previousMessage = index > 0 ? messages[index - 1] : null;
+          const nextMessage = index < messages.length - 1 ? messages[index + 1] : null;
+          const groupedWithPrev = previousMessage?.role === msg.role;
+          const groupedWithNext = nextMessage?.role === msg.role;
+          const baseRadius = 18;
+          const chainRadius = 12;
+          const tailRadius = 6;
+
+          return (
             <View
               style={{
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                borderRadius: 20,
-                backgroundColor: msg.role === 'user' ? colors.primary : colors.card,
-                borderWidth: msg.role === 'user' ? 0 : 1,
-                borderColor: msg.role === 'user' ? 'transparent' : colors.border,
-                borderBottomRightRadius: msg.role === 'user' ? 8 : 20,
-                borderBottomLeftRadius: msg.role === 'user' ? 20 : 8,
-                maxWidth: msg.role === 'user' ? '84%' : '88%',
-                shadowColor: '#000',
-                shadowOpacity: msg.role === 'user' ? 0.12 : 0.06,
-                shadowRadius: msg.role === 'user' ? 12 : 8,
-                shadowOffset: { width: 0, height: 4 },
-                elevation: msg.role === 'user' ? 2 : 1,
+                flexDirection: 'row',
+                justifyContent: isUser ? 'flex-end' : 'flex-start',
+                width: '100%',
+                marginTop: index === 0 ? 0 : groupedWithPrev ? 4 : 12,
               }}
             >
-              {msg.role === 'user' ? (
-                <Text style={{ color: colors.primaryForeground, fontSize: 16, lineHeight: 24 }}>
-                  {msg.content}
-                </Text>
-              ) : (
-                <Markdown style={markdownStyles}>
-                  {msg.content}
-                </Markdown>
-              )}
-            </View>
-            {msg.role === 'user' && (
               <View
                 style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 9999,
-                  backgroundColor: colors.secondary,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: 2,
+                  paddingHorizontal: 13,
+                  paddingVertical: 9,
+                  borderRadius: baseRadius,
+                  backgroundColor: isUser ? colors.primary : colors.card,
+                  borderWidth: isUser ? 0 : 1,
+                  borderColor: isUser ? 'transparent' : colors.border,
+                  borderTopLeftRadius: isUser
+                    ? (groupedWithPrev ? chainRadius : baseRadius)
+                    : (groupedWithPrev ? chainRadius : baseRadius),
+                  borderTopRightRadius: isUser
+                    ? (groupedWithPrev ? chainRadius : baseRadius)
+                    : (groupedWithPrev ? chainRadius : baseRadius),
+                  borderBottomRightRadius: isUser
+                    ? (groupedWithNext ? chainRadius : tailRadius)
+                    : (groupedWithNext ? chainRadius : baseRadius),
+                  borderBottomLeftRadius: isUser
+                    ? (groupedWithNext ? chainRadius : baseRadius)
+                    : (groupedWithNext ? chainRadius : tailRadius),
+                  maxWidth: isUser
+                    ? Math.min(messageMaxWidth, 500)
+                    : Math.min(messageMaxWidth + 28, 560),
                 }}
               >
-                <User size={14} color={colors.foreground} />
+                {isUser ? (
+                  <Text style={{ color: colors.primaryForeground, fontSize: 15, lineHeight: 21 }}>
+                    {msg.content}
+                  </Text>
+                ) : (
+                  <Markdown style={markdownStyles}>
+                    {msg.content}
+                  </Markdown>
+                )}
               </View>
-            )}
-          </View>
-        )}
+            </View>
+          );
+        }}
         style={contentWidthStyle}
         keyboardShouldPersistTaps="handled"
         onContentSizeChange={maybeAutoScroll}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         contentContainerStyle={{
-          gap: 18,
           paddingHorizontal: 16,
           paddingTop: 20,
           paddingBottom: Math.max(insets.bottom, 16) + 122,
@@ -1723,10 +1642,7 @@ export default function AIChatScreen() {
               style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.background }, contentWidthStyle]}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: colors.primary + '1f', borderWidth: 1, borderColor: colors.primary + '40', alignItems: 'center', justifyContent: 'center' }}>
-                  <Bot size={17} color={colors.primary} />
-                </View>
-                <View style={{ marginLeft: 10 }}>
+                <View>
                   <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>{t('aiAdvisor')}</Text>
                   <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 1 }}>
                     {aiConfigured
@@ -1947,34 +1863,6 @@ export default function AIChatScreen() {
                     )}
                   </Pressable>
                 </View>
-
-                {showComposerPrompts && (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ gap: 8, paddingTop: 10, paddingHorizontal: 2 }}
-                  >
-                    {composerPrompts.map((prompt, i) => (
-                      <Pressable
-                        key={`${prompt}-${i}`}
-                        onPress={() => setMessage(prompt)}
-                        style={({ pressed }) => [
-                          {
-                            backgroundColor: colors.secondary,
-                            borderWidth: 1,
-                            borderColor: colors.border,
-                            paddingHorizontal: 12,
-                            paddingVertical: 6,
-                            borderRadius: 9999,
-                          },
-                          pressed && { opacity: 0.72 },
-                        ]}
-                      >
-                        <Text style={{ color: colors.foreground, fontSize: 12 }}>{prompt}</Text>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                )}
 
                 <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 8, marginHorizontal: 4 }}>
                   {t('rateLimit') || 'Rate limit'}: {aiRateLimitPerMinute}/min ({t('burst') || 'burst'} {aiRateLimitBurst})

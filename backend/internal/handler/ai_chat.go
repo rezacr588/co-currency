@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/service"
+	"github.com/rezacr588/currency-converter/pkg/ctxkeys"
 	"github.com/rezacr588/currency-converter/pkg/httputil"
 	"github.com/rs/zerolog/log"
 )
@@ -277,16 +278,21 @@ func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	response.TraceID = ctxkeys.GetTraceID(r.Context())
 
 	httputil.JSON(w, http.StatusOK, response)
 }
 
 // ChatStream streams the AI response using Server-Sent Events.
+// Add ?trace=1 to receive internal trace events in the SSE stream.
 func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 	userID, ok := requireUserID(w, r)
 	if !ok {
 		return
 	}
+	traceID := ctxkeys.GetTraceID(r.Context())
+	traceParam := strings.TrimSpace(strings.ToLower(r.URL.Query().Get("trace")))
+	streamTrace := traceParam == "1" || traceParam == "true" || traceParam == "yes"
 
 	var req model.ChatRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -347,6 +353,7 @@ func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 			if err := sendEvent(map[string]interface{}{
 				"type":            "start",
 				"conversation_id": conversationID,
+				"trace_id":        traceID,
 			}); err != nil {
 				log.Error().Err(err).Str("conversation_id", conversationID).Msg("Failed to send SSE start event")
 			}
@@ -356,6 +363,20 @@ func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 				"type":    "delta",
 				"content": chunk,
 			})
+		},
+		func(_ string, fields map[string]interface{}) {
+			if !streamTrace {
+				return
+			}
+			payload := map[string]interface{}{
+				"type": "trace",
+			}
+			for k, v := range fields {
+				payload[k] = v
+			}
+			if err := sendEvent(payload); err != nil {
+				log.Warn().Err(err).Str("trace_id", traceID).Msg("Failed to send SSE trace event")
+			}
 		},
 	)
 	if err != nil {
@@ -368,18 +389,21 @@ func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 			message = "AI service is unavailable. Please try again later."
 		}
 		if sseErr := sendEvent(map[string]interface{}{
-			"type":  "error",
-			"error": message,
+			"type":     "error",
+			"error":    message,
+			"trace_id": traceID,
 		}); sseErr != nil {
 			log.Error().Err(sseErr).Str("message", message).Msg("Failed to send SSE error event")
 		}
 		return
 	}
+	response.TraceID = traceID
 
 	if err := sendEvent(map[string]interface{}{
 		"type":            "done",
 		"conversation_id": response.ConversationID,
 		"message":         response.Message,
+		"trace_id":        traceID,
 	}); err != nil {
 		log.Error().Err(err).Str("conversation_id", response.ConversationID).Msg("Failed to send SSE done event")
 	}

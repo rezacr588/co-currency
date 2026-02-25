@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -70,27 +69,6 @@ func TestTrace(t *testing.T) {
 		// Verify context contains provided trace ID
 		if capturedTraceID != providedTraceID {
 			t.Errorf("expected context trace ID %s, got %s", providedTraceID, capturedTraceID)
-		}
-	})
-}
-
-func TestGetTraceIDFromContext(t *testing.T) {
-	t.Run("returns trace ID when present", func(t *testing.T) {
-		expectedID := "test-trace-id-123"
-		ctx := context.WithValue(context.Background(), ctxkeys.TraceID, expectedID)
-
-		result := GetTraceIDFromContext(ctx)
-		if result != expectedID {
-			t.Errorf("expected %s, got %s", expectedID, result)
-		}
-	})
-
-	t.Run("returns empty string when not present", func(t *testing.T) {
-		ctx := context.Background()
-
-		result := GetTraceIDFromContext(ctx)
-		if result != "" {
-			t.Errorf("expected empty string, got %s", result)
 		}
 	})
 }

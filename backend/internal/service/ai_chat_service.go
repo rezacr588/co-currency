@@ -13,6 +13,7 @@ import (
 	gocache "github.com/patrickmn/go-cache"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
+	"github.com/rezacr588/currency-converter/pkg/ctxkeys"
 	"github.com/rs/zerolog/log"
 	"github.com/tmc/langchaingo/llms"
 )
@@ -41,12 +42,57 @@ type AIChatService struct {
 var (
 	ErrConversationNotFound  = errors.New("conversation not found")
 	ErrInvalidConversationID = errors.New("invalid conversation id")
+	errNoAIResponse          = errors.New("no response from AI")
 
 	// promptInjectionPattern matches lines that look like prompt override attempts
 	promptInjectionPattern = regexp.MustCompile(`(?i)^(SYSTEM:|You are |Ignore previous|Forget all|Disregard|New instructions:|ASSISTANT:|<\|im_start\||<\|system\|)`)
 )
 
 type currencyConverterFunc func(ctx context.Context, from, to string, amount float64) (*model.ConversionResult, error)
+
+type chatTraceCallback func(step string, fields map[string]interface{})
+
+func emitChatTrace(
+	ctx context.Context,
+	userID uuid.UUID,
+	conversationID string,
+	step string,
+	fields map[string]interface{},
+	cb chatTraceCallback,
+) {
+	traceID := ctxkeys.GetTraceID(ctx)
+
+	eventFields := map[string]interface{}{
+		"step":     step,
+		"user_id":  userID.String(),
+		"trace_id": traceID,
+	}
+	if conversationID != "" {
+		eventFields["conversation_id"] = conversationID
+	}
+	for k, v := range fields {
+		eventFields[k] = v
+	}
+
+	logEvent := log.Info().
+		Str("component", "ai_chat").
+		Str("step", step).
+		Str("user_id", userID.String())
+	if traceID != "" {
+		logEvent = logEvent.Str("trace_id", traceID)
+	}
+	if conversationID != "" {
+		logEvent = logEvent.Str("conversation_id", conversationID)
+	}
+	for k, v := range fields {
+		logEvent = logEvent.Interface(k, v)
+	}
+	logEvent.Msg("AI chat trace")
+
+	if cb != nil {
+		cb(step, eventFields)
+	}
+}
 
 // sanitizeForPrompt sanitizes user-provided data before interpolation into the system prompt.
 // It strips characters that could be used for prompt injection and limits length.
@@ -129,48 +175,61 @@ func (s *AIChatService) CreateConversation(ctx context.Context, userID uuid.UUID
 	return s.chatRepo.CreateConversation(ctx, userID, title)
 }
 
-// Chat processes a user message and returns an AI response with full context
-func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName string, conversationID string, message string) (*model.ChatResponse, error) {
-	var convID uuid.UUID
-	var conv *model.ChatConversation
-	var err error
+type preparedChatInput struct {
+	UserMessage  *model.ChatMessage
+	LLMMessages  []llms.MessageContent
+	BaseCurrency string
+	HistoryCount int
+}
 
-	// Trim and validate conversation ID
+func (s *AIChatService) resolveConversation(
+	ctx context.Context,
+	userID uuid.UUID,
+	conversationID string,
+	message string,
+) (uuid.UUID, bool, error) {
 	conversationID = strings.TrimSpace(conversationID)
 
-	// Get or create conversation
-	// Ignore temp IDs or invalid formats
+	// Reuse existing conversation when provided (ignore temporary client IDs).
 	if conversationID != "" && !strings.HasPrefix(conversationID, "temp-") {
-		convID, err = uuid.Parse(conversationID)
+		convID, err := uuid.Parse(conversationID)
 		if err != nil {
-			return nil, ErrInvalidConversationID
+			return uuid.Nil, false, ErrInvalidConversationID
 		}
-		conv, err = s.chatRepo.GetConversation(ctx, convID)
+
+		conv, err := s.chatRepo.GetConversation(ctx, convID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return nil, ErrConversationNotFound
+				return uuid.Nil, false, ErrConversationNotFound
 			}
-			return nil, fmt.Errorf("getting conversation: %w", err)
+			return uuid.Nil, false, fmt.Errorf("getting conversation: %w", err)
 		}
-		// Verify ownership
 		if conv.UserID != userID {
-			return nil, ErrConversationNotFound
+			return uuid.Nil, false, ErrConversationNotFound
 		}
-	} else {
-		// Create new conversation with first message as title
-		title := message
-		if len(title) > 50 {
-			title = title[:47] + "..."
-		}
-		conv, err = s.chatRepo.CreateConversation(ctx, userID, title)
-		if err != nil {
-			return nil, fmt.Errorf("creating conversation: %w", err)
-		}
-		convID = conv.ID
+
+		return convID, false, nil
 	}
 
-	// Save user message
-	userMsg, err := s.chatRepo.AddMessage(ctx, convID, "user", message, 0)
+	title := message
+	if len(title) > 50 {
+		title = title[:47] + "..."
+	}
+	conv, err := s.chatRepo.CreateConversation(ctx, userID, title)
+	if err != nil {
+		return uuid.Nil, false, fmt.Errorf("creating conversation: %w", err)
+	}
+	return conv.ID, true, nil
+}
+
+func (s *AIChatService) prepareChatInput(
+	ctx context.Context,
+	userID uuid.UUID,
+	userName string,
+	conversationID uuid.UUID,
+	message string,
+) (*preparedChatInput, error) {
+	userMsg, err := s.chatRepo.AddMessage(ctx, conversationID, "user", message, 0)
 	if err != nil {
 		return nil, fmt.Errorf("saving user message: %w", err)
 	}
@@ -178,58 +237,201 @@ func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName str
 		return nil, fmt.Errorf("saving user message: empty response")
 	}
 
-	// Get conversation history for context (last 40 messages)
-	history, err := s.chatRepo.GetRecentMessages(ctx, convID, 40)
+	history, err := s.chatRepo.GetRecentMessages(ctx, conversationID, 40)
 	if err != nil {
 		return nil, fmt.Errorf("getting history: %w", err)
 	}
 
-	// Get financial context
 	financialContext, err := s.getFinancialContext(ctx, userID)
 	if err != nil {
-		// Continue without financial context if there's an error
 		financialContext = &model.FinancialContext{}
 	}
 
-	// Get user memories (long-term context) - use semantic search with current message
-	// Memories are optional context, so errors are ignored
+	// Memories are optional context, so errors are ignored.
 	memories, _ := s.getUserMemories(ctx, userID, message)
 
-	// Get exchange rates (use user's preferred currency or USD)
 	baseCurrency := financialContext.PreferredCurrency
 	if baseCurrency == "" {
 		baseCurrency = "USD"
 	}
 	rates := s.getExchangeRates(ctx, baseCurrency)
-
-	// Build the system prompt with rich financial context
 	systemPrompt := s.buildSystemPrompt(userName, financialContext, memories, rates)
 
-	// Build message history for the LLM
-	messages := s.buildLLMMessages(systemPrompt, history, *userMsg)
+	return &preparedChatInput{
+		UserMessage:  userMsg,
+		LLMMessages:  s.buildLLMMessages(systemPrompt, history, *userMsg),
+		BaseCurrency: baseCurrency,
+		HistoryCount: len(history),
+	}, nil
+}
+
+func (s *AIChatService) persistAssistantResponse(
+	ctx context.Context,
+	userID uuid.UUID,
+	conversationID uuid.UUID,
+	userMessage string,
+	aiResponse string,
+) (*model.ChatMessage, error) {
+	aiMsg, err := s.chatRepo.AddMessage(ctx, conversationID, "assistant", aiResponse, 0)
+	if err != nil {
+		return nil, fmt.Errorf("saving AI message: %w", err)
+	}
+
+	if s.memoryService != nil {
+		s.memoryService.StoreShortTermMemory(ctx, userID, conversationID.String(), "user", userMessage)
+		s.memoryService.StoreShortTermMemory(ctx, userID, conversationID.String(), "assistant", aiResponse)
+	}
+
+	return aiMsg, nil
+}
+
+func buildToolResultPrompt(toolName, result string) string {
+	return fmt.Sprintf(
+		"Tool '%s' returned:\n%s\n\nNow provide your final answer to the user based on this data. Keep a natural personal-advisor tone. Do not use tables in the main body; only an optional final Summary table if needed.",
+		toolName,
+		result,
+	)
+}
+
+func appendToolResultMessage(messages []llms.MessageContent, toolName, result string) []llms.MessageContent {
+	return append(messages, llms.MessageContent{
+		Parts: []llms.ContentPart{llms.TextPart(buildToolResultPrompt(toolName, result))},
+		Role:  llms.ChatMessageTypeHuman,
+	})
+}
+
+func (s *AIChatService) executeToolWithTrace(
+	ctx context.Context,
+	userID uuid.UUID,
+	currency string,
+	conversationID string,
+	tc *ToolCall,
+	onTrace chatTraceCallback,
+	logContext string,
+) string {
+	toolStartedAt := time.Now()
+	result, execErr := s.toolExecutor.Execute(ctx, userID, currency, tc)
+	if execErr != nil {
+		log.Warn().
+			Err(execErr).
+			Str("tool", tc.Name).
+			Str("user_id", userID.String()).
+			Str("context", logContext).
+			Str("error_type", fmt.Sprintf("%T", execErr)).
+			Msg("Tool execution failed")
+		result = fmt.Sprintf("Tool '%s' failed: %v. Please answer based on the available context.", tc.Name, execErr)
+		emitChatTrace(ctx, userID, conversationID, "tool_execution_failed", map[string]interface{}{
+			"tool":        tc.Name,
+			"duration_ms": time.Since(toolStartedAt).Milliseconds(),
+			"error":       execErr.Error(),
+		}, onTrace)
+		return result
+	}
+
+	emitChatTrace(ctx, userID, conversationID, "tool_execution_completed", map[string]interface{}{
+		"tool":        tc.Name,
+		"duration_ms": time.Since(toolStartedAt).Milliseconds(),
+		"result_size": len(result),
+	}, onTrace)
+	return result
+}
+
+func emitChatFailure(
+	ctx context.Context,
+	userID uuid.UUID,
+	conversationID string,
+	requestStartedAt time.Time,
+	onTrace chatTraceCallback,
+	err error,
+) {
+	emitChatTrace(ctx, userID, conversationID, "chat_request_failed", map[string]interface{}{
+		"duration_ms": time.Since(requestStartedAt).Milliseconds(),
+		"error":       err.Error(),
+	}, onTrace)
+}
+
+func failChatWithWrap(
+	ctx context.Context,
+	userID uuid.UUID,
+	conversationID string,
+	requestStartedAt time.Time,
+	onTrace chatTraceCallback,
+	format string,
+	cause error,
+) error {
+	err := fmt.Errorf(format, cause)
+	emitChatFailure(ctx, userID, conversationID, requestStartedAt, onTrace, err)
+	return err
+}
+
+func failChatWithError(
+	ctx context.Context,
+	userID uuid.UUID,
+	conversationID string,
+	requestStartedAt time.Time,
+	onTrace chatTraceCallback,
+	err error,
+) error {
+	emitChatFailure(ctx, userID, conversationID, requestStartedAt, onTrace, err)
+	return err
+}
+
+// Chat processes a user message and returns an AI response with full context
+func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName string, conversationID string, message string) (*model.ChatResponse, error) {
+	requestStartedAt := time.Now()
+	emitChatTrace(ctx, userID, conversationID, "chat_request_started", map[string]interface{}{
+		"message_length": len(message),
+		"streaming":      false,
+	}, nil)
+
+	convID, createdConversation, err := s.resolveConversation(ctx, userID, conversationID, message)
+	if err != nil {
+		return nil, err
+	}
+	emitChatTrace(ctx, userID, convID.String(), "conversation_ready", map[string]interface{}{
+		"created": createdConversation,
+	}, nil)
+
+	prepared, err := s.prepareChatInput(ctx, userID, userName, convID, message)
+	if err != nil {
+		return nil, err
+	}
+	emitChatTrace(ctx, userID, convID.String(), "user_message_saved", map[string]interface{}{
+		"message_id": prepared.UserMessage.ID.String(),
+	}, nil)
+	emitChatTrace(ctx, userID, convID.String(), "llm_input_ready", map[string]interface{}{
+		"history_messages": prepared.HistoryCount,
+		"llm_messages":     len(prepared.LLMMessages),
+		"base_currency":    prepared.BaseCurrency,
+	}, nil)
 
 	// Call the AI with tool resolution loop
 	llm, err := s.aiService.getLLM(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting LLM: %w", err)
 	}
+	emitChatTrace(ctx, userID, convID.String(), "llm_initialized", map[string]interface{}{
+		"provider": s.aiService.provider,
+	}, nil)
 
-	aiResponse, err := s.resolveToolCalls(ctx, llm, messages, userID, baseCurrency)
+	llmStartedAt := time.Now()
+	aiResponse, err := s.resolveToolCalls(ctx, llm, prepared.LLMMessages, userID, prepared.BaseCurrency, convID.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("calling AI: %w", err)
+		return nil, failChatWithWrap(ctx, userID, convID.String(), requestStartedAt, nil, "calling AI: %w", err)
 	}
+	emitChatTrace(ctx, userID, convID.String(), "llm_completed", map[string]interface{}{
+		"duration_ms":     time.Since(llmStartedAt).Milliseconds(),
+		"response_length": len(aiResponse),
+	}, nil)
 
-	// Save AI response
-	aiMsg, err := s.chatRepo.AddMessage(ctx, convID, "assistant", aiResponse, 0)
+	aiMsg, err := s.persistAssistantResponse(ctx, userID, convID, message, aiResponse)
 	if err != nil {
-		return nil, fmt.Errorf("saving AI message: %w", err)
+		return nil, err
 	}
 
-	// Store messages in short-term memory (async) for semantic recall
-	if s.memoryService != nil {
-		s.memoryService.StoreShortTermMemory(ctx, userID, convID.String(), "user", message)
-		s.memoryService.StoreShortTermMemory(ctx, userID, convID.String(), "assistant", aiResponse)
-	}
+	emitChatTrace(ctx, userID, convID.String(), "chat_request_completed", map[string]interface{}{
+		"duration_ms": time.Since(requestStartedAt).Milliseconds(),
+	}, nil)
 
 	return &model.ChatResponse{
 		ConversationID: convID.String(),
@@ -247,181 +449,102 @@ func (s *AIChatService) ChatStream(
 	message string,
 	onStart func(conversationID string),
 	onChunk func(chunk string) error,
+	onTrace chatTraceCallback,
 ) (*model.ChatResponse, error) {
-	var convID uuid.UUID
-	var conv *model.ChatConversation
-	var err error
+	requestStartedAt := time.Now()
+	emitChatTrace(ctx, userID, conversationID, "chat_request_started", map[string]interface{}{
+		"message_length": len(message),
+		"streaming":      true,
+	}, onTrace)
 
-	// Trim and validate conversation ID
-	conversationID = strings.TrimSpace(conversationID)
-
-	// Get or create conversation
-	// Ignore temp IDs or invalid formats
-	if conversationID != "" && !strings.HasPrefix(conversationID, "temp-") {
-		convID, err = uuid.Parse(conversationID)
-		if err != nil {
-			return nil, ErrInvalidConversationID
-		}
-		conv, err = s.chatRepo.GetConversation(ctx, convID)
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return nil, ErrConversationNotFound
-			}
-			return nil, fmt.Errorf("getting conversation: %w", err)
-		}
-		// Verify ownership
-		if conv.UserID != userID {
-			return nil, ErrConversationNotFound
-		}
-	} else {
-		// Create new conversation with first message as title
-		title := message
-		if len(title) > 50 {
-			title = title[:47] + "..."
-		}
-		conv, err = s.chatRepo.CreateConversation(ctx, userID, title)
-		if err != nil {
-			return nil, fmt.Errorf("creating conversation: %w", err)
-		}
-		convID = conv.ID
+	convID, createdConversation, err := s.resolveConversation(ctx, userID, conversationID, message)
+	if err != nil {
+		return nil, err
 	}
+	emitChatTrace(ctx, userID, convID.String(), "conversation_ready", map[string]interface{}{
+		"created": createdConversation,
+	}, onTrace)
 
 	if onStart != nil {
 		onStart(convID.String())
 	}
+	emitChatTrace(ctx, userID, convID.String(), "stream_started", nil, onTrace)
 
-	// Save user message
-	userMsg, err := s.chatRepo.AddMessage(ctx, convID, "user", message, 0)
+	prepared, err := s.prepareChatInput(ctx, userID, userName, convID, message)
 	if err != nil {
-		return nil, fmt.Errorf("saving user message: %w", err)
+		return nil, err
 	}
-	if userMsg == nil {
-		return nil, fmt.Errorf("saving user message: empty response")
-	}
-
-	// Get conversation history for context (last 40 messages)
-	history, err := s.chatRepo.GetRecentMessages(ctx, convID, 40)
-	if err != nil {
-		return nil, fmt.Errorf("getting history: %w", err)
-	}
-
-	// Get financial context
-	financialContext, err := s.getFinancialContext(ctx, userID)
-	if err != nil {
-		financialContext = &model.FinancialContext{}
-	}
-
-	// Get user memories (long-term context) - use semantic search with current message
-	// Memories are optional context, so errors are ignored
-	memories, _ := s.getUserMemories(ctx, userID, message)
-
-	// Get exchange rates (use user's preferred currency or USD)
-	baseCurrency := financialContext.PreferredCurrency
-	if baseCurrency == "" {
-		baseCurrency = "USD"
-	}
-	rates := s.getExchangeRates(ctx, baseCurrency)
-
-	// Build the system prompt with rich financial context
-	systemPrompt := s.buildSystemPrompt(userName, financialContext, memories, rates)
-
-	// Build message history for the LLM
-	messages := s.buildLLMMessages(systemPrompt, history, *userMsg)
+	emitChatTrace(ctx, userID, convID.String(), "user_message_saved", map[string]interface{}{
+		"message_id": prepared.UserMessage.ID.String(),
+	}, onTrace)
+	emitChatTrace(ctx, userID, convID.String(), "llm_input_ready", map[string]interface{}{
+		"history_messages": prepared.HistoryCount,
+		"llm_messages":     len(prepared.LLMMessages),
+		"base_currency":    prepared.BaseCurrency,
+	}, onTrace)
 
 	// Call the AI (with tool resolution, then stream final response)
 	llm, err := s.aiService.getLLM(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting LLM: %w", err)
 	}
+	emitChatTrace(ctx, userID, convID.String(), "llm_initialized", map[string]interface{}{
+		"provider": s.aiService.provider,
+	}, onTrace)
 
 	// First call: non-streaming to check for tool calls
-	firstResponse, err := llm.GenerateContent(ctx, messages)
+	firstLLMStartedAt := time.Now()
+	firstResponse, err := llm.GenerateContent(ctx, prepared.LLMMessages)
 	if err != nil {
-		return nil, fmt.Errorf("calling ai: %w", err)
+		return nil, failChatWithWrap(ctx, userID, convID.String(), requestStartedAt, onTrace, "calling ai: %w", err)
 	}
 	if len(firstResponse.Choices) == 0 {
-		return nil, fmt.Errorf("no response from AI")
+		return nil, failChatWithError(ctx, userID, convID.String(), requestStartedAt, onTrace, errNoAIResponse)
 	}
 
 	firstText := firstResponse.Choices[0].Content
 	tc := parseToolCall(firstText)
+	emitChatTrace(ctx, userID, convID.String(), "llm_first_response", map[string]interface{}{
+		"duration_ms":     time.Since(firstLLMStartedAt).Milliseconds(),
+		"tool_call_found": tc != nil,
+		"response_length": len(firstText),
+	}, onTrace)
 
 	var aiResponse string
+	streamChunkCount := 0
+	streamChars := 0
 
 	if tc != nil {
-		// Tool call detected — resolve non-streaming, then stream final answer
-		// Append AI's tool call + tool result to messages
-		messages = append(messages, llms.MessageContent{
+		emitChatTrace(ctx, userID, convID.String(), "tool_call_detected", map[string]interface{}{
+			"tool": tc.Name,
+		}, onTrace)
+
+		// Tool call detected — execute it, then resolve remaining tool chain non-streaming.
+		messages := append(prepared.LLMMessages, llms.MessageContent{
 			Parts: []llms.ContentPart{llms.TextPart(firstText)},
 			Role:  llms.ChatMessageTypeAI,
 		})
+		result := s.executeToolWithTrace(ctx, userID, prepared.BaseCurrency, convID.String(), tc, onTrace, "chat_stream_initial_tool")
+		messages = appendToolResultMessage(messages, tc.Name, result)
 
-		result, execErr := s.toolExecutor.Execute(ctx, userID, baseCurrency, tc)
-		if execErr != nil {
-			log.Warn().
-				Err(execErr).
-				Str("tool", tc.Name).
-				Str("user_id", userID.String()).
-				Str("error_type", fmt.Sprintf("%T", execErr)).
-				Msg("Tool execution failed in ChatStream")
-			result = fmt.Sprintf("Tool '%s' failed: %v. Please answer based on the available context.", tc.Name, execErr)
-		}
-
-		messages = append(messages, llms.MessageContent{
-			Parts: []llms.ContentPart{llms.TextPart(fmt.Sprintf("Tool '%s' returned:\n%s\n\nNow provide your final answer to the user based on this data.", tc.Name, result))},
-			Role:  llms.ChatMessageTypeHuman,
-		})
-
-		// Allow up to 2 more iterations for chained tool calls
-		for i := 0; i < 2; i++ {
-			nextResp, err := llm.GenerateContent(ctx, messages)
-			if err != nil {
-				return nil, fmt.Errorf("calling ai (tool loop): %w", err)
-			}
-			if len(nextResp.Choices) == 0 {
-				return nil, fmt.Errorf("no response from AI")
-			}
-			nextText := nextResp.Choices[0].Content
-			nextTC := parseToolCall(nextText)
-			if nextTC == nil {
-				// No more tool calls — stream this final response
-				aiResponse = stripToolCallMarkers(nextText)
-				break
-			}
-			// Another tool call
-			messages = append(messages, llms.MessageContent{
-				Parts: []llms.ContentPart{llms.TextPart(nextText)},
-				Role:  llms.ChatMessageTypeAI,
-			})
-			result, execErr = s.toolExecutor.Execute(ctx, userID, baseCurrency, nextTC)
-			if execErr != nil {
-				log.Warn().
-					Err(execErr).
-					Str("tool", nextTC.Name).
-					Str("user_id", userID.String()).
-					Str("error_type", fmt.Sprintf("%T", execErr)).
-					Msg("Tool execution failed in ChatStream loop")
-				result = fmt.Sprintf("Tool '%s' failed: %v. Please answer based on the available context.", nextTC.Name, execErr)
-			}
-			messages = append(messages, llms.MessageContent{
-				Parts: []llms.ContentPart{llms.TextPart(fmt.Sprintf("Tool '%s' returned:\n%s\n\nNow provide your final answer to the user based on this data.", nextTC.Name, result))},
-				Role:  llms.ChatMessageTypeHuman,
-			})
-		}
-
-		// If we exhausted iterations without a final answer, force one
-		if aiResponse == "" {
-			finalResp, err := llm.GenerateContent(ctx, messages)
-			if err != nil {
-				return nil, fmt.Errorf("calling ai (final): %w", err)
-			}
-			if len(finalResp.Choices) > 0 {
-				aiResponse = stripToolCallMarkers(finalResp.Choices[0].Content)
-			}
+		aiResponse, err = s.resolveToolCallsWithLimit(
+			ctx,
+			llm,
+			messages,
+			userID,
+			prepared.BaseCurrency,
+			convID.String(),
+			onTrace,
+			2,
+		)
+		if err != nil {
+			return nil, failChatWithWrap(ctx, userID, convID.String(), requestStartedAt, onTrace, "calling ai (tool loop): %w", err)
 		}
 
 		// Stream the final response to the client
 		if onChunk != nil && aiResponse != "" {
+			streamChunkCount++
+			streamChars += len(aiResponse)
 			if err := onChunk(aiResponse); err != nil {
 				return nil, err
 			}
@@ -437,6 +560,8 @@ func (s *AIChatService) ChatStream(
 			streamedAny = true
 			text := string(chunk)
 			sb.WriteString(text)
+			streamChunkCount++
+			streamChars += len(text)
 			if onChunk != nil {
 				if err := onChunk(text); err != nil {
 					return err
@@ -445,27 +570,29 @@ func (s *AIChatService) ChatStream(
 			return nil
 		}
 
-		response, err := llm.GenerateContent(ctx, messages, llms.WithStreamingFunc(streamingFunc))
+		response, err := llm.GenerateContent(ctx, prepared.LLMMessages, llms.WithStreamingFunc(streamingFunc))
 		if err != nil {
 			if streamedAny {
-				return nil, fmt.Errorf("calling ai: streaming failed: %w", err)
+				return nil, failChatWithWrap(ctx, userID, convID.String(), requestStartedAt, onTrace, "calling ai: streaming failed: %w", err)
 			}
 			sb.Reset()
 			// Fallback to non-streaming
-			response, err = llm.GenerateContent(ctx, messages)
+			response, err = llm.GenerateContent(ctx, prepared.LLMMessages)
 			if err != nil {
-				return nil, fmt.Errorf("calling ai: %w", err)
+				return nil, failChatWithWrap(ctx, userID, convID.String(), requestStartedAt, onTrace, "calling ai: %w", err)
 			}
 		}
 
 		if len(response.Choices) == 0 {
-			return nil, fmt.Errorf("no response from AI")
+			return nil, failChatWithError(ctx, userID, convID.String(), requestStartedAt, onTrace, errNoAIResponse)
 		}
 
 		aiResponse = strings.TrimSpace(sb.String())
 		if aiResponse == "" {
 			aiResponse = response.Choices[0].Content
 			if onChunk != nil && aiResponse != "" {
+				streamChunkCount++
+				streamChars += len(aiResponse)
 				if err := onChunk(aiResponse); err != nil {
 					return nil, err
 				}
@@ -476,17 +603,15 @@ func (s *AIChatService) ChatStream(
 		aiResponse = stripToolCallMarkers(aiResponse)
 	}
 
-	// Save AI response
-	aiMsg, err := s.chatRepo.AddMessage(ctx, convID, "assistant", aiResponse, 0)
+	aiMsg, err := s.persistAssistantResponse(ctx, userID, convID, message, aiResponse)
 	if err != nil {
-		return nil, fmt.Errorf("saving AI message: %w", err)
+		return nil, failChatWithError(ctx, userID, convID.String(), requestStartedAt, onTrace, err)
 	}
-
-	// Store messages in short-term memory (async) for semantic recall
-	if s.memoryService != nil {
-		s.memoryService.StoreShortTermMemory(ctx, userID, convID.String(), "user", message)
-		s.memoryService.StoreShortTermMemory(ctx, userID, convID.String(), "assistant", aiResponse)
-	}
+	emitChatTrace(ctx, userID, convID.String(), "chat_request_completed", map[string]interface{}{
+		"duration_ms":  time.Since(requestStartedAt).Milliseconds(),
+		"chunk_count":  streamChunkCount,
+		"stream_chars": streamChars,
+	}, onTrace)
 
 	return &model.ChatResponse{
 		ConversationID: convID.String(),
@@ -691,8 +816,17 @@ func (s *AIChatService) buildSystemPrompt(userName string, fctx *model.Financial
 2. **Use Correct Rates**: When converting currencies or discussing exchange rates, use the LIVE EXCHANGE RATES provided above
 3. **Remember Context**: Reference memories and previous conversations when relevant
 4. **Be Actionable**: Give concrete suggestions with specific amounts
-5. **Be Concise**: Keep responses focused and easy to read
-6. **Track Insights**: When you learn something important about the user (preferences, goals, habits), note it for future conversations
+5. **Talk Like a Human Advisor**: Sound like a trusted personal finance advisor in a natural conversation, not like an analyst report
+6. **Avoid Jargon**: Use plain language and explain clearly when needed
+7. **Be Concise**: Keep responses focused and easy to read
+8. **Track Insights**: When you learn something important about the user (preferences, goals, habits), note it for future conversations
+
+## RESPONSE FORMAT
+
+- Do **not** use markdown tables in the main body of your response
+- Give the answer as natural prose with short paragraphs or bullets
+- If a numeric summary is helpful, include **one** small table only at the very end under a "Summary" heading
+- If no numeric summary is needed, do not include any table
 
 ## CAPABILITIES
 
@@ -704,7 +838,7 @@ You can help with:
 - Spending pattern analysis
 - Recurring expense insights
 
-Remember: Be friendly, professional, and always use the user's actual data when giving advice.
+Remember: Be friendly, personal, practical, and always use the user's actual data when giving advice.
 `)
 
 	// Append tool definitions
@@ -715,20 +849,53 @@ Remember: Be friendly, professional, and always use the user's actual data when 
 }
 
 // resolveToolCalls runs the LLM and resolves any tool calls (max 3 iterations)
-func (s *AIChatService) resolveToolCalls(ctx context.Context, llm llms.Model, messages []llms.MessageContent, userID uuid.UUID, currency string) (string, error) {
-	const maxIterations = 3
+func (s *AIChatService) resolveToolCalls(
+	ctx context.Context,
+	llm llms.Model,
+	messages []llms.MessageContent,
+	userID uuid.UUID,
+	currency string,
+	conversationID string,
+	onTrace chatTraceCallback,
+) (string, error) {
+	return s.resolveToolCallsWithLimit(ctx, llm, messages, userID, currency, conversationID, onTrace, 3)
+}
 
+func (s *AIChatService) resolveToolCallsWithLimit(
+	ctx context.Context,
+	llm llms.Model,
+	messages []llms.MessageContent,
+	userID uuid.UUID,
+	currency string,
+	conversationID string,
+	onTrace chatTraceCallback,
+	maxIterations int,
+) (string, error) {
 	for i := 0; i < maxIterations; i++ {
+		iterationStartedAt := time.Now()
 		response, err := llm.GenerateContent(ctx, messages)
 		if err != nil {
+			emitChatTrace(ctx, userID, conversationID, "llm_iteration_failed", map[string]interface{}{
+				"iteration": i + 1,
+				"error":     err.Error(),
+			}, onTrace)
 			return "", fmt.Errorf("generating content: %w", err)
 		}
 		if len(response.Choices) == 0 {
-			return "", fmt.Errorf("no response from AI")
+			emitChatTrace(ctx, userID, conversationID, "llm_iteration_failed", map[string]interface{}{
+				"iteration": i + 1,
+				"error":     errNoAIResponse.Error(),
+			}, onTrace)
+			return "", errNoAIResponse
 		}
 
 		text := response.Choices[0].Content
 		tc := parseToolCall(text)
+		emitChatTrace(ctx, userID, conversationID, "llm_iteration_completed", map[string]interface{}{
+			"iteration":       i + 1,
+			"duration_ms":     time.Since(iterationStartedAt).Milliseconds(),
+			"tool_call_found": tc != nil,
+		}, onTrace)
 
 		if tc == nil {
 			// No tool call — return the final response
@@ -736,36 +903,33 @@ func (s *AIChatService) resolveToolCalls(ctx context.Context, llm llms.Model, me
 		}
 
 		// Execute the tool
-		result, execErr := s.toolExecutor.Execute(ctx, userID, currency, tc)
-		if execErr != nil {
-			log.Warn().
-				Err(execErr).
-				Str("tool", tc.Name).
-				Str("user_id", userID.String()).
-				Str("error_type", fmt.Sprintf("%T", execErr)).
-				Msg("Tool execution failed in resolveToolCalls")
-			result = fmt.Sprintf("Tool '%s' failed: %v. Please answer based on the available context.", tc.Name, execErr)
-		}
+		result := s.executeToolWithTrace(ctx, userID, currency, conversationID, tc, onTrace, "resolve_tool_calls")
 
 		// Append the AI response and tool result to messages for the next iteration
 		messages = append(messages, llms.MessageContent{
 			Parts: []llms.ContentPart{llms.TextPart(text)},
 			Role:  llms.ChatMessageTypeAI,
 		})
-		messages = append(messages, llms.MessageContent{
-			Parts: []llms.ContentPart{llms.TextPart(fmt.Sprintf("Tool '%s' returned:\n%s\n\nNow provide your final answer to the user based on this data.", tc.Name, result))},
-			Role:  llms.ChatMessageTypeHuman,
-		})
+		messages = appendToolResultMessage(messages, tc.Name, result)
 	}
 
 	// If we exhausted iterations, make one final call
 	response, err := llm.GenerateContent(ctx, messages)
 	if err != nil {
+		emitChatTrace(ctx, userID, conversationID, "llm_final_failed", map[string]interface{}{
+			"error": err.Error(),
+		}, onTrace)
 		return "", fmt.Errorf("generating final content: %w", err)
 	}
 	if len(response.Choices) == 0 {
-		return "", fmt.Errorf("no response from AI")
+		emitChatTrace(ctx, userID, conversationID, "llm_final_failed", map[string]interface{}{
+			"error": errNoAIResponse.Error(),
+		}, onTrace)
+		return "", errNoAIResponse
 	}
+	emitChatTrace(ctx, userID, conversationID, "llm_final_completed", map[string]interface{}{
+		"response_length": len(response.Choices[0].Content),
+	}, onTrace)
 	return stripToolCallMarkers(response.Choices[0].Content), nil
 }
 
