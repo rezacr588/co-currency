@@ -1,1 +1,0 @@
-export { QuickConvert } from './QuickConvert';

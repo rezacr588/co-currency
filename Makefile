@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend build test lint deploy logs status run-local clean \
+.PHONY: dev dev-backend dev-app dev-web build test lint deploy logs status run-local clean \
 	ops-doctor gh-summary gh-runs koyeb-list koyeb-redeploy koyeb-logs koyeb-status \
 	neon-projects neon-branches neon-cs
 
@@ -13,8 +13,11 @@ dev:
 dev-backend:
 	cd backend && go run ./cmd/api
 
-dev-frontend:
-	cd frontend && npm run dev
+dev-app:
+	cd app && npm run start
+
+dev-web:
+	cd app && npm run web
 
 # Build
 build:
@@ -23,37 +26,37 @@ build:
 build-backend:
 	cd backend && go build -o bin/api ./cmd/api
 
-build-frontend:
-	cd frontend && npm run build
+build-web:
+	cd app && npx expo export --platform web
 
 # Test
 test:
 	cd backend && go test ./...
-	cd frontend && npm test --if-present
+	cd app && npm test --if-present
 
 test-backend:
 	cd backend && go test ./...
 
-test-frontend:
-	cd frontend && npm test --if-present
+test-app:
+	cd app && npm test --if-present
 
 # Lint
 lint:
 	cd backend && if ! command -v golangci-lint &> /dev/null; then go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; fi
 	cd backend && golangci-lint run
-	cd frontend && npm run lint
+	cd app && npm run lint
 
 lint-backend:
 	cd backend && if ! command -v golangci-lint &> /dev/null; then go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; fi
 	cd backend && golangci-lint run
 
-lint-frontend:
-	cd frontend && npm run lint
+lint-app:
+	cd app && npm run lint
 
 # Install dependencies
 install:
 	cd backend && go mod download
-	cd frontend && npm install
+	cd app && npm install
 
 # Deploy (Koyeb)
 deploy:
@@ -101,4 +104,4 @@ run-local:
 # Clean
 clean:
 	rm -rf backend/bin backend/tmp
-	rm -rf frontend/dist frontend/node_modules/.vite
+	rm -rf app/dist app/node_modules/.cache

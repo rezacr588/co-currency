@@ -1,5 +1,5 @@
-# ============ Stage 1: Build Expo Web Frontend ============
-FROM node:20-alpine AS frontend-builder
+# ============ Stage 1: Build Expo Web App ============
+FROM node:20-alpine AS app-builder
 
 WORKDIR /app
 
@@ -23,8 +23,8 @@ RUN go mod download
 # Copy backend source
 COPY backend/ ./
 
-# Copy built Expo web frontend into backend static folder
-COPY --from=frontend-builder /app/dist ./cmd/api/static/
+# Copy built Expo web app into backend static folder
+COPY --from=app-builder /app/dist ./cmd/api/static/
 
 # Build the binary with embedded static files
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /api ./cmd/api

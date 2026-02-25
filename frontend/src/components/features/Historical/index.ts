@@ -1,1 +1,0 @@
-export { Historical } from './Historical';

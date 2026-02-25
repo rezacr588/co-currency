@@ -1,5 +1,7 @@
 # Personal Finance App - Implementation Plan
 
+> **Legacy Note (2026-02-25)**: This plan predates the React Native-only consolidation. Any `frontend/` file paths are historical; active client code now lives in `app/`.
+
 ## Overview
 
 Transform the currency converter into a full-featured personal finance application with AI-powered insights, multi-currency support, and comprehensive budget management.

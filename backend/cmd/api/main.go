@@ -595,7 +595,7 @@ func main() {
 		entries, _ := fs.ReadDir(subFS, ".")
 		if len(entries) > 0 {
 			staticFS = subFS
-			log.Info().Msg("Serving static frontend files")
+			log.Info().Msg("Serving static app web files")
 		}
 	}
 

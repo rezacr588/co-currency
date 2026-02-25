@@ -4,16 +4,13 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              CLIENTS                                         │
-├───────────────────┬───────────────────┬─────────────────────────────────────┤
-│   Web (React)     │  Mobile (Expo)    │   Web PWA                           │
-│   Port: 5173      │  iOS/Android      │   Installable                       │
-│   Vite + React    │  React Native     │   Offline Support                   │
-└─────────┬─────────┴─────────┬─────────┴──────────────┬──────────────────────┘
-          │                   │                        │
-          └───────────────────┼────────────────────────┘
-                              │ HTTPS
-                              ▼
+│                                 CLIENT APP                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│             Expo React Native (Web + iOS + Android + Tablet)               │
+│             Expo Router + React Native Web + TanStack Query                │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │ HTTPS
+                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           GO BACKEND                                         │
 │                         (Single Binary)                                      │
@@ -25,7 +22,7 @@
 │  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘    │
 │                                                                              │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │                    Embedded Static Files (React Build)                │  │
+│  │                 Embedded Static Files (Expo Web Export)               │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────────┘
           │                   │                        │
@@ -58,19 +55,7 @@ cofinance/
 │   │   └── router/         # Route definitions
 │   └── pkg/                # Shared utilities
 │
-├── frontend/               # React Web Application
-│   └── src/
-│       ├── api/            # API client
-│       ├── components/     # UI components
-│       │   ├── ui/         # Design system
-│       │   ├── features/   # Feature components
-│       │   └── layout/     # Layout components
-│       ├── context/        # React Context providers
-│       ├── hooks/          # Custom hooks
-│       ├── pages/          # Route pages
-│       └── types/          # TypeScript definitions
-│
-├── app/                    # Expo Mobile Application
+├── app/                    # Expo Client App (web + mobile)
 │   ├── app/                # File-based routing
 │   │   ├── (public)/       # Public screens
 │   │   ├── (auth)/         # Auth screens
@@ -94,16 +79,10 @@ cofinance/
 - **Caching**: go-cache (in-memory)
 - **Vector DB**: Qdrant (optional, for AI memory)
 
-### Frontend (React)
-- **Build Tool**: Vite
-- **State Management**: TanStack Query
-- **Styling**: Tailwind CSS
-- **Icons**: Lucide React
-- **PWA**: vite-plugin-pwa
-
-### Mobile (React Native)
+### Client App (React Native + Web)
 - **Framework**: Expo (SDK 54)
 - **Routing**: Expo Router (file-based)
+- **Web**: React Native Web (Expo web export)
 - **Styling**: styled-components/native with custom theme system (`buildTheme()`, `AppTheme`)
 - **Storage**: Expo SecureStore
 - **Updates**: EAS Update (OTA)
@@ -244,7 +223,7 @@ All API endpoints follow RESTful conventions:
 
 ### Production
 - **Platform**: Koyeb
-- **Container**: Single Docker image with embedded frontend
+- **Container**: Single Docker image with embedded Expo web export
 - **Database**: Neon PostgreSQL
 - **CDN**: Built into Koyeb
 

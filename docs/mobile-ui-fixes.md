@@ -1,15 +1,8 @@
 # Mobile UI Fix Tracker
 
-## Web Mobile Fixes (frontend/)
-- [x] AI chat mobile functional gap resolved in `/frontend/src/pages/AIChat.tsx` by adding a mobile conversation drawer with conversation list, new chat action, delete conversation action, and close behaviors (select, outside tap, Escape).
-- [x] AI chat double-shell conflict resolved in `/frontend/src/App.tsx` by moving AI chat routes out of `AuthenticatedLayout` and wrapping them with `ProtectedRoute` directly.
-- [x] Bottom nav accessibility fixed in `/frontend/src/components/layout/BottomNav.tsx` by adding explicit `aria-label` names for icon-only items.
-- [x] Mobile first-paint desktop flash fixed in `/frontend/src/components/layout/AppLayout.tsx` by synchronous breakpoint initialization and `matchMedia` change listener updates.
-- [x] Offline banner interaction blocking fixed in `/frontend/src/components/ui/OfflineBanner.tsx` by disabling pointer events while keeping status visibility.
-- [x] Bottom nav active-state ambiguity on `/wallet/add` fixed in `/frontend/src/components/layout/BottomNav.tsx` with explicit per-item active matching.
-- [x] Build validation passed: `cd frontend && npm run build`.
-- [x] Unit validation passed: `cd frontend && npm run test:run`.
-- [ ] Lint validation blocked by pre-existing unrelated repo lint errors (`any` usage and E2E regex escapes in untouched files).
+## Archived Web Fixes
+- [x] Legacy `frontend/` fixes were completed before the React Native-only consolidation.
+- [x] Legacy `frontend/` was removed from this repository; all active UI work now lives in `app/`.
 
 ## Mobile App Daily Report Fixes (app/)
 - [x] Daily report range reworked to rolling 30-day windows in `/app/src/components/features/Reports/DailyReportView.tsx` (window index navigation with historical windows).

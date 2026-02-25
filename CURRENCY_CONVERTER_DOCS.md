@@ -1,5 +1,7 @@
 # CoFinance Application - Complete Documentation
 
+> **Legacy Note (2026-02-25)**: Sections that reference `frontend/` describe the removed legacy web client. Active client implementation is now Expo React Native under `app/`.
+
 ## Table of Contents
 1. [Overview](#overview)
 2. [Architecture](#architecture)

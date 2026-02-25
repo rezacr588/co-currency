@@ -233,18 +233,11 @@ See [API.md](./API.md) for full documentation.
 - **AI**: LangChainGo with multi-provider support (Groq, OpenAI, Google AI, Cerebras)
 - **Auth**: JWT (golang-jwt/v5) with OAuth (Google, LinkedIn)
 
-### Web Frontend
-- **Framework**: React 18
-- **Language**: TypeScript
-- **Build**: Vite
-- **State**: TanStack Query
-- **Styling**: Tailwind CSS
-- **Charts**: Recharts
-
-### Mobile App
+### Client App (Web + Mobile)
 - **Framework**: Expo ~54, React Native 0.81
 - **Language**: TypeScript
 - **Routing**: Expo Router (file-based)
+- **Web**: React Native Web (Expo web export)
 - **Styling**: styled-components/native
 - **State**: TanStack Query
 - **Charts**: react-native-gifted-charts

@@ -36,8 +36,7 @@ A full-stack personal finance platform with multi-currency wallet, budgets, goal
 | **Database** | PostgreSQL (Neon), pgx/pgxpool |
 | **Vector DB** | Qdrant (semantic memory for AI) |
 | **AI** | Multi-provider: Groq, OpenAI, Google AI, Cerebras |
-| **Web Frontend** | React 18, TypeScript, Vite, Tailwind CSS, TanStack Query |
-| **Mobile App** | Expo ~54, React Native 0.81, styled-components, Expo Router |
+| **Client App (Web + Mobile)** | Expo ~54, React Native 0.81, React Native Web, styled-components, Expo Router |
 | **Cache** | go-cache (in-memory) with singleflight |
 | **Deploy** | Docker, Koyeb, EAS (mobile OTA updates) |
 
@@ -46,15 +45,13 @@ A full-stack personal finance platform with multi-currency wallet, budgets, goal
 ## Architecture
 
 ```
-┌──────────────────────┐  ┌───────────────────────┐
-│   Web (React/Vite)   │  │  Mobile (Expo/RN)     │
-│   Tailwind CSS       │  │  styled-components    │
-│   TanStack Query     │  │  TanStack Query       │
-└──────────┬───────────┘  └──────────┬────────────┘
-           │                         │
-           └────────────┬────────────┘
-                        │ HTTPS / REST
-                        ▼
+┌─────────────────────────────────────┐
+│      Expo App (React Native)       │
+│      Web + iOS + Android           │
+│      Expo Router + RN Web          │
+└──────────────────┬──────────────────┘
+                   │ HTTPS / REST
+                   ▼
 ┌─────────────────────────────────────────────────┐
 │              Go Backend (Single Binary)          │
 │  Router → Middleware → Handlers → Services       │
@@ -90,16 +87,7 @@ cofinance/
 │   │   └── config/         # Environment config
 │   └── pkg/                # Shared HTTP utilities
 │
-├── frontend/               # React web application
-│   └── src/
-│       ├── api/            # API client with retry logic
-│       ├── components/     # UI, features, and layout components
-│       ├── context/        # Auth, Theme, Language, Toast
-│       ├── hooks/          # Custom React hooks
-│       ├── pages/          # Route pages
-│       └── i18n/           # Translations (4 languages)
-│
-├── app/                    # Expo mobile application
+├── app/                    # Expo app (web + iOS + Android)
 │   ├── app/                # File-based routing (Expo Router)
 │   │   ├── (public)/       # Welcome, converter, about
 │   │   ├── (auth)/         # Login, register, password reset
@@ -138,7 +126,7 @@ cd cofinance
 make install
 cp backend/.env.example backend/.env  # Configure environment
 
-# Start all services
+# Start backend service (Docker)
 make dev
 ```
 
@@ -148,8 +136,11 @@ make dev
 # Backend (port 8080)
 make dev-backend
 
-# Frontend (port 5173) — separate terminal
-make dev-frontend
+# Expo native dev server (iOS/Android)
+make dev-app
+
+# Expo web (port 5173) — separate terminal
+make dev-web
 ```
 
 ### Mobile App
@@ -178,14 +169,10 @@ make test
 # Backend only
 make test-backend
 
-# Frontend only
-cd frontend && npm test
-
-# Mobile app
+# App tests
 cd app && npm test
 
 # TypeScript checks
-cd frontend && npx tsc --noEmit
 cd app && npx tsc --noEmit
 ```
 
@@ -228,7 +215,7 @@ See [docs/API.md](docs/API.md) for full endpoint documentation with request/resp
 
 ### Web
 - **Push to main** → Docker build → push to ghcr.io → deploy to Koyeb
-- **Pull requests** → Go tests + frontend TypeScript check
+- **Pull requests** → Go tests + app TypeScript check
 
 ### Mobile
 - **Push to main** (app/ changes) → lint + typecheck → OTA update to production

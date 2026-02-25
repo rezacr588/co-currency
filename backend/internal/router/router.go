@@ -359,7 +359,7 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 		httpSwagger.URL("/swagger/doc.json"), //The url pointing to API definition
 	))
 
-	// Serve static files (frontend)
+	// Serve embedded static files (Expo web export)
 	if staticFS != nil {
 		fileServer := http.FileServer(http.FS(staticFS))
 		r.Get("/*", func(w http.ResponseWriter, r *http.Request) {

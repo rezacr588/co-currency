@@ -2,7 +2,7 @@
 
 ## Overview
 
-The CoFinance backend is built with Go, following clean architecture principles with clear separation of concerns. It provides a REST API for currency conversion, exchange rates, and serves the frontend as static files.
+The CoFinance backend is built with Go, following clean architecture principles with clear separation of concerns. It provides a REST API for currency conversion, exchange rates, and serves the Expo web app as static files.
 
 ## Technology Stack
 
@@ -71,7 +71,7 @@ The main function orchestrates dependency injection and server startup:
 │     - Handler                                           │
 │     - RateLimiter                                       │
 │  4. Create router with middleware                       │
-│  5. Serve static frontend files (embedded)              │
+│  5. Serve static web app files (embedded)               │
 │  6. Start HTTP server                                   │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -98,7 +98,7 @@ GET  /api/v1/currencies       → List available currencies
 GET  /api/v1/rates/{base}     → Get exchange rates for base currency
 GET  /api/v1/convert          → Convert amount between currencies
 GET  /api/v1/historical/{date}→ Get historical rates for a date
-GET  /*                       → Serve static frontend files (SPA)
+GET  /*                       → Serve static web app files (SPA)
 ```
 
 ### 4. Middleware (`internal/middleware`)
@@ -288,14 +288,14 @@ httputil.TooManyRequests(w, "Rate limit exceeded")
 
 ## Static File Serving
 
-The frontend is embedded into the binary using Go's `embed` package:
+The web app is embedded into the binary using Go's `embed` package:
 
 ```go
 //go:embed static/*
 var staticFiles embed.FS
 ```
 
-This allows single-binary deployment with both API and frontend.
+This allows single-binary deployment with both API and web app.
 
 ## Security Features
 
@@ -309,4 +309,4 @@ This allows single-binary deployment with both API and frontend.
 1. **In-Memory Caching**: Reduces external API calls
 2. **Connection Pooling**: HTTP client reuses connections
 3. **Structured Logging**: Zerolog is zero-allocation
-4. **Static Embedding**: No filesystem I/O for frontend files
+4. **Static Embedding**: No filesystem I/O for web app files

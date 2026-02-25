@@ -1,5 +1,7 @@
 # CoFinance - Free Features Implementation Plan
 
+> **Legacy Note (2026-02-25)**: This document predates the React Native-only consolidation. References to `frontend/` should be interpreted as historical; active client code now lives in `app/`.
+
 > **Objective**: Enhance CoFinance with high-impact features that require zero additional cost.
 > 
 > **Estimated Total Effort**: 4-6 weeks for all features

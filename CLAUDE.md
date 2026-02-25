@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CoFinance (`github.com/rezacr588/cofinance`) is a full-stack personal finance app: Go backend, React web frontend, and Expo/React Native mobile app. Features include multi-currency wallet, budgets, goals, recurring transactions, reports, AI chat advisor with vector memory, subscriptions, badges/XP gamification, and multi-language support (EN, FA, AR, TR with RTL).
+CoFinance (`github.com/rezacr588/cofinance`) is a full-stack personal finance app: Go backend plus a single Expo/React Native client app that targets web, iOS, and Android. Features include multi-currency wallet, budgets, goals, recurring transactions, reports, AI chat advisor with vector memory, subscriptions, badges/XP gamification, and multi-language support (EN, FA, AR, TR with RTL).
 
 ## Development Commands
 
@@ -24,14 +24,13 @@ go test -v -run TestName ./internal/service/... # Single test
 go test -cover ./...                       # Coverage
 ```
 
-### Frontend (run from /frontend)
+### App Web (run from /app)
 ```bash
-npm run dev              # Vite dev server on :5173
-npm run build            # tsc && vite build (production)
+npm run web              # Expo web dev server on :5173
+npx expo export --platform web  # Web production export (dist/)
 npm run lint             # ESLint (strict, max-warnings=0)
-npm test                 # Vitest watch mode
-npm run test:run         # Run tests once
-npm run test:e2e         # Playwright E2E (headless, chromium-only)
+npm run typecheck        # TypeScript check
+npm test                 # Jest (jest-expo)
 ```
 
 ### Mobile App (run from /app)
@@ -46,11 +45,11 @@ node scripts/bump-version.js patch|minor|major|build    # Version bump
 
 ### Make Targets
 ```bash
-make dev-backend / dev-frontend   # Run separately
-make test / test-backend / test-frontend
-make lint / lint-backend / lint-frontend
+make dev-backend / dev-app / dev-web
+make test / test-backend / test-app
+make lint / lint-backend / lint-app
 make build                        # Build Docker image
-make build-backend / build-frontend
+make build-backend / build-web
 make run-local                    # Test production build locally
 make deploy / logs / status       # Koyeb deployment
 make clean                        # Remove build artifacts
@@ -161,63 +160,7 @@ make clean                        # Remove build artifacts
 - Transaction: types `credit`/`debit`/`convert`, sources `manual`/`ai_receipt`/`ai_invoice`, AIExtractedData (JSON)
 - FinancialContext: comprehensive snapshot (balances, monthly income/expenses, budgets, goals, recurring, trends, loans, categories, days until month end)
 
-### Frontend (`/frontend/src`)
-
-**Tech stack:** React 18, React Router v7, TanStack Query 5, Tailwind CSS 3, TypeScript 5.6, Vite 5, Recharts 3
-
-- **Path alias:** `@/*` → `src/*`
-- **Routing:** React Router v7 with `<BrowserRouter>`, 27 routes, lazy-loaded with code splitting
-- **Three layout types:** `PublicLayout` (header/footer), `AuthenticatedLayout` (sidebar/nav), `HybridLayout` (auth-aware public pages)
-- **Protected routes:** `<ProtectedRoute>` component redirects to `/login` with `state.from` for post-login redirect
-
-**Directory structure:**
-```
-src/
-├── api/           # 14 endpoint files + base client (base.ts) + index + 1 test
-├── components/
-│   ├── ui/        # 20 reusable components + 4 test files (Button, Card, Input, Modal, CurrencyInput, ConfirmDialog, EmptyState, ErrorMessage, ErrorBoundary, HamburgerMenu, InfoMessage, LanguageToggle, LoadingSpinner, OfflineBanner, RateChange, Select, Skeleton, StatusBadge, ThemeToggle, Toast/ToastContainer)
-│   ├── layout/    # 14 layout components (PublicLayout, AuthenticatedLayout, AppLayout, Header, MobileHeader, Sidebar, BottomNav, Footer, Container, Grid, BalanceDisplay, HybridLayout, UserDropdown, index)
-│   └── features/  # 16 domain folders (AboutUs, Badges, Budgets, Converter [5], Dashboard, Goals, Historical, NotFound, Onboarding, QuickConvert, RatesGrid, Recurring, Subscriptions, Wallet [8])
-├── context/       # AuthContext, ThemeContext, LanguageContext, ToastContext
-├── hooks/         # useConvert, useRates, useCurrencies, useHistorical, useDebounce, useMutationAction, index
-├── pages/         # 12 page components (AIChat, Badges, Converter, ForgotPassword, Home, Login, OAuthCallback, Profile, Register, Reports, ResetPassword, Subscriptions)
-├── types/         # wallet.ts, currency.ts, goal.ts, index.ts
-├── utils/         # format.ts (currency/date formatting with Jalali), storage.ts (localStorage), constants.ts + 2 test files
-├── constants/     # routes.ts (27 routes), navigation.ts, icons.tsx
-├── i18n/          # translations.ts (2398 lines, 4 languages) + 1 test file
-└── styles/        # globals.css (Tailwind + design tokens)
-```
-
-**API client (`api/base.ts`):**
-- Fetch-based with exponential backoff (maxRetries=3, baseDelay=1s, maxDelay=10s, 10% jitter)
-- JWT in localStorage + in-memory cache, refresh token handling (single attempt + retry)
-- 401 → attempts token refresh → retries request → or redirects to login
-- Only retries on network errors (TypeError) and 5xx, never on 4xx
-
-**Key frontend patterns:**
-- TanStack Query: retry=3 with exponential backoff (1s→2s→4s, max 30s), `refetchOnWindowFocus: false`
-- `useMutationAction` hook: wraps `useMutation` with auto-invalidation, toast notifications, type-safe
-- Forms: uncontrolled with `useState()` (no form library)
-- Vite: dev proxy `/api` and `/health` → `localhost:8080`, manual chunks (vendor: React libs, ui: Recharts+Lucide)
-- **No PWA plugin** currently installed (no vite-plugin-pwa)
-
-**Design system:**
-- Colors: Navy blue (primary), Gold (accent `#d4af37`), Emerald (success), Red (danger)
-- CSS custom properties: `--primary`, `--accent`, `--success`, `--danger`, `--muted`, `--border`
-- Fonts: Plus Jakarta Sans (serif), JetBrains Mono (mono), Vazirmatn (Persian)
-- Dark mode: class-based (`dark:` prefix), tabular figures for financial data (`font-feature-settings: "tnum" 1`)
-- Component variants: Button (`primary`/`secondary`/`outline`/`ghost`, sizes `sm`/`md`/`lg`), Card (`primary`/`secondary`/`gradient`/`glass`)
-
-**i18n (LanguageContext):**
-- Detection priority: localStorage → URL param (`?lang=fa`) → browser locale → IP detection (ipapi.co, 3s timeout)
-- RTL: `fa` and `ar` automatically set `dir="rtl"` on `document.documentElement`
-- Usage: `const { t, isRTL, language, setLanguage } = useLanguage()`
-
-**SEO:** react-helmet-async with Open Graph, hreflang (4 languages), JSON-LD (WebApplication, FAQPage, BreadcrumbList)
-
-**Test setup:** Vitest with jsdom, mocks localStorage/fetch/clipboard globally. Playwright E2E is chromium-only (Desktop Chrome, auto-starts dev server).
-
-### Mobile App (`/app`)
+### App Client (`/app`)
 
 **Tech stack:** Expo ~54.0, React Native 0.81.5, React 19.1, Expo Router ~6.0, styled-components 6 (styled-components/native), TanStack Query 5, TypeScript ~5.9
 
@@ -273,7 +216,7 @@ app/
 - App store reviews: `expo-store-review`
 
 **Custom hooks:**
-- Data: `useConvert`, `useRates`, `useCurrencies`, `useHistorical` (same as frontend)
+- Data: `useConvert`, `useRates`, `useCurrencies`, `useHistorical`
 - App: `useAppUpdates`, `useAndroidNavigationBar`, `usePushNotifications`, `useOfflineSync`, `useDebounce`
 - State: `useAuth`, `useTheme`, `useColors`, `useLanguage`, `useSettings`
 
@@ -332,7 +275,7 @@ All routes defined in `internal/router/router.go`. Groups:
 
 **Web (`.github/workflows/ci.yml`):**
 - Push to main → Docker build → push to ghcr.io → deploy to Koyeb (tests not blocking)
-- PRs → Go tests (`go test ./...`) + frontend typecheck (`npx tsc --noEmit`)
+- PRs → Go tests (`go test ./...`) + app typecheck (`npm run typecheck`)
 
 **Mobile (`.github/workflows/mobile-build.yml`):**
 - Push to main (app/** paths) → lint + typecheck → OTA update to production branch
@@ -346,9 +289,9 @@ All routes defined in `internal/router/router.go`. Groups:
 
 ## Build & Deploy
 
-**Docker** (3-stage): Expo web export (node:20-alpine) → Go binary with embedded static files (golang:1.24-alpine, `CGO_ENABLED=0 GOOS=linux GOARCH=amd64 -w -s`) → Alpine 3.19 non-root runtime (UID 1001). Health check: `wget` to `/health` at 30s interval. **Important:** Production serves the Expo web build, NOT the Vite frontend.
+**Docker** (3-stage): Expo web export (node:20-alpine) → Go binary with embedded static files (golang:1.24-alpine, `CGO_ENABLED=0 GOOS=linux GOARCH=amd64 -w -s`) → Alpine 3.19 non-root runtime (UID 1001). Health check: `wget` to `/health` at 30s interval.
 
-**Docker Compose (dev):** Backend mounts full `./backend` directory, runs `go run ./cmd/api`. Frontend mounts `src/` and `public/` for Vite HMR, runs `npm run dev -- --host`.
+**Docker Compose (dev):** Runs backend service only; run Expo from `app/` directly (`npm run start` for native, `npm run web` for browser).
 
 ```bash
 make build       # Build Docker image
