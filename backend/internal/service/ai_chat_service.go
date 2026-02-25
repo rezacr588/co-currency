@@ -100,8 +100,9 @@ func NewAIChatService(
 	reportsService *ReportsService,
 	subscriptionRepo *repository.SubscriptionRepository,
 	noteRepo *repository.NoteRepository,
+	tavilyAPIKey string,
 ) *AIChatService {
-	toolExecutor := NewAIToolExecutor(walletRepo, categoryRepo, reportsService, subscriptionRepo, noteRepo, loanRepo, budgetRepo)
+	toolExecutor := NewAIToolExecutor(walletRepo, categoryRepo, reportsService, subscriptionRepo, noteRepo, loanRepo, budgetRepo, tavilyAPIKey)
 	return &AIChatService{
 		aiService:        aiService,
 		exchangeService:  exchangeService,

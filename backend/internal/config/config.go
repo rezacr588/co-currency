@@ -45,6 +45,7 @@ type Config struct {
 	AIModel        string `env:"AI_MODEL" envDefault:""`             // Model name (e.g., llama-3.3-70b-versatile for Groq)
 	AIVisionModel  string `env:"AI_VISION_MODEL" envDefault:""`     // Vision model (auto-detected per provider if empty)
 	AICloudProject string `env:"AI_CLOUD_PROJECT" envDefault:""`    // Google Cloud project ID
+	TavilyAPIKey   string `env:"TAVILY_API_KEY" envDefault:""`      // Tavily API key for web search
 
 	// News settings
 	NewsCacheTTL time.Duration `env:"NEWS_CACHE_TTL" envDefault:"30m"`

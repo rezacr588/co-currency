@@ -286,7 +286,7 @@ func main() {
 		log.Info().Msg("Goal service initialized")
 
 		taskRepo := repository.NewTaskRepository(mainDB)
-		taskService = service.NewTaskService(taskRepo, goalRepo)
+		taskService = service.NewTaskService(taskRepo, goalRepo, walletRepo)
 		log.Info().Msg("Task service initialized")
 
 		todoService = service.NewTodoService(taskRepo, goalRepo)
@@ -433,6 +433,7 @@ func main() {
 				reportsService,
 				subscriptionRepo,
 				noteRepo,
+				cfg.TavilyAPIKey,
 			)
 			log.Info().Msg("AI Chat service initialized with full context")
 		}

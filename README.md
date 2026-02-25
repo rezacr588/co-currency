@@ -204,7 +204,9 @@ All endpoints are prefixed with `/api/v1` unless noted. Protected endpoints requ
 | **Profile** | `GET /auth/profile`, `PUT /auth/profile`, `POST /auth/onboarding` | Yes |
 | **Wallet** | `GET /wallet/balances`, `/summary`, `/transactions`, `POST /wallet/transaction`, `/convert` | Yes |
 | **Categories** | `GET /wallet/categories`, `POST`, `PUT`, `DELETE` | Yes |
-| **Goals** | `GET /goals`, `POST`, `PUT`, `DELETE`, `POST /{id}/contribute` | Yes |
+| **Goals** | `GET /goals`, `GET /goals/types`, `GET /goals/categories`, `POST`, `PUT`, `DELETE`, `POST /{id}/contribute` | Yes |
+| **Tasks** | `GET /tasks`, `/statuses`, `/priorities`, `POST`, `PUT`, `DELETE`, `POST /{id}/complete` | Yes |
+| **Todo** | `GET /todo` (combined goals + tasks list) | Yes |
 | **Budgets** | `GET /budgets`, `POST`, `PUT`, `DELETE` | Yes |
 | **Recurring** | `GET /recurring`, `POST`, `PUT`, `DELETE`, `POST /{id}/execute` | Yes |
 | **Subscriptions** | `GET /subscriptions`, `/summary`, `/upcoming`, `POST`, `PUT`, `DELETE` | Yes |
@@ -241,9 +243,53 @@ See [docs/API.md](docs/API.md) for full endpoint documentation with request/resp
 The app auto-deploys on push to main via GitHub Actions. The Docker image serves the Expo web build embedded in the Go binary.
 
 ```bash
-make deploy             # Manual deploy
-make logs               # View logs
-make status             # Check status
+make deploy             # Manual redeploy (Koyeb)
+make logs               # Tail Koyeb runtime logs
+make status             # Describe Koyeb service
+make koyeb-list         # List apps/services
+```
+
+### Operational CLI (gh + koyeb + neonctl)
+
+This repository now includes an ops helper script:
+
+```bash
+scripts/ops/platform-cli.sh doctor
+```
+
+You can use Make targets for common tasks:
+
+```bash
+make ops-doctor         # Tool + auth readiness check
+make gh-summary         # Repo + open PRs
+make gh-runs            # Recent GitHub Actions runs
+make koyeb-status       # Koyeb service status
+make koyeb-logs         # Koyeb logs
+make koyeb-redeploy     # Koyeb redeploy
+make neon-projects      # List Neon projects
+make neon-branches      # List Neon branches
+make neon-cs            # Print Neon connection string
+```
+
+Configure env vars as needed:
+
+```bash
+export GH_REPO=rezacr588/co-currency
+export KOYEB_APP=terrible-moselle
+export KOYEB_SERVICE=co-currency
+
+# Neon (non-interactive)
+export NEON_API_KEY=...
+export NEON_PROJECT_ID=...
+export NEON_BRANCH=main
+export NEON_DATABASE=neondb
+export NEON_ROLE=neondb_owner
+```
+
+If Neon CLI is missing:
+
+```bash
+brew install neonctl
 ```
 
 ### Mobile OTA Updates

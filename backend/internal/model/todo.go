@@ -40,20 +40,21 @@ func (s TodoStatus) IsValid() bool {
 
 // TodoItem is a unified list item for goals and tasks.
 type TodoItem struct {
-	ID          uuid.UUID    `json:"id"`
-	Type        TodoItemType `json:"type"`
-	GoalID      *uuid.UUID   `json:"goal_id,omitempty"` // only for tasks linked to a goal
-	Title       string       `json:"title"`
-	Description string       `json:"description,omitempty"`
-	Status      TodoStatus   `json:"status"`
-	Priority    string       `json:"priority,omitempty"`
-	DueDate     *time.Time   `json:"due_date,omitempty"`
-	Progress    float64      `json:"progress,omitempty"` // mainly for goals
-	GoalType    GoalType     `json:"goal_type,omitempty"`
-	Category    string       `json:"category,omitempty"`
-	Unit        string       `json:"unit,omitempty"`
-	CreatedAt   time.Time    `json:"created_at"`
-	UpdatedAt   time.Time    `json:"updated_at"`
+	ID            uuid.UUID    `json:"id"`
+	Type          TodoItemType `json:"type"`
+	GoalID        *uuid.UUID   `json:"goal_id,omitempty"`        // only for tasks linked to a goal
+	TransactionID *uuid.UUID   `json:"transaction_id,omitempty"` // only for tasks linked to a transaction
+	Title         string       `json:"title"`
+	Description   string       `json:"description,omitempty"`
+	Status        TodoStatus   `json:"status"`
+	Priority      string       `json:"priority,omitempty"`
+	DueDate       *time.Time   `json:"due_date,omitempty"`
+	Progress      float64      `json:"progress,omitempty"` // mainly for goals
+	GoalType      GoalType     `json:"goal_type,omitempty"`
+	Category      string       `json:"category,omitempty"`
+	Unit          string       `json:"unit,omitempty"`
+	CreatedAt     time.Time    `json:"created_at"`
+	UpdatedAt     time.Time    `json:"updated_at"`
 }
 
 type TodoSummary struct {

@@ -134,7 +134,7 @@ async function fetchWithRetry<T>(
       const response = await fetch(url, {
         ...options,
         headers: {
-          'Content-Type': 'application/json',
+          ...(options?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...options?.headers,
         },

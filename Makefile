@@ -1,4 +1,10 @@
-.PHONY: dev dev-backend dev-frontend build test lint deploy logs status run-local clean
+.PHONY: dev dev-backend dev-frontend build test lint deploy logs status run-local clean \
+	ops-doctor gh-summary gh-runs koyeb-list koyeb-redeploy koyeb-logs koyeb-status \
+	neon-projects neon-branches neon-cs
+
+KOYEB_APP ?= terrible-moselle
+KOYEB_SERVICE ?= co-currency
+GH_REPO ?= rezacr588/co-currency
 
 # Development
 dev:
@@ -51,13 +57,41 @@ install:
 
 # Deploy (Koyeb)
 deploy:
-	koyeb service redeploy cofinance/cofinance
+	KOYEB_APP=$(KOYEB_APP) KOYEB_SERVICE=$(KOYEB_SERVICE) scripts/ops/platform-cli.sh koyeb-redeploy
 
 logs:
-	koyeb service logs cofinance/cofinance
+	KOYEB_APP=$(KOYEB_APP) KOYEB_SERVICE=$(KOYEB_SERVICE) scripts/ops/platform-cli.sh koyeb-logs
 
 status:
-	koyeb service describe cofinance/cofinance
+	KOYEB_APP=$(KOYEB_APP) KOYEB_SERVICE=$(KOYEB_SERVICE) scripts/ops/platform-cli.sh koyeb-status
+
+koyeb-redeploy: deploy
+
+koyeb-logs: logs
+
+koyeb-status: status
+
+koyeb-list:
+	koyeb apps list -o table
+	koyeb services list -o table
+
+ops-doctor:
+	KOYEB_APP=$(KOYEB_APP) KOYEB_SERVICE=$(KOYEB_SERVICE) GH_REPO=$(GH_REPO) scripts/ops/platform-cli.sh doctor
+
+gh-summary:
+	GH_REPO=$(GH_REPO) scripts/ops/platform-cli.sh gh-summary
+
+gh-runs:
+	GH_REPO=$(GH_REPO) scripts/ops/platform-cli.sh gh-runs
+
+neon-projects:
+	scripts/ops/platform-cli.sh neon-projects
+
+neon-branches:
+	scripts/ops/platform-cli.sh neon-branches
+
+neon-cs:
+	scripts/ops/platform-cli.sh neon-cs
 
 # Local production test
 run-local:

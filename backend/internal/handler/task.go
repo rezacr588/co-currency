@@ -45,6 +45,14 @@ func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 		}
 		filter.GoalID = &parsed
 	}
+	if transactionID := strings.TrimSpace(r.URL.Query().Get("transaction_id")); transactionID != "" {
+		parsed, err := uuid.Parse(transactionID)
+		if err != nil {
+			httputil.BadRequestWithContext(r.Context(), w, "invalid transaction_id")
+			return
+		}
+		filter.TransactionID = &parsed
+	}
 
 	tasks, err := h.taskService.GetTasks(r.Context(), userID, filter)
 	if err != nil {
@@ -108,6 +116,10 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 			httputil.NotFoundWithContext(r.Context(), w, "goal not found")
 			return
 		}
+		if errors.Is(err, repository.ErrTransactionNotFound) {
+			httputil.NotFoundWithContext(r.Context(), w, "transaction not found")
+			return
+		}
 		if errors.Is(err, service.ErrTaskTitleRequired) ||
 			errors.Is(err, service.ErrInvalidTaskStatus) ||
 			errors.Is(err, service.ErrInvalidTaskPriority) ||
@@ -151,6 +163,10 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, repository.ErrGoalNotFound) {
 			httputil.NotFoundWithContext(r.Context(), w, "goal not found")
+			return
+		}
+		if errors.Is(err, repository.ErrTransactionNotFound) {
+			httputil.NotFoundWithContext(r.Context(), w, "transaction not found")
 			return
 		}
 		if errors.Is(err, service.ErrTaskTitleRequired) ||
@@ -242,8 +258,10 @@ func isTaskValidationError(err error) bool {
 	msg := err.Error()
 	for _, marker := range []string{
 		"invalid goal_id format",
+		"invalid transaction_id format",
 		"invalid due_date format",
 		"goal repository is not configured",
+		"wallet repository is not configured",
 	} {
 		if strings.Contains(msg, marker) {
 			return true

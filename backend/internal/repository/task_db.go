@@ -27,8 +27,8 @@ func NewTaskRepository(db *Database) *TaskRepository {
 
 func (r *TaskRepository) Create(ctx context.Context, task *model.Task) error {
 	query := `
-		INSERT INTO tasks (id, user_id, goal_id, title, description, status, priority, due_date, completed_at, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO tasks (id, user_id, goal_id, transaction_id, title, description, status, priority, due_date, completed_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
 
 	now := time.Now()
@@ -40,6 +40,7 @@ func (r *TaskRepository) Create(ctx context.Context, task *model.Task) error {
 		task.ID,
 		task.UserID,
 		task.GoalID,
+		task.TransactionID,
 		task.Title,
 		nullableTaskText(task.Description),
 		task.Status,
@@ -57,7 +58,7 @@ func (r *TaskRepository) Create(ctx context.Context, task *model.Task) error {
 
 func (r *TaskRepository) GetByID(ctx context.Context, userID, taskID uuid.UUID) (*model.Task, error) {
 	query := `
-		SELECT id, user_id, goal_id::text, title, description, status, priority, due_date, completed_at, created_at, updated_at
+		SELECT id, user_id, goal_id::text, transaction_id::text, title, description, status, priority, due_date, completed_at, created_at, updated_at
 		FROM tasks
 		WHERE id = $1 AND user_id = $2
 	`
@@ -75,7 +76,7 @@ func (r *TaskRepository) GetByID(ctx context.Context, userID, taskID uuid.UUID) 
 
 func (r *TaskRepository) GetByUser(ctx context.Context, userID uuid.UUID, filter model.TaskListFilter) ([]model.Task, error) {
 	query := `
-		SELECT id, user_id, goal_id::text, title, description, status, priority, due_date, completed_at, created_at, updated_at
+		SELECT id, user_id, goal_id::text, transaction_id::text, title, description, status, priority, due_date, completed_at, created_at, updated_at
 		FROM tasks
 		WHERE user_id = $1
 	`
@@ -85,6 +86,11 @@ func (r *TaskRepository) GetByUser(ctx context.Context, userID uuid.UUID, filter
 	if filter.GoalID != nil {
 		query += fmt.Sprintf(" AND goal_id = $%d", argPos)
 		args = append(args, *filter.GoalID)
+		argPos++
+	}
+	if filter.TransactionID != nil {
+		query += fmt.Sprintf(" AND transaction_id = $%d", argPos)
+		args = append(args, *filter.TransactionID)
 		argPos++
 	}
 	if filter.Status != "" {
@@ -136,14 +142,15 @@ func (r *TaskRepository) GetByUser(ctx context.Context, userID uuid.UUID, filter
 func (r *TaskRepository) Update(ctx context.Context, task *model.Task) error {
 	query := `
 		UPDATE tasks
-		SET goal_id = $1, title = $2, description = $3, status = $4, priority = $5, due_date = $6, completed_at = $7, updated_at = $8
-		WHERE id = $9 AND user_id = $10
+		SET goal_id = $1, transaction_id = $2, title = $3, description = $4, status = $5, priority = $6, due_date = $7, completed_at = $8, updated_at = $9
+		WHERE id = $10 AND user_id = $11
 	`
 
 	task.UpdatedAt = time.Now()
 
 	result, err := r.pool.Exec(ctx, query,
 		task.GoalID,
+		task.TransactionID,
 		task.Title,
 		nullableTaskText(task.Description),
 		task.Status,
@@ -187,6 +194,7 @@ type taskScanner interface {
 func scanTask(scanner taskScanner) (*model.Task, error) {
 	task := &model.Task{}
 	var goalID *string
+	var transactionID *string
 	var description *string
 	var status string
 	var priority string
@@ -197,6 +205,7 @@ func scanTask(scanner taskScanner) (*model.Task, error) {
 		&task.ID,
 		&task.UserID,
 		&goalID,
+		&transactionID,
 		&task.Title,
 		&description,
 		&status,
@@ -215,6 +224,13 @@ func scanTask(scanner taskScanner) (*model.Task, error) {
 			return nil, fmt.Errorf("parsing goal id: %w", err)
 		}
 		task.GoalID = &parsedGoalID
+	}
+	if transactionID != nil && strings.TrimSpace(*transactionID) != "" {
+		parsedTransactionID, err := uuid.Parse(*transactionID)
+		if err != nil {
+			return nil, fmt.Errorf("parsing transaction id: %w", err)
+		}
+		task.TransactionID = &parsedTransactionID
 	}
 	if description != nil {
 		task.Description = *description

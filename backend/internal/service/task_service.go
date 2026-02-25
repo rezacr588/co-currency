@@ -19,14 +19,16 @@ var (
 )
 
 type TaskService struct {
-	taskRepo *repository.TaskRepository
-	goalRepo *repository.GoalRepository
+	taskRepo   *repository.TaskRepository
+	goalRepo   *repository.GoalRepository
+	walletRepo *repository.WalletRepository
 }
 
-func NewTaskService(taskRepo *repository.TaskRepository, goalRepo *repository.GoalRepository) *TaskService {
+func NewTaskService(taskRepo *repository.TaskRepository, goalRepo *repository.GoalRepository, walletRepo *repository.WalletRepository) *TaskService {
 	return &TaskService{
-		taskRepo: taskRepo,
-		goalRepo: goalRepo,
+		taskRepo:   taskRepo,
+		goalRepo:   goalRepo,
+		walletRepo: walletRepo,
 	}
 }
 
@@ -85,6 +87,10 @@ func (s *TaskService) CreateTask(ctx context.Context, userID uuid.UUID, req *mod
 	if err != nil {
 		return nil, err
 	}
+	transactionID, err := s.parseAndValidateTransactionID(ctx, userID, req.TransactionID)
+	if err != nil {
+		return nil, err
+	}
 
 	dueDate, err := parseTaskDate(req.DueDate)
 	if err != nil {
@@ -92,13 +98,14 @@ func (s *TaskService) CreateTask(ctx context.Context, userID uuid.UUID, req *mod
 	}
 
 	task := &model.Task{
-		UserID:      userID,
-		GoalID:      goalID,
-		Title:       title,
-		Description: strings.TrimSpace(req.Description),
-		Status:      status,
-		Priority:    priority,
-		DueDate:     dueDate,
+		UserID:        userID,
+		GoalID:        goalID,
+		TransactionID: transactionID,
+		Title:         title,
+		Description:   strings.TrimSpace(req.Description),
+		Status:        status,
+		Priority:      priority,
+		DueDate:       dueDate,
 	}
 
 	if task.Status == model.TaskStatusDone {
@@ -128,6 +135,13 @@ func (s *TaskService) UpdateTask(ctx context.Context, userID, taskID uuid.UUID, 
 			return nil, err
 		}
 		task.GoalID = goalID
+	}
+	if req.TransactionID != nil {
+		transactionID, err := s.parseAndValidateTransactionID(ctx, userID, *req.TransactionID)
+		if err != nil {
+			return nil, err
+		}
+		task.TransactionID = transactionID
 	}
 	if req.Title != nil {
 		title := strings.TrimSpace(*req.Title)
@@ -219,6 +233,31 @@ func (s *TaskService) parseAndValidateGoalID(ctx context.Context, userID uuid.UU
 	}
 
 	return &goalID, nil
+}
+
+func (s *TaskService) parseAndValidateTransactionID(ctx context.Context, userID uuid.UUID, raw string) (*uuid.UUID, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+
+	transactionID, err := uuid.Parse(raw)
+	if err != nil {
+		return nil, errors.New("invalid transaction_id format")
+	}
+
+	if s.walletRepo == nil {
+		return nil, errors.New("wallet repository is not configured")
+	}
+
+	if _, err := s.walletRepo.GetTransaction(ctx, userID, transactionID); err != nil {
+		if errors.Is(err, repository.ErrTransactionNotFound) {
+			return nil, repository.ErrTransactionNotFound
+		}
+		return nil, fmt.Errorf("validating transaction: %w", err)
+	}
+
+	return &transactionID, nil
 }
 
 func parseTaskDate(raw string) (*time.Time, error) {

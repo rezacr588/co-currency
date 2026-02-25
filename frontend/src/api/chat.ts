@@ -55,4 +55,17 @@ export const chat = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  sendVoiceMessage: (data: { conversation_id?: string; file: Blob; message?: string }) => {
+    const formData = new FormData();
+    if (data.conversation_id) {
+      formData.append('conversation_id', data.conversation_id);
+    }
+    formData.append('message', data.message || '');
+    formData.append('file', data.file, 'recording.webm');
+    return fetchAPI<ChatResponse>('/ai/chat', {
+      method: 'POST',
+      body: formData,
+    });
+  },
 };

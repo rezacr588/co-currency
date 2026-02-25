@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { Send, Bot, User, Plus, Trash2, ArrowLeft, Sparkles, Menu, X, RotateCcw } from 'lucide-react';
+import { Send, Bot, User, Plus, Trash2, ArrowLeft, Sparkles, Menu, X, RotateCcw, Zap, Mic, Square } from 'lucide-react';
 import { api } from '../api';
 import { ROUTES } from '../constants/routes';
 import type { ChatMessage, Conversation, ConversationWithMessages } from '../api/chat';
@@ -48,9 +48,16 @@ export default function AIChat() {
         conversationId || null
     );
     const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
+    const [totalTokensUsed, setTotalTokensUsed] = useState(0);
+    const [lastTokensUsed, setLastTokensUsed] = useState<number | null>(null);
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingDuration, setRecordingDuration] = useState(0);
     const optimisticConversationIdRef = useRef<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
+    const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const selectedConversationId = activeConversationId || conversationId || '';
 
     const { data: aiStatus } = useQuery({
@@ -115,15 +122,18 @@ export default function AIChat() {
     }, [isMobileConversationsOpen]);
 
 
+    // Shared conversation ID resolver
+    const getRealConversationId = useCallback(() => {
+        return selectedConversationId && !selectedConversationId.startsWith('temp-')
+            ? selectedConversationId
+            : undefined;
+    }, [selectedConversationId]);
+
     // Send message mutation
     const sendMessageMutation = useMutation({
         mutationFn: async (msg: string) => {
-            // Only send conversation_id if it's a real UUID (not temp-)
-            const realConversationId = selectedConversationId && !selectedConversationId.startsWith('temp-')
-                ? selectedConversationId
-                : undefined;
             return api.chat.sendMessage({
-                conversation_id: realConversationId,
+                conversation_id: getRealConversationId(),
                 message: msg,
             });
         },
@@ -286,6 +296,12 @@ export default function AIChat() {
                 navigate(`${ROUTES.aiChat}/${serverConversationId}`);
             }
 
+            // Track token usage
+            if (data.tokens_used) {
+                setTotalTokensUsed(prev => prev + data.tokens_used!);
+                setLastTokensUsed(data.tokens_used);
+            }
+
             // Refresh conversations list
             queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
             setIsTyping(false);
@@ -342,6 +358,210 @@ export default function AIChat() {
             setActiveConversationId(null);
         },
     });
+
+    // Send voice message mutation
+    const sendVoiceMutation = useMutation({
+        mutationFn: async (audioBlob: Blob) => {
+            return api.chat.sendVoiceMessage({
+                conversation_id: getRealConversationId(),
+                file: audioBlob,
+            });
+        },
+        onMutate: async () => {
+            setIsTyping(true);
+            setSendError(null);
+            setLastFailedMessage(null);
+            const now = new Date().toISOString();
+            const optimisticMessageId = `temp-${Date.now()}`;
+            const optimisticMessage: ChatMessage = {
+                id: optimisticMessageId,
+                conversation_id: selectedConversationId || 'temp',
+                role: 'user',
+                content: '🎤 Voice message...',
+                created_at: now,
+            };
+
+            if (selectedConversationId) {
+                queryClient.setQueryData<ConversationWithMessages | null>(
+                    ['ai-conversation', selectedConversationId],
+                    (old) => {
+                        if (!old) return old;
+                        return { ...old, messages: [...(old.messages ?? []), optimisticMessage] };
+                    }
+                );
+                optimisticConversationIdRef.current = selectedConversationId;
+                return { optimisticConversationId: selectedConversationId, optimisticMessageId };
+            }
+
+            const optimisticConversationId = `temp-${Date.now()}`;
+            const optimisticConversation: Conversation = {
+                id: optimisticConversationId,
+                user_id: '',
+                title: 'Voice message',
+                created_at: now,
+                updated_at: now,
+            };
+
+            queryClient.setQueryData<ConversationWithMessages>(
+                ['ai-conversation', optimisticConversationId],
+                { conversation: optimisticConversation, messages: [optimisticMessage] }
+            );
+            queryClient.setQueryData<{ conversations: Conversation[] } | undefined>(
+                ['ai-conversations'],
+                (old) => {
+                    const current = old?.conversations ?? [];
+                    return { conversations: [optimisticConversation, ...current] };
+                }
+            );
+
+            setActiveConversationId(optimisticConversationId);
+            optimisticConversationIdRef.current = optimisticConversationId;
+            return { optimisticConversationId, optimisticMessageId };
+        },
+        onSuccess: (data) => {
+            const serverConversationId = data.conversation_id;
+            if (!serverConversationId || !data.message?.content) {
+                setSendError('Received invalid response from server');
+                setIsTyping(false);
+                return;
+            }
+
+            if (optimisticConversationIdRef.current && optimisticConversationIdRef.current !== serverConversationId) {
+                const tempId = optimisticConversationIdRef.current;
+                const tempData = queryClient.getQueryData<ConversationWithMessages>(['ai-conversation', tempId]);
+
+                queryClient.setQueryData<ConversationWithMessages>(
+                    ['ai-conversation', serverConversationId],
+                    {
+                        conversation: {
+                            id: serverConversationId,
+                            user_id: tempData?.conversation.user_id || '',
+                            title: tempData?.conversation.title || data.message.content.slice(0, 50),
+                            created_at: tempData?.conversation.created_at || new Date().toISOString(),
+                            updated_at: new Date().toISOString(),
+                        },
+                        messages: [...(tempData?.messages?.filter(m => !m.id.startsWith('temp-')) || []), data.message],
+                    }
+                );
+                queryClient.removeQueries({ queryKey: ['ai-conversation', tempId] });
+                queryClient.setQueryData<{ conversations: Conversation[] } | undefined>(
+                    ['ai-conversations'],
+                    (old) => {
+                        if (!old) return old;
+                        return { conversations: old.conversations.map(c => c.id === tempId ? { ...c, id: serverConversationId } : c) };
+                    }
+                );
+                setActiveConversationId(serverConversationId);
+            } else {
+                queryClient.setQueryData<ConversationWithMessages | null>(
+                    ['ai-conversation', serverConversationId],
+                    (old) => {
+                        if (!old) return old;
+                        // Replace placeholder and add AI message
+                        const filtered = old.messages.filter(m => !m.id.startsWith('temp-'));
+                        const exists = filtered.some(m => m.id === data.message.id);
+                        return { ...old, messages: exists ? filtered : [...filtered, data.message] };
+                    }
+                );
+            }
+
+            if (!conversationId) {
+                navigate(`${ROUTES.aiChat}/${serverConversationId}`);
+            }
+
+            if (data.tokens_used) {
+                setTotalTokensUsed(prev => prev + data.tokens_used!);
+                setLastTokensUsed(data.tokens_used);
+            }
+
+            queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
+            // Refetch to get the real user message (transcription) from the server
+            queryClient.invalidateQueries({ queryKey: ['ai-conversation', serverConversationId] });
+            setIsTyping(false);
+            optimisticConversationIdRef.current = null;
+        },
+        onError: (error, _blob, context) => {
+            setIsTyping(false);
+            setSendError(getFriendlyErrorMessage(error));
+
+            if (context?.optimisticConversationId?.startsWith('temp-')) {
+                queryClient.removeQueries({ queryKey: ['ai-conversation', context.optimisticConversationId] });
+                queryClient.setQueryData<{ conversations: Conversation[] } | undefined>(
+                    ['ai-conversations'],
+                    (old) => {
+                        if (!old) return old;
+                        return { conversations: old.conversations.filter(c => c.id !== context.optimisticConversationId) };
+                    }
+                );
+            } else if (context?.optimisticConversationId && context.optimisticMessageId) {
+                queryClient.setQueryData<ConversationWithMessages | null>(
+                    ['ai-conversation', context.optimisticConversationId],
+                    (old) => {
+                        if (!old) return old;
+                        return { ...old, messages: old.messages.filter(m => m.id !== context.optimisticMessageId) };
+                    }
+                );
+            }
+            optimisticConversationIdRef.current = null;
+        },
+    });
+
+    // Voice recording helpers
+    const formatDuration = (seconds: number) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) audioChunksRef.current.push(e.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                stream.getTracks().forEach(t => t.stop());
+                if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+                setRecordingDuration(0);
+
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                if (audioBlob.size > 0) {
+                    sendVoiceMutation.mutate(audioBlob);
+                }
+            };
+
+            mediaRecorderRef.current = mediaRecorder;
+            mediaRecorder.start();
+            setIsRecording(true);
+            setRecordingDuration(0);
+            recordingTimerRef.current = setInterval(() => {
+                setRecordingDuration(prev => prev + 1);
+            }, 1000);
+        } catch {
+            setSendError('Microphone access denied. Please allow microphone access to use voice messages.');
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop();
+        }
+        setIsRecording(false);
+    };
+
+    // Cleanup recording on unmount
+    useEffect(() => {
+        return () => {
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+                mediaRecorderRef.current.stop();
+            }
+            if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+        };
+    }, []);
 
     const messages: ChatMessage[] = useMemo(
         () => currentConversation?.messages || [],
@@ -413,9 +633,9 @@ export default function AIChat() {
     const canChangeConversation = !sendMessageMutation.isPending && !isTyping;
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex">
+        <div className="h-[100dvh] bg-slate-50 dark:bg-slate-950 flex overflow-hidden">
             {/* Sidebar - Conversations */}
-            <div className="hidden md:flex w-72 flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+            <div className="hidden lg:flex w-72 flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
                 <div className="p-4 border-b border-slate-200 dark:border-slate-800">
                     <button
                         onClick={handleNewConversation}
@@ -453,7 +673,7 @@ export default function AIChat() {
 
             {/* Mobile Conversations Drawer */}
             {isMobileConversationsOpen && (
-                <div className="fixed inset-0 z-50 md:hidden">
+                <div className="fixed inset-0 z-50 lg:hidden">
                     <button
                         type="button"
                         onClick={() => setIsMobileConversationsOpen(false)}
@@ -526,7 +746,7 @@ export default function AIChat() {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => navigate(ROUTES.dashboard)}
-                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors md:hidden"
+                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors lg:hidden"
                         >
                             <ArrowLeft className="w-5 h-5" />
                         </button>
@@ -545,7 +765,7 @@ export default function AIChat() {
                     <button
                         type="button"
                         onClick={() => setIsMobileConversationsOpen(true)}
-                        className="md:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        className="lg:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                         aria-label={t('openMenu') || 'Open menu'}
                     >
                         <Menu className="w-5 h-5" />
@@ -553,7 +773,7 @@ export default function AIChat() {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
                     {!aiConfigured && messages.length === 0 && (
                         <div className="flex flex-col items-center justify-center h-full text-center px-4">
                             <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
@@ -658,7 +878,7 @@ export default function AIChat() {
                 </div>
 
                 {/* Input */}
-                <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                     {sendError && (
                         <div className="max-w-4xl mx-auto mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300 flex items-center justify-between gap-2">
                             <span>{sendError}</span>
@@ -693,14 +913,47 @@ export default function AIChat() {
                                 </span>
                             )}
                         </div>
+                        {/* Mic / Stop button */}
+                        <button
+                            onClick={isRecording ? stopRecording : startRecording}
+                            disabled={sendMessageMutation.isPending || sendVoiceMutation.isPending || isTyping || !aiConfigured}
+                            className={`px-3 py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed ${isRecording
+                                ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30'
+                                : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                }`}
+                            title={isRecording ? 'Stop recording' : 'Voice message'}
+                        >
+                            {isRecording ? (
+                                <div className="flex items-center gap-1.5">
+                                    <Square className="w-4 h-4 fill-current" />
+                                    <span className="text-xs font-mono tabular-nums">{formatDuration(recordingDuration)}</span>
+                                </div>
+                            ) : (
+                                <Mic className="w-5 h-5" />
+                            )}
+                        </button>
                         <button
                             onClick={() => handleSend()}
-                            disabled={!message.trim() || message.length > MAX_MESSAGE_LENGTH || sendMessageMutation.isPending || isTyping || !aiConfigured}
+                            disabled={!message.trim() || message.length > MAX_MESSAGE_LENGTH || sendMessageMutation.isPending || sendVoiceMutation.isPending || isTyping || !aiConfigured}
                             className="px-4 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary-500/20"
                         >
                             <Send className="w-5 h-5" />
                         </button>
                     </div>
+                    {totalTokensUsed > 0 && (
+                        <div className="flex items-center justify-center gap-3 mt-2 text-xs text-slate-400 dark:text-slate-500">
+                            <span className="flex items-center gap-1">
+                                <Zap className="w-3 h-3" />
+                                {totalTokensUsed.toLocaleString()} tokens used
+                            </span>
+                            {lastTokensUsed && (
+                                <span className="text-slate-300 dark:text-slate-600">•</span>
+                            )}
+                            {lastTokensUsed && (
+                                <span>Last: {lastTokensUsed.toLocaleString()}</span>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

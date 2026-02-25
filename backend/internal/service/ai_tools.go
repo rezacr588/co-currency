@@ -1,9 +1,12 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 	"time"
 
@@ -28,6 +31,7 @@ type AIToolExecutor struct {
 	noteRepo         *repository.NoteRepository
 	loanRepo         *repository.LoanRepository
 	budgetRepo       *repository.BudgetRepository
+	tavilyAPIKey     string
 }
 
 // NewAIToolExecutor creates a new tool executor
@@ -39,6 +43,7 @@ func NewAIToolExecutor(
 	noteRepo *repository.NoteRepository,
 	loanRepo *repository.LoanRepository,
 	budgetRepo *repository.BudgetRepository,
+	tavilyAPIKey string,
 ) *AIToolExecutor {
 	return &AIToolExecutor{
 		walletRepo:       walletRepo,
@@ -48,6 +53,7 @@ func NewAIToolExecutor(
 		noteRepo:         noteRepo,
 		loanRepo:         loanRepo,
 		budgetRepo:       budgetRepo,
+		tavilyAPIKey:     tavilyAPIKey,
 	}
 }
 
@@ -111,6 +117,8 @@ func (e *AIToolExecutor) Execute(ctx context.Context, userID uuid.UUID, currency
 		return e.executeGetSubscriptions(ctx, userID, currency, tc.Params)
 	case "search_notes":
 		return e.executeSearchNotes(ctx, userID, tc.Params)
+	case "web_search":
+		return e.executeWebSearch(ctx, tc.Params)
 	default:
 		return "", fmt.Errorf("unknown tool: %s", tc.Name)
 	}
@@ -397,6 +405,83 @@ func (e *AIToolExecutor) executeSearchNotes(ctx context.Context, userID uuid.UUI
 	return sb.String(), nil
 }
 
+func (e *AIToolExecutor) executeWebSearch(ctx context.Context, params map[string]interface{}) (string, error) {
+	if e.tavilyAPIKey == "" {
+		return "Web search is not configured. Please set TAVILY_API_KEY.", nil
+	}
+
+	query := getStringParam(params, "query")
+	if query == "" {
+		return "No search query provided.", nil
+	}
+
+	// Build Tavily search request
+	reqBody := map[string]interface{}{
+		"api_key":             e.tavilyAPIKey,
+		"query":               query,
+		"search_depth":        "basic",
+		"max_results":         5,
+		"include_answer":      true,
+		"include_raw_content": false,
+	}
+
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", fmt.Errorf("marshaling search request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.tavily.com/search", bytes.NewReader(jsonData))
+	if err != nil {
+		return "", fmt.Errorf("creating search request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("search request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return "", fmt.Errorf("search API returned status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var result struct {
+		Answer  string `json:"answer"`
+		Results []struct {
+			Title   string `json:"title"`
+			URL     string `json:"url"`
+			Content string `json:"content"`
+		} `json:"results"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("parsing search response: %w", err)
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Web search results for '%s':\n\n", query))
+
+	if result.Answer != "" {
+		sb.WriteString(fmt.Sprintf("Summary: %s\n\n", result.Answer))
+	}
+
+	for i, r := range result.Results {
+		content := r.Content
+		if len(content) > 300 {
+			content = content[:300] + "..."
+		}
+		sb.WriteString(fmt.Sprintf("%d. **%s**\n   %s\n   Source: %s\n\n", i+1, r.Title, content, r.URL))
+	}
+
+	if len(result.Results) == 0 && result.Answer == "" {
+		sb.WriteString("No results found.\n")
+	}
+
+	return sb.String(), nil
+}
+
 // --- Param helpers ---
 
 func getStringParam(params map[string]interface{}, key string) string {
@@ -462,6 +547,9 @@ You have access to tools that let you query the user's financial data dynamicall
 8. **search_notes** — Full-text search on user's notes
    Params: query (string)
 
+9. **web_search** — Search the internet for current information (news, exchange rates, financial tips, etc.)
+   Params: query (string, required)
+
 ### How to Call a Tool
 
 Output ONLY the following marker when you need to call a tool (nothing else in your response):
@@ -485,5 +573,8 @@ User: "Show my spending trends"
 
 User: "What's my financial health?"
 <tool_call>{"name": "get_health_score", "params": {}}</tool_call>
+
+User: "What's the latest EUR to USD exchange rate?"
+<tool_call>{"name": "web_search", "params": {"query": "EUR to USD exchange rate today"}}</tool_call>
 `
 }

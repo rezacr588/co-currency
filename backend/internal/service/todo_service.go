@@ -52,16 +52,17 @@ func (s *TodoService) GetTodoList(ctx context.Context, userID uuid.UUID, status 
 			}
 
 			items = append(items, model.TodoItem{
-				ID:          task.ID,
-				Type:        model.TodoItemTypeTask,
-				GoalID:      task.GoalID,
-				Title:       task.Title,
-				Description: task.Description,
-				Status:      todoStatus,
-				Priority:    string(task.Priority),
-				DueDate:     task.DueDate,
-				CreatedAt:   task.CreatedAt,
-				UpdatedAt:   task.UpdatedAt,
+				ID:            task.ID,
+				Type:          model.TodoItemTypeTask,
+				GoalID:        task.GoalID,
+				TransactionID: task.TransactionID,
+				Title:         task.Title,
+				Description:   task.Description,
+				Status:        todoStatus,
+				Priority:      string(task.Priority),
+				DueDate:       task.DueDate,
+				CreatedAt:     task.CreatedAt,
+				UpdatedAt:     task.UpdatedAt,
 			})
 		}
 	}
