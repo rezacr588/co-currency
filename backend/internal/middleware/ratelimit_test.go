@@ -632,14 +632,45 @@ func TestRateLimiterWithConfig_CustomAILimit(t *testing.T) {
 	}
 }
 
+func TestRateLimiter_AISettings_Defaults(t *testing.T) {
+	rl := NewRateLimiterWithConfig(RateLimiterConfig{
+		RequestsPerMinute: 60,
+	})
+	defer rl.Stop()
+
+	perMin, burst := rl.AISettings()
+	if perMin != 20 {
+		t.Errorf("Expected AISettings perMin=20, got %d", perMin)
+	}
+	if burst != 5 {
+		t.Errorf("Expected AISettings burst=5, got %d", burst)
+	}
+}
+
+func TestRateLimiter_AISettings_Custom(t *testing.T) {
+	rl := NewRateLimiterWithConfig(RateLimiterConfig{
+		RequestsPerMinute:   60,
+		AIRequestsPerMinute: 33,
+	})
+	defer rl.Stop()
+
+	perMin, burst := rl.AISettings()
+	if perMin != 33 {
+		t.Errorf("Expected AISettings perMin=33, got %d", perMin)
+	}
+	if burst != 5 {
+		t.Errorf("Expected AISettings burst=5, got %d", burst)
+	}
+}
+
 // Test getIP function
 func TestGetIP(t *testing.T) {
 	tests := []struct {
-		name           string
-		remoteAddr     string
-		xForwardedFor  string
-		xRealIP        string
-		expectedIP     string
+		name          string
+		remoteAddr    string
+		xForwardedFor string
+		xRealIP       string
+		expectedIP    string
 	}{
 		{
 			name:       "RemoteAddr only",

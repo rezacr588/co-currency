@@ -19,8 +19,15 @@ export interface PersonalizedAdvice {
   is_ai: boolean;
 }
 
+export interface AIStatusResponse {
+  configured: boolean;
+  provider?: string;
+  rate_limit_per_minute?: number;
+  rate_limit_burst?: number;
+}
+
 export const ai = {
-  getStatus: () => fetchAPI<{ configured: boolean; provider?: string }>('/ai/status'),
+  getStatus: () => fetchAPI<AIStatusResponse>('/ai/status'),
 
   getAdvice: (lang?: string, forceRefresh?: boolean) => {
     const params = new URLSearchParams();

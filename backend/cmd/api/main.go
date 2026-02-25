@@ -587,6 +587,10 @@ func main() {
 	}
 
 	rateLimiter := middleware.NewRateLimiter(cfg.RateLimitPerMin)
+	if aiHandler != nil {
+		aiLimitPerMin, aiBurst := rateLimiter.AISettings()
+		aiHandler.SetRateLimitInfo(aiLimitPerMin, aiBurst)
+	}
 
 	// Setup static file system
 	var staticFS fs.FS

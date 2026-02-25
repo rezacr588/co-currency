@@ -108,14 +108,18 @@ func (s *MockWalletServiceForAIHandler) ApplyAIParsedResult(ctx context.Context,
 
 // AIHandlerWithMock wraps AIHandler with mock services
 type AIHandlerWithMock struct {
-	aiService     *MockAIServiceForHandler
-	walletService *MockWalletServiceForAIHandler
+	aiService         *MockAIServiceForHandler
+	walletService     *MockWalletServiceForAIHandler
+	aiRateLimitPerMin int
+	aiRateLimitBurst  int
 }
 
 func NewAIHandlerWithMock(aiService *MockAIServiceForHandler, walletService *MockWalletServiceForAIHandler) *AIHandlerWithMock {
 	return &AIHandlerWithMock{
-		aiService:     aiService,
-		walletService: walletService,
+		aiService:         aiService,
+		walletService:     walletService,
+		aiRateLimitPerMin: 20,
+		aiRateLimitBurst:  5,
 	}
 }
 
@@ -214,7 +218,9 @@ func (h *AIHandlerWithMock) ApplyParsed(w http.ResponseWriter, r *http.Request) 
 
 func (h *AIHandlerWithMock) GetStatus(w http.ResponseWriter, r *http.Request) {
 	status := map[string]interface{}{
-		"configured": h.aiService != nil && h.aiService.IsConfigured(),
+		"configured":            h.aiService != nil && h.aiService.IsConfigured(),
+		"rate_limit_per_minute": h.aiRateLimitPerMin,
+		"rate_limit_burst":      h.aiRateLimitBurst,
 	}
 
 	if h.aiService != nil {
@@ -576,6 +582,16 @@ func TestGetStatusHandler_Configured(t *testing.T) {
 	if !ok || provider != "googleai" {
 		t.Errorf("Expected provider googleai, got %v", response["provider"])
 	}
+
+	limit, ok := response["rate_limit_per_minute"].(float64)
+	if !ok || int(limit) != 20 {
+		t.Errorf("Expected rate_limit_per_minute 20, got %v", response["rate_limit_per_minute"])
+	}
+
+	burst, ok := response["rate_limit_burst"].(float64)
+	if !ok || int(burst) != 5 {
+		t.Errorf("Expected rate_limit_burst 5, got %v", response["rate_limit_burst"])
+	}
 }
 
 func TestGetStatusHandler_NotConfigured(t *testing.T) {
@@ -715,5 +731,32 @@ func TestAIHandler_GetStatus_NoAIService(t *testing.T) {
 	configured, ok := response["configured"].(bool)
 	if !ok || configured {
 		t.Error("Expected configured to be false")
+	}
+}
+
+func TestAIHandler_GetStatus_CustomRateLimit(t *testing.T) {
+	handler := NewAIHandler(nil, nil)
+	handler.SetRateLimitInfo(42, 9)
+
+	req := httptest.NewRequest("GET", "/api/v1/ai/status", nil)
+	rr := httptest.NewRecorder()
+
+	handler.GetStatus(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", rr.Code)
+	}
+
+	var response map[string]interface{}
+	json.NewDecoder(rr.Body).Decode(&response)
+
+	limit, ok := response["rate_limit_per_minute"].(float64)
+	if !ok || int(limit) != 42 {
+		t.Errorf("Expected rate_limit_per_minute 42, got %v", response["rate_limit_per_minute"])
+	}
+
+	burst, ok := response["rate_limit_burst"].(float64)
+	if !ok || int(burst) != 9 {
+		t.Errorf("Expected rate_limit_burst 9, got %v", response["rate_limit_burst"])
 	}
 }

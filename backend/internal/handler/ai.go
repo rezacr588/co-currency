@@ -16,18 +16,22 @@ import (
 
 // AIHandler handles AI-related endpoints
 type AIHandler struct {
-	aiService        *service.AIService
-	walletService    *service.WalletService
-	recurringService *service.RecurringService
-	goalService      *service.GoalService
-	adviceService    *service.AdviceService
+	aiService         *service.AIService
+	walletService     *service.WalletService
+	recurringService  *service.RecurringService
+	goalService       *service.GoalService
+	adviceService     *service.AdviceService
+	aiRateLimitPerMin int
+	aiRateLimitBurst  int
 }
 
 // NewAIHandler creates a new AIHandler
 func NewAIHandler(aiService *service.AIService, walletService *service.WalletService) *AIHandler {
 	return &AIHandler{
-		aiService:     aiService,
-		walletService: walletService,
+		aiService:         aiService,
+		walletService:     walletService,
+		aiRateLimitPerMin: 20,
+		aiRateLimitBurst:  5,
 	}
 }
 
@@ -44,6 +48,16 @@ func (h *AIHandler) SetGoalService(goalService *service.GoalService) {
 // SetAdviceService sets the advice service (for dependency injection)
 func (h *AIHandler) SetAdviceService(adviceService *service.AdviceService) {
 	h.adviceService = adviceService
+}
+
+// SetRateLimitInfo sets AI endpoint rate limit metadata for the status endpoint.
+func (h *AIHandler) SetRateLimitInfo(limitPerMinute, burst int) {
+	if limitPerMinute > 0 {
+		h.aiRateLimitPerMin = limitPerMinute
+	}
+	if burst > 0 {
+		h.aiRateLimitBurst = burst
+	}
 }
 
 // GetPersonalizedAdvice handles GET /api/v1/ai/advice
@@ -140,7 +154,9 @@ func (h *AIHandler) ApplyParsed(w http.ResponseWriter, r *http.Request) {
 // GetStatus handles GET /api/v1/ai/status
 func (h *AIHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
 	status := map[string]interface{}{
-		"configured": h.aiService != nil && h.aiService.IsConfigured(),
+		"configured":            h.aiService != nil && h.aiService.IsConfigured(),
+		"rate_limit_per_minute": h.aiRateLimitPerMin,
+		"rate_limit_burst":      h.aiRateLimitBurst,
 	}
 
 	if h.aiService != nil {

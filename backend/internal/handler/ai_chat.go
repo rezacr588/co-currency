@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"path/filepath"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -137,6 +139,12 @@ func (h *AIChatHandler) DeleteConversation(w http.ResponseWriter, r *http.Reques
 // maxChatMessageLength is the maximum allowed length for a chat message
 const maxChatMessageLength = 5000
 
+// maxChatAttachmentBytes is the maximum file size accepted for AI chat attachments.
+const maxChatAttachmentBytes int64 = 10 << 20 // 10MB
+
+// maxMultipartFormOverheadBytes allows room for multipart boundaries/metadata.
+const maxMultipartFormOverheadBytes int64 = 1 << 20 // 1MB
+
 // Chat handles a chat message and returns AI response
 func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 	userID, ok := requireUserID(w, r)
@@ -148,8 +156,8 @@ func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 
 	if strings.HasPrefix(contentType, "multipart/form-data") {
-		// Parse multipart form (max 10MB)
-		if err := r.ParseMultipartForm(10 << 20); err != nil {
+		r.Body = http.MaxBytesReader(w, r.Body, maxChatAttachmentBytes+maxMultipartFormOverheadBytes)
+		if err := r.ParseMultipartForm(maxChatAttachmentBytes); err != nil {
 			httputil.BadRequestWithContext(r.Context(), w, "Failed to parse multipart form", err)
 			return
 		}
@@ -160,25 +168,25 @@ func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 		file, header, err := r.FormFile("file")
 		if err == nil {
 			defer file.Close()
-			fileData := make([]byte, header.Size)
-			if _, err := file.Read(fileData); err != nil {
+			fileData, err := io.ReadAll(file)
+			if err != nil {
 				httputil.BadRequestWithContext(r.Context(), w, "Failed to read file", err)
 				return
 			}
+			if len(fileData) == 0 {
+				httputil.BadRequestWithContext(r.Context(), w, "Empty file attachment", nil)
+				return
+			}
+			if int64(len(fileData)) > maxChatAttachmentBytes {
+				httputil.BadRequestWithContext(r.Context(), w, "File too large (max 10MB)", nil)
+				return
+			}
 			req.FileData = fileData
-			req.FileMimeType = header.Header.Get("Content-Type")
 			req.FileName = header.Filename
+			req.FileMimeType = normalizeChatFileMIME(header.Header.Get("Content-Type"), fileData, req.FileName)
 
 			// Validate MIME type
-			validTypes := []string{"image/", "application/pdf", "text/csv", "audio/"}
-			isValid := false
-			for _, prefix := range validTypes {
-				if strings.HasPrefix(req.FileMimeType, prefix) {
-					isValid = true
-					break
-				}
-			}
-			if !isValid {
+			if !isSupportedChatFileType(req.FileMimeType, req.FileName) {
 				httputil.BadRequestWithContext(r.Context(), w, "Unsupported file type: "+req.FileMimeType, nil)
 				return
 			}
@@ -189,6 +197,7 @@ func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	req.Message = strings.TrimSpace(req.Message)
 
 	if req.Message == "" && len(req.FileData) == 0 {
 		httputil.BadRequestWithContext(r.Context(), w, "Message or file is required", nil)
@@ -220,9 +229,9 @@ func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 				}
 			} else {
 				// Append extracted info to the message
-				imgContext := fmt.Sprintf("\n\n[Attached image analysis: Amount=%.2f %s, Type=%s, Description=%s]",
+				imgContext := fmt.Sprintf("[Attached image analysis: Amount=%.2f %s, Type=%s, Description=%s]",
 					result.Amount, result.Currency, result.Type, result.Description)
-				req.Message += imgContext
+				req.Message = appendChatContext(req.Message, imgContext)
 			}
 		} else if strings.HasPrefix(req.FileMimeType, "audio/") {
 			// For audio, transcribe first
@@ -236,10 +245,10 @@ func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 				if req.Message == "" {
 					req.Message = transcript
 				} else {
-					req.Message += "\n\n[Voice message transcript: " + transcript + "]"
+					req.Message = appendChatContext(req.Message, "[Voice message transcript: "+transcript+"]")
 				}
 			}
-		} else if req.FileMimeType == "text/csv" {
+		} else if isCSVChatFile(req.FileMimeType, req.FileName) {
 			// For CSV, read content and include in message
 			csvContent := string(req.FileData)
 			lines := strings.Split(csvContent, "\n")
@@ -247,10 +256,10 @@ func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 				lines = lines[:50]
 			}
 			csvPreview := strings.Join(lines, "\n")
-			req.Message += "\n\n[Attached CSV data (first 50 rows):\n" + csvPreview + "]"
+			req.Message = appendChatContext(req.Message, "[Attached CSV data (first 50 rows):\n"+csvPreview+"]")
 		} else if req.FileMimeType == "application/pdf" {
 			// For PDF, include a note (full extraction would need pdfcpu)
-			req.Message += "\n\n[User attached a PDF document: " + req.FileName + "]"
+			req.Message = appendChatContext(req.Message, "[User attached a PDF document: "+req.FileName+"]")
 		}
 	}
 
@@ -284,6 +293,7 @@ func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 		httputil.BadRequestWithContext(r.Context(), w, "Invalid request body", err)
 		return
 	}
+	req.Message = strings.TrimSpace(req.Message)
 
 	if req.Message == "" {
 		httputil.BadRequestWithContext(r.Context(), w, "Message is required", nil)
@@ -373,6 +383,72 @@ func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 	}); err != nil {
 		log.Error().Err(err).Str("conversation_id", response.ConversationID).Msg("Failed to send SSE done event")
 	}
+}
+
+func normalizeChatFileMIME(contentType string, fileData []byte, fileName string) string {
+	mimeType := strings.ToLower(strings.TrimSpace(contentType))
+	if semi := strings.IndexByte(mimeType, ';'); semi >= 0 {
+		mimeType = strings.TrimSpace(mimeType[:semi])
+	}
+
+	if mimeType == "" || mimeType == "application/octet-stream" {
+		detected := strings.ToLower(strings.TrimSpace(http.DetectContentType(fileData)))
+		if semi := strings.IndexByte(detected, ';'); semi >= 0 {
+			detected = strings.TrimSpace(detected[:semi])
+		}
+		mimeType = detected
+	}
+
+	if strings.EqualFold(filepath.Ext(fileName), ".csv") &&
+		(mimeType == "" || mimeType == "text/plain" || mimeType == "application/octet-stream") {
+		return "text/csv"
+	}
+
+	return mimeType
+}
+
+func isCSVChatFile(mimeType, fileName string) bool {
+	mimeType = strings.ToLower(strings.TrimSpace(mimeType))
+	if semi := strings.IndexByte(mimeType, ';'); semi >= 0 {
+		mimeType = strings.TrimSpace(mimeType[:semi])
+	}
+
+	if mimeType == "text/csv" || mimeType == "application/vnd.ms-excel" {
+		return true
+	}
+
+	return strings.EqualFold(filepath.Ext(fileName), ".csv") && strings.HasPrefix(mimeType, "text/")
+}
+
+func isSupportedChatFileType(mimeType, fileName string) bool {
+	mimeType = strings.ToLower(strings.TrimSpace(mimeType))
+	if semi := strings.IndexByte(mimeType, ';'); semi >= 0 {
+		mimeType = strings.TrimSpace(mimeType[:semi])
+	}
+
+	switch {
+	case strings.HasPrefix(mimeType, "image/"):
+		return true
+	case strings.HasPrefix(mimeType, "audio/"):
+		return true
+	case mimeType == "application/pdf":
+		return true
+	default:
+		return isCSVChatFile(mimeType, fileName)
+	}
+}
+
+func appendChatContext(message, context string) string {
+	msg := strings.TrimSpace(message)
+	ctx := strings.TrimSpace(context)
+
+	if ctx == "" {
+		return msg
+	}
+	if msg == "" {
+		return ctx
+	}
+	return msg + "\n\n" + ctx
 }
 
 func isAIProviderError(err error) bool {

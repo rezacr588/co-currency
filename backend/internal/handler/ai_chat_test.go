@@ -135,6 +135,29 @@ func TestChatHandler_RejectsEmptyMessage(t *testing.T) {
 	}
 }
 
+// TestChatHandler_RejectsWhitespaceOnlyMessage verifies that whitespace-only
+// messages are treated as empty and rejected with 400.
+func TestChatHandler_RejectsWhitespaceOnlyMessage(t *testing.T) {
+	handler := NewAIChatHandler(nil, nil)
+
+	body, _ := json.Marshal(map[string]string{
+		"message": " \n\t  ",
+	})
+
+	req := httptest.NewRequest("POST", "/api/v1/ai/chat", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	userID := uuid.New()
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	handler.Chat(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for whitespace-only message, got %d", rr.Code)
+	}
+}
+
 // TestChatStreamHandler_RejectsMessageOver5000Chars verifies that the ChatStream
 // handler rejects messages exceeding the maxChatMessageLength limit (5000 chars).
 func TestChatStreamHandler_RejectsMessageOver5000Chars(t *testing.T) {
@@ -188,6 +211,29 @@ func TestChatStreamHandler_RejectsEmptyMessage(t *testing.T) {
 
 	if rr.Code != http.StatusBadRequest {
 		t.Errorf("Expected status 400 for empty message in ChatStream, got %d", rr.Code)
+	}
+}
+
+// TestChatStreamHandler_RejectsWhitespaceOnlyMessage verifies that ChatStream
+// rejects messages containing only spaces/newlines.
+func TestChatStreamHandler_RejectsWhitespaceOnlyMessage(t *testing.T) {
+	handler := NewAIChatHandler(nil, nil)
+
+	body, _ := json.Marshal(map[string]string{
+		"message": "   \n   ",
+	})
+
+	req := httptest.NewRequest("POST", "/api/v1/ai/chat/stream", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	userID := uuid.New()
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	handler.ChatStream(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for whitespace-only message in ChatStream, got %d", rr.Code)
 	}
 }
 
@@ -352,5 +398,53 @@ func TestChatStreamHandler_MessageSizeValidation_TableDriven(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestNormalizeChatFileMIME_DetectsFromFileContent(t *testing.T) {
+	pdfData := []byte("%PDF-1.7\n1 0 obj\n<<>>\nendobj\n")
+	mimeType := normalizeChatFileMIME("application/octet-stream", pdfData, "receipt.pdf")
+	if mimeType != "application/pdf" {
+		t.Errorf("Expected detected MIME type application/pdf, got %q", mimeType)
+	}
+}
+
+func TestNormalizeChatFileMIME_CSVFallbackByExtension(t *testing.T) {
+	csvData := []byte("date,amount\n2026-01-01,120.50\n")
+	mimeType := normalizeChatFileMIME("text/plain; charset=utf-8", csvData, "report.csv")
+	if mimeType != "text/csv" {
+		t.Errorf("Expected MIME type text/csv for .csv fallback, got %q", mimeType)
+	}
+}
+
+func TestNormalizeChatFileMIME_CSVFallbackForOctetStream(t *testing.T) {
+	csvData := []byte("date,amount\n2026-01-01,120.50\n")
+	mimeType := normalizeChatFileMIME("application/octet-stream", csvData, "report.csv")
+	if mimeType != "text/csv" {
+		t.Errorf("Expected MIME type text/csv for octet-stream .csv fallback, got %q", mimeType)
+	}
+}
+
+func TestIsCSVChatFile_AcceptsCommonCSVMIMEs(t *testing.T) {
+	if !isCSVChatFile("text/csv", "report.csv") {
+		t.Fatal("Expected text/csv to be accepted as CSV")
+	}
+	if !isCSVChatFile("application/vnd.ms-excel", "report.csv") {
+		t.Fatal("Expected application/vnd.ms-excel to be accepted as CSV")
+	}
+	if !isCSVChatFile("text/plain", "report.csv") {
+		t.Fatal("Expected text/plain with .csv extension to be accepted as CSV")
+	}
+}
+
+func TestAppendChatContext_DoesNotPrefixNewlines(t *testing.T) {
+	got := appendChatContext("", "[Attached CSV data]")
+	if got != "[Attached CSV data]" {
+		t.Errorf("Expected context without leading newlines, got %q", got)
+	}
+
+	got = appendChatContext("How much did I spend?", "[Attached CSV data]")
+	if got != "How much did I spend?\n\n[Attached CSV data]" {
+		t.Errorf("Unexpected combined context format: %q", got)
 	}
 }

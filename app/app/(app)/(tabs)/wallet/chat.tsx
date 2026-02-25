@@ -12,7 +12,6 @@ import {
   useWindowDimensions,
   Alert,
   StyleSheet,
-  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,7 +26,6 @@ import {
   Trash2,
   Sparkles,
   MessageCircle,
-  X,
   CheckCircle2,
   AlertTriangle,
   RotateCcw,
@@ -154,7 +152,6 @@ export default function AIChatScreen() {
 
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [showInputModal, setShowInputModal] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
@@ -316,6 +313,8 @@ export default function AIChatScreen() {
   });
 
   const aiConfigured = aiStatus?.configured !== false;
+  const aiRateLimitPerMinute = aiStatus?.rate_limit_per_minute ?? 20;
+  const aiRateLimitBurst = aiStatus?.rate_limit_burst ?? 5;
 
   // Fetch conversations list
   const { data: conversationsData } = useQuery({
@@ -706,6 +705,19 @@ export default function AIChatScreen() {
 
   const messages: ChatMessage[] = currentConversation?.messages || [];
   const conversations: Conversation[] = conversationsData?.conversations || [];
+  const hasTypedMessage = message.trim().length > 0;
+  const canSendMessage =
+    (hasTypedMessage || !!attachment) &&
+    message.length <= MAX_MESSAGE_LENGTH &&
+    !sendMessageMutation.isPending;
+  const inputPlaceholder = attachment
+    ? (t('addCaption') || 'Add optional caption...')
+    : (t('typeMessage') || 'Type a message');
+  const showComposerPrompts = !hasTypedMessage && !attachment && !isRecordingVoice;
+  const composerPrompts = [
+    ...suggestedActions.slice(0, 2),
+    ...suggestedQuestions.slice(0, 2),
+  ];
 
   // Scroll to bottom on new messages
   const scrollToBottom = useCallback(() => {
@@ -733,18 +745,20 @@ export default function AIChatScreen() {
 
   const handleSend = (overrideMessage?: string) => {
     const msgToSend = overrideMessage || message;
-    if (!msgToSend.trim() || sendMessageMutation.isPending || pendingMutationRef.current) return;
+    const trimmed = msgToSend.trim();
+    if ((!trimmed && !attachment) || sendMessageMutation.isPending || pendingMutationRef.current) return;
     if (msgToSend.length > MAX_MESSAGE_LENGTH) return;
     if (!aiConfigured) {
       setSendError('AI is not configured on the server.');
       return;
     }
-    const trimmed = msgToSend.trim();
     lastSentMessageRef.current = trimmed; // Save message for retry on error
     sendMessageMutation.mutate(trimmed);
     if (!overrideMessage) setMessage('');
     setLastFailedMessage(null);
-    void maybeStartAction(trimmed);
+    if (trimmed) {
+      void maybeStartAction(trimmed);
+    }
     isNearBottomRef.current = true;
     setTimeout(scrollToBottom, 50);
   };
@@ -1000,39 +1014,95 @@ export default function AIChatScreen() {
   );
 
   const renderWelcome = () => (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <View style={{ width: 64, height: 64, borderRadius: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-        <Sparkles size={32} color={colors.primaryForeground} />
-      </View>
-      <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground, textAlign: 'center', marginBottom: 8 }}>
-        {t('aiWelcome')}
-      </Text>
-      <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginBottom: 24, maxWidth: 448 }}>
-        {t('aiWelcomeDesc')}
-      </Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginBottom: 20 }}>
-        {suggestedActions.map((action, i) => (
-          <Pressable
-            key={i}
-            onPress={() => setMessage(action)}
-            style={({ pressed }) => [{ backgroundColor: colors.secondary, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 9999 }, pressed && { opacity: 0.7 }]}
-          >
-            <Text style={{ color: colors.foreground, fontSize: 14 }}>{action}</Text>
-          </Pressable>
-        ))}
-      </View>
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <View
-        style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, maxWidth: contentMaxWidth ?? 500 }}
+        style={{
+          width: '100%',
+          maxWidth: 760,
+          backgroundColor: colors.card,
+          borderWidth: 1,
+          borderColor: colors.border,
+          borderRadius: 24,
+          padding: isTablet ? 28 : 20,
+          shadowColor: '#000',
+          shadowOpacity: 0.08,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: 10 },
+          elevation: 2,
+        }}
       >
-        {suggestedQuestions.map((q, i) => (
-          <Pressable
-            key={i}
-            onPress={() => setMessage(q)}
-            style={({ pressed }) => [{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 9999 }, pressed && { opacity: 0.7 }]}
-          >
-            <Text style={{ color: colors.foreground, fontSize: 14 }}>{q}</Text>
-          </Pressable>
-        ))}
+        <View
+          style={{
+            alignSelf: 'center',
+            width: 74,
+            height: 74,
+            borderRadius: 24,
+            backgroundColor: colors.primary + '22',
+            borderWidth: 1,
+            borderColor: colors.primary + '44',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 14,
+          }}
+        >
+          <Sparkles size={32} color={colors.primary} />
+        </View>
+        <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground, textAlign: 'center', marginBottom: 8 }}>
+          {t('aiWelcome') || 'How can I help with your money today?'}
+        </Text>
+        <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginBottom: 20, maxWidth: 560, alignSelf: 'center', lineHeight: 22 }}>
+          {t('aiWelcomeDesc') || 'Ask questions, attach receipts, or let me take actions like adding transactions and conversions.'}
+        </Text>
+
+        <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_600SemiBold', marginBottom: 10 }}>
+          {t('quickActions') || 'QUICK ACTIONS'}
+        </Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+          {suggestedActions.map((action, i) => (
+            <Pressable
+              key={i}
+              onPress={() => setMessage(action)}
+              style={({ pressed }) => [
+                {
+                  backgroundColor: colors.primary + '16',
+                  borderWidth: 1,
+                  borderColor: colors.primary + '33',
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 9999,
+                },
+                pressed && { opacity: 0.72 },
+              ]}
+            >
+              <Text style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_500Medium' }}>{action}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_600SemiBold', marginBottom: 10 }}>
+          {t('suggestions') || 'SUGGESTIONS'}
+        </Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {suggestedQuestions.slice(0, 4).map((q, i) => (
+            <Pressable
+              key={i}
+              onPress={() => setMessage(q)}
+              style={({ pressed }) => [
+                {
+                  backgroundColor: colors.muted,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 9999,
+                },
+                pressed && { opacity: 0.72 },
+              ]}
+            >
+              <Text style={{ color: colors.foreground, fontSize: 13 }}>{q}</Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -1063,8 +1133,24 @@ export default function AIChatScreen() {
     const footerContent = isTyping || pendingAction ? (
       <View style={{ gap: 16 }}>
         {isTyping && (
-          <View style={{ flexDirection: 'row', justifyContent: 'flex-start', width: '100%' }}>
-            <View style={{ backgroundColor: colors.card, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, borderBottomLeftRadius: 4, maxWidth: '90%' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-start', width: '100%', alignItems: 'flex-end', gap: 8 }}>
+            <View
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 9999,
+                backgroundColor: colors.primary + '22',
+                borderWidth: 1,
+                borderColor: colors.primary + '44',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 2,
+              }}
+            >
+              <Bot size={14} color={colors.primary} />
+            </View>
+            <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 18, borderBottomLeftRadius: 6, maxWidth: '90%' }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6 }}>Thinking…</Text>
               <View style={{ flexDirection: 'row', gap: 4 }}>
                 <View style={{ width: 8, height: 8, backgroundColor: colors.mutedForeground, borderRadius: 9999 }} />
                 <View style={{ width: 8, height: 8, backgroundColor: colors.mutedForeground, borderRadius: 9999 }} />
@@ -1075,8 +1161,23 @@ export default function AIChatScreen() {
         )}
 
         {pendingAction && (
-          <View style={{ flexDirection: 'row', justifyContent: 'flex-start', width: '100%' }}>
-            <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, maxWidth: '90%' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-start', width: '100%', alignItems: 'flex-start', gap: 8 }}>
+            <View
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 9999,
+                backgroundColor: colors.primary + '22',
+                borderWidth: 1,
+                borderColor: colors.primary + '44',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: 2,
+              }}
+            >
+              <Sparkles size={14} color={colors.primary} />
+            </View>
+            <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 18, paddingHorizontal: 16, paddingVertical: 12, maxWidth: '92%' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                   <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
                     {pendingAction.kind === 'transaction'
@@ -1516,18 +1617,44 @@ export default function AIChatScreen() {
             style={{
               flexDirection: 'row',
               justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+              alignItems: 'flex-end',
+              gap: 8,
               width: '100%',
             }}
           >
+            {msg.role !== 'user' && (
+              <View
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 9999,
+                  backgroundColor: colors.primary + '22',
+                  borderWidth: 1,
+                  borderColor: colors.primary + '44',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 2,
+                }}
+              >
+                <Bot size={14} color={colors.primary} />
+              </View>
+            )}
             <View
               style={{
                 paddingHorizontal: 16,
                 paddingVertical: 12,
-                borderRadius: 16,
-                backgroundColor: msg.role === 'user' ? colors.accent : colors.muted,
-                borderBottomRightRadius: msg.role === 'user' ? 4 : 16,
-                borderBottomLeftRadius: msg.role === 'user' ? 16 : 4,
-                maxWidth: '100%',
+                borderRadius: 20,
+                backgroundColor: msg.role === 'user' ? colors.primary : colors.card,
+                borderWidth: msg.role === 'user' ? 0 : 1,
+                borderColor: msg.role === 'user' ? 'transparent' : colors.border,
+                borderBottomRightRadius: msg.role === 'user' ? 8 : 20,
+                borderBottomLeftRadius: msg.role === 'user' ? 20 : 8,
+                maxWidth: msg.role === 'user' ? '84%' : '88%',
+                shadowColor: '#000',
+                shadowOpacity: msg.role === 'user' ? 0.12 : 0.06,
+                shadowRadius: msg.role === 'user' ? 12 : 8,
+                shadowOffset: { width: 0, height: 4 },
+                elevation: msg.role === 'user' ? 2 : 1,
               }}
             >
               {msg.role === 'user' ? (
@@ -1540,6 +1667,23 @@ export default function AIChatScreen() {
                 </Markdown>
               )}
             </View>
+            {msg.role === 'user' && (
+              <View
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 9999,
+                  backgroundColor: colors.secondary,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 2,
+                }}
+              >
+                <User size={14} color={colors.foreground} />
+              </View>
+            )}
           </View>
         )}
         style={contentWidthStyle}
@@ -1548,10 +1692,10 @@ export default function AIChatScreen() {
         onScroll={handleScroll}
         scrollEventThrottle={16}
         contentContainerStyle={{
-          gap: 16,
+          gap: 18,
           paddingHorizontal: 16,
-          paddingTop: 16,
-          paddingBottom: Math.max(insets.bottom, 16) + 96,
+          paddingTop: 20,
+          paddingBottom: Math.max(insets.bottom, 16) + 122,
           flexGrow: messages.length === 0 ? 1 : undefined,
           justifyContent: messages.length === 0 ? 'center' : 'flex-start',
         }}
@@ -1576,19 +1720,39 @@ export default function AIChatScreen() {
           <View style={{ flex: 1, flexDirection: 'column' }}>
             {/* Header */}
             <View
-              style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.card }, contentWidthStyle]}
+              style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.background }, contentWidthStyle]}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ width: 32, height: 32, borderRadius: 9999, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
-                  <Bot size={16} color={colors.primaryForeground} />
+                <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: colors.primary + '1f', borderWidth: 1, borderColor: colors.primary + '40', alignItems: 'center', justifyContent: 'center' }}>
+                  <Bot size={17} color={colors.primary} />
                 </View>
-                <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginLeft: 12 }}>{t('aiAdvisor')}</Text>
+                <View style={{ marginLeft: 10 }}>
+                  <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>{t('aiAdvisor')}</Text>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 1 }}>
+                    {aiConfigured
+                      ? `${t('alwaysReady') || 'Always ready'} · ${aiRateLimitPerMinute}/min`
+                      : 'Offline'}
+                  </Text>
+                </View>
               </View>
               <Pressable
                 onPress={handleNewConversation}
-                style={{ backgroundColor: colors.muted, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999 }}
+                style={({ pressed }) => [
+                  {
+                    backgroundColor: colors.secondary,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 9999,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                  },
+                  pressed && { opacity: 0.74 },
+                ]}
               >
-                <Text style={{ fontSize: 12, color: colors.mutedForeground }}>{t('newChat') || 'New Chat'}</Text>
+                <Plus size={14} color={colors.foreground} />
+                <Text style={{ fontSize: 12, color: colors.foreground, marginLeft: 6 }}>{t('newChat') || 'New Chat'}</Text>
               </Pressable>
             </View>
 
@@ -1641,7 +1805,7 @@ export default function AIChatScreen() {
 
             {/* Input */}
             <View
-              style={{ padding: 16, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.card, paddingBottom: Math.max(insets.bottom, 12) }}
+              style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12), backgroundColor: colors.background }}
             >
               {sendError && (
                 <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger + '33', padding: 12, borderRadius: 8, marginBottom: 12 }}>
@@ -1671,193 +1835,152 @@ export default function AIChatScreen() {
                 </View>
               )}
 
-              {/* Voice Recording UI */}
-              {isRecordingVoice && (
-                <VoiceRecorder
-                  onRecordingComplete={handleVoiceComplete}
-                  onCancel={cancelVoice}
-                />
-              )}
-
-              {/* Attachment Preview */}
-              {attachment && !isRecordingVoice && (
-                <AttachmentPreview attachment={attachment} onRemove={clearAttachment} />
-              )}
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                {/* Attachment Button */}
-                {!isRecordingVoice && (
-                  <AttachmentButton onPress={showAttachmentPicker} />
+              <View
+                style={{
+                  backgroundColor: colors.card,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: 20,
+                  padding: 10,
+                  shadowColor: '#000',
+                  shadowOpacity: 0.08,
+                  shadowRadius: 12,
+                  shadowOffset: { width: 0, height: 4 },
+                  elevation: 2,
+                }}
+              >
+                {/* Voice Recording UI */}
+                {isRecordingVoice && (
+                  <VoiceRecorder
+                    onRecordingComplete={handleVoiceComplete}
+                    onCancel={cancelVoice}
+                  />
                 )}
-                {/* Tap to open input modal */}
-                <View style={{ flex: 1 }}>
-                  <Pressable
-                    onPress={() => setShowInputModal(true)}
-                    disabled={sendMessageMutation.isPending}
-                    style={{
-                      backgroundColor: colors.muted,
-                      borderWidth: 1,
-                      borderColor: colors.borderStrong,
-                      borderRadius: 12,
-                      paddingHorizontal: 16,
-                      paddingVertical: 14,
-                      minHeight: 48,
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Text style={{ color: message ? colors.foreground : colors.mutedForeground, fontSize: 16 }} numberOfLines={1}>
-                      {message || t('typeMessage')}
-                    </Text>
-                  </Pressable>
-                  {message.length > CHAR_COUNT_THRESHOLD && (
-                    <Text style={{
-                      position: 'absolute',
-                      right: 12,
-                      bottom: 4,
-                      fontSize: 10,
-                      color: message.length >= MAX_MESSAGE_LENGTH ? colors.danger : colors.mutedForeground,
-                    }}>
-                      {message.length}/{MAX_MESSAGE_LENGTH}
-                    </Text>
-                  )}
-                </View>
-                <Pressable
-                  onPress={() => handleSend()}
-                  disabled={!message.trim() || message.length > MAX_MESSAGE_LENGTH || sendMessageMutation.isPending}
-                  style={({ pressed }) => [{
-                    backgroundColor: colors.primary,
-                    padding: 12,
-                    borderRadius: 12,
-                    opacity: !message.trim() || message.length > MAX_MESSAGE_LENGTH || sendMessageMutation.isPending ? 0.5 : pressed ? 0.7 : 1,
-                  }]}
-                >
-                  {sendMessageMutation.isPending ? (
-                    <ActivityIndicator size="small" color={colors.primaryForeground} />
-                  ) : (
-                    <Send size={20} color={colors.primaryForeground} />
-                  )}
-                </Pressable>
-              </View>
-            </View>
 
-            {/* Input Modal */}
-            <Modal
-              visible={showInputModal}
-              animationType="slide"
-              presentationStyle="pageSheet"
-              onRequestClose={() => setShowInputModal(false)}
-            >
-              <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-                <KeyboardAvoidingView
-                  style={{ flex: 1 }}
-                  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                >
-                  {/* Modal Header */}
-                  <View style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingHorizontal: 16,
-                    paddingVertical: 12,
-                    borderBottomWidth: 1,
-                    borderBottomColor: colors.secondary,
-                  }}>
-                    <Pressable
-                      onPress={() => setShowInputModal(false)}
-                      style={{ padding: 8 }}
-                    >
-                      <X size={24} color={colors.secondaryForeground} />
-                    </Pressable>
-                    <Text style={{ color: colors.foreground, fontSize: 17, fontFamily: 'Inter_600SemiBold' }}>
-                      {t('typeMessage')}
-                    </Text>
-                    <Pressable
-                      onPress={() => {
-                        setShowInputModal(false);
-                        if (message.trim() && message.length <= MAX_MESSAGE_LENGTH) {
-                          handleSend();
-                        }
-                      }}
-                      disabled={!message.trim() || message.length > MAX_MESSAGE_LENGTH || sendMessageMutation.isPending}
+                {/* Attachment Preview */}
+                {attachment && !isRecordingVoice && (
+                  <AttachmentPreview attachment={attachment} onRemove={clearAttachment} />
+                )}
+
+                <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
+                  {!isRecordingVoice && (
+                    <View
                       style={{
-                        backgroundColor: message.trim() && message.length <= MAX_MESSAGE_LENGTH ? colors.accent : colors.secondary,
-                        paddingHorizontal: 16,
-                        paddingVertical: 8,
-                        borderRadius: 8,
+                        width: 40,
+                        height: 40,
+                        borderRadius: 12,
+                        backgroundColor: colors.muted,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        alignItems: 'center',
+                        justifyContent: 'center',
                       }}
                     >
-                      <Text style={{
-                        color: message.trim() && message.length <= MAX_MESSAGE_LENGTH ? colors.primaryForeground : colors.mutedForeground,
-                        fontFamily: 'Inter_600SemiBold',
-                      }}>
-                        {t('send') || 'Send'}
-                      </Text>
-                    </Pressable>
-                  </View>
+                      <AttachmentButton onPress={showAttachmentPicker} />
+                    </View>
+                  )}
 
-                  {/* Large Text Input */}
-                  <View style={{ flex: 1, padding: 16 }}>
-                    <TextInput
-                      value={message}
-                      onChangeText={(text) => setMessage(text.slice(0, MAX_MESSAGE_LENGTH))}
-                      placeholder={t('typeMessage')}
-                      placeholderTextColor={colors.mutedForeground}
-                      multiline
-                      autoFocus
-                      maxLength={MAX_MESSAGE_LENGTH}
-                      selectionColor={colors.accent}
-                      cursorColor={colors.accent}
+                  <View style={{ flex: 1 }}>
+                    <View
                       style={{
-                        flex: 1,
                         backgroundColor: colors.muted,
                         borderWidth: 1,
                         borderColor: colors.borderStrong,
-                        borderRadius: 12,
-                        padding: 16,
-                        color: colors.foreground,
-                        fontSize: 18,
-                        textAlignVertical: 'top',
+                        borderRadius: 14,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        minHeight: 46,
+                        maxHeight: 130,
                       }}
-                    />
+                    >
+                      <TextInput
+                        value={message}
+                        onChangeText={(text) => setMessage(text.slice(0, MAX_MESSAGE_LENGTH))}
+                        placeholder={inputPlaceholder}
+                        placeholderTextColor={colors.mutedForeground}
+                        multiline
+                        editable={!sendMessageMutation.isPending}
+                        maxLength={MAX_MESSAGE_LENGTH}
+                        selectionColor={colors.accent}
+                        cursorColor={colors.accent}
+                        style={{
+                          color: colors.foreground,
+                          fontSize: 16,
+                          lineHeight: 21,
+                          textAlignVertical: 'top',
+                          paddingVertical: Platform.OS === 'ios' ? 6 : 2,
+                          minHeight: 30,
+                          maxHeight: 108,
+                        }}
+                      />
+                    </View>
                     {message.length > CHAR_COUNT_THRESHOLD && (
                       <Text style={{
                         textAlign: 'right',
-                        fontSize: 11,
-                        color: message.length >= MAX_MESSAGE_LENGTH ? colors.danger : colors.mutedForeground,
                         marginTop: 4,
+                        marginRight: 4,
+                        fontSize: 10,
+                        color: message.length >= MAX_MESSAGE_LENGTH ? colors.danger : colors.mutedForeground,
                       }}>
                         {message.length}/{MAX_MESSAGE_LENGTH}
                       </Text>
                     )}
                   </View>
 
-                  {/* Suggested prompts */}
-                  <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: colors.secondary }}>
-                    <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 8 }}>
-                      {t('suggestions') || 'Suggestions'}
-                    </Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                      <View style={{ flexDirection: 'row', gap: 8 }}>
-                        {suggestedQuestions.slice(0, 3).map((q, i) => (
-                          <Pressable
-                            key={i}
-                            onPress={() => setMessage(q)}
-                            style={{
-                              backgroundColor: colors.secondary,
-                              paddingHorizontal: 12,
-                              paddingVertical: 8,
-                              borderRadius: 8,
-                            }}
-                          >
-                            <Text style={{ color: colors.foreground, fontSize: 13 }}>{q}</Text>
-                          </Pressable>
-                        ))}
-                      </View>
-                    </ScrollView>
-                  </View>
-                </KeyboardAvoidingView>
-              </SafeAreaView>
-            </Modal>
+                  <Pressable
+                    onPress={() => handleSend()}
+                    disabled={!canSendMessage}
+                    style={({ pressed }) => [{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 12,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: colors.primary,
+                      opacity: !canSendMessage ? 0.45 : pressed ? 0.72 : 1,
+                    }]}
+                  >
+                    {sendMessageMutation.isPending ? (
+                      <ActivityIndicator size="small" color={colors.primaryForeground} />
+                    ) : (
+                      <Send size={18} color={colors.primaryForeground} />
+                    )}
+                  </Pressable>
+                </View>
+
+                {showComposerPrompts && (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ gap: 8, paddingTop: 10, paddingHorizontal: 2 }}
+                  >
+                    {composerPrompts.map((prompt, i) => (
+                      <Pressable
+                        key={`${prompt}-${i}`}
+                        onPress={() => setMessage(prompt)}
+                        style={({ pressed }) => [
+                          {
+                            backgroundColor: colors.secondary,
+                            borderWidth: 1,
+                            borderColor: colors.border,
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                            borderRadius: 9999,
+                          },
+                          pressed && { opacity: 0.72 },
+                        ]}
+                      >
+                        <Text style={{ color: colors.foreground, fontSize: 12 }}>{prompt}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                )}
+
+                <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 8, marginHorizontal: 4 }}>
+                  {t('rateLimit') || 'Rate limit'}: {aiRateLimitPerMinute}/min ({t('burst') || 'burst'} {aiRateLimitBurst})
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
       </KeyboardAvoidingView>

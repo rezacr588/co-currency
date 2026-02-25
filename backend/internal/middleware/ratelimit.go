@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"math"
 	"net/http"
 	"strings"
 	"sync"
@@ -149,6 +150,19 @@ func (rl *RateLimiter) Stats() map[string]interface{} {
 		"limit_per_min":  float64(rl.limit) * 60,
 		"burst":          rl.burst,
 	}
+}
+
+// AISettings returns the configured AI endpoint rate limit and burst values.
+func (rl *RateLimiter) AISettings() (requestsPerMinute int, burst int) {
+	rl.mu.RLock()
+	defer rl.mu.RUnlock()
+
+	perMin := int(math.Round(float64(rl.aiLimit) * 60))
+	if perMin < 1 {
+		perMin = 1
+	}
+
+	return perMin, rl.aiBurst
 }
 
 // getLimiter returns the rate limiter for a given key with specified limits
