@@ -108,7 +108,12 @@ export function QuickNotesCard() {
           {sortedNotes.map((note) => (
             <Pressable
               key={note.id}
-              onPress={() => router.push(`/(app)/notes`)}
+              onPress={() =>
+                router.push({
+                  pathname: '/(app)/note/[id]' as any,
+                  params: { id: note.id },
+                })
+              }
               style={({ pressed }) => [{ cursor: 'pointer', backgroundColor: colors.muted + '80', padding: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'flex-start' }, pressed && { opacity: 0.7 }]}
             >
               <View

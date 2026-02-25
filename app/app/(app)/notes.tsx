@@ -18,8 +18,6 @@ import {
   Plus,
   Search,
   StickyNote,
-  Trash2,
-  Pin,
 } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
@@ -122,12 +120,23 @@ export default function NotesScreen() {
   }, [refetch]);
 
   const handleNotePress = (note: Note) => {
+    router.push({
+      pathname: '/(app)/note/[id]' as any,
+      params: { id: note.id },
+    });
+  };
+
+  const handleEditNote = (note: Note) => {
     setSelectedNote(note);
     setShowFormModal(true);
   };
 
   const handleNoteLongPress = (note: Note) => {
     Alert.alert(note.title, t('noteActions') || 'Choose an action', [
+      {
+        text: t('edit') || 'Edit',
+        onPress: () => handleEditNote(note),
+      },
       {
         text: note.is_pinned ? (t('unpin') || 'Unpin') : (t('pin') || 'Pin'),
         onPress: () => togglePinMutation.mutate(note.id),
