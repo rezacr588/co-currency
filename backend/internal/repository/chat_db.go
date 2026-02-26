@@ -293,6 +293,15 @@ func (r *ChatRepository) GetUsageSummary(ctx context.Context, userID uuid.UUID, 
 		days = 7
 	}
 
+	// Prefer total_tokens, but fall back to legacy tokens_used (or prompt+completion)
+	// so usage still appears for older rows and partial provider metadata.
+	effectiveTotalTokensExpr := `COALESCE(
+		NULLIF(m.total_tokens, 0),
+		NULLIF(m.tokens_used, 0),
+		NULLIF(COALESCE(m.prompt_tokens, 0) + COALESCE(m.completion_tokens, 0), 0),
+		0
+	)`
+
 	summary := &model.ChatUsageSummary{
 		Days:     days,
 		Currency: "USD",
@@ -300,20 +309,20 @@ func (r *ChatRepository) GetUsageSummary(ctx context.Context, userID uuid.UUID, 
 		ByModel:  []model.ChatUsageByModel{},
 	}
 
-	totalsQuery := `
+	totalsQuery := fmt.Sprintf(`
 		SELECT
 			COUNT(*)::int,
 			COALESCE(SUM(m.prompt_tokens), 0)::int,
 			COALESCE(SUM(m.completion_tokens), 0)::int,
-			COALESCE(SUM(m.total_tokens), 0)::int,
+			COALESCE(SUM(%s), 0)::int,
 			COALESCE(SUM(m.estimated_cost_usd), 0)::float8,
 			COALESCE(SUM(m.billed_cost_usd), 0)::float8
 		FROM chat_messages m
 		INNER JOIN chat_conversations c ON c.id = m.conversation_id
 		WHERE c.user_id = $1
 			AND m.role = 'assistant'
-			AND m.created_at >= NOW() - ($2::text || ' days')::interval
-	`
+			AND m.created_at >= NOW() - make_interval(days => $2)
+	`, effectiveTotalTokensExpr)
 
 	if err := r.pool.QueryRow(ctx, totalsQuery, userID, days).Scan(
 		&summary.Totals.Messages,
@@ -326,23 +335,23 @@ func (r *ChatRepository) GetUsageSummary(ctx context.Context, userID uuid.UUID, 
 		return nil, fmt.Errorf("getting usage totals: %w", err)
 	}
 
-	dailyQuery := `
+	dailyQuery := fmt.Sprintf(`
 		SELECT
 			DATE_TRUNC('day', m.created_at)::date::text AS day,
 			COUNT(*)::int,
 			COALESCE(SUM(m.prompt_tokens), 0)::int,
 			COALESCE(SUM(m.completion_tokens), 0)::int,
-			COALESCE(SUM(m.total_tokens), 0)::int,
+			COALESCE(SUM(%s), 0)::int,
 			COALESCE(SUM(m.estimated_cost_usd), 0)::float8,
 			COALESCE(SUM(m.billed_cost_usd), 0)::float8
 		FROM chat_messages m
 		INNER JOIN chat_conversations c ON c.id = m.conversation_id
 		WHERE c.user_id = $1
 			AND m.role = 'assistant'
-			AND m.created_at >= NOW() - ($2::text || ' days')::interval
+			AND m.created_at >= NOW() - make_interval(days => $2)
 		GROUP BY DATE_TRUNC('day', m.created_at)::date
 		ORDER BY day ASC
-	`
+	`, effectiveTotalTokensExpr)
 
 	dailyRows, err := r.pool.Query(ctx, dailyQuery, userID, days)
 	if err != nil {
@@ -366,14 +375,14 @@ func (r *ChatRepository) GetUsageSummary(ctx context.Context, userID uuid.UUID, 
 		summary.Daily = append(summary.Daily, day)
 	}
 
-	byModelQuery := `
+	byModelQuery := fmt.Sprintf(`
 		SELECT
 			COALESCE(NULLIF(m.provider, ''), 'unknown') AS provider,
 			COALESCE(NULLIF(m.model, ''), 'unknown') AS model,
 			COUNT(*)::int,
 			COALESCE(SUM(m.prompt_tokens), 0)::int,
 			COALESCE(SUM(m.completion_tokens), 0)::int,
-			COALESCE(SUM(m.total_tokens), 0)::int,
+			COALESCE(SUM(%s), 0)::int,
 			COALESCE(SUM(m.estimated_cost_usd), 0)::float8,
 			COALESCE(SUM(m.billed_cost_usd), 0)::float8,
 			CASE
@@ -385,10 +394,10 @@ func (r *ChatRepository) GetUsageSummary(ctx context.Context, userID uuid.UUID, 
 		INNER JOIN chat_conversations c ON c.id = m.conversation_id
 		WHERE c.user_id = $1
 			AND m.role = 'assistant'
-			AND m.created_at >= NOW() - ($2::text || ' days')::interval
+			AND m.created_at >= NOW() - make_interval(days => $2)
 		GROUP BY provider, model
-		ORDER BY COALESCE(SUM(m.total_tokens), 0) DESC, provider ASC, model ASC
-	`
+		ORDER BY COALESCE(SUM(%s), 0) DESC, provider ASC, model ASC
+	`, effectiveTotalTokensExpr, effectiveTotalTokensExpr)
 
 	modelRows, err := r.pool.Query(ctx, byModelQuery, userID, days)
 	if err != nil {

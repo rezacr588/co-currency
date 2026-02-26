@@ -38,6 +38,8 @@ import { useLanguage } from '../../../../src/context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { AttachmentButton, AttachmentPreview, useAttachmentPicker } from '../../../../src/components/features/Chat';
 import { VoiceRecorder } from '../../../../src/components/features/Chat';
+import { EmptyState } from '../../../../src/components/ui';
+import { Skeleton } from '../../../../src/components/ui/Skeleton';
 import type { ChatMessage, ChatStreamTraceEvent, Conversation, ConversationWithMessages } from '../../../../src/api/chat';
 import type { SmartParseResponse } from '../../../../src/types/wallet';
 import type { ConversionResult } from '../../../../src/types/currency';
@@ -824,6 +826,16 @@ export default function AIChatScreen() {
   const inputPlaceholder = attachment
     ? (t('addCaption') || 'Add optional caption...')
     : (t('typeMessage') || 'Type a message');
+  const quickPrompts = useMemo(
+    () =>
+      [
+        t('suggestedQuestion1'),
+        t('suggestedQuestion2'),
+        t('suggestedQuestion3'),
+        t('suggestedAction1'),
+      ].filter((item): item is string => Boolean(item)),
+    [t]
+  );
 
   // Scroll to bottom on new messages
   const scrollToBottom = useCallback(() => {
@@ -1157,6 +1169,35 @@ export default function AIChatScreen() {
         <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginBottom: 20, maxWidth: 560, alignSelf: 'center', lineHeight: 22 }}>
           {t('aiWelcomeDesc') || 'Ask questions, attach receipts, or let me take actions like adding transactions and conversions.'}
         </Text>
+        {quickPrompts.length > 0 && (
+          <View style={{ width: '100%' }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+              {quickPrompts.map((prompt) => (
+                <Pressable
+                  key={prompt}
+                  onPress={() => handleSend(prompt)}
+                  accessibilityRole="button"
+                  accessibilityLabel={prompt}
+                  style={({ pressed }) => [{
+                    minHeight: 36,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 9999,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    backgroundColor: colors.cardElevated,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }, pressed && { opacity: 0.75 }]}
+                >
+                  <Text style={{ color: colors.foreground, fontSize: 12, fontFamily: 'Inter_500Medium' }}>
+                    {prompt}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -1172,13 +1213,11 @@ export default function AIChatScreen() {
       }
       if (!aiConfigured) {
         return (
-          <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 24, alignItems: 'center' }}>
-            <Sparkles size={24} color={colors.accent} />
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginTop: 12 }}>AI assistant is offline</Text>
-            <Text style={{ color: colors.mutedForeground, fontSize: 14, textAlign: 'center', marginTop: 8 }}>
-              The server is missing an AI configuration. Please add an AI_API_KEY and redeploy.
-            </Text>
-          </View>
+          <EmptyState
+            icon={Sparkles}
+            title={t('youAreOffline') || 'You are offline'}
+            description="The server is missing an AI configuration. Please add an AI_API_KEY and redeploy."
+          />
         );
       }
       return renderWelcome();
@@ -1722,6 +1761,8 @@ export default function AIChatScreen() {
                         {table ? (
                           <Pressable
                             onPress={() => setTableModalContent({ title: 'AI Table', markdown: table })}
+                            accessibilityRole="button"
+                            accessibilityLabel="Open AI response table"
                             style={({ pressed }) => [{
                               marginTop: 6,
                               borderWidth: 1,
@@ -1854,13 +1895,17 @@ export default function AIChatScreen() {
                     setSelectedActivityMessageID(null);
                     setIsActivityModalVisible(true);
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open agent activity"
+                  hitSlop={6}
                   style={({ pressed }) => [
                     {
                       backgroundColor: colors.secondary,
                       borderWidth: 1,
                       borderColor: colors.border,
                       paddingHorizontal: 10,
-                      paddingVertical: 7,
+                      paddingVertical: 8,
+                      minHeight: 36,
                       borderRadius: 9999,
                       flexDirection: 'row',
                       alignItems: 'center',
@@ -1873,13 +1918,17 @@ export default function AIChatScreen() {
                 </Pressable>
                 <Pressable
                   onPress={() => setIsUsageModalVisible(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open usage and billing"
+                  hitSlop={6}
                   style={({ pressed }) => [
                     {
                       backgroundColor: colors.secondary,
                       borderWidth: 1,
                       borderColor: colors.border,
                       paddingHorizontal: 10,
-                      paddingVertical: 7,
+                      paddingVertical: 8,
+                      minHeight: 36,
                       borderRadius: 9999,
                       flexDirection: 'row',
                       alignItems: 'center',
@@ -1892,13 +1941,17 @@ export default function AIChatScreen() {
                 </Pressable>
                 <Pressable
                   onPress={() => router.push('/todo' as any)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open planner"
+                  hitSlop={6}
                   style={({ pressed }) => [
                     {
                       backgroundColor: colors.secondary,
                       borderWidth: 1,
                       borderColor: colors.border,
                       paddingHorizontal: 10,
-                      paddingVertical: 7,
+                      paddingVertical: 8,
+                      minHeight: 36,
                       borderRadius: 9999,
                       flexDirection: 'row',
                       alignItems: 'center',
@@ -1911,13 +1964,17 @@ export default function AIChatScreen() {
                 </Pressable>
                 <Pressable
                   onPress={handleNewConversation}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('newConversation') || 'New chat'}
+                  hitSlop={6}
                   style={({ pressed }) => [
                     {
                       backgroundColor: colors.secondary,
                       borderWidth: 1,
                       borderColor: colors.border,
                       paddingHorizontal: 10,
-                      paddingVertical: 7,
+                      paddingVertical: 8,
+                      minHeight: 36,
                       borderRadius: 9999,
                       flexDirection: 'row',
                       alignItems: 'center',
@@ -2129,6 +2186,8 @@ export default function AIChatScreen() {
                   <Pressable
                     onPress={() => handleSend()}
                     disabled={!canSendMessage}
+                    accessibilityRole="button"
+                    accessibilityLabel="Send message"
                     style={({ pressed }) => [{
                       width: 40,
                       height: 40,
@@ -2171,9 +2230,12 @@ export default function AIChatScreen() {
               </View>
               <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: Math.max(insets.bottom, 18) }}>
                 {activeTraceEvents.length === 0 ? (
-                  <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>
-                    No workflow events yet. Send a message to start capturing agent steps.
-                  </Text>
+                  <EmptyState
+                    icon={Activity}
+                    title={t('noActivity') || 'No activity'}
+                    description="No workflow events yet. Send a message to start capturing agent steps."
+                    variant="compact"
+                  />
                 ) : (
                   activeTraceEvents.map((event, index) => (
                     <View
@@ -2258,8 +2320,27 @@ export default function AIChatScreen() {
                 })}
               </View>
               <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: Math.max(insets.bottom, 18) }}>
-                {isUsageSummaryLoading || !usageSummary ? (
-                  <ActivityIndicator size="small" color={colors.accent} />
+                {isUsageSummaryLoading ? (
+                  <View style={{ gap: 10 }}>
+                    {[0, 1, 2].map((item) => (
+                      <View
+                        key={`usage-skeleton-${item}`}
+                        style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 10, backgroundColor: colors.card }}
+                      >
+                        <Skeleton width="35%" height={12} style={{ marginBottom: 10 }} />
+                        <Skeleton width="55%" height={20} style={{ marginBottom: 8 }} />
+                        <Skeleton width="90%" height={12} style={{ marginBottom: 6 }} />
+                        <Skeleton width="70%" height={12} />
+                      </View>
+                    ))}
+                  </View>
+                ) : !usageSummary || usageSummary.totals.messages === 0 ? (
+                  <EmptyState
+                    icon={Coins}
+                    title={t('noActivity') || 'No activity'}
+                    description="No usage data yet. Send a message to see token and billing details."
+                    variant="compact"
+                  />
                 ) : (
                   <View style={{ gap: 10 }}>
                     <View style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 10, backgroundColor: colors.card }}>
@@ -2273,19 +2354,25 @@ export default function AIChatScreen() {
                       </Text>
                     </View>
 
-                    {usageSummary.by_model.map((modelUsage) => (
-                      <View key={`${modelUsage.provider}-${modelUsage.model}`} style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 10, backgroundColor: colors.card }}>
-                        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>
-                          {modelUsage.provider} · {modelUsage.model}
-                        </Text>
-                        <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 2 }}>
-                          {modelUsage.messages} messages · {modelUsage.total_tokens} tokens · {modelUsage.billing_source}
-                        </Text>
-                        <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 2 }}>
-                          Est {formatUsd(modelUsage.estimated_cost_usd)} · Billed {formatUsd(modelUsage.billed_cost_usd)}
-                        </Text>
-                      </View>
-                    ))}
+                    {usageSummary.by_model.length === 0 ? (
+                      <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+                        No model-level breakdown available yet.
+                      </Text>
+                    ) : (
+                      usageSummary.by_model.map((modelUsage) => (
+                        <View key={`${modelUsage.provider}-${modelUsage.model}`} style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 10, backgroundColor: colors.card }}>
+                          <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>
+                            {modelUsage.provider} · {modelUsage.model}
+                          </Text>
+                          <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 2 }}>
+                            {modelUsage.messages} messages · {modelUsage.total_tokens} tokens · {modelUsage.billing_source}
+                          </Text>
+                          <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 2 }}>
+                            Est {formatUsd(modelUsage.estimated_cost_usd)} · Billed {formatUsd(modelUsage.billed_cost_usd)}
+                          </Text>
+                        </View>
+                      ))
+                    )}
                   </View>
                 )}
               </ScrollView>

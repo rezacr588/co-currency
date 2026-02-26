@@ -13,6 +13,13 @@ func TestLoad_Defaults(t *testing.T) {
 	os.Unsetenv("CACHE_TTL")
 	os.Unsetenv("RATE_LIMIT")
 	os.Unsetenv("FRANKFURTER_URL")
+	os.Unsetenv("METRICS_ENABLED")
+	os.Unsetenv("HTTP_READ_TIMEOUT")
+	os.Unsetenv("HTTP_READ_HEADER_TIMEOUT")
+	os.Unsetenv("HTTP_WRITE_TIMEOUT")
+	os.Unsetenv("HTTP_IDLE_TIMEOUT")
+	os.Unsetenv("HTTP_SHUTDOWN_TIMEOUT")
+	os.Unsetenv("HTTP_MAX_HEADER_BYTES")
 	os.Unsetenv("EXPOSE_ERROR_DETAILS")
 
 	cfg, err := Load()
@@ -35,6 +42,27 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.FrankfurterURL != "https://api.frankfurter.app" {
 		t.Errorf("FrankfurterURL = %v, want %v", cfg.FrankfurterURL, "https://api.frankfurter.app")
 	}
+	if !cfg.MetricsEnabled {
+		t.Errorf("MetricsEnabled = %v, want true", cfg.MetricsEnabled)
+	}
+	if cfg.HTTPReadTimeout != 15*time.Second {
+		t.Errorf("HTTPReadTimeout = %v, want 15s", cfg.HTTPReadTimeout)
+	}
+	if cfg.HTTPReadHeaderTimeout != 10*time.Second {
+		t.Errorf("HTTPReadHeaderTimeout = %v, want 10s", cfg.HTTPReadHeaderTimeout)
+	}
+	if cfg.HTTPWriteTimeout != 5*time.Minute {
+		t.Errorf("HTTPWriteTimeout = %v, want 5m", cfg.HTTPWriteTimeout)
+	}
+	if cfg.HTTPIdleTimeout != 120*time.Second {
+		t.Errorf("HTTPIdleTimeout = %v, want 120s", cfg.HTTPIdleTimeout)
+	}
+	if cfg.HTTPShutdownTimeout != 20*time.Second {
+		t.Errorf("HTTPShutdownTimeout = %v, want 20s", cfg.HTTPShutdownTimeout)
+	}
+	if cfg.HTTPMaxHeaderBytes != 1048576 {
+		t.Errorf("HTTPMaxHeaderBytes = %v, want 1048576", cfg.HTTPMaxHeaderBytes)
+	}
 	if cfg.ExposeErrorDetails != true {
 		t.Errorf("ExposeErrorDetails = %v, want true", cfg.ExposeErrorDetails)
 	}
@@ -46,6 +74,13 @@ func TestLoad_CustomValues(t *testing.T) {
 	os.Setenv("CACHE_TTL", "10m")
 	os.Setenv("RATE_LIMIT", "200")
 	os.Setenv("FRANKFURTER_URL", "https://custom.api.com")
+	os.Setenv("METRICS_ENABLED", "false")
+	os.Setenv("HTTP_READ_TIMEOUT", "20s")
+	os.Setenv("HTTP_READ_HEADER_TIMEOUT", "12s")
+	os.Setenv("HTTP_WRITE_TIMEOUT", "6m")
+	os.Setenv("HTTP_IDLE_TIMEOUT", "150s")
+	os.Setenv("HTTP_SHUTDOWN_TIMEOUT", "30s")
+	os.Setenv("HTTP_MAX_HEADER_BYTES", "2097152")
 	os.Setenv("EXPOSE_ERROR_DETAILS", "false")
 	defer func() {
 		os.Unsetenv("PORT")
@@ -53,6 +88,13 @@ func TestLoad_CustomValues(t *testing.T) {
 		os.Unsetenv("CACHE_TTL")
 		os.Unsetenv("RATE_LIMIT")
 		os.Unsetenv("FRANKFURTER_URL")
+		os.Unsetenv("METRICS_ENABLED")
+		os.Unsetenv("HTTP_READ_TIMEOUT")
+		os.Unsetenv("HTTP_READ_HEADER_TIMEOUT")
+		os.Unsetenv("HTTP_WRITE_TIMEOUT")
+		os.Unsetenv("HTTP_IDLE_TIMEOUT")
+		os.Unsetenv("HTTP_SHUTDOWN_TIMEOUT")
+		os.Unsetenv("HTTP_MAX_HEADER_BYTES")
 		os.Unsetenv("EXPOSE_ERROR_DETAILS")
 	}()
 
@@ -75,6 +117,27 @@ func TestLoad_CustomValues(t *testing.T) {
 	}
 	if cfg.FrankfurterURL != "https://custom.api.com" {
 		t.Errorf("FrankfurterURL = %v, want %v", cfg.FrankfurterURL, "https://custom.api.com")
+	}
+	if cfg.MetricsEnabled != false {
+		t.Errorf("MetricsEnabled = %v, want false", cfg.MetricsEnabled)
+	}
+	if cfg.HTTPReadTimeout != 20*time.Second {
+		t.Errorf("HTTPReadTimeout = %v, want 20s", cfg.HTTPReadTimeout)
+	}
+	if cfg.HTTPReadHeaderTimeout != 12*time.Second {
+		t.Errorf("HTTPReadHeaderTimeout = %v, want 12s", cfg.HTTPReadHeaderTimeout)
+	}
+	if cfg.HTTPWriteTimeout != 6*time.Minute {
+		t.Errorf("HTTPWriteTimeout = %v, want 6m", cfg.HTTPWriteTimeout)
+	}
+	if cfg.HTTPIdleTimeout != 150*time.Second {
+		t.Errorf("HTTPIdleTimeout = %v, want 150s", cfg.HTTPIdleTimeout)
+	}
+	if cfg.HTTPShutdownTimeout != 30*time.Second {
+		t.Errorf("HTTPShutdownTimeout = %v, want 30s", cfg.HTTPShutdownTimeout)
+	}
+	if cfg.HTTPMaxHeaderBytes != 2097152 {
+		t.Errorf("HTTPMaxHeaderBytes = %v, want 2097152", cfg.HTTPMaxHeaderBytes)
 	}
 	if cfg.ExposeErrorDetails != false {
 		t.Errorf("ExposeErrorDetails = %v, want false", cfg.ExposeErrorDetails)
@@ -298,6 +361,38 @@ func TestLoad_MaxMemoryResults_BoundaryValues(t *testing.T) {
 			}
 			if !tt.expectError && err != nil {
 				t.Errorf("Unexpected error for MAX_MEMORY_RESULTS = %s: %v", tt.value, err)
+			}
+		})
+	}
+}
+
+func TestLoad_HTTPServerValidation(t *testing.T) {
+	testCases := []struct {
+		name   string
+		key    string
+		value  string
+		expect bool
+	}{
+		{"reject read timeout zero", "HTTP_READ_TIMEOUT", "0s", true},
+		{"reject read header timeout zero", "HTTP_READ_HEADER_TIMEOUT", "0s", true},
+		{"reject write timeout negative", "HTTP_WRITE_TIMEOUT", "-1s", true},
+		{"reject idle timeout zero", "HTTP_IDLE_TIMEOUT", "0s", true},
+		{"reject shutdown timeout zero", "HTTP_SHUTDOWN_TIMEOUT", "0s", true},
+		{"reject max header bytes zero", "HTTP_MAX_HEADER_BYTES", "0", true},
+		{"accept write timeout zero", "HTTP_WRITE_TIMEOUT", "0s", false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			os.Setenv(tc.key, tc.value)
+			defer os.Unsetenv(tc.key)
+
+			_, err := Load()
+			if tc.expect && err == nil {
+				t.Fatalf("expected error for %s=%s, got nil", tc.key, tc.value)
+			}
+			if !tc.expect && err != nil {
+				t.Fatalf("unexpected error for %s=%s: %v", tc.key, tc.value, err)
 			}
 		})
 	}

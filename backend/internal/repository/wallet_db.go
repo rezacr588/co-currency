@@ -26,6 +26,26 @@ type transactionScanner interface {
 	Scan(dest ...interface{}) error
 }
 
+type AggregatedTypeTotal struct {
+	Type     string
+	Currency string
+	Total    float64
+}
+
+type AggregatedCategoryTotal struct {
+	Category string
+	Currency string
+	Total    float64
+	Count    int
+}
+
+type AggregatedMonthlyTypeTotal struct {
+	Period   time.Time
+	Type     string
+	Currency string
+	Total    float64
+}
+
 func scanTransaction(scanner transactionScanner) (*model.Transaction, error) {
 	var t model.Transaction
 	var aiData []byte
@@ -466,6 +486,118 @@ func (r *WalletRepository) GetTransactionsFiltered(ctx context.Context, userID u
 	}
 
 	return transactions, total, nil
+}
+
+// GetTypeTotalsByCurrency returns aggregated transaction totals by type and currency for a date range.
+func (r *WalletRepository) GetTypeTotalsByCurrency(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]AggregatedTypeTotal, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT type, currency, COALESCE(SUM(amount), 0)::float8 AS total
+		FROM transactions
+		WHERE user_id = $1
+			AND created_at >= $2
+			AND created_at <= $3
+		GROUP BY type, currency
+	`, userID, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("querying type totals: %w", err)
+	}
+	defer rows.Close()
+
+	totals := make([]AggregatedTypeTotal, 0)
+	for rows.Next() {
+		var row AggregatedTypeTotal
+		if err := rows.Scan(&row.Type, &row.Currency, &row.Total); err != nil {
+			return nil, fmt.Errorf("scanning type total: %w", err)
+		}
+		totals = append(totals, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating type totals: %w", err)
+	}
+	return totals, nil
+}
+
+// GetCategoryTotalsByCurrency returns aggregated debit totals by category and currency for a date range.
+func (r *WalletRepository) GetCategoryTotalsByCurrency(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]AggregatedCategoryTotal, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT
+			COALESCE(NULLIF(BTRIM(category), ''), 'other') AS category,
+			currency,
+			COALESCE(SUM(amount), 0)::float8 AS total,
+			COUNT(*)::int AS count
+		FROM transactions
+		WHERE user_id = $1
+			AND type = 'debit'
+			AND created_at >= $2
+			AND created_at <= $3
+		GROUP BY COALESCE(NULLIF(BTRIM(category), ''), 'other'), currency
+	`, userID, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("querying category totals: %w", err)
+	}
+	defer rows.Close()
+
+	totals := make([]AggregatedCategoryTotal, 0)
+	for rows.Next() {
+		var row AggregatedCategoryTotal
+		if err := rows.Scan(&row.Category, &row.Currency, &row.Total, &row.Count); err != nil {
+			return nil, fmt.Errorf("scanning category total: %w", err)
+		}
+		totals = append(totals, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating category totals: %w", err)
+	}
+	return totals, nil
+}
+
+// GetMonthlyTypeTotalsByCurrency returns monthly aggregated totals by type and currency for a date range.
+func (r *WalletRepository) GetMonthlyTypeTotalsByCurrency(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]AggregatedMonthlyTypeTotal, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT
+			DATE_TRUNC('month', created_at)::date AS period,
+			type,
+			currency,
+			COALESCE(SUM(amount), 0)::float8 AS total
+		FROM transactions
+		WHERE user_id = $1
+			AND created_at >= $2
+			AND created_at <= $3
+		GROUP BY DATE_TRUNC('month', created_at)::date, type, currency
+		ORDER BY period ASC
+	`, userID, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("querying monthly type totals: %w", err)
+	}
+	defer rows.Close()
+
+	totals := make([]AggregatedMonthlyTypeTotal, 0)
+	for rows.Next() {
+		var row AggregatedMonthlyTypeTotal
+		if err := rows.Scan(&row.Period, &row.Type, &row.Currency, &row.Total); err != nil {
+			return nil, fmt.Errorf("scanning monthly type total: %w", err)
+		}
+		totals = append(totals, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating monthly type totals: %w", err)
+	}
+	return totals, nil
+}
+
+// CountActiveTransactionDays returns the number of distinct days with at least one transaction in the range.
+func (r *WalletRepository) CountActiveTransactionDays(ctx context.Context, userID uuid.UUID, from, to time.Time) (int, error) {
+	var dayCount int
+	if err := r.pool.QueryRow(ctx, `
+		SELECT COUNT(DISTINCT created_at::date)::int
+		FROM transactions
+		WHERE user_id = $1
+			AND created_at >= $2
+			AND created_at <= $3
+	`, userID, from, to).Scan(&dayCount); err != nil {
+		return 0, fmt.Errorf("counting active transaction days: %w", err)
+	}
+	return dayCount, nil
 }
 
 // GetTransaction retrieves a single transaction by ID

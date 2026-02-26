@@ -123,7 +123,14 @@ export interface ChatStreamCallbacks {
   onHeartbeat?: (event: ChatStreamHeartbeatEvent) => void;
 }
 
-function parseSSEPayload(rawEvent: string): Record<string, unknown> | null {
+type StreamPayload = Record<string, unknown>;
+
+type StreamPayloadResult =
+  | { kind: 'none' }
+  | { kind: 'error'; message: string }
+  | { kind: 'done'; response: ChatResponse };
+
+export function parseSSEPayload(rawEvent: string): StreamPayload | null {
   const dataLines = rawEvent
     .split('\n')
     .map((line) => line.trimEnd())
@@ -139,6 +146,42 @@ function parseSSEPayload(rawEvent: string): Record<string, unknown> | null {
   } catch {
     return null;
   }
+}
+
+export function handleChatStreamPayload(
+  payload: StreamPayload,
+  callbacks: ChatStreamCallbacks
+): StreamPayloadResult {
+  const type = typeof payload.type === 'string' ? payload.type : '';
+  if (type === 'start') {
+    callbacks.onStart?.(payload as unknown as ChatStreamStartEvent);
+    return { kind: 'none' };
+  }
+  if (type === 'delta') {
+    const content = typeof payload.content === 'string' ? payload.content : '';
+    if (content) {
+      callbacks.onDelta?.({ type: 'delta', content });
+    }
+    return { kind: 'none' };
+  }
+  if (type === 'trace') {
+    callbacks.onTrace?.(payload as unknown as ChatStreamTraceEvent);
+    return { kind: 'none' };
+  }
+  if (type === 'heartbeat') {
+    callbacks.onHeartbeat?.(payload as unknown as ChatStreamHeartbeatEvent);
+    return { kind: 'none' };
+  }
+  if (type === 'error') {
+    const message = typeof payload.error === 'string' ? payload.error : 'Streaming request failed';
+    return { kind: 'error', message };
+  }
+  if (type === 'done') {
+    const doneEvent = payload as unknown as ChatStreamDoneEvent;
+    callbacks.onDone?.(doneEvent);
+    return { kind: 'done', response: normalizeDoneResponse(doneEvent) };
+  }
+  return { kind: 'none' };
 }
 
 export interface ConversationWithMessages {
@@ -283,44 +326,22 @@ async function sendMessageStreamViaWebSocket(
       armInactivityTimer();
       if (typeof event.data !== 'string') return;
 
-      let payload: Record<string, unknown>;
+      let payload: StreamPayload;
       try {
-        payload = JSON.parse(event.data) as Record<string, unknown>;
+        payload = JSON.parse(event.data) as StreamPayload;
       } catch {
         return;
       }
 
-      const type = typeof payload.type === 'string' ? payload.type : '';
-      if (type === 'start') {
-        callbacks.onStart?.(payload as unknown as ChatStreamStartEvent);
+      const result = handleChatStreamPayload(payload, callbacks);
+      if (result.kind === 'error') {
+        settleError(new Error(result.message || 'Realtime stream failed'));
         return;
       }
-      if (type === 'delta') {
-        const content = typeof payload.content === 'string' ? payload.content : '';
-        if (content) {
-          callbacks.onDelta?.({ type: 'delta', content });
-        }
-        return;
-      }
-      if (type === 'trace') {
-        callbacks.onTrace?.(payload as unknown as ChatStreamTraceEvent);
-        return;
-      }
-      if (type === 'heartbeat') {
-        callbacks.onHeartbeat?.(payload as unknown as ChatStreamHeartbeatEvent);
-        return;
-      }
-      if (type === 'error') {
-        const message = typeof payload.error === 'string' ? payload.error : 'Realtime stream failed';
-        settleError(new Error(message));
-        return;
-      }
-      if (type === 'done') {
-        const doneEvent = payload as unknown as ChatStreamDoneEvent;
+      if (result.kind === 'done') {
         seenDone = true;
-        finalResponse = normalizeDoneResponse(doneEvent);
-        callbacks.onDone?.(doneEvent);
-        settleSuccess(finalResponse);
+        finalResponse = result.response;
+        settleSuccess(result.response);
       }
     };
 
@@ -386,36 +407,15 @@ async function sendMessageStreamViaSSE(
       resolve(response);
     };
 
-    const handlePayload = (payload: Record<string, unknown>) => {
-      const type = typeof payload.type === 'string' ? payload.type : '';
-      if (type === 'start') {
-        callbacks.onStart?.(payload as unknown as ChatStreamStartEvent);
+    const handlePayload = (payload: StreamPayload) => {
+      const result = handleChatStreamPayload(payload, callbacks);
+      if (result.kind === 'error') {
+        streamError = result.message;
         return;
       }
-      if (type === 'delta') {
-        const content = typeof payload.content === 'string' ? payload.content : '';
-        if (content) {
-          callbacks.onDelta?.({ type: 'delta', content });
-        }
-        return;
-      }
-      if (type === 'trace') {
-        callbacks.onTrace?.(payload as unknown as ChatStreamTraceEvent);
-        return;
-      }
-      if (type === 'heartbeat') {
-        callbacks.onHeartbeat?.(payload as unknown as ChatStreamHeartbeatEvent);
-        return;
-      }
-      if (type === 'error') {
-        streamError = typeof payload.error === 'string' ? payload.error : 'Streaming request failed';
-        return;
-      }
-      if (type === 'done') {
-        const doneEvent = payload as unknown as ChatStreamDoneEvent;
+      if (result.kind === 'done') {
         seenDone = true;
-        finalResponse = normalizeDoneResponse(doneEvent);
-        callbacks.onDone?.(doneEvent);
+        finalResponse = result.response;
       }
     };
 

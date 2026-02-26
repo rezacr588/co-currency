@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/rezacr588/currency-converter/internal/config"
 	"github.com/rezacr588/currency-converter/internal/handler"
@@ -281,6 +283,8 @@ func main() {
 
 	// AI Chat service
 	var aiChatService *service.AIChatService
+	var memoryServiceForShutdown *service.MemoryService
+	var qdrantClientForShutdown *repository.QdrantClient
 
 	if mainDB != nil {
 		goalRepo = repository.NewGoalRepository(mainDB)
@@ -416,14 +420,21 @@ func main() {
 							embeddingService,
 							cfg.MaxMemoryResults,
 						)
+						qdrantClientForShutdown = qdrantClient
 						log.Info().Msg("Memory service initialized with semantic search (Qdrant)")
 					}
 				}
-			} else {
-				// Qdrant disabled, use PostgreSQL-only memory service
-				memoryService = service.NewMemoryService(memoryRepo, nil, nil, cfg.MaxMemoryResults)
-				log.Info().Msg("Memory service initialized (PostgreSQL only, Qdrant disabled)")
 			}
+			if memoryService == nil {
+				// Qdrant disabled or unavailable, use PostgreSQL-only memory service.
+				memoryService = service.NewMemoryService(memoryRepo, nil, nil, cfg.MaxMemoryResults)
+				if cfg.QdrantEnabled && cfg.QdrantURL != "" {
+					log.Warn().Msg("Falling back to PostgreSQL-only memory service")
+				} else {
+					log.Info().Msg("Memory service initialized (PostgreSQL only, Qdrant disabled)")
+				}
+			}
+			memoryServiceForShutdown = memoryService
 
 			aiChatService = service.NewAIChatService(
 				aiService,
@@ -624,40 +635,102 @@ func main() {
 	// Create router
 	r := router.New(handlers, rateLimiter, authMiddleware, staticFS)
 
-	// Start server
+	// Wrap API router with metrics endpoint and instrumentation when enabled.
+	serverHandler := http.Handler(r)
+	if cfg.MetricsEnabled {
+		metricsRegistry := prometheus.NewRegistry()
+		metricsRegistry.MustRegister(
+			prometheus.NewGoCollector(),
+			prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}),
+		)
+		httpMetrics := middleware.NewHTTPMetrics(metricsRegistry)
+
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", httpMetrics.Handler())
+		mux.Handle("/", httpMetrics.Middleware(serverHandler))
+		serverHandler = mux
+
+		log.Info().Msg("Prometheus metrics enabled at /metrics")
+	}
+
+	srv := &http.Server{
+		Addr:              fmt.Sprintf(":%s", cfg.Port),
+		Handler:           serverHandler,
+		ReadTimeout:       cfg.HTTPReadTimeout,
+		ReadHeaderTimeout: cfg.HTTPReadHeaderTimeout,
+		WriteTimeout:      cfg.HTTPWriteTimeout,
+		IdleTimeout:       cfg.HTTPIdleTimeout,
+		MaxHeaderBytes:    cfg.HTTPMaxHeaderBytes,
+	}
+
+	// Start server and handle graceful shutdown.
 	addr := fmt.Sprintf(":%s", cfg.Port)
-	log.Info().Str("addr", addr).Msg("Server listening")
+	log.Info().
+		Str("addr", addr).
+		Dur("read_timeout", cfg.HTTPReadTimeout).
+		Dur("read_header_timeout", cfg.HTTPReadHeaderTimeout).
+		Dur("write_timeout", cfg.HTTPWriteTimeout).
+		Dur("idle_timeout", cfg.HTTPIdleTimeout).
+		Msg("Server listening")
 
-	// Handle graceful shutdown
+	sigCtx, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stopSignals()
+
+	serverErrCh := make(chan error, 1)
 	go func() {
-		sigCh := make(chan os.Signal, 1)
-		signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-		<-sigCh
-
-		log.Info().Msg("Shutting down...")
-
-		// Stop crawler
-		if irrCrawler != nil {
-			irrCrawler.Stop()
-		}
-
-		// Close databases
-		if irrDB != nil {
-			if err := irrDB.Close(); err != nil {
-				log.Error().Err(err).Msg("Error closing IRR database")
-			}
-		}
-		if mainDB != nil {
-			if err := mainDB.Close(); err != nil {
-				log.Error().Err(err).Msg("Error closing main database")
-			}
-		}
-
-		os.Exit(0)
+		serverErrCh <- srv.ListenAndServe()
 	}()
 
-	if err := http.ListenAndServe(addr, r); err != nil {
-		log.Fatal().Err(err).Msg("Server failed")
+	var serveErr error
+	select {
+	case err := <-serverErrCh:
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serveErr = err
+		}
+	case <-sigCtx.Done():
+		log.Info().Msg("Shutdown signal received")
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.HTTPShutdownTimeout)
+		defer cancel()
+
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			log.Error().Err(err).Msg("HTTP server graceful shutdown failed, forcing close")
+			if closeErr := srv.Close(); closeErr != nil {
+				log.Error().Err(closeErr).Msg("Failed to force-close HTTP server")
+			}
+		}
+
+		if err := <-serverErrCh; err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serveErr = err
+		}
+	}
+
+	log.Info().Msg("Cleaning up background resources")
+
+	if irrCrawler != nil {
+		irrCrawler.Stop()
+	}
+	if memoryServiceForShutdown != nil {
+		memoryServiceForShutdown.Close()
+	}
+	if qdrantClientForShutdown != nil {
+		if err := qdrantClientForShutdown.Close(); err != nil {
+			log.Error().Err(err).Msg("Error closing Qdrant client")
+		}
+	}
+	if irrDB != nil {
+		if err := irrDB.Close(); err != nil {
+			log.Error().Err(err).Msg("Error closing IRR database")
+		}
+	}
+	if mainDB != nil {
+		if err := mainDB.Close(); err != nil {
+			log.Error().Err(err).Msg("Error closing main database")
+		}
+	}
+
+	if serveErr != nil {
+		log.Fatal().Err(serveErr).Msg("Server failed")
 	}
 }
 

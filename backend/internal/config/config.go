@@ -15,6 +15,15 @@ type Config struct {
 	CacheTTL        time.Duration `env:"CACHE_TTL" envDefault:"5m"`
 	RateLimitPerMin int           `env:"RATE_LIMIT" envDefault:"100"`
 	FrankfurterURL  string        `env:"FRANKFURTER_URL" envDefault:"https://api.frankfurter.app"`
+	MetricsEnabled  bool          `env:"METRICS_ENABLED" envDefault:"true"`
+
+	// HTTP server settings
+	HTTPReadTimeout       time.Duration `env:"HTTP_READ_TIMEOUT" envDefault:"15s"`
+	HTTPReadHeaderTimeout time.Duration `env:"HTTP_READ_HEADER_TIMEOUT" envDefault:"10s"`
+	HTTPWriteTimeout      time.Duration `env:"HTTP_WRITE_TIMEOUT" envDefault:"5m"`
+	HTTPIdleTimeout       time.Duration `env:"HTTP_IDLE_TIMEOUT" envDefault:"120s"`
+	HTTPShutdownTimeout   time.Duration `env:"HTTP_SHUTDOWN_TIMEOUT" envDefault:"20s"`
+	HTTPMaxHeaderBytes    int           `env:"HTTP_MAX_HEADER_BYTES" envDefault:"1048576"` // 1 MiB
 
 	// IRR database and crawler settings
 	DatabaseURL        string        `env:"DATABASE_URL" envDefault:""`
@@ -81,6 +90,24 @@ func Load() (*Config, error) {
 	// Validate MaxMemoryResults
 	if cfg.MaxMemoryResults < 1 || cfg.MaxMemoryResults > 100 {
 		return nil, fmt.Errorf("MAX_MEMORY_RESULTS must be between 1 and 100, got %d", cfg.MaxMemoryResults)
+	}
+	if cfg.HTTPReadTimeout <= 0 {
+		return nil, fmt.Errorf("HTTP_READ_TIMEOUT must be greater than 0, got %s", cfg.HTTPReadTimeout)
+	}
+	if cfg.HTTPReadHeaderTimeout <= 0 {
+		return nil, fmt.Errorf("HTTP_READ_HEADER_TIMEOUT must be greater than 0, got %s", cfg.HTTPReadHeaderTimeout)
+	}
+	if cfg.HTTPWriteTimeout < 0 {
+		return nil, fmt.Errorf("HTTP_WRITE_TIMEOUT must be 0 or greater, got %s", cfg.HTTPWriteTimeout)
+	}
+	if cfg.HTTPIdleTimeout <= 0 {
+		return nil, fmt.Errorf("HTTP_IDLE_TIMEOUT must be greater than 0, got %s", cfg.HTTPIdleTimeout)
+	}
+	if cfg.HTTPShutdownTimeout <= 0 {
+		return nil, fmt.Errorf("HTTP_SHUTDOWN_TIMEOUT must be greater than 0, got %s", cfg.HTTPShutdownTimeout)
+	}
+	if cfg.HTTPMaxHeaderBytes <= 0 {
+		return nil, fmt.Errorf("HTTP_MAX_HEADER_BYTES must be greater than 0, got %d", cfg.HTTPMaxHeaderBytes)
 	}
 
 	mode := strings.ToLower(strings.TrimSpace(cfg.AIThinkingModeDefault))

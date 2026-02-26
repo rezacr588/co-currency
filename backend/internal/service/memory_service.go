@@ -12,6 +12,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	memoryAsyncWorkerCount = 2
+	memoryAsyncQueueSize   = 256
+	memoryAsyncJobTimeout  = 30 * time.Second
+)
+
 // MemoryService orchestrates PostgreSQL and Qdrant memory with fallback logic
 type MemoryService struct {
 	memoryRepo       *repository.MemoryRepository       // PostgreSQL (source of truth)
@@ -19,6 +25,10 @@ type MemoryService struct {
 	embeddingService *EmbeddingService
 	maxResults       int
 	mu               sync.RWMutex
+	asyncJobs        chan func(context.Context)
+	asyncStop        chan struct{}
+	asyncWG          sync.WaitGroup
+	closeOnce        sync.Once
 }
 
 // NewMemoryService creates a new memory service
@@ -31,36 +41,38 @@ func NewMemoryService(
 	if maxResults <= 0 {
 		maxResults = 10
 	}
-	return &MemoryService{
+	svc := &MemoryService{
 		memoryRepo:       memoryRepo,
 		vectorRepo:       vectorRepo,
 		embeddingService: embeddingService,
 		maxResults:       maxResults,
+		asyncJobs:        make(chan func(context.Context), memoryAsyncQueueSize),
+		asyncStop:        make(chan struct{}),
 	}
+	svc.startAsyncWorkers(memoryAsyncWorkerCount)
+	return svc
 }
 
 // StoreShortTermMemory stores a chat message as short-term memory (async)
-// Note: Uses a background context since this is fire-and-forget, but with a timeout
 func (s *MemoryService) StoreShortTermMemory(ctx context.Context, userID uuid.UUID, conversationID, role, content string) {
-	// Capture values for goroutine to avoid closure issues
-	uid := userID
-	convID := conversationID
-	r := role
-	c := content
+	if !s.isVectorEnabled() {
+		return
+	}
 
-	// Run async to not block chat response
-	go func() {
-		// Use background context since parent may be cancelled after HTTP response
-		bgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-
-		if err := s.storeShortTermMemorySync(bgCtx, uid, convID, r, c); err != nil {
+	queued := s.enqueueAsync(func(bgCtx context.Context) {
+		if err := s.storeShortTermMemorySync(bgCtx, userID, conversationID, role, content); err != nil {
 			log.Warn().Err(err).
-				Str("user_id", uid.String()).
-				Str("conversation_id", convID).
+				Str("user_id", userID.String()).
+				Str("conversation_id", conversationID).
 				Msg("Failed to store short-term memory")
 		}
-	}()
+	})
+	if !queued {
+		log.Warn().
+			Str("user_id", userID.String()).
+			Str("conversation_id", conversationID).
+			Msg("Dropped short-term memory job because async queue is full")
+	}
 }
 
 // storeShortTermMemorySync stores short-term memory synchronously
@@ -99,9 +111,8 @@ func (s *MemoryService) StoreLongTermMemory(ctx context.Context, userID uuid.UUI
 		return nil, fmt.Errorf("storing in postgresql: %w", err)
 	}
 
-	// Store in Qdrant if available (async to not block)
+	// Store in Qdrant if available (async to avoid blocking request path)
 	if s.isVectorEnabled() {
-		// Capture values for goroutine to avoid closure issues
 		memoryID := pgMemory.ID.String()
 		uid := userID
 		cat := category
@@ -109,11 +120,7 @@ func (s *MemoryService) StoreLongTermMemory(ctx context.Context, userID uuid.UUI
 		src := source
 		createdAt := pgMemory.CreatedAt
 
-		go func() {
-			// Use background context since parent may be cancelled after HTTP response
-			bgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-
+		queued := s.enqueueAsync(func(bgCtx context.Context) {
 			// Generate embedding
 			embResp, err := s.embeddingService.Embed(bgCtx, cont)
 			if err != nil {
@@ -136,7 +143,10 @@ func (s *MemoryService) StoreLongTermMemory(ctx context.Context, userID uuid.UUI
 			if err := s.vectorRepo.StoreLongTermMemory(bgCtx, memory, embResp.Embedding); err != nil {
 				log.Warn().Err(err).Str("memory_id", memoryID).Msg("Failed to store long-term memory in Qdrant")
 			}
-		}()
+		})
+		if !queued {
+			log.Warn().Str("memory_id", memoryID).Msg("Dropped long-term memory vector sync job because async queue is full")
+		}
 	}
 
 	return pgMemory, nil
@@ -333,4 +343,49 @@ func (s *MemoryService) isVectorEnabled() bool {
 // IsVectorEnabled returns whether vector search is available (public)
 func (s *MemoryService) IsVectorEnabled() bool {
 	return s.isVectorEnabled()
+}
+
+func (s *MemoryService) startAsyncWorkers(workerCount int) {
+	if workerCount < 1 {
+		workerCount = 1
+	}
+	for i := 0; i < workerCount; i++ {
+		s.asyncWG.Add(1)
+		go func() {
+			defer s.asyncWG.Done()
+			for {
+				select {
+				case job := <-s.asyncJobs:
+					if job == nil {
+						continue
+					}
+					jobCtx, cancel := context.WithTimeout(context.Background(), memoryAsyncJobTimeout)
+					job(jobCtx)
+					cancel()
+				case <-s.asyncStop:
+					return
+				}
+			}
+		}()
+	}
+}
+
+func (s *MemoryService) enqueueAsync(job func(context.Context)) bool {
+	if job == nil {
+		return false
+	}
+	select {
+	case s.asyncJobs <- job:
+		return true
+	default:
+		return false
+	}
+}
+
+// Close stops background workers and waits for in-flight jobs to complete.
+func (s *MemoryService) Close() {
+	s.closeOnce.Do(func() {
+		close(s.asyncStop)
+		s.asyncWG.Wait()
+	})
 }

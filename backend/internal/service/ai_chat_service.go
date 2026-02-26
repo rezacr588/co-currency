@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -329,35 +330,71 @@ func extractUsageFromGenerationInfo(generationInfo map[string]any) (promptTokens
 
 	promptTokens = intFromAny(
 		generationInfo["PromptTokens"],
+		generationInfo["promptTokens"],
 		generationInfo["prompt_tokens"],
 		generationInfo["input_tokens"],
+		generationInfo["inputTokenCount"],
 		generationInfo["promptTokenCount"],
 	)
 	completionTokens = intFromAny(
 		generationInfo["CompletionTokens"],
+		generationInfo["completionTokens"],
 		generationInfo["completion_tokens"],
 		generationInfo["output_tokens"],
+		generationInfo["outputTokenCount"],
 		generationInfo["candidatesTokenCount"],
 	)
 	totalTokens = intFromAny(
 		generationInfo["TotalTokens"],
+		generationInfo["totalTokens"],
 		generationInfo["total_tokens"],
+		generationInfo["token_count"],
+		generationInfo["tokenCount"],
+		generationInfo["usage_tokens"],
 		generationInfo["totalTokenCount"],
 	)
 
 	// Some providers nest token usage in a usage object.
-	if usageObj, ok := generationInfo["usage"].(map[string]any); ok {
+	if usageObj := usageAsMap(generationInfo["usage"]); usageObj != nil {
 		if promptTokens == 0 {
-			promptTokens = intFromAny(usageObj["prompt_tokens"], usageObj["input_tokens"], usageObj["promptTokenCount"])
+			promptTokens = intFromAny(
+				usageObj["PromptTokens"],
+				usageObj["promptTokens"],
+				usageObj["prompt_tokens"],
+				usageObj["input_tokens"],
+				usageObj["inputTokenCount"],
+				usageObj["promptTokenCount"],
+			)
 		}
 		if completionTokens == 0 {
-			completionTokens = intFromAny(usageObj["completion_tokens"], usageObj["output_tokens"], usageObj["candidatesTokenCount"])
+			completionTokens = intFromAny(
+				usageObj["CompletionTokens"],
+				usageObj["completionTokens"],
+				usageObj["completion_tokens"],
+				usageObj["output_tokens"],
+				usageObj["outputTokenCount"],
+				usageObj["candidatesTokenCount"],
+			)
 		}
 		if totalTokens == 0 {
-			totalTokens = intFromAny(usageObj["total_tokens"], usageObj["totalTokenCount"])
+			totalTokens = intFromAny(
+				usageObj["TotalTokens"],
+				usageObj["totalTokens"],
+				usageObj["total_tokens"],
+				usageObj["token_count"],
+				usageObj["tokenCount"],
+				usageObj["usage_tokens"],
+				usageObj["totalTokenCount"],
+			)
 		}
 		if billedCost == nil {
-			if value, ok := floatFromAny(usageObj["billed_cost_usd"], usageObj["cost_usd"], usageObj["billed_cost"]); ok {
+			if value, ok := floatFromAny(
+				usageObj["billed_cost_usd"],
+				usageObj["billedCostUSD"],
+				usageObj["cost_usd"],
+				usageObj["costUSD"],
+				usageObj["billed_cost"],
+			); ok {
 				billedCost = &value
 			}
 		}
@@ -366,7 +403,9 @@ func extractUsageFromGenerationInfo(generationInfo map[string]any) (promptTokens
 	if billedCost == nil {
 		if value, ok := floatFromAny(
 			generationInfo["billed_cost_usd"],
+			generationInfo["billedCostUSD"],
 			generationInfo["cost_usd"],
+			generationInfo["costUSD"],
 			generationInfo["billed_cost"],
 		); ok {
 			billedCost = &value
@@ -374,6 +413,25 @@ func extractUsageFromGenerationInfo(generationInfo map[string]any) (promptTokens
 	}
 
 	return promptTokens, completionTokens, totalTokens, billedCost
+}
+
+func usageAsMap(value any) map[string]any {
+	switch v := value.(type) {
+	case nil:
+		return nil
+	case map[string]any:
+		return v
+	default:
+		raw, err := json.Marshal(v)
+		if err != nil {
+			return nil
+		}
+		var m map[string]any
+		if err := json.Unmarshal(raw, &m); err != nil {
+			return nil
+		}
+		return m
+	}
 }
 
 func intFromAny(values ...any) int {
@@ -389,10 +447,27 @@ func intFromAny(values ...any) int {
 			return int(v)
 		case int64:
 			return int(v)
+		case uint:
+			return int(v)
+		case uint8:
+			return int(v)
+		case uint16:
+			return int(v)
+		case uint32:
+			return int(v)
+		case uint64:
+			return int(v)
 		case float32:
 			return int(v)
 		case float64:
 			return int(v)
+		case json.Number:
+			if parsed, err := v.Int64(); err == nil {
+				return int(parsed)
+			}
+			if parsed, err := v.Float64(); err == nil {
+				return int(parsed)
+			}
 		case string:
 			v = strings.TrimSpace(v)
 			if v == "" {
@@ -416,10 +491,20 @@ func floatFromAny(values ...any) (float64, bool) {
 			return v, true
 		case int:
 			return float64(v), true
+		case uint:
+			return float64(v), true
 		case int32:
 			return float64(v), true
 		case int64:
 			return float64(v), true
+		case uint32:
+			return float64(v), true
+		case uint64:
+			return float64(v), true
+		case json.Number:
+			if parsed, err := v.Float64(); err == nil {
+				return parsed, true
+			}
 		case string:
 			v = strings.TrimSpace(v)
 			if v == "" {
@@ -947,18 +1032,33 @@ func (s *AIChatService) ChatStream(
 		"mode":     finalMode,
 	}, onTrace)
 
-	// First call: non-streaming to check for tool calls
+	// Single-pass first response. Buffer stream output so we can detect tool calls without leaking markers.
 	firstLLMStartedAt := time.Now()
-	firstResponse, err := llm.GenerateContent(ctx, prepared.LLMMessages)
+	var initialStreamBuffer strings.Builder
+	streamingFunc := func(ctx context.Context, chunk []byte) error {
+		if len(chunk) == 0 {
+			return nil
+		}
+		initialStreamBuffer.Write(chunk)
+		return nil
+	}
+	firstResponse, err := llm.GenerateContent(ctx, prepared.LLMMessages, llms.WithStreamingFunc(streamingFunc))
 	if err != nil {
-		return nil, failChatWithWrap(ctx, userID, convID.String(), requestStartedAt, onTrace, "calling ai: %w", err)
+		// Some providers reject streaming callbacks; retry once without streaming.
+		firstResponse, err = llm.GenerateContent(ctx, prepared.LLMMessages)
+		if err != nil {
+			return nil, failChatWithWrap(ctx, userID, convID.String(), requestStartedAt, onTrace, "calling ai: %w", err)
+		}
 	}
 	usageTracker.addResponse(firstResponse)
 	if len(firstResponse.Choices) == 0 {
 		return nil, failChatWithError(ctx, userID, convID.String(), requestStartedAt, onTrace, errNoAIResponse)
 	}
 
-	firstText := firstResponse.Choices[0].Content
+	firstText := strings.TrimSpace(initialStreamBuffer.String())
+	if firstText == "" {
+		firstText = firstResponse.Choices[0].Content
+	}
 	tc := parseToolCall(firstText)
 	emitChatTrace(ctx, userID, convID.String(), "llm_first_response", map[string]interface{}{
 		"duration_ms":     time.Since(firstLLMStartedAt).Milliseconds(),
@@ -999,7 +1099,6 @@ func (s *AIChatService) ChatStream(
 			return nil, failChatWithWrap(ctx, userID, convID.String(), requestStartedAt, onTrace, "calling ai (tool loop): %w", err)
 		}
 
-		// Stream the final response to the client
 		if onChunk != nil && aiResponse != "" {
 			chunks, chars, err := emitChunkedText(onChunk, aiResponse)
 			if err != nil {
@@ -1009,59 +1108,16 @@ func (s *AIChatService) ChatStream(
 			streamChars += chars
 		}
 	} else {
-		// No tool call — redo with streaming for better UX
-		var sb strings.Builder
-		streamedAny := false
-		streamingFunc := func(ctx context.Context, chunk []byte) error {
-			if len(chunk) == 0 {
-				return nil
-			}
-			streamedAny = true
-			text := string(chunk)
-			sb.WriteString(text)
-			streamChunkCount++
-			streamChars += len(text)
-			if onChunk != nil {
-				if err := onChunk(text); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-
-		response, err := llm.GenerateContent(ctx, prepared.LLMMessages, llms.WithStreamingFunc(streamingFunc))
-		if err != nil {
-			if streamedAny {
-				return nil, failChatWithWrap(ctx, userID, convID.String(), requestStartedAt, onTrace, "calling ai: streaming failed: %w", err)
-			}
-			sb.Reset()
-			// Fallback to non-streaming
-			response, err = llm.GenerateContent(ctx, prepared.LLMMessages)
+		// No tool call — stream the first response without issuing a second model request.
+		aiResponse = stripToolCallMarkers(firstText)
+		if onChunk != nil && aiResponse != "" {
+			chunks, chars, err := emitChunkedText(onChunk, aiResponse)
 			if err != nil {
-				return nil, failChatWithWrap(ctx, userID, convID.String(), requestStartedAt, onTrace, "calling ai: %w", err)
+				return nil, err
 			}
+			streamChunkCount += chunks
+			streamChars += chars
 		}
-		usageTracker.addResponse(response)
-
-		if len(response.Choices) == 0 {
-			return nil, failChatWithError(ctx, userID, convID.String(), requestStartedAt, onTrace, errNoAIResponse)
-		}
-
-		aiResponse = strings.TrimSpace(sb.String())
-		if aiResponse == "" {
-			aiResponse = response.Choices[0].Content
-			if onChunk != nil && aiResponse != "" {
-				chunks, chars, err := emitChunkedText(onChunk, aiResponse)
-				if err != nil {
-					return nil, err
-				}
-				streamChunkCount += chunks
-				streamChars += chars
-			}
-		}
-
-		// Strip any accidental tool call markers
-		aiResponse = stripToolCallMarkers(aiResponse)
 	}
 
 	aiMsg, err := s.persistAssistantResponse(ctx, userID, convID, message, aiResponse, usageTracker.toMessageMeta())
