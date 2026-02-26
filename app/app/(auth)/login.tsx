@@ -22,6 +22,7 @@ import { LinkedInIcon, GoogleIcon } from '../../src/constants/icons';
 import { Button } from '../../src/components/ui/Button';
 import { FormError } from '../../src/components/ui/FormError';
 import { H2, Caption, Body } from '../../src/components/ui/styled';
+import { resolvePostAuthRoute } from '../../src/navigation/mode';
 
 const ScreenContainer = styled(SafeAreaView)`
   flex: 1;
@@ -86,7 +87,10 @@ export default function LoginScreen() {
             if (isMountedRef.current) setError(errorParam);
           } else if (token && refreshToken) {
             await handleOAuthCallback(token, refreshToken);
-            if (isMountedRef.current) router.replace('/(app)/(tabs)');
+            if (isMountedRef.current) {
+              const target = await resolvePostAuthRoute();
+              router.replace(target as any);
+            }
           }
         } catch (err) {
           if (isMountedRef.current) setError(err instanceof Error ? err.message : 'OAuth failed');
@@ -110,7 +114,8 @@ export default function LoginScreen() {
     setError('');
     try {
       await login({ email, password });
-      router.replace('/(app)/(tabs)');
+      const target = await resolvePostAuthRoute();
+      router.replace(target as any);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('loginFailed'));
     } finally {

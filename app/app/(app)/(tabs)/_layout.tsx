@@ -23,6 +23,7 @@ import { useTheme as useStyledTheme } from 'styled-components/native';
 import { useLanguage } from '../../../src/context/LanguageContext';
 import { useAuth } from '../../../src/context/AuthContext';
 import { ErrorBoundary } from '../../../src/components/ui/ErrorBoundary';
+import { ModeSwitch } from '../../../src/components/navigation/ModeSwitch';
 
 const SIDEBAR_WIDTH = 280;
 const SIDEBAR_COLLAPSED_WIDTH = 80;
@@ -85,7 +86,7 @@ function DesktopSidebar({
   const toolsNavItems = [
     { icon: <Trophy size={20} color={colors.secondaryForeground} />, label: t('badges') || 'Badges', href: '/(app)/badges' },
     { icon: <History size={20} color={colors.secondaryForeground} />, label: t('historicalRates') || 'Historical', href: '/(app)/historical' },
-    { icon: <KanbanSquare size={20} color={colors.secondaryForeground} />, label: 'Planner', href: '/(app)/planner' },
+    { icon: <KanbanSquare size={20} color={colors.secondaryForeground} />, label: 'Planner', href: '/todo' },
   ];
 
   const isActiveRoute = (href: string) => {
@@ -212,6 +213,7 @@ function DesktopNavbar() {
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <ModeSwitch />
         <Pressable
           onPress={toggleTheme}
           hitSlop={6}
@@ -293,6 +295,19 @@ function TabsLayoutInner() {
           onToggle={() => setIsSidebarCollapsed((prev) => !prev)}
         />
         <View style={{ flex: 1 }}>
+          <View
+            style={{
+              paddingHorizontal: 14,
+              paddingTop: Math.max(insets.top, 10),
+              paddingBottom: 10,
+              borderBottomWidth: 1,
+              borderBottomColor: colors.border,
+              backgroundColor: colors.background,
+              alignItems: 'flex-start',
+            }}
+          >
+            <ModeSwitch />
+          </View>
           <Tabs
             screenOptions={{
               headerShown: false,
@@ -318,78 +333,94 @@ function TabsLayoutInner() {
 
   // Mobile layout - bottom tabs
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.tabBarActive,
-        tabBarInactiveTintColor: colors.tabBarInactive,
-        tabBarShowLabel: true,
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontFamily: 'Inter_500Medium',
-          marginTop: -2,
-        },
-        tabBarStyle: {
-          backgroundColor: colors.tabBarBackground,
-          borderTopWidth: 1,
-          borderTopColor: colors.tabBarBorder,
-          elevation: 0,
-          height: 70 + insets.bottom,
-          paddingBottom: insets.bottom,
-          paddingTop: 8,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: t('dashboard'),
-          tabBarIcon: ({ color, size }) => <LayoutDashboard size={size} color={color} />,
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <View
+        style={{
+          paddingTop: Math.max(insets.top, 8),
+          paddingBottom: 8,
+          paddingHorizontal: 12,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.border,
+          backgroundColor: colors.background,
+          alignItems: 'flex-start',
         }}
-      />
-      <Tabs.Screen
-        name="wallet"
-        options={{
-          title: t('wallet'),
-          popToTopOnBlur: true,
-          tabBarIcon: ({ color, size }) => <Wallet size={size} color={color} />,
+      >
+        <ModeSwitch />
+      </View>
+
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: colors.tabBarActive,
+          tabBarInactiveTintColor: colors.tabBarInactive,
+          tabBarShowLabel: true,
+          tabBarLabelStyle: {
+            fontSize: 10,
+            fontFamily: 'Inter_500Medium',
+            marginTop: -2,
+          },
+          tabBarStyle: {
+            backgroundColor: colors.tabBarBackground,
+            borderTopWidth: 1,
+            borderTopColor: colors.tabBarBorder,
+            elevation: 0,
+            height: 70 + insets.bottom,
+            paddingBottom: insets.bottom,
+            paddingTop: 8,
+          },
         }}
-      />
-      <Tabs.Screen
-        name="add"
-        options={{
-          title: '',
-          tabBarShowLabel: false,
-          tabBarIcon: ({ focused }) => (
-            <View
-              style={{
-                backgroundColor: colors.foreground,
-                borderRadius: 50,
-                padding: 14,
-                marginTop: -24,
-              }}
-            >
-              <Plus size={22} color={colors.background} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="chat"
-        options={{
-          title: t('aiAdvisor') || 'Chat',
-          tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="reports"
-        options={{
-          title: t('reports'),
-          tabBarIcon: ({ color, size }) => <BarChart3 size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen name="goals" options={{ href: null }} />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: t('dashboard'),
+            tabBarIcon: ({ color, size }) => <LayoutDashboard size={size} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="wallet"
+          options={{
+            title: t('wallet'),
+            popToTopOnBlur: true,
+            tabBarIcon: ({ color, size }) => <Wallet size={size} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="add"
+          options={{
+            title: '',
+            tabBarShowLabel: false,
+            tabBarIcon: ({ focused }) => (
+              <View
+                style={{
+                  backgroundColor: colors.foreground,
+                  borderRadius: 50,
+                  padding: 14,
+                  marginTop: -24,
+                }}
+              >
+                <Plus size={22} color={colors.background} />
+              </View>
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="chat"
+          options={{
+            title: t('aiAdvisor') || 'Chat',
+            tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="reports"
+          options={{
+            title: t('reports'),
+            tabBarIcon: ({ color, size }) => <BarChart3 size={size} color={color} />,
+          }}
+        />
+        <Tabs.Screen name="goals" options={{ href: null }} />
+      </Tabs>
+    </View>
   );
 }
 

@@ -69,7 +69,7 @@ export default function WalletScreen() {
     { label: t('budgets') || 'Budgets', href: '/(app)/budgets', icon: PiggyBank },
     { label: t('aiAdvisor') || 'AI Advisor', href: '/(app)/(tabs)/wallet/chat', icon: MessageCircle },
     { label: t('reports') || 'Reports', href: '/(app)/(tabs)/reports', icon: BarChart3 },
-    { label: 'Planner', href: '/(app)/planner', icon: KanbanSquare },
+    { label: 'Planner', href: '/todo', icon: KanbanSquare },
   ];
 
   const featureCols = isDesktop ? 6 : 3;

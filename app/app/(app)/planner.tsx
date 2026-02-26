@@ -36,6 +36,7 @@ import {
 } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useTheme } from 'styled-components/native';
+import { ModeSwitch } from '../../src/components/navigation/ModeSwitch';
 import type {
   CreateTaskRequest,
   GoalFundingRequired,
@@ -97,12 +98,16 @@ function PlannerCard({
   onMove,
   onCompleteTask,
   onDeleteTask,
+  onAddTransaction,
+  isLaunchingTransaction,
 }: {
   item: TodoItem;
   columnIndex: number;
   onMove: (item: TodoItem, nextStatus: PlannerStatus) => void;
   onCompleteTask: (taskID: string) => void;
   onDeleteTask: (taskID: string) => void;
+  onAddTransaction?: (taskID: string) => void;
+  isLaunchingTransaction?: boolean;
 }) {
   const theme = useTheme();
   const colors = theme.colors;
@@ -205,6 +210,30 @@ function PlannerCard({
             {isTask ? (
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Pressable
+                  onPress={() => onAddTransaction?.(item.id)}
+                  disabled={isLaunchingTransaction}
+                  style={({ pressed }) => [{
+                    minWidth: 44,
+                    paddingHorizontal: 8,
+                    height: 28,
+                    borderRadius: 8,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: colors.accent + '20',
+                    borderWidth: 1,
+                    borderColor: colors.accent + '44',
+                    opacity: isLaunchingTransaction ? 0.7 : 1,
+                  }, pressed && { opacity: 0.72 }]}
+                >
+                  {isLaunchingTransaction ? (
+                    <ActivityIndicator size="small" color={colors.accent} />
+                  ) : (
+                    <Text style={{ color: colors.accent, fontSize: 11, fontFamily: 'Inter_600SemiBold' }}>
+                      Txn
+                    </Text>
+                  )}
+                </Pressable>
+                <Pressable
                   onPress={() => onCompleteTask(item.id)}
                   style={({ pressed }) => [{
                     width: 28,
@@ -250,6 +279,7 @@ export default function PlannerScreen() {
   const [boardState, setBoardState] = useState<PlannerBoardResponse | null>(null);
   const [isTaskModalVisible, setIsTaskModalVisible] = useState(false);
   const [fundingRequired, setFundingRequired] = useState<GoalFundingRequired | null>(null);
+  const [launchingTaskID, setLaunchingTaskID] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -303,7 +333,9 @@ export default function PlannerScreen() {
     mutationFn: (taskID: string) => api.tasks.complete(taskID),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['planner-board'] });
+      await queryClient.invalidateQueries({ queryKey: ['wallet'] });
       await queryClient.invalidateQueries({ queryKey: ['wallet', 'transactions'] });
+      await queryClient.invalidateQueries({ queryKey: ['reports'] });
       await refetchBoard();
     },
   });
@@ -436,6 +468,47 @@ export default function PlannerScreen() {
     setSubtasks((prev) => prev.filter((sub) => sub.id !== id));
   };
 
+  const openAddTransactionForTask = useCallback(async (taskID: string) => {
+    setLaunchingTaskID(taskID);
+    try {
+      const taskResponse = await api.tasks.get(taskID);
+      const task = taskResponse.task;
+      const params: Record<string, string> = {
+        linked_task_id: taskID,
+        return_to: encodeURIComponent('/todo'),
+      };
+
+      if (task.ledger_type === 'credit' || task.ledger_type === 'debit') {
+        params.type = task.ledger_type;
+      }
+      if (typeof task.ledger_amount === 'number' && task.ledger_amount > 0) {
+        params.amount = String(task.ledger_amount);
+      }
+      if (task.ledger_currency) {
+        params.currency = task.ledger_currency;
+      }
+      if (task.ledger_wallet_currency) {
+        params.wallet_currency = task.ledger_wallet_currency;
+      }
+      if (task.ledger_category) {
+        params.category = task.ledger_category;
+      }
+      const resolvedDescription = task.ledger_description?.trim() || task.title;
+      if (resolvedDescription) {
+        params.description = resolvedDescription;
+      }
+
+      router.push({
+        pathname: '/(app)/(tabs)/add',
+        params,
+      } as any);
+    } catch (error) {
+      Alert.alert('Could not open transaction flow', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setLaunchingTaskID(null);
+    }
+  }, [router]);
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
       <LinearGradient
@@ -476,24 +549,27 @@ export default function PlannerScreen() {
             </View>
           </View>
 
-          <Pressable
-            onPress={() => setIsTaskModalVisible(true)}
-            style={({ pressed }) => [{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: colors.accent,
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderRadius: 999,
-              shadowColor: colors.accent,
-              shadowOpacity: 0.38,
-              shadowRadius: 12,
-              shadowOffset: { width: 0, height: 0 },
-            }, pressed && { opacity: 0.78 }]}
-          >
-            <Plus size={14} color={colors.accentForeground} />
-            <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 6 }}>New Task</Text>
-          </Pressable>
+          <View style={{ alignItems: 'flex-end', gap: 8 }}>
+            <ModeSwitch />
+            <Pressable
+              onPress={() => setIsTaskModalVisible(true)}
+              style={({ pressed }) => [{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: colors.accent,
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 999,
+                shadowColor: colors.accent,
+                shadowOpacity: 0.38,
+                shadowRadius: 12,
+                shadowOffset: { width: 0, height: 0 },
+              }, pressed && { opacity: 0.78 }]}
+            >
+              <Plus size={14} color={colors.accentForeground} />
+              <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 6 }}>New Task</Text>
+            </Pressable>
+          </View>
         </View>
 
         <View style={{ paddingHorizontal: 16, paddingTop: 14, flexDirection: 'row', gap: 10 }}>
@@ -581,6 +657,8 @@ export default function PlannerScreen() {
                           item={item}
                           columnIndex={columnIndex}
                           onMove={handleMoveItem}
+                          onAddTransaction={item.type === 'task' ? openAddTransactionForTask : undefined}
+                          isLaunchingTransaction={item.type === 'task' && launchingTaskID === item.id}
                           onCompleteTask={(taskID) => completeTaskMutation.mutate(taskID)}
                           onDeleteTask={(taskID) => deleteTaskMutation.mutate(taskID)}
                         />

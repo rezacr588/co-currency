@@ -24,6 +24,8 @@ export default function AppLayout() {
   return (
     <>
       <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="finapp" />
+        <Stack.Screen name="todo" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="profile" options={{ presentation: 'modal' }} />
         <Stack.Screen name="change-password" />

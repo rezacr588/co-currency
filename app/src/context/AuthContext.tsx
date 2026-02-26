@@ -11,6 +11,7 @@ import {
 } from '../api';
 import type { User, LoginRequest, RegisterRequest } from '../types/wallet';
 import { isValidJWT } from '../utils/validation';
+import { resolvePostAuthRoute, usePersistModeRoute } from '../navigation/mode';
 
 interface AuthContextType {
   user: User | null;
@@ -31,6 +32,7 @@ function useProtectedRoute(user: User | null, isLoading: boolean) {
   const router = useRouter();
 
   useEffect(() => {
+    let active = true;
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
@@ -41,8 +43,16 @@ function useProtectedRoute(user: User | null, isLoading: boolean) {
       router.replace('/login');
     } else if (user && inAuthGroup) {
       // Redirect to dashboard if already logged in
-      router.replace('/(app)/(tabs)');
+      void (async () => {
+        const target = await resolvePostAuthRoute();
+        if (!active) return;
+        router.replace(target as any);
+      })();
     }
+
+    return () => {
+      active = false;
+    };
   }, [user, segments, isLoading, router]);
 }
 
@@ -53,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Protect routes based on auth state
   useProtectedRoute(user, isLoading);
+  usePersistModeRoute(!!user && !isLoading);
 
   // Use a ref for the auth error callback to avoid stale closures
   const authErrorRef = useRef(() => {

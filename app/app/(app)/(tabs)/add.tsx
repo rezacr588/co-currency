@@ -11,7 +11,7 @@ import {
   Platform,
   useWindowDimensions,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { TrendingUp, TrendingDown, Check, Search, Plus, Trash2, Sparkles } from 'lucide-react-native';
@@ -27,6 +27,7 @@ import { FormError } from '../../../src/components/ui/FormError';
 import { Button } from '../../../src/components/ui/Button';
 import { H2, Caption, BodyMedium } from '../../../src/components/ui/styled';
 import type { Category, TransactionRequest } from '../../../src/types/wallet';
+import type { AddTransactionStep } from '../../../src/navigation/mode';
 
 const ScreenContainer = styled(SafeAreaView)`
   flex: 1;
@@ -102,11 +103,28 @@ const CategoryChip = styled.Pressable<{ $active: boolean }>`
 
 const FALLBACK_CATEGORIES = Object.keys(CATEGORY_ICONS);
 const CURRENCIES = [...COMMON_CURRENCIES];
+const ADD_TRANSACTION_STEPS: AddTransactionStep[] = ['basics', 'currency', 'category', 'review'];
+const STEP_LABELS: Record<AddTransactionStep, string> = {
+  basics: 'Basics',
+  currency: 'Currency',
+  category: 'Category',
+  review: 'Review',
+};
 
 export default function AddTransactionScreen() {
   const { t } = useLanguage();
   const theme = useTheme();
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    type?: string;
+    amount?: string;
+    currency?: string;
+    wallet_currency?: string;
+    category?: string;
+    description?: string;
+    linked_task_id?: string;
+    return_to?: string;
+  }>();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -133,10 +151,41 @@ export default function AddTransactionScreen() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
+  const [step, setStep] = useState<AddTransactionStep>('basics');
   const [isSuggestingCategory, setIsSuggestingCategory] = useState(false);
   const { showToast } = useToast();
   const parsedAmount = Number.parseFloat(amount);
   const hasValidAmount = Number.isFinite(parsedAmount) && parsedAmount > 0;
+  const stepIndex = ADD_TRANSACTION_STEPS.indexOf(step);
+  const returnTo = typeof params.return_to === 'string' && params.return_to.trim() ? decodeURIComponent(params.return_to) : '';
+
+  useEffect(() => {
+    if (typeof params.type === 'string' && (params.type === 'credit' || params.type === 'debit')) {
+      setType(params.type);
+    }
+    if (typeof params.amount === 'string' && params.amount.trim()) {
+      setAmount(params.amount);
+    }
+    if (typeof params.currency === 'string' && params.currency.trim()) {
+      setCurrency(params.currency.toUpperCase());
+    }
+    if (typeof params.wallet_currency === 'string' && params.wallet_currency.trim()) {
+      setWalletCurrency(params.wallet_currency.toUpperCase());
+    }
+    if (typeof params.category === 'string' && params.category.trim()) {
+      setCategory(params.category);
+    }
+    if (typeof params.description === 'string' && params.description.trim()) {
+      setDescription(params.description);
+    }
+  }, [
+    params.amount,
+    params.category,
+    params.currency,
+    params.description,
+    params.type,
+    params.wallet_currency,
+  ]);
 
   const { data: balancesData } = useQuery({
     queryKey: ['wallet', 'balances'],
@@ -253,11 +302,17 @@ export default function AddTransactionScreen() {
       setError('');
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['planner-board'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       api.badges.check().then(() => {
         queryClient.invalidateQueries({ queryKey: ['badges'] });
       }).catch(() => {});
       showToast(t('transactionAdded') || 'Transaction added', 'success');
-      router.back();
+      if (returnTo) {
+        router.replace(returnTo as any);
+      } else {
+        router.back();
+      }
     },
     onError: (err) => {
       setError(err instanceof Error ? err.message : 'Failed to add transaction');
@@ -281,6 +336,45 @@ export default function AddTransactionScreen() {
     }
     setError('');
     mutation.mutate(payload);
+  };
+
+  const validateStep = (stepToValidate: AddTransactionStep): boolean => {
+    if (stepToValidate === 'basics') {
+      if (!parsedAmount || parsedAmount <= 0) {
+        setError(t('enterValidAmount'));
+        return false;
+      }
+    }
+
+    if (stepToValidate === 'currency') {
+      if (enableTargetConversion && walletCurrency === currency) {
+        setError(t('selectWalletCurrency'));
+        return false;
+      }
+    }
+
+    if (stepToValidate === 'category') {
+      if (!category.trim()) {
+        setError(t('categoryRequired') || 'Category is required');
+        return false;
+      }
+    }
+
+    setError('');
+    return true;
+  };
+
+  const goToPreviousStep = () => {
+    if (stepIndex <= 0) return;
+    setStep(ADD_TRANSACTION_STEPS[stepIndex - 1]);
+    setError('');
+  };
+
+  const goToNextStep = () => {
+    if (!validateStep(step)) return;
+    if (stepIndex >= ADD_TRANSACTION_STEPS.length - 1) return;
+    setStep(ADD_TRANSACTION_STEPS[stepIndex + 1]);
+    setError('');
   };
 
   const handleCreateCategory = () => {
@@ -359,7 +453,42 @@ export default function AddTransactionScreen() {
 
           <FormError message={error} />
 
+          <View style={{ marginBottom: theme.spacing.xl }}>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {ADD_TRANSACTION_STEPS.map((item, index) => {
+                const active = item === step;
+                const complete = index < stepIndex;
+                return (
+                  <View
+                    key={item}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 8,
+                      paddingHorizontal: 8,
+                      borderRadius: theme.radii.md,
+                      borderWidth: 1,
+                      borderColor: active ? theme.colors.accent : theme.colors.border,
+                      backgroundColor: active ? theme.colors.accent + '22' : complete ? theme.colors.success + '1F' : theme.colors.card,
+                    }}
+                  >
+                    <Caption
+                      style={{
+                        textAlign: 'center',
+                        color: active ? theme.colors.accent : complete ? theme.colors.success : theme.colors.mutedForeground,
+                        fontFamily: active ? 'Inter_600SemiBold' : 'Inter_500Medium',
+                        fontSize: 11,
+                      }}
+                    >
+                      {`${index + 1}. ${STEP_LABELS[item]}`}
+                    </Caption>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+
           {/* Desktop: Two column layout for type and amount */}
+          {step === 'basics' && (
           <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: isDesktop ? 24 : 0 }}>
             {/* Transaction Type */}
             <View style={{ marginBottom: theme.spacing.xl, flex: isDesktop ? 1 : undefined }}>
@@ -409,73 +538,22 @@ export default function AddTransactionScreen() {
               </AmountContainer>
             </View>
           </View>
+          )}
 
           {/* Currency */}
-          <View style={{ marginBottom: theme.spacing.xl }}>
-            <Caption style={{ marginBottom: theme.spacing.sm }}>{t('currency') || 'Currency'}</Caption>
-            {isDesktop ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
-                {CURRENCIES.map((code) => {
-                  const display = getCurrencyDisplay(code);
-                  return (
-                    <CurrencyChip key={code} $active={currency === code} onPress={() => setCurrency(code)}>
-                      <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || '🌐'}</Text>
-                      <BodyMedium
-                        $color={currency === code ? theme.colors.background : theme.colors.foreground}
-                        style={{ fontSize: 14 }}
-                      >
-                        {code}
-                      </BodyMedium>
-                    </CurrencyChip>
-                  );
-                })}
-              </View>
-            ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-                  {CURRENCIES.map((code) => {
-                    const display = getCurrencyDisplay(code);
-                    return (
-                      <CurrencyChip key={code} $active={currency === code} onPress={() => setCurrency(code)}>
-                        <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || '🌐'}</Text>
-                        <BodyMedium
-                          $color={currency === code ? theme.colors.background : theme.colors.foreground}
-                          style={{ fontSize: 14 }}
-                        >
-                          {code}
-                        </BodyMedium>
-                      </CurrencyChip>
-                    );
-                  })}
-                </View>
-              </ScrollView>
-            )}
-          </View>
-
-          {/* Optional wallet currency conversion */}
-          <SectionCard>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
-              <View style={{ flex: 1, paddingRight: theme.spacing.md }}>
-                <BodyMedium style={{ fontSize: 14 }}>{t('convertCurrency')}</BodyMedium>
-                <Caption style={{ marginTop: 4 }}>{`${t('walletCurrency')} (${t('optional')})`}</Caption>
-              </View>
-              <Toggle value={enableTargetConversion} onValueChange={setEnableTargetConversion} />
-            </View>
-
-            {enableTargetConversion ? (
-              <>
-                <Caption style={{ marginBottom: theme.spacing.sm }}>{t('selectWalletCurrency')}</Caption>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-                    {availableWalletCurrencies.map((code) => {
+          {step === 'currency' && (
+            <>
+              <View style={{ marginBottom: theme.spacing.xl }}>
+                <Caption style={{ marginBottom: theme.spacing.sm }}>{t('currency') || 'Currency'}</Caption>
+                {isDesktop ? (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
+                    {CURRENCIES.map((code) => {
                       const display = getCurrencyDisplay(code);
-                      const isSelected = walletCurrency === code;
-                      const isSame = code === currency;
                       return (
-                        <CurrencyChip key={code} $active={isSelected} $dim={isSame} onPress={() => setWalletCurrency(code)}>
+                        <CurrencyChip key={code} $active={currency === code} onPress={() => setCurrency(code)}>
                           <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || '🌐'}</Text>
                           <BodyMedium
-                            $color={isSelected ? theme.colors.background : theme.colors.foreground}
+                            $color={currency === code ? theme.colors.background : theme.colors.foreground}
                             style={{ fontSize: 14 }}
                           >
                             {code}
@@ -484,40 +562,98 @@ export default function AddTransactionScreen() {
                       );
                     })}
                   </View>
-                </ScrollView>
-
-                {walletCurrency === currency && (
-                  <Caption style={{ marginTop: theme.spacing.md }}>{t('selectWalletCurrency')}</Caption>
+                ) : (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+                      {CURRENCIES.map((code) => {
+                        const display = getCurrencyDisplay(code);
+                        return (
+                          <CurrencyChip key={code} $active={currency === code} onPress={() => setCurrency(code)}>
+                            <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || '🌐'}</Text>
+                            <BodyMedium
+                              $color={currency === code ? theme.colors.background : theme.colors.foreground}
+                              style={{ fontSize: 14 }}
+                            >
+                              {code}
+                            </BodyMedium>
+                          </CurrencyChip>
+                        );
+                      })}
+                    </View>
+                  </ScrollView>
                 )}
+              </View>
 
-                {shouldFetchConversionPreview && (
-                  <View style={{
-                    marginTop: theme.spacing.md,
-                    backgroundColor: theme.colors.secondary + '66',
-                    borderWidth: 1, borderColor: theme.colors.border,
-                    borderRadius: theme.radii.md, padding: theme.spacing.md,
-                  }}>
-                    <BodyMedium style={{ fontSize: 14, marginBottom: theme.spacing.sm }}>{t('conversionPreview')}</BodyMedium>
-                    {isLoadingConversionPreview ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <ActivityIndicator size="small" color={theme.colors.accent} />
-                        <Caption style={{ marginLeft: theme.spacing.sm }}>{t('converting')}</Caption>
-                      </View>
-                    ) : isConversionPreviewError ? (
-                      <Caption $color={theme.colors.danger}>{t('conversionFailed')}</Caption>
-                    ) : conversionPreview ? (
-                      <View>
-                        <Caption>{`${formatCompactCurrency(parsedAmount, currency)} -> ${formatCompactCurrency(conversionPreview.result, walletCurrency)}`}</Caption>
-                        <Caption style={{ marginTop: 4 }}>{`${t('rate')}: 1 ${currency} = ${conversionPreview.rate.toFixed(4)} ${walletCurrency}`}</Caption>
-                      </View>
-                    ) : null}
+              {/* Optional wallet currency conversion */}
+              <SectionCard>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
+                  <View style={{ flex: 1, paddingRight: theme.spacing.md }}>
+                    <BodyMedium style={{ fontSize: 14 }}>{t('convertCurrency')}</BodyMedium>
+                    <Caption style={{ marginTop: 4 }}>{`${t('walletCurrency')} (${t('optional')})`}</Caption>
                   </View>
-                )}
-              </>
-            ) : null}
-          </SectionCard>
+                  <Toggle value={enableTargetConversion} onValueChange={setEnableTargetConversion} />
+                </View>
+
+                {enableTargetConversion ? (
+                  <>
+                    <Caption style={{ marginBottom: theme.spacing.sm }}>{t('selectWalletCurrency')}</Caption>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+                        {availableWalletCurrencies.map((code) => {
+                          const display = getCurrencyDisplay(code);
+                          const isSelected = walletCurrency === code;
+                          const isSame = code === currency;
+                          return (
+                            <CurrencyChip key={code} $active={isSelected} $dim={isSame} onPress={() => setWalletCurrency(code)}>
+                              <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || '🌐'}</Text>
+                              <BodyMedium
+                                $color={isSelected ? theme.colors.background : theme.colors.foreground}
+                                style={{ fontSize: 14 }}
+                              >
+                                {code}
+                              </BodyMedium>
+                            </CurrencyChip>
+                          );
+                        })}
+                      </View>
+                    </ScrollView>
+
+                    {walletCurrency === currency && (
+                      <Caption style={{ marginTop: theme.spacing.md }}>{t('selectWalletCurrency')}</Caption>
+                    )}
+
+                    {shouldFetchConversionPreview && (
+                      <View style={{
+                        marginTop: theme.spacing.md,
+                        backgroundColor: theme.colors.secondary + '66',
+                        borderWidth: 1, borderColor: theme.colors.border,
+                        borderRadius: theme.radii.md, padding: theme.spacing.md,
+                      }}>
+                        <BodyMedium style={{ fontSize: 14, marginBottom: theme.spacing.sm }}>{t('conversionPreview')}</BodyMedium>
+                        {isLoadingConversionPreview ? (
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <ActivityIndicator size="small" color={theme.colors.accent} />
+                            <Caption style={{ marginLeft: theme.spacing.sm }}>{t('converting')}</Caption>
+                          </View>
+                        ) : isConversionPreviewError ? (
+                          <Caption $color={theme.colors.danger}>{t('conversionFailed')}</Caption>
+                        ) : conversionPreview ? (
+                          <View>
+                            <Caption>{`${formatCompactCurrency(parsedAmount, currency)} -> ${formatCompactCurrency(conversionPreview.result, walletCurrency)}`}</Caption>
+                            <Caption style={{ marginTop: 4 }}>{`${t('rate')}: 1 ${currency} = ${conversionPreview.rate.toFixed(4)} ${walletCurrency}`}</Caption>
+                          </View>
+                        ) : null}
+                      </View>
+                    )}
+                  </>
+                ) : null}
+              </SectionCard>
+            </>
+          )}
 
           {/* Category */}
+          {step === 'category' && (
+            <>
           <SectionCard>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
               <Caption>{t('category')}</Caption>
@@ -687,16 +823,96 @@ export default function AddTransactionScreen() {
               } as any}
             />
           </View>
+          </>
+          )}
 
-          {/* Submit Button */}
-          <Button
-            variant="accent"
-            onPress={handleSubmit}
-            isLoading={mutation.isPending}
-            leftIcon={<Check size={18} color={theme.colors.primaryForeground} />}
-          >
-            {t('saveTransaction') || 'Save Transaction'}
-          </Button>
+          {step === 'review' && (
+            <SectionCard>
+              <Caption style={{ marginBottom: theme.spacing.md }}>{t('review') || 'Review'}</Caption>
+
+              <View style={{ marginBottom: theme.spacing.md }}>
+                <BodyMedium style={{ marginBottom: 4 }}>{t('transactionType') || 'Transaction Type'}</BodyMedium>
+                <Caption>{type === 'credit' ? (t('income') || 'Income') : (t('expense') || 'Expense')}</Caption>
+              </View>
+
+              <View style={{ marginBottom: theme.spacing.md }}>
+                <BodyMedium style={{ marginBottom: 4 }}>{t('amount') || 'Amount'}</BodyMedium>
+                <Caption>{formatCompactCurrency(parsedAmount || 0, currency)}</Caption>
+              </View>
+
+              <View style={{ marginBottom: theme.spacing.md }}>
+                <BodyMedium style={{ marginBottom: 4 }}>{t('walletCurrency') || 'Wallet Currency'}</BodyMedium>
+                <Caption>
+                  {enableTargetConversion && walletCurrency !== currency
+                    ? `${walletCurrency} (${t('convertCurrency') || 'conversion enabled'})`
+                    : currency}
+                </Caption>
+              </View>
+
+              <View style={{ marginBottom: theme.spacing.md }}>
+                <BodyMedium style={{ marginBottom: 4 }}>{t('category') || 'Category'}</BodyMedium>
+                <Caption>{resolveCategoryLabel(category)}</Caption>
+              </View>
+
+              <View style={{ marginBottom: theme.spacing.md }}>
+                <BodyMedium style={{ marginBottom: 4 }}>{t('description') || 'Description'}</BodyMedium>
+                <Caption>{description.trim() || (t('optional') || 'Optional')}</Caption>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.sm }}>
+                <Pressable
+                  onPress={() => setStep('basics')}
+                  style={({ pressed }) => [{ paddingHorizontal: 10, paddingVertical: 8, borderRadius: theme.radii.md, borderWidth: 1, borderColor: theme.colors.border }, pressed && { opacity: 0.76 }]}
+                >
+                  <Caption>{STEP_LABELS.basics}</Caption>
+                </Pressable>
+                <Pressable
+                  onPress={() => setStep('currency')}
+                  style={({ pressed }) => [{ paddingHorizontal: 10, paddingVertical: 8, borderRadius: theme.radii.md, borderWidth: 1, borderColor: theme.colors.border }, pressed && { opacity: 0.76 }]}
+                >
+                  <Caption>{STEP_LABELS.currency}</Caption>
+                </Pressable>
+                <Pressable
+                  onPress={() => setStep('category')}
+                  style={({ pressed }) => [{ paddingHorizontal: 10, paddingVertical: 8, borderRadius: theme.radii.md, borderWidth: 1, borderColor: theme.colors.border }, pressed && { opacity: 0.76 }]}
+                >
+                  <Caption>{STEP_LABELS.category}</Caption>
+                </Pressable>
+              </View>
+            </SectionCard>
+          )}
+
+          <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+            <Button
+              variant="outline"
+              onPress={goToPreviousStep}
+              disabled={stepIndex <= 0 || mutation.isPending}
+              style={{ flex: 1 } as any}
+            >
+              {t('back') || 'Back'}
+            </Button>
+
+            {step === 'review' ? (
+              <Button
+                variant="accent"
+                onPress={handleSubmit}
+                isLoading={mutation.isPending}
+                leftIcon={<Check size={18} color={theme.colors.primaryForeground} />}
+                style={{ flex: 2 } as any}
+              >
+                {t('saveTransaction') || 'Save Transaction'}
+              </Button>
+            ) : (
+              <Button
+                variant="accent"
+                onPress={goToNextStep}
+                disabled={mutation.isPending}
+                style={{ flex: 2 } as any}
+              >
+                {t('next') || 'Next'}
+              </Button>
+            )}
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>

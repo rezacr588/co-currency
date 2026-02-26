@@ -1891,7 +1891,7 @@ export default function AIChatScreen() {
                   <Text style={{ fontSize: 11, color: colors.foreground, marginLeft: 5 }}>Usage</Text>
                 </Pressable>
                 <Pressable
-                  onPress={() => router.push('/planner' as any)}
+                  onPress={() => router.push('/todo' as any)}
                   style={({ pressed }) => [
                     {
                       backgroundColor: colors.secondary,

@@ -16,6 +16,8 @@ export const ROUTES = {
   googleCallback: '/auth/google/callback',
 
   // Authenticated routes (tabs)
+  finappHome: '/finapp',
+  todoHome: '/todo',
   dashboard: '/(app)/(tabs)',
   wallet: '/(app)/(tabs)/wallet',
   walletAdd: '/(app)/(tabs)/wallet/add',
@@ -31,6 +33,7 @@ export const ROUTES = {
   recurring: '/(app)/recurring',
   subscriptions: '/(app)/subscriptions',
   badges: '/(app)/badges',
+  planner: '/planner',
 } as const;
 
 export type RouteKey = keyof typeof ROUTES;
