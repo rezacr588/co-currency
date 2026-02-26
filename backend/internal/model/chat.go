@@ -17,30 +17,104 @@ type ChatConversation struct {
 
 // ChatMessage represents a message in a conversation
 type ChatMessage struct {
-	ID             uuid.UUID `json:"id"`
-	ConversationID uuid.UUID `json:"conversation_id"`
-	Role           string    `json:"role"` // "user" or "assistant"
-	Content        string    `json:"content"`
-	TokensUsed     int       `json:"tokens_used,omitempty"`
-	CreatedAt      time.Time `json:"created_at"`
+	ID               uuid.UUID `json:"id"`
+	ConversationID   uuid.UUID `json:"conversation_id"`
+	Role             string    `json:"role"` // "user" or "assistant"
+	Content          string    `json:"content"`
+	TokensUsed       int       `json:"tokens_used,omitempty"`
+	Provider         string    `json:"provider,omitempty"`
+	Model            string    `json:"model,omitempty"`
+	ThinkingMode     string    `json:"thinking_mode,omitempty"`
+	PromptTokens     int       `json:"prompt_tokens,omitempty"`
+	CompletionTokens int       `json:"completion_tokens,omitempty"`
+	TotalTokens      int       `json:"total_tokens,omitempty"`
+	EstimatedCostUSD *float64  `json:"estimated_cost_usd,omitempty"`
+	BilledCostUSD    *float64  `json:"billed_cost_usd,omitempty"`
+	BillingSource    string    `json:"billing_source,omitempty"`
+	CreatedAt        time.Time `json:"created_at"`
+}
+
+type ChatThinkingMode string
+
+const (
+	ChatThinkingModeAuto     ChatThinkingMode = "auto"
+	ChatThinkingModeFast     ChatThinkingMode = "fast"
+	ChatThinkingModeThinking ChatThinkingMode = "thinking"
+)
+
+func (m ChatThinkingMode) IsValid() bool {
+	return m == ChatThinkingModeAuto || m == ChatThinkingModeFast || m == ChatThinkingModeThinking
 }
 
 // ChatRequest represents a new chat message request
 type ChatRequest struct {
-	ConversationID string `json:"conversation_id,omitempty"`
-	Message        string `json:"message"`
+	ConversationID string           `json:"conversation_id,omitempty"`
+	Message        string           `json:"message"`
+	ThinkingMode   ChatThinkingMode `json:"thinking_mode,omitempty"`
 	// File attachment (populated from multipart form, not JSON)
 	FileData     []byte `json:"-"`
 	FileMimeType string `json:"-"`
 	FileName     string `json:"-"`
 }
 
+type ChatUsage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	TotalTokens      int `json:"total_tokens"`
+}
+
+type ChatUsageTotals struct {
+	Messages         int     `json:"messages"`
+	PromptTokens     int     `json:"prompt_tokens"`
+	CompletionTokens int     `json:"completion_tokens"`
+	TotalTokens      int     `json:"total_tokens"`
+	EstimatedCostUSD float64 `json:"estimated_cost_usd"`
+	BilledCostUSD    float64 `json:"billed_cost_usd"`
+}
+
+type ChatUsageDaily struct {
+	Day              string  `json:"day"`
+	Messages         int     `json:"messages"`
+	PromptTokens     int     `json:"prompt_tokens"`
+	CompletionTokens int     `json:"completion_tokens"`
+	TotalTokens      int     `json:"total_tokens"`
+	EstimatedCostUSD float64 `json:"estimated_cost_usd"`
+	BilledCostUSD    float64 `json:"billed_cost_usd"`
+}
+
+type ChatUsageByModel struct {
+	Provider         string  `json:"provider"`
+	Model            string  `json:"model"`
+	Messages         int     `json:"messages"`
+	PromptTokens     int     `json:"prompt_tokens"`
+	CompletionTokens int     `json:"completion_tokens"`
+	TotalTokens      int     `json:"total_tokens"`
+	EstimatedCostUSD float64 `json:"estimated_cost_usd"`
+	BilledCostUSD    float64 `json:"billed_cost_usd"`
+	BillingSource    string  `json:"billing_source"`
+}
+
+type ChatUsageSummary struct {
+	Days     int                `json:"days"`
+	Totals   ChatUsageTotals    `json:"totals"`
+	Daily    []ChatUsageDaily   `json:"daily"`
+	ByModel  []ChatUsageByModel `json:"by_model"`
+	Currency string             `json:"currency"`
+}
+
 // ChatResponse represents the response from the AI
 type ChatResponse struct {
-	ConversationID string      `json:"conversation_id"`
-	Message        ChatMessage `json:"message"`
-	TokensUsed     int         `json:"tokens_used,omitempty"`
-	TraceID        string      `json:"trace_id,omitempty"`
+	ConversationID   string      `json:"conversation_id"`
+	Message          ChatMessage `json:"message"`
+	TokensUsed       int         `json:"tokens_used,omitempty"`
+	Provider         string      `json:"provider,omitempty"`
+	Model            string      `json:"model,omitempty"`
+	ThinkingMode     string      `json:"thinking_mode,omitempty"`
+	Usage            ChatUsage   `json:"usage,omitempty"`
+	EstimatedCostUSD *float64    `json:"estimated_cost_usd,omitempty"`
+	BilledCostUSD    *float64    `json:"billed_cost_usd,omitempty"`
+	BillingSource    string      `json:"billing_source,omitempty"`
+	TraceID          string      `json:"trace_id,omitempty"`
 }
 
 // ConversationWithMessages represents a conversation with its messages

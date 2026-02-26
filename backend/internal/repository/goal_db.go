@@ -30,8 +30,14 @@ func NewGoalRepository(db *Database) *GoalRepository {
 // Create creates a new goal
 func (r *GoalRepository) Create(ctx context.Context, goal *model.Goal) error {
 	query := `
-		INSERT INTO goals (id, user_id, name, goal_type, description, target_amount, current_amount, currency, unit, category, deadline, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		INSERT INTO goals (
+			id, user_id, name, goal_type, description, target_amount, current_amount, currency, unit, category,
+			workflow_status, sort_order, deadline, created_at, updated_at
+		)
+		VALUES (
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+			$11, $12, $13, $14, $15
+		)
 	`
 
 	goal.ID = uuid.New()
@@ -40,6 +46,9 @@ func (r *GoalRepository) Create(ctx context.Context, goal *model.Goal) error {
 	goal.UpdatedAt = now
 	if goal.Type == "" {
 		goal.Type = model.GoalTypeFinancial
+	}
+	if goal.WorkflowStatus == "" {
+		goal.WorkflowStatus = model.GoalWorkflowStatusTodo
 	}
 
 	_, err := r.pool.Exec(ctx, query,
@@ -53,6 +62,8 @@ func (r *GoalRepository) Create(ctx context.Context, goal *model.Goal) error {
 		nullableString(goal.Currency),
 		nullableString(goal.Unit),
 		nullableString(goal.Category),
+		goal.WorkflowStatus,
+		goal.SortOrder,
 		goal.Deadline,
 		goal.CreatedAt,
 		goal.UpdatedAt,
@@ -68,7 +79,7 @@ func (r *GoalRepository) Create(ctx context.Context, goal *model.Goal) error {
 // GetByID retrieves a goal by ID for a user
 func (r *GoalRepository) GetByID(ctx context.Context, userID, goalID uuid.UUID) (*model.Goal, error) {
 	query := `
-		SELECT id, user_id, name, goal_type, description, target_amount, current_amount, currency, unit, category, deadline, created_at, updated_at
+		SELECT id, user_id, name, goal_type, description, target_amount, current_amount, currency, unit, category, workflow_status, sort_order, deadline, created_at, updated_at
 		FROM goals
 		WHERE id = $1 AND user_id = $2
 	`
@@ -79,6 +90,7 @@ func (r *GoalRepository) GetByID(ctx context.Context, userID, goalID uuid.UUID) 
 	var currency *string
 	var unit *string
 	var category *string
+	var workflowStatus string
 	var deadline *time.Time
 
 	err := r.pool.QueryRow(ctx, query, goalID, userID).Scan(
@@ -92,6 +104,8 @@ func (r *GoalRepository) GetByID(ctx context.Context, userID, goalID uuid.UUID) 
 		&currency,
 		&unit,
 		&category,
+		&workflowStatus,
+		&goal.SortOrder,
 		&deadline,
 		&goal.CreatedAt,
 		&goal.UpdatedAt,
@@ -104,7 +118,7 @@ func (r *GoalRepository) GetByID(ctx context.Context, userID, goalID uuid.UUID) 
 		return nil, fmt.Errorf("getting goal: %w", err)
 	}
 
-	assignGoalOptionalFields(goal, goalType, description, currency, unit, category, deadline)
+	assignGoalOptionalFields(goal, goalType, description, currency, unit, category, workflowStatus, deadline)
 
 	return goal, nil
 }
@@ -112,7 +126,7 @@ func (r *GoalRepository) GetByID(ctx context.Context, userID, goalID uuid.UUID) 
 // GetByUser retrieves all goals for a user
 func (r *GoalRepository) GetByUser(ctx context.Context, userID uuid.UUID) ([]model.Goal, error) {
 	query := `
-		SELECT id, user_id, name, goal_type, description, target_amount, current_amount, currency, unit, category, deadline, created_at, updated_at
+		SELECT id, user_id, name, goal_type, description, target_amount, current_amount, currency, unit, category, workflow_status, sort_order, deadline, created_at, updated_at
 		FROM goals
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -132,6 +146,7 @@ func (r *GoalRepository) GetByUser(ctx context.Context, userID uuid.UUID) ([]mod
 		var currency *string
 		var unit *string
 		var category *string
+		var workflowStatus string
 		var deadline *time.Time
 
 		if err := rows.Scan(
@@ -145,6 +160,8 @@ func (r *GoalRepository) GetByUser(ctx context.Context, userID uuid.UUID) ([]mod
 			&currency,
 			&unit,
 			&category,
+			&workflowStatus,
+			&g.SortOrder,
 			&deadline,
 			&g.CreatedAt,
 			&g.UpdatedAt,
@@ -152,7 +169,7 @@ func (r *GoalRepository) GetByUser(ctx context.Context, userID uuid.UUID) ([]mod
 			return nil, fmt.Errorf("scanning goal: %w", err)
 		}
 
-		assignGoalOptionalFields(&g, goalType, description, currency, unit, category, deadline)
+		assignGoalOptionalFields(&g, goalType, description, currency, unit, category, workflowStatus, deadline)
 
 		goals = append(goals, g)
 	}
@@ -168,13 +185,16 @@ func (r *GoalRepository) GetByUser(ctx context.Context, userID uuid.UUID) ([]mod
 func (r *GoalRepository) Update(ctx context.Context, goal *model.Goal) error {
 	query := `
 		UPDATE goals
-		SET name = $1, goal_type = $2, description = $3, target_amount = $4, currency = $5, unit = $6, category = $7, deadline = $8, updated_at = $9
-		WHERE id = $10 AND user_id = $11
+		SET name = $1, goal_type = $2, description = $3, target_amount = $4, current_amount = $5, currency = $6, unit = $7, category = $8, workflow_status = $9, sort_order = $10, deadline = $11, updated_at = $12
+		WHERE id = $13 AND user_id = $14
 	`
 
 	goal.UpdatedAt = time.Now()
 	if goal.Type == "" {
 		goal.Type = model.GoalTypeFinancial
+	}
+	if goal.WorkflowStatus == "" {
+		goal.WorkflowStatus = model.GoalWorkflowStatusTodo
 	}
 
 	result, err := r.pool.Exec(ctx, query,
@@ -182,9 +202,12 @@ func (r *GoalRepository) Update(ctx context.Context, goal *model.Goal) error {
 		goal.Type,
 		nullableString(goal.Description),
 		goal.TargetAmount,
+		goal.CurrentAmount,
 		nullableString(goal.Currency),
 		nullableString(goal.Unit),
 		nullableString(goal.Category),
+		goal.WorkflowStatus,
+		goal.SortOrder,
 		goal.Deadline,
 		goal.UpdatedAt,
 		goal.ID,
@@ -208,7 +231,7 @@ func (r *GoalRepository) UpdateCurrentAmount(ctx context.Context, userID, goalID
 		UPDATE goals
 		SET current_amount = current_amount + $1, updated_at = $2
 		WHERE id = $3 AND user_id = $4
-		RETURNING id, user_id, name, goal_type, description, target_amount, current_amount, currency, unit, category, deadline, created_at, updated_at
+		RETURNING id, user_id, name, goal_type, description, target_amount, current_amount, currency, unit, category, workflow_status, sort_order, deadline, created_at, updated_at
 	`
 
 	goal := &model.Goal{}
@@ -217,6 +240,7 @@ func (r *GoalRepository) UpdateCurrentAmount(ctx context.Context, userID, goalID
 	var currency *string
 	var unit *string
 	var category *string
+	var workflowStatus string
 	var deadline *time.Time
 	now := time.Now()
 
@@ -231,6 +255,8 @@ func (r *GoalRepository) UpdateCurrentAmount(ctx context.Context, userID, goalID
 		&currency,
 		&unit,
 		&category,
+		&workflowStatus,
+		&goal.SortOrder,
 		&deadline,
 		&goal.CreatedAt,
 		&goal.UpdatedAt,
@@ -243,7 +269,7 @@ func (r *GoalRepository) UpdateCurrentAmount(ctx context.Context, userID, goalID
 		return nil, fmt.Errorf("updating goal amount: %w", err)
 	}
 
-	assignGoalOptionalFields(goal, goalType, description, currency, unit, category, deadline)
+	assignGoalOptionalFields(goal, goalType, description, currency, unit, category, workflowStatus, deadline)
 
 	return goal, nil
 }
@@ -322,13 +348,14 @@ func (r *GoalRepository) ContributeFromWallet(ctx context.Context, userID, goalI
 	var goalCurrencyResult *string
 	var unit *string
 	var category *string
+	var workflowStatus string
 	var deadline *time.Time
 
 	err = tx.QueryRow(ctx, `
 		UPDATE goals
 		SET current_amount = current_amount + $1, updated_at = $2
 		WHERE id = $3 AND user_id = $4
-		RETURNING id, user_id, name, goal_type, description, target_amount, current_amount, currency, unit, category, deadline, created_at, updated_at
+		RETURNING id, user_id, name, goal_type, description, target_amount, current_amount, currency, unit, category, workflow_status, sort_order, deadline, created_at, updated_at
 	`, amount, now, goalID, userID).Scan(
 		&goal.ID,
 		&goal.UserID,
@@ -340,6 +367,8 @@ func (r *GoalRepository) ContributeFromWallet(ctx context.Context, userID, goalI
 		&goalCurrencyResult,
 		&unit,
 		&category,
+		&workflowStatus,
+		&goal.SortOrder,
 		&deadline,
 		&goal.CreatedAt,
 		&goal.UpdatedAt,
@@ -348,7 +377,7 @@ func (r *GoalRepository) ContributeFromWallet(ctx context.Context, userID, goalI
 		return nil, nil, fmt.Errorf("updating goal: %w", err)
 	}
 
-	assignGoalOptionalFields(goal, goalType, description, goalCurrencyResult, unit, category, deadline)
+	assignGoalOptionalFields(goal, goalType, description, goalCurrencyResult, unit, category, workflowStatus, deadline)
 
 	// Record transaction
 	transaction := &model.Transaction{
@@ -378,7 +407,7 @@ func (r *GoalRepository) ContributeFromWallet(ctx context.Context, userID, goalI
 	return goal, transaction, nil
 }
 
-func assignGoalOptionalFields(goal *model.Goal, goalType string, description, currency, unit, category *string, deadline *time.Time) {
+func assignGoalOptionalFields(goal *model.Goal, goalType string, description, currency, unit, category *string, workflowStatus string, deadline *time.Time) {
 	goal.Type = model.GoalType(goalType)
 	if goal.Type == "" {
 		goal.Type = model.GoalTypeFinancial
@@ -394,6 +423,10 @@ func assignGoalOptionalFields(goal *model.Goal, goalType string, description, cu
 	}
 	if category != nil {
 		goal.Category = *category
+	}
+	goal.WorkflowStatus = model.GoalWorkflowStatus(workflowStatus)
+	if goal.WorkflowStatus == "" {
+		goal.WorkflowStatus = model.GoalWorkflowStatusTodo
 	}
 	goal.Deadline = deadline
 }

@@ -8,8 +8,12 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/websocket"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/service"
 	"github.com/rezacr588/currency-converter/pkg/ctxkeys"
@@ -21,6 +25,10 @@ import (
 type AIChatHandler struct {
 	chatService *service.AIChatService
 	authService *service.AuthService
+}
+
+var aiChatWSUpgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
 // NewAIChatHandler creates a new AIChatHandler
@@ -39,6 +47,8 @@ func (h *AIChatHandler) RegisterRoutes(r chi.Router) {
 	r.Delete("/conversations/{id}", h.DeleteConversation)
 	r.Post("/chat", h.Chat)
 	r.Post("/chat/stream", h.ChatStream)
+	r.Get("/chat/realtime", h.ChatRealtime)
+	r.Get("/usage/summary", h.GetUsageSummary)
 }
 
 // ListConversations returns all conversations for the user
@@ -164,6 +174,9 @@ func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 		}
 		req.Message = r.FormValue("message")
 		req.ConversationID = r.FormValue("conversation_id")
+		if rawThinkingMode := strings.TrimSpace(r.FormValue("thinking_mode")); rawThinkingMode != "" {
+			req.ThinkingMode = model.ChatThinkingMode(rawThinkingMode)
+		}
 
 		// Handle file attachment
 		file, header, err := r.FormFile("file")
@@ -207,6 +220,14 @@ func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 
 	if len(req.Message) > maxChatMessageLength {
 		httputil.BadRequestWithContext(r.Context(), w, fmt.Sprintf("Message too long: %d characters, maximum is %d", len(req.Message), maxChatMessageLength), nil)
+		return
+	}
+	if req.ThinkingMode != "" && !req.ThinkingMode.IsValid() {
+		httputil.BadRequestWithContext(r.Context(), w, "Invalid thinking_mode (must be auto|fast|thinking)", nil)
+		return
+	}
+	if h.chatService == nil || h.authService == nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "AI chat service is unavailable", nil)
 		return
 	}
 
@@ -264,7 +285,7 @@ func (h *AIChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	response, err := h.chatService.Chat(r.Context(), userID, userName, req.ConversationID, req.Message)
+	response, err := h.chatService.Chat(r.Context(), userID, userName, req.ConversationID, req.Message, req.ThinkingMode)
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrInvalidConversationID):
@@ -310,6 +331,14 @@ func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 		httputil.BadRequestWithContext(r.Context(), w, fmt.Sprintf("Message too long: %d characters, maximum is %d", len(req.Message), maxChatMessageLength), nil)
 		return
 	}
+	if req.ThinkingMode != "" && !req.ThinkingMode.IsValid() {
+		httputil.BadRequestWithContext(r.Context(), w, "Invalid thinking_mode (must be auto|fast|thinking)", nil)
+		return
+	}
+	if h.chatService == nil || h.authService == nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "AI chat service is unavailable", nil)
+		return
+	}
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
@@ -318,17 +347,28 @@ func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Cache-Control", "no-cache, no-transform")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
 
+	// SSE prelude to reduce proxy/client buffering on mobile networks.
+	if _, err := fmt.Fprintf(w, ": %s\n\n", strings.Repeat(" ", 2048)); err == nil {
+		flusher.Flush()
+	}
+	if _, err := fmt.Fprint(w, "retry: 1500\n\n"); err == nil {
+		flusher.Flush()
+	}
+
+	var writeMu sync.Mutex
 	sendEvent := func(payload any) error {
 		data, err := json.Marshal(payload)
 		if err != nil {
 			return err
 		}
+		writeMu.Lock()
+		defer writeMu.Unlock()
 		if _, err := fmt.Fprintf(w, "data: %s\n\n", data); err != nil {
 			return err
 		}
@@ -343,12 +383,35 @@ func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 		userName = user.Name
 	}
 
+	stopHeartbeat := make(chan struct{})
+	defer close(stopHeartbeat)
+	go func() {
+		ticker := time.NewTicker(12 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				if err := sendEvent(map[string]interface{}{
+					"type":      "heartbeat",
+					"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
+					"trace_id":  traceID,
+				}); err != nil {
+					return
+				}
+			case <-stopHeartbeat:
+				return
+			}
+		}
+	}()
+
+	var traceSequence int64
 	response, err := h.chatService.ChatStream(
 		r.Context(),
 		userID,
 		userName,
 		req.ConversationID,
 		req.Message,
+		req.ThinkingMode,
 		func(conversationID string) {
 			if err := sendEvent(map[string]interface{}{
 				"type":            "start",
@@ -364,15 +427,42 @@ func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 				"content": chunk,
 			})
 		},
-		func(_ string, fields map[string]interface{}) {
+		func(stage string, fields map[string]interface{}) {
 			if !streamTrace {
 				return
 			}
+			sequenceID := atomic.AddInt64(&traceSequence, 1)
 			payload := map[string]interface{}{
-				"type": "trace",
+				"type":        "trace",
+				"sequence_id": sequenceID,
+				"timestamp":   time.Now().UTC().Format(time.RFC3339Nano),
+				"stage":       stage,
+				"trace_id":    traceID,
 			}
+			rawFields := map[string]interface{}{}
 			for k, v := range fields {
-				payload[k] = v
+				rawFields[k] = v
+			}
+			if len(rawFields) > 0 {
+				payload["raw"] = rawFields
+			}
+			if tool, ok := fields["tool"]; ok {
+				payload["tool_name"] = tool
+			}
+			if toolArgs, ok := fields["tool_args"]; ok {
+				payload["tool_args"] = toolArgs
+			}
+			if duration, ok := fields["duration_ms"]; ok {
+				payload["duration_ms"] = duration
+			}
+			if resultSize, ok := fields["result_size"]; ok {
+				payload["result_size"] = resultSize
+			}
+			if traceErr, ok := fields["error"]; ok {
+				payload["error"] = traceErr
+			}
+			if conversationID, ok := fields["conversation_id"]; ok {
+				payload["conversation_id"] = conversationID
 			}
 			if err := sendEvent(payload); err != nil {
 				log.Warn().Err(err).Str("trace_id", traceID).Msg("Failed to send SSE trace event")
@@ -400,13 +490,258 @@ func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 	response.TraceID = traceID
 
 	if err := sendEvent(map[string]interface{}{
-		"type":            "done",
-		"conversation_id": response.ConversationID,
-		"message":         response.Message,
-		"trace_id":        traceID,
+		"type":               "done",
+		"conversation_id":    response.ConversationID,
+		"message":            response.Message,
+		"provider":           response.Provider,
+		"model":              response.Model,
+		"thinking_mode":      response.ThinkingMode,
+		"usage":              response.Usage,
+		"estimated_cost_usd": response.EstimatedCostUSD,
+		"billed_cost_usd":    response.BilledCostUSD,
+		"billing_source":     response.BillingSource,
+		"trace_id":           traceID,
 	}); err != nil {
 		log.Error().Err(err).Str("conversation_id", response.ConversationID).Msg("Failed to send SSE done event")
 	}
+}
+
+// ChatRealtime streams AI responses over WebSocket. The client must send a single JSON
+// message after connecting: {"conversation_id":"...", "message":"...", "thinking_mode":"auto|fast|thinking"}.
+func (h *AIChatHandler) ChatRealtime(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+	if h.chatService == nil || h.authService == nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "AI chat service is unavailable", nil)
+		return
+	}
+
+	conn, err := aiChatWSUpgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to upgrade websocket connection")
+		return
+	}
+	defer conn.Close()
+
+	traceID := ctxkeys.GetTraceID(r.Context())
+	traceParam := strings.TrimSpace(strings.ToLower(r.URL.Query().Get("trace")))
+	streamTrace := traceParam == "1" || traceParam == "true" || traceParam == "yes"
+
+	var req model.ChatRequest
+	if err := conn.ReadJSON(&req); err != nil {
+		_ = conn.WriteJSON(map[string]interface{}{
+			"type":  "error",
+			"error": "Invalid initial websocket payload",
+		})
+		return
+	}
+
+	req.Message = strings.TrimSpace(req.Message)
+	if req.Message == "" {
+		_ = conn.WriteJSON(map[string]interface{}{
+			"type":  "error",
+			"error": "Message is required",
+		})
+		return
+	}
+	if len(req.Message) > maxChatMessageLength {
+		_ = conn.WriteJSON(map[string]interface{}{
+			"type":  "error",
+			"error": fmt.Sprintf("Message too long: %d characters, maximum is %d", len(req.Message), maxChatMessageLength),
+		})
+		return
+	}
+	if req.ThinkingMode != "" && !req.ThinkingMode.IsValid() {
+		_ = conn.WriteJSON(map[string]interface{}{
+			"type":  "error",
+			"error": "Invalid thinking_mode (must be auto|fast|thinking)",
+		})
+		return
+	}
+
+	user, err := h.authService.GetUserByID(r.Context(), userID)
+	userName := "User"
+	if err == nil && user != nil && user.Name != "" {
+		userName = user.Name
+	}
+
+	var writeMu sync.Mutex
+	writeEvent := func(payload any) error {
+		writeMu.Lock()
+		defer writeMu.Unlock()
+		return conn.WriteJSON(payload)
+	}
+
+	stopHeartbeat := make(chan struct{})
+	defer close(stopHeartbeat)
+	go func() {
+		ticker := time.NewTicker(12 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				if err := writeEvent(map[string]interface{}{
+					"type":      "heartbeat",
+					"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
+					"trace_id":  traceID,
+				}); err != nil {
+					return
+				}
+			case <-stopHeartbeat:
+				return
+			}
+		}
+	}()
+
+	var traceSequence int64
+	response, err := h.chatService.ChatStream(
+		r.Context(),
+		userID,
+		userName,
+		req.ConversationID,
+		req.Message,
+		req.ThinkingMode,
+		func(conversationID string) {
+			_ = writeEvent(map[string]interface{}{
+				"type":            "start",
+				"conversation_id": conversationID,
+				"trace_id":        traceID,
+			})
+		},
+		func(chunk string) error {
+			return writeEvent(map[string]interface{}{
+				"type":    "delta",
+				"content": chunk,
+			})
+		},
+		func(stage string, fields map[string]interface{}) {
+			if !streamTrace {
+				return
+			}
+			sequenceID := atomic.AddInt64(&traceSequence, 1)
+			payload := map[string]interface{}{
+				"type":        "trace",
+				"sequence_id": sequenceID,
+				"timestamp":   time.Now().UTC().Format(time.RFC3339Nano),
+				"stage":       stage,
+				"trace_id":    traceID,
+			}
+			rawFields := map[string]interface{}{}
+			for k, v := range fields {
+				rawFields[k] = v
+			}
+			if len(rawFields) > 0 {
+				payload["raw"] = rawFields
+			}
+			if tool, ok := fields["tool"]; ok {
+				payload["tool_name"] = tool
+			}
+			if toolArgs, ok := fields["tool_args"]; ok {
+				payload["tool_args"] = toolArgs
+			}
+			if duration, ok := fields["duration_ms"]; ok {
+				payload["duration_ms"] = duration
+			}
+			if resultSize, ok := fields["result_size"]; ok {
+				payload["result_size"] = resultSize
+			}
+			if traceErr, ok := fields["error"]; ok {
+				payload["error"] = traceErr
+			}
+			if conversationID, ok := fields["conversation_id"]; ok {
+				payload["conversation_id"] = conversationID
+			}
+			_ = writeEvent(payload)
+		},
+	)
+	if err != nil {
+		message := err.Error()
+		if errors.Is(err, service.ErrInvalidConversationID) {
+			message = "Invalid conversation ID"
+		} else if errors.Is(err, service.ErrConversationNotFound) {
+			message = "Conversation not found"
+		} else if isAIProviderError(err) {
+			message = "AI service is unavailable. Please try again later."
+		}
+		_ = writeEvent(map[string]interface{}{
+			"type":     "error",
+			"error":    message,
+			"trace_id": traceID,
+		})
+		return
+	}
+
+	response.TraceID = traceID
+	_ = writeEvent(map[string]interface{}{
+		"type":               "done",
+		"conversation_id":    response.ConversationID,
+		"message":            response.Message,
+		"provider":           response.Provider,
+		"model":              response.Model,
+		"thinking_mode":      response.ThinkingMode,
+		"usage":              response.Usage,
+		"estimated_cost_usd": response.EstimatedCostUSD,
+		"billed_cost_usd":    response.BilledCostUSD,
+		"billing_source":     response.BillingSource,
+		"trace_id":           traceID,
+	})
+}
+
+// GetUsageSummary returns per-user token and cost usage for assistant messages.
+func (h *AIChatHandler) GetUsageSummary(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+	if h.chatService == nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "AI chat service is unavailable", nil)
+		return
+	}
+
+	days, err := parseUsageSummaryDays(r.URL.Query().Get("days"), r.URL.Query().Get("range"))
+	if err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, err.Error(), err)
+		return
+	}
+
+	summary, err := h.chatService.GetUsageSummary(r.Context(), userID, days)
+	if err != nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get usage summary", err)
+		return
+	}
+
+	httputil.Success(w, summary)
+}
+
+func parseUsageSummaryDays(daysParam, rangeParam string) (int, error) {
+	daysParam = strings.TrimSpace(daysParam)
+	rangeParam = strings.TrimSpace(strings.ToLower(rangeParam))
+
+	if daysParam == "" && rangeParam == "" {
+		return 7, nil
+	}
+
+	if rangeParam != "" {
+		switch rangeParam {
+		case "7d":
+			return 7, nil
+		case "30d":
+			return 30, nil
+		default:
+			return 0, fmt.Errorf("invalid range (supported: 7d, 30d)")
+		}
+	}
+
+	var days int
+	if _, err := fmt.Sscanf(daysParam, "%d", &days); err != nil {
+		return 0, fmt.Errorf("invalid days parameter")
+	}
+	if days < 1 || days > 365 {
+		return 0, fmt.Errorf("days must be between 1 and 365")
+	}
+	return days, nil
 }
 
 func normalizeChatFileMIME(contentType string, fileData []byte, fileName string) string {

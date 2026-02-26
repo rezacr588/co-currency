@@ -16,6 +16,7 @@ import {
   X,
   LogOut,
   ChevronRight,
+  KanbanSquare,
 } from 'lucide-react-native';
 import { useTheme } from '../../../src/context/ThemeContext';
 import { useTheme as useStyledTheme } from 'styled-components/native';
@@ -84,6 +85,7 @@ function DesktopSidebar({
   const toolsNavItems = [
     { icon: <Trophy size={20} color={colors.secondaryForeground} />, label: t('badges') || 'Badges', href: '/(app)/badges' },
     { icon: <History size={20} color={colors.secondaryForeground} />, label: t('historicalRates') || 'Historical', href: '/(app)/historical' },
+    { icon: <KanbanSquare size={20} color={colors.secondaryForeground} />, label: 'Planner', href: '/(app)/planner' },
   ];
 
   const isActiveRoute = (href: string) => {

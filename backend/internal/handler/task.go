@@ -123,6 +123,8 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrTaskTitleRequired) ||
 			errors.Is(err, service.ErrInvalidTaskStatus) ||
 			errors.Is(err, service.ErrInvalidTaskPriority) ||
+			errors.Is(err, service.ErrInvalidTaskReminderMode) ||
+			errors.Is(err, service.ErrInvalidTaskLedgerType) ||
 			isTaskValidationError(err) {
 			httputil.BadRequestWithContext(r.Context(), w, err.Error(), err)
 			return
@@ -172,6 +174,8 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrTaskTitleRequired) ||
 			errors.Is(err, service.ErrInvalidTaskStatus) ||
 			errors.Is(err, service.ErrInvalidTaskPriority) ||
+			errors.Is(err, service.ErrInvalidTaskReminderMode) ||
+			errors.Is(err, service.ErrInvalidTaskLedgerType) ||
 			isTaskValidationError(err) {
 			httputil.BadRequestWithContext(r.Context(), w, err.Error(), err)
 			return
@@ -240,6 +244,98 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// GetTaskTags handles GET /api/v1/tasks/{id}/tags
+func (h *TaskHandler) GetTaskTags(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+	taskID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "invalid task ID")
+		return
+	}
+	tags, err := h.taskService.GetTaskTags(r.Context(), userID, taskID)
+	if err != nil {
+		if errors.Is(err, repository.ErrTaskNotFound) {
+			httputil.NotFoundWithContext(r.Context(), w, "task not found")
+			return
+		}
+		httputil.BadRequestWithContext(r.Context(), w, err.Error(), err)
+		return
+	}
+	httputil.Success(w, map[string]interface{}{"tags": tags})
+}
+
+// AddTaskTag handles POST /api/v1/tasks/{id}/tags
+func (h *TaskHandler) AddTaskTag(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+	taskID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "invalid task ID")
+		return
+	}
+	var req struct {
+		TagID string `json:"tag_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
+		return
+	}
+	tagID, err := uuid.Parse(strings.TrimSpace(req.TagID))
+	if err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "invalid tag ID", err)
+		return
+	}
+	if err := h.taskService.AddTaskTag(r.Context(), userID, taskID, tagID); err != nil {
+		if errors.Is(err, repository.ErrTaskNotFound) {
+			httputil.NotFoundWithContext(r.Context(), w, "task not found")
+			return
+		}
+		if errors.Is(err, repository.ErrTagNotFound) {
+			httputil.NotFoundWithContext(r.Context(), w, "tag not found")
+			return
+		}
+		httputil.BadRequestWithContext(r.Context(), w, err.Error(), err)
+		return
+	}
+	httputil.Success(w, map[string]string{"message": "tag added to task"})
+}
+
+// RemoveTaskTag handles DELETE /api/v1/tasks/{id}/tags/{tagID}
+func (h *TaskHandler) RemoveTaskTag(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+	taskID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "invalid task ID")
+		return
+	}
+	tagID, err := uuid.Parse(chi.URLParam(r, "tagID"))
+	if err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "invalid tag ID")
+		return
+	}
+	if err := h.taskService.RemoveTaskTag(r.Context(), userID, taskID, tagID); err != nil {
+		if errors.Is(err, repository.ErrTaskNotFound) {
+			httputil.NotFoundWithContext(r.Context(), w, "task not found")
+			return
+		}
+		if errors.Is(err, repository.ErrTagNotFound) {
+			httputil.NotFoundWithContext(r.Context(), w, "tag not found")
+			return
+		}
+		httputil.BadRequestWithContext(r.Context(), w, err.Error(), err)
+		return
+	}
+	httputil.Success(w, map[string]string{"message": "tag removed from task"})
+}
+
 // GetTaskStatuses handles GET /api/v1/tasks/statuses
 func (h *TaskHandler) GetTaskStatuses(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, map[string]interface{}{
@@ -262,6 +358,11 @@ func isTaskValidationError(err error) bool {
 		"invalid due_date format",
 		"goal repository is not configured",
 		"wallet repository is not configured",
+		"subtasks cannot exceed",
+		"subtask #",
+		"ledger_amount must be positive",
+		"ledger_currency is required",
+		"auto-ledger transaction",
 	} {
 		if strings.Contains(msg, marker) {
 			return true

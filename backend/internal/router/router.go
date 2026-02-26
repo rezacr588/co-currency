@@ -23,6 +23,7 @@ type Handlers struct {
 	Goal          *handler.GoalHandler
 	Todo          *handler.TodoHandler
 	Task          *handler.TaskHandler
+	Planner       *handler.PlannerHandler
 	Tag           *handler.TagHandler
 	Budget        *handler.BudgetHandler
 	Recurring     *handler.RecurringHandler
@@ -120,6 +121,9 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 			r.Get("/transactions/{id}", h.Wallet.GetTransaction)
 			r.Put("/transactions/{id}", h.Wallet.UpdateTransaction)
 			r.Delete("/transactions/{id}", h.Wallet.DeleteTransaction)
+			r.Get("/transactions/{id}/tags", h.Wallet.GetTransactionTags)
+			r.Post("/transactions/{id}/tags", h.Wallet.AddTransactionTag)
+			r.Delete("/transactions/{id}/tags/{tagID}", h.Wallet.RemoveTransactionTag)
 			r.Get("/categories", h.Wallet.GetCategories)
 			r.Post("/categories", h.Wallet.CreateCategory)
 			r.Delete("/categories/{id}", h.Wallet.DeleteCategory)
@@ -180,6 +184,9 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 				r.Put("/{id}", h.Task.UpdateTask)
 				r.Delete("/{id}", h.Task.DeleteTask)
 				r.Post("/{id}/complete", h.Task.CompleteTask)
+				r.Get("/{id}/tags", h.Task.GetTaskTags)
+				r.Post("/{id}/tags", h.Task.AddTaskTag)
+				r.Delete("/{id}/tags/{tagID}", h.Task.RemoveTaskTag)
 			})
 		}
 
@@ -188,6 +195,16 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 			r.Route("/todo", func(r chi.Router) {
 				r.Use(authMiddleware.Middleware)
 				r.Get("/", h.Todo.GetTodoList)
+			})
+		}
+
+		// Planner board routes (protected)
+		if h.Planner != nil {
+			r.Route("/planner", func(r chi.Router) {
+				r.Use(authMiddleware.Middleware)
+				r.Get("/board", h.Planner.GetBoard)
+				r.Patch("/items/{type}/{id}/move", h.Planner.MoveItem)
+				r.Post("/goals/{id}/mark-done", h.Planner.MarkGoalDone)
 			})
 		}
 

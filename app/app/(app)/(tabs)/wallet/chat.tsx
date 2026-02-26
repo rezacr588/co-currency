@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
   Alert,
   StyleSheet,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,13 +27,18 @@ import {
   CheckCircle2,
   AlertTriangle,
   RotateCcw,
+  KanbanSquare,
+  Cpu,
+  Coins,
+  Activity,
+  Table2,
 } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { AttachmentButton, AttachmentPreview, useAttachmentPicker } from '../../../../src/components/features/Chat';
 import { VoiceRecorder } from '../../../../src/components/features/Chat';
-import type { ChatMessage, Conversation, ConversationWithMessages } from '../../../../src/api/chat';
+import type { ChatMessage, ChatStreamTraceEvent, Conversation, ConversationWithMessages } from '../../../../src/api/chat';
 import type { SmartParseResponse } from '../../../../src/types/wallet';
 import type { ConversionResult } from '../../../../src/types/currency';
 import type { Goal, RecurringTransaction } from '../../../../src/types/goal';
@@ -56,6 +62,37 @@ function getFriendlyErrorMessage(error: unknown): string {
     return 'Connection lost. Please check your internet and try again.';
   }
   return 'Something went wrong. Please try again.';
+}
+
+function extractFirstMarkdownTable(content: string): { body: string; table: string | null } {
+  const normalized = content.replace(/\r\n/g, '\n');
+  const lines = normalized.split('\n');
+
+  for (let i = 0; i < lines.length - 1; i++) {
+    const line = lines[i];
+    const divider = lines[i + 1];
+    const looksLikeHeader = line.includes('|');
+    const looksLikeDivider = /^\s*\|?[\s:-]+\|[\s|:-]*\s*$/.test(divider);
+    if (!looksLikeHeader || !looksLikeDivider) continue;
+
+    let end = i + 2;
+    while (end < lines.length && lines[end].includes('|')) {
+      end += 1;
+    }
+    const tableLines = lines.slice(i, end);
+    if (tableLines.length < 3) continue;
+
+    const table = tableLines.join('\n').trim();
+    const body = [...lines.slice(0, i), ...lines.slice(end)].join('\n').trim();
+    return { body, table };
+  }
+
+  return { body: normalized.trim(), table: null };
+}
+
+function formatUsd(value: number | undefined): string {
+  if (!value || Number.isNaN(value)) return '$0.0000';
+  return `$${value.toFixed(4)}`;
 }
 
 
@@ -128,6 +165,7 @@ export default function AIChatScreen() {
   } as const;
 
   const [message, setMessage] = useState('');
+  const [thinkingMode, setThinkingMode] = useState<'auto' | 'fast' | 'thinking'>('auto');
   const [isTyping, setIsTyping] = useState(false);
   const [streamingDraft, setStreamingDraft] = useState('');
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
@@ -142,6 +180,13 @@ export default function AIChatScreen() {
   const [editType, setEditType] = useState<'credit' | 'debit'>('debit');
   const [editCurrency, setEditCurrency] = useState('USD');
   const [editDescription, setEditDescription] = useState('');
+  const [liveTrace, setLiveTrace] = useState<ChatStreamTraceEvent[]>([]);
+  const [traceByMessageID, setTraceByMessageID] = useState<Record<string, ChatStreamTraceEvent[]>>({});
+  const [isActivityModalVisible, setIsActivityModalVisible] = useState(false);
+  const [selectedActivityMessageID, setSelectedActivityMessageID] = useState<string | null>(null);
+  const [isUsageModalVisible, setIsUsageModalVisible] = useState(false);
+  const [usageWindowDays, setUsageWindowDays] = useState<7 | 30>(7);
+  const [tableModalContent, setTableModalContent] = useState<{ title: string; markdown: string } | null>(null);
 
   const { attachment, isRecordingVoice, showPicker: showAttachmentPicker, clearAttachment, handleVoiceComplete, cancelVoice } = useAttachmentPicker();
 
@@ -149,14 +194,38 @@ export default function AIChatScreen() {
   const isNearBottomRef = useRef(true);
   const pendingMutationRef = useRef(false);
   const lastSentMessageRef = useRef<string>('');
+  const liveTraceRef = useRef<ChatStreamTraceEvent[]>([]);
+  const streamReplayTokenRef = useRef(0);
+  const cancelReplayStream = useCallback(() => {
+    streamReplayTokenRef.current += 1;
+  }, []);
   const clearStreamingState = useCallback(() => {
+    cancelReplayStream();
     setIsTyping(false);
     setStreamingDraft('');
-  }, []);
+  }, [cancelReplayStream]);
   const clearConversationTransientState = useCallback(() => {
     setPendingAction(null);
     setSendError(null);
     setStreamingDraft('');
+    liveTraceRef.current = [];
+    setLiveTrace([]);
+    setSelectedActivityMessageID(null);
+  }, []);
+  const replayMessageAsStream = useCallback(async (content: string) => {
+    if (!content) return;
+    const replayToken = streamReplayTokenRef.current + 1;
+    streamReplayTokenRef.current = replayToken;
+    const chunkSize = 28;
+    const frameMs = 14;
+    setIsTyping(false);
+    setStreamingDraft('');
+    for (let i = 0; i < content.length; i += chunkSize) {
+      if (streamReplayTokenRef.current !== replayToken) return;
+      const nextChunk = content.slice(i, i + chunkSize);
+      setStreamingDraft((prev) => prev + nextChunk);
+      await new Promise((resolve) => setTimeout(resolve, frameMs));
+    }
   }, []);
   const toMutationErrorMessage = useCallback(
     (err: unknown, fallback: string) => (err instanceof Error ? err.message : fallback),
@@ -315,6 +384,13 @@ export default function AIChatScreen() {
   const aiRateLimitPerMinute = aiStatus?.rate_limit_per_minute ?? 20;
   const aiRateLimitBurst = aiStatus?.rate_limit_burst ?? 5;
 
+  const { data: usageSummary, isLoading: isUsageSummaryLoading } = useQuery({
+    queryKey: ['ai-usage-summary', usageWindowDays],
+    queryFn: () => api.chat.getUsageSummary(usageWindowDays),
+    enabled: isUsageModalVisible && aiConfigured,
+    staleTime: 60 * 1000,
+  });
+
   // Fetch conversations list
   const { data: conversationsData } = useQuery({
     queryKey: ['ai-conversations'],
@@ -353,6 +429,7 @@ export default function AIChatScreen() {
         const result = await api.chat.sendMessageWithAttachment({
           conversation_id: realConversationId,
           message: msg,
+          thinking_mode: thinkingMode,
           file: attachment,
         });
         clearAttachment();
@@ -360,35 +437,51 @@ export default function AIChatScreen() {
       }
 
       try {
+        let deltaEvents = 0;
         const streamCallbacks: Parameters<typeof api.chat.sendMessageStream>[1] = {
+          onStart: (event) => {
+            liveTraceRef.current = [];
+            setLiveTrace([]);
+            if (__DEV__ && event.trace_id) {
+              console.debug(`[AI trace] stream start: ${event.trace_id}`);
+            }
+          },
           onDelta: (event) => {
+            deltaEvents += 1;
             setIsTyping(false);
             setStreamingDraft((prev) => prev + event.content);
           },
-        };
-        if (__DEV__) {
-          streamCallbacks.onStart = (event) => {
-            if (event.trace_id) {
-              console.debug(`[AI trace] stream start: ${event.trace_id}`);
+          onTrace: (event: ChatStreamTraceEvent) => {
+            liveTraceRef.current = [...liveTraceRef.current, event];
+            setLiveTrace(liveTraceRef.current);
+            if (__DEV__) {
+              console.debug('[AI trace]', event);
             }
-          };
-          streamCallbacks.onTrace = (event) => {
-            console.debug('[AI trace]', event);
-          };
-          streamCallbacks.onDone = (event) => {
-            if (event.trace_id) {
+          },
+          onDone: (event) => {
+            if (__DEV__ && event.trace_id) {
               console.debug(`[AI trace] stream done: ${event.trace_id}`);
             }
-          };
-        }
+            if (event.message?.id) {
+              const completedTrace = [...liveTraceRef.current];
+              setTraceByMessageID((prev) => ({ ...prev, [event.message.id]: completedTrace }));
+            }
+            liveTraceRef.current = [];
+            setLiveTrace([]);
+          },
+        };
 
         const result = await api.chat.sendMessageStream(
           {
             conversation_id: realConversationId,
             message: msg,
+            thinking_mode: thinkingMode,
           },
           streamCallbacks
         );
+        if (deltaEvents <= 1 && result?.message?.content) {
+          await replayMessageAsStream(result.message.content);
+        }
         clearAttachment();
         return result;
       } catch (streamErr) {
@@ -398,8 +491,11 @@ export default function AIChatScreen() {
     },
     onMutate: async (msg) => {
       pendingMutationRef.current = true;
+      cancelReplayStream();
       setIsTyping(true);
       setStreamingDraft('');
+      liveTraceRef.current = [];
+      setLiveTrace([]);
       setSendError(null);
       setLastFailedMessage(null);
       const now = new Date().toISOString();
@@ -468,6 +564,13 @@ export default function AIChatScreen() {
         console.error('Invalid response from server:', data);
         clearStreamingState();
         return;
+      }
+
+      if (liveTraceRef.current.length > 0 && data.message?.id) {
+        const finalTrace = [...liveTraceRef.current];
+        setTraceByMessageID((prev) => ({ ...prev, [data.message.id]: finalTrace }));
+        liveTraceRef.current = [];
+        setLiveTrace([]);
       }
 
       const serverConversationId = data.conversation_id;
@@ -564,6 +667,8 @@ export default function AIChatScreen() {
       lastSentMessageRef.current = ''; // Clear saved message on success
     },
     onError: (error, _msg, context) => {
+      liveTraceRef.current = [];
+      setLiveTrace([]);
       // Remove the optimistic user message on error
       if (context?.optimisticConversationId && context.optimisticMessageId) {
         queryClient.setQueryData<ConversationWithMessages | null>(
@@ -708,6 +813,9 @@ export default function AIChatScreen() {
 
   const messages: ChatMessage[] = currentConversation?.messages || [];
   const conversations: Conversation[] = conversationsData?.conversations || [];
+  const activeTraceEvents = selectedActivityMessageID
+    ? traceByMessageID[selectedActivityMessageID] || []
+    : liveTrace;
   const hasTypedMessage = message.trim().length > 0;
   const canSendMessage =
     (hasTypedMessage || !!attachment) &&
@@ -1598,9 +1706,98 @@ export default function AIChatScreen() {
                     {msg.content}
                   </Text>
                 ) : (
-                  <Markdown style={markdownStyles}>
-                    {msg.content}
-                  </Markdown>
+                  (() => {
+                    const { body, table } = extractFirstMarkdownTable(msg.content);
+                    const messageTrace = traceByMessageID[msg.id] || [];
+                    const tokenCount = msg.total_tokens || msg.tokens_used;
+                    const hasUsageMeta = Boolean(msg.provider || msg.model || msg.thinking_mode || tokenCount || msg.estimated_cost_usd || msg.billed_cost_usd);
+                    return (
+                      <View>
+                        {body ? (
+                          <Markdown style={markdownStyles}>
+                            {body}
+                          </Markdown>
+                        ) : null}
+
+                        {table ? (
+                          <Pressable
+                            onPress={() => setTableModalContent({ title: 'AI Table', markdown: table })}
+                            style={({ pressed }) => [{
+                              marginTop: 6,
+                              borderWidth: 1,
+                              borderColor: colors.border,
+                              borderRadius: 10,
+                              paddingVertical: 8,
+                              paddingHorizontal: 10,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              backgroundColor: colors.muted,
+                            }, pressed && { opacity: 0.75 }]}
+                          >
+                            <Table2 size={13} color={colors.accent} />
+                            <Text style={{ color: colors.foreground, marginLeft: 6, fontSize: 12, fontFamily: 'Inter_500Medium' }}>
+                              Open Table
+                            </Text>
+                          </Pressable>
+                        ) : null}
+
+                        {hasUsageMeta ? (
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                            {msg.provider || msg.model ? (
+                              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 7, paddingVertical: 4, borderRadius: 999, backgroundColor: colors.secondary }}>
+                                <Cpu size={11} color={colors.mutedForeground} />
+                                <Text style={{ color: colors.mutedForeground, fontSize: 10, marginLeft: 4 }} numberOfLines={1}>
+                                  {[msg.provider, msg.model].filter(Boolean).join(' · ')}
+                                </Text>
+                              </View>
+                            ) : null}
+                            {msg.thinking_mode ? (
+                              <View style={{ paddingHorizontal: 7, paddingVertical: 4, borderRadius: 999, backgroundColor: colors.secondary }}>
+                                <Text style={{ color: colors.mutedForeground, fontSize: 10 }}>{msg.thinking_mode}</Text>
+                              </View>
+                            ) : null}
+                            {tokenCount ? (
+                              <View style={{ paddingHorizontal: 7, paddingVertical: 4, borderRadius: 999, backgroundColor: colors.secondary }}>
+                                <Text style={{ color: colors.mutedForeground, fontSize: 10 }}>{tokenCount} tok</Text>
+                              </View>
+                            ) : null}
+                            {(msg.estimated_cost_usd || msg.billed_cost_usd) ? (
+                              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 7, paddingVertical: 4, borderRadius: 999, backgroundColor: colors.secondary }}>
+                                <Coins size={11} color={colors.mutedForeground} />
+                                <Text style={{ color: colors.mutedForeground, fontSize: 10, marginLeft: 4 }}>
+                                  {formatUsd(msg.billed_cost_usd ?? msg.estimated_cost_usd)} {msg.billing_source ? `(${msg.billing_source})` : ''}
+                                </Text>
+                              </View>
+                            ) : null}
+                          </View>
+                        ) : null}
+
+                        <Pressable
+                          onPress={() => {
+                            setSelectedActivityMessageID(msg.id);
+                            setIsActivityModalVisible(true);
+                          }}
+                          style={({ pressed }) => [{
+                            marginTop: 8,
+                            alignSelf: 'flex-start',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingHorizontal: 8,
+                            paddingVertical: 5,
+                            borderRadius: 999,
+                            borderWidth: 1,
+                            borderColor: colors.border,
+                            backgroundColor: colors.secondary,
+                          }, pressed && { opacity: 0.75 }]}
+                        >
+                          <Activity size={11} color={colors.mutedForeground} />
+                          <Text style={{ color: colors.mutedForeground, fontSize: 10, marginLeft: 4 }}>
+                            Agent Activity {messageTrace.length > 0 ? `(${messageTrace.length})` : ''}
+                          </Text>
+                        </Pressable>
+                      </View>
+                    );
+                  })()
                 )}
               </View>
             </View>
@@ -1651,25 +1848,87 @@ export default function AIChatScreen() {
                   </Text>
                 </View>
               </View>
-              <Pressable
-                onPress={handleNewConversation}
-                style={({ pressed }) => [
-                  {
-                    backgroundColor: colors.secondary,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                    paddingHorizontal: 12,
-                    paddingVertical: 7,
-                    borderRadius: 9999,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                  },
-                  pressed && { opacity: 0.74 },
-                ]}
-              >
-                <Plus size={14} color={colors.foreground} />
-                <Text style={{ fontSize: 12, color: colors.foreground, marginLeft: 6 }}>{t('newChat') || 'New Chat'}</Text>
-              </Pressable>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Pressable
+                  onPress={() => {
+                    setSelectedActivityMessageID(null);
+                    setIsActivityModalVisible(true);
+                  }}
+                  style={({ pressed }) => [
+                    {
+                      backgroundColor: colors.secondary,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      paddingHorizontal: 10,
+                      paddingVertical: 7,
+                      borderRadius: 9999,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                    },
+                    pressed && { opacity: 0.74 },
+                  ]}
+                >
+                  <Activity size={13} color={colors.foreground} />
+                  <Text style={{ fontSize: 11, color: colors.foreground, marginLeft: 5 }}>Activity</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setIsUsageModalVisible(true)}
+                  style={({ pressed }) => [
+                    {
+                      backgroundColor: colors.secondary,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      paddingHorizontal: 10,
+                      paddingVertical: 7,
+                      borderRadius: 9999,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                    },
+                    pressed && { opacity: 0.74 },
+                  ]}
+                >
+                  <Coins size={13} color={colors.foreground} />
+                  <Text style={{ fontSize: 11, color: colors.foreground, marginLeft: 5 }}>Usage</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push('/planner' as any)}
+                  style={({ pressed }) => [
+                    {
+                      backgroundColor: colors.secondary,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      paddingHorizontal: 10,
+                      paddingVertical: 7,
+                      borderRadius: 9999,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                    },
+                    pressed && { opacity: 0.74 },
+                  ]}
+                >
+                  <KanbanSquare size={13} color={colors.foreground} />
+                  <Text style={{ fontSize: 11, color: colors.foreground, marginLeft: 5 }}>Planner</Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleNewConversation}
+                  style={({ pressed }) => [
+                    {
+                      backgroundColor: colors.secondary,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      paddingHorizontal: 10,
+                      paddingVertical: 7,
+                      borderRadius: 9999,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                    },
+                    pressed && { opacity: 0.74 },
+                  ]}
+                >
+                  <Plus size={14} color={colors.foreground} />
+                  <Text style={{ fontSize: 11, color: colors.foreground, marginLeft: 6 }}>{t('newChat') || 'New Chat'}</Text>
+                </Pressable>
+              </View>
             </View>
 
             {/* Mobile Conversations Carousel */}
@@ -1778,6 +2037,30 @@ export default function AIChatScreen() {
                   <AttachmentPreview attachment={attachment} onRemove={clearAttachment} />
                 )}
 
+                <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
+                  {(['auto', 'fast', 'thinking'] as const).map((mode) => {
+                    const selected = thinkingMode === mode;
+                    return (
+                      <Pressable
+                        key={mode}
+                        onPress={() => setThinkingMode(mode)}
+                        style={({ pressed }) => [{
+                          paddingHorizontal: 9,
+                          paddingVertical: 5,
+                          borderRadius: 999,
+                          borderWidth: 1,
+                          borderColor: selected ? colors.accent : colors.border,
+                          backgroundColor: selected ? colors.accent + '22' : colors.card,
+                        }, pressed && { opacity: 0.75 }]}
+                      >
+                        <Text style={{ fontSize: 11, color: selected ? colors.accent : colors.mutedForeground, fontFamily: selected ? 'Inter_600SemiBold' : undefined }}>
+                          {mode}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
                 <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
                   {!isRecordingVoice && (
                     <View
@@ -1871,6 +2154,169 @@ export default function AIChatScreen() {
             </View>
           </View>
         </View>
+
+        <Modal
+          visible={isActivityModalVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setIsActivityModalVisible(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
+            <View style={{ maxHeight: '82%', backgroundColor: colors.background, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, borderColor: colors.border }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 16 }}>Agent Activity</Text>
+                <Pressable onPress={() => setIsActivityModalVisible(false)}>
+                  <Text style={{ color: colors.mutedForeground }}>Close</Text>
+                </Pressable>
+              </View>
+              <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: Math.max(insets.bottom, 18) }}>
+                {activeTraceEvents.length === 0 ? (
+                  <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>
+                    No workflow events yet. Send a message to start capturing agent steps.
+                  </Text>
+                ) : (
+                  activeTraceEvents.map((event, index) => (
+                    <View
+                      key={`${event.sequence_id || index}-${event.stage || event.step || index}`}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: 12,
+                        backgroundColor: colors.card,
+                        padding: 10,
+                        marginBottom: 10,
+                      }}
+                    >
+                      <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>
+                        {event.stage || event.step || 'event'}
+                      </Text>
+                      <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 2 }}>
+                        #{event.sequence_id || index + 1}
+                        {event.timestamp ? ` · ${new Date(event.timestamp).toLocaleTimeString()}` : ''}
+                      </Text>
+                      {event.tool_name ? (
+                        <Text style={{ color: colors.foreground, fontSize: 12, marginTop: 6 }}>
+                          Tool: {String(event.tool_name)}
+                        </Text>
+                      ) : null}
+                      {event.duration_ms ? (
+                        <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 2 }}>
+                          Duration: {String(event.duration_ms)} ms
+                        </Text>
+                      ) : null}
+                      {event.error ? (
+                        <Text style={{ color: colors.danger, fontSize: 11, marginTop: 4 }}>
+                          Error: {String(event.error)}
+                        </Text>
+                      ) : null}
+                      {event.raw ? (
+                        <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 6 }} numberOfLines={8}>
+                          {JSON.stringify(event.raw)}
+                        </Text>
+                      ) : null}
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+        <Modal
+          visible={isUsageModalVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setIsUsageModalVisible(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
+            <View style={{ maxHeight: '84%', backgroundColor: colors.background, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, borderColor: colors.border }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 16 }}>Usage & Billing</Text>
+                <Pressable onPress={() => setIsUsageModalVisible(false)}>
+                  <Text style={{ color: colors.mutedForeground }}>Close</Text>
+                </Pressable>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 14, paddingTop: 12 }}>
+                {([7, 30] as const).map((days) => {
+                  const selected = usageWindowDays === days;
+                  return (
+                    <Pressable
+                      key={days}
+                      onPress={() => setUsageWindowDays(days)}
+                      style={({ pressed }) => [{
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: selected ? colors.accent : colors.border,
+                        backgroundColor: selected ? colors.accent + '22' : colors.card,
+                      }, pressed && { opacity: 0.75 }]}
+                    >
+                      <Text style={{ color: selected ? colors.accent : colors.foreground, fontSize: 12 }}>{days}d</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: Math.max(insets.bottom, 18) }}>
+                {isUsageSummaryLoading || !usageSummary ? (
+                  <ActivityIndicator size="small" color={colors.accent} />
+                ) : (
+                  <View style={{ gap: 10 }}>
+                    <View style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 10, backgroundColor: colors.card }}>
+                      <Text style={{ color: colors.mutedForeground, fontSize: 11 }}>Messages</Text>
+                      <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 20 }}>{usageSummary.totals.messages}</Text>
+                      <Text style={{ color: colors.foreground, fontSize: 12, marginTop: 6 }}>
+                        Tokens: {usageSummary.totals.total_tokens} ({usageSummary.totals.prompt_tokens} in / {usageSummary.totals.completion_tokens} out)
+                      </Text>
+                      <Text style={{ color: colors.foreground, fontSize: 12, marginTop: 2 }}>
+                        Estimated: {formatUsd(usageSummary.totals.estimated_cost_usd)} · Billed: {formatUsd(usageSummary.totals.billed_cost_usd)}
+                      </Text>
+                    </View>
+
+                    {usageSummary.by_model.map((modelUsage) => (
+                      <View key={`${modelUsage.provider}-${modelUsage.model}`} style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 10, backgroundColor: colors.card }}>
+                        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>
+                          {modelUsage.provider} · {modelUsage.model}
+                        </Text>
+                        <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 2 }}>
+                          {modelUsage.messages} messages · {modelUsage.total_tokens} tokens · {modelUsage.billing_source}
+                        </Text>
+                        <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 2 }}>
+                          Est {formatUsd(modelUsage.estimated_cost_usd)} · Billed {formatUsd(modelUsage.billed_cost_usd)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+        <Modal
+          visible={!!tableModalContent}
+          animationType="slide"
+          onRequestClose={() => setTableModalContent(null)}
+        >
+          <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Table2 size={15} color={colors.accent} />
+                <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 15, marginLeft: 7 }}>
+                  {tableModalContent?.title || 'Table'}
+                </Text>
+              </View>
+              <Pressable onPress={() => setTableModalContent(null)}>
+                <Text style={{ color: colors.mutedForeground }}>Close</Text>
+              </Pressable>
+            </View>
+            <ScrollView horizontal style={{ flex: 1 }}>
+              <ScrollView contentContainerStyle={{ padding: 14, minWidth: width - 20 }}>
+                <Markdown style={markdownStyles}>{tableModalContent?.markdown || ''}</Markdown>
+              </ScrollView>
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

@@ -4,6 +4,8 @@ import { ai } from './ai';
 import { chat } from './chat';
 import { goals } from './goals';
 import { tags } from './tags';
+import { tasks } from './tasks';
+import { planner } from './planner';
 import { budgets } from './budgets';
 import { recurring } from './recurring';
 import { reports } from './reports';
@@ -27,6 +29,8 @@ export const api = {
   chat,
   goals,
   tags,
+  tasks,
+  planner,
   budgets,
   recurring,
   reports,

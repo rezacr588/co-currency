@@ -3,7 +3,7 @@ import { Link } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, ArrowLeftRight, History, MessageCircle, Target, PiggyBank, BarChart3, Wallet } from 'lucide-react-native';
+import { Plus, ArrowLeftRight, History, MessageCircle, Target, PiggyBank, BarChart3, Wallet, KanbanSquare } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
 import { useTheme } from 'styled-components/native';
@@ -69,6 +69,7 @@ export default function WalletScreen() {
     { label: t('budgets') || 'Budgets', href: '/(app)/budgets', icon: PiggyBank },
     { label: t('aiAdvisor') || 'AI Advisor', href: '/(app)/(tabs)/wallet/chat', icon: MessageCircle },
     { label: t('reports') || 'Reports', href: '/(app)/(tabs)/reports', icon: BarChart3 },
+    { label: 'Planner', href: '/(app)/planner', icon: KanbanSquare },
   ];
 
   const featureCols = isDesktop ? 6 : 3;

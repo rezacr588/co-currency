@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/caarlos0/env/v9"
@@ -40,12 +41,15 @@ type Config struct {
 	FrontendURL string `env:"FRONTEND_URL" envDefault:"http://localhost:5173"`
 
 	// AI Service settings
-	AIProvider     string `env:"AI_PROVIDER" envDefault:"googleai"` // googleai, openai, cerebras, groq
-	AIAPIKey       string `env:"AI_API_KEY" envDefault:""`
-	AIModel        string `env:"AI_MODEL" envDefault:""`             // Model name (e.g., llama-3.3-70b-versatile for Groq)
-	AIVisionModel  string `env:"AI_VISION_MODEL" envDefault:""`     // Vision model (auto-detected per provider if empty)
-	AICloudProject string `env:"AI_CLOUD_PROJECT" envDefault:""`    // Google Cloud project ID
-	TavilyAPIKey   string `env:"TAVILY_API_KEY" envDefault:""`      // Tavily API key for web search
+	AIProvider            string `env:"AI_PROVIDER" envDefault:"googleai"` // googleai, openai, cerebras, groq
+	AIAPIKey              string `env:"AI_API_KEY" envDefault:""`
+	AIModel               string `env:"AI_MODEL" envDefault:""`                     // Model name (e.g., llama-3.3-70b-versatile for Groq)
+	AIFastModel           string `env:"AI_FAST_MODEL" envDefault:""`                // Fast response model (falls back to AI_MODEL)
+	AIThinkingModel       string `env:"AI_THINKING_MODEL" envDefault:""`            // Higher-quality thinking model
+	AIThinkingModeDefault string `env:"AI_THINKING_MODE_DEFAULT" envDefault:"auto"` // auto|fast|thinking
+	AIVisionModel         string `env:"AI_VISION_MODEL" envDefault:""`              // Vision model (auto-detected per provider if empty)
+	AICloudProject        string `env:"AI_CLOUD_PROJECT" envDefault:""`             // Google Cloud project ID
+	TavilyAPIKey          string `env:"TAVILY_API_KEY" envDefault:""`               // Tavily API key for web search
 
 	// News settings
 	NewsCacheTTL time.Duration `env:"NEWS_CACHE_TTL" envDefault:"30m"`
@@ -77,6 +81,17 @@ func Load() (*Config, error) {
 	// Validate MaxMemoryResults
 	if cfg.MaxMemoryResults < 1 || cfg.MaxMemoryResults > 100 {
 		return nil, fmt.Errorf("MAX_MEMORY_RESULTS must be between 1 and 100, got %d", cfg.MaxMemoryResults)
+	}
+
+	mode := strings.ToLower(strings.TrimSpace(cfg.AIThinkingModeDefault))
+	switch mode {
+	case "", "auto", "fast", "thinking":
+		if mode == "" {
+			mode = "auto"
+		}
+		cfg.AIThinkingModeDefault = mode
+	default:
+		return nil, fmt.Errorf("AI_THINKING_MODE_DEFAULT must be one of auto|fast|thinking, got %q", cfg.AIThinkingModeDefault)
 	}
 
 	return cfg, nil

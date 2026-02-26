@@ -200,3 +200,56 @@ func (r *TagRepository) GetTagsForTransaction(ctx context.Context, transactionID
 
 	return tags, nil
 }
+
+// AddTagToTask adds a tag to a task.
+func (r *TagRepository) AddTagToTask(ctx context.Context, taskID, tagID uuid.UUID) error {
+	query := `
+		INSERT INTO task_tags (task_id, tag_id)
+		VALUES ($1, $2)
+		ON CONFLICT DO NOTHING
+	`
+	if _, err := r.pool.Exec(ctx, query, taskID, tagID); err != nil {
+		return fmt.Errorf("adding tag to task: %w", err)
+	}
+	return nil
+}
+
+// RemoveTagFromTask removes a tag from a task.
+func (r *TagRepository) RemoveTagFromTask(ctx context.Context, taskID, tagID uuid.UUID) error {
+	query := `DELETE FROM task_tags WHERE task_id = $1 AND tag_id = $2`
+	if _, err := r.pool.Exec(ctx, query, taskID, tagID); err != nil {
+		return fmt.Errorf("removing tag from task: %w", err)
+	}
+	return nil
+}
+
+// GetTagsForTask returns all tags assigned to a task.
+func (r *TagRepository) GetTagsForTask(ctx context.Context, taskID uuid.UUID) ([]model.Tag, error) {
+	query := `
+		SELECT t.id, t.user_id, t.name, t.color, t.created_at
+		FROM tags t
+		JOIN task_tags tt ON t.id = tt.tag_id
+		WHERE tt.task_id = $1
+		ORDER BY t.name
+	`
+	rows, err := r.pool.Query(ctx, query, taskID)
+	if err != nil {
+		return nil, fmt.Errorf("querying task tags: %w", err)
+	}
+	defer rows.Close()
+
+	var tags []model.Tag
+	for rows.Next() {
+		var t model.Tag
+		var color *string
+
+		if err := rows.Scan(&t.ID, &t.UserID, &t.Name, &color, &t.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scanning tag: %w", err)
+		}
+		if color != nil {
+			t.Color = *color
+		}
+		tags = append(tags, t)
+	}
+	return tags, nil
+}

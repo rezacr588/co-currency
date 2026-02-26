@@ -11,6 +11,7 @@ import type {
   WalletConvertResponse,
   Category,
 } from '../types/wallet';
+import type { Tag } from '../types/goal';
 import { API_BASE, fetchAPI } from './base';
 import { buildQuery } from './utils';
 
@@ -40,6 +41,17 @@ export const wallet = {
     }),
   deleteTransaction: (id: string) =>
     fetchAPI<{ message: string }>(`/wallet/transactions/${id}`, {
+      method: 'DELETE',
+    }),
+  getTransactionTags: (id: string) =>
+    fetchAPI<{ tags: Tag[] }>(`/wallet/transactions/${id}/tags`),
+  addTransactionTag: (id: string, tag_id: string) =>
+    fetchAPI<{ message: string }>(`/wallet/transactions/${id}/tags`, {
+      method: 'POST',
+      body: JSON.stringify({ tag_id }),
+    }),
+  removeTransactionTag: (id: string, tagID: string) =>
+    fetchAPI<{ message: string }>(`/wallet/transactions/${id}/tags/${tagID}`, {
       method: 'DELETE',
     }),
   importTransactions: (transactions: TransactionRequest[]) =>

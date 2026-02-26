@@ -37,6 +37,9 @@ type AIChatService struct {
 	noteRepo         *repository.NoteRepository
 	toolExecutor     *AIToolExecutor
 	contextCache     *gocache.Cache // In-memory cache for financial context per user
+	fastModel        string
+	thinkingModel    string
+	defaultMode      model.ChatThinkingMode
 }
 
 var (
@@ -167,7 +170,31 @@ func NewAIChatService(
 		noteRepo:         noteRepo,
 		toolExecutor:     toolExecutor,
 		contextCache:     gocache.New(60*time.Second, 2*time.Minute),
+		fastModel:        aiService.GetDefaultModel(),
+		thinkingModel:    aiService.GetDefaultModel(),
+		defaultMode:      model.ChatThinkingModeAuto,
 	}
+}
+
+// SetThinkingConfig configures model routing between fast and thinking modes.
+func (s *AIChatService) SetThinkingConfig(fastModel, thinkingModel string, defaultMode model.ChatThinkingMode) {
+	if strings.TrimSpace(fastModel) != "" {
+		s.fastModel = strings.TrimSpace(fastModel)
+	}
+	if strings.TrimSpace(thinkingModel) != "" {
+		s.thinkingModel = strings.TrimSpace(thinkingModel)
+	}
+	if defaultMode.IsValid() {
+		s.defaultMode = defaultMode
+	}
+}
+
+// GetUsageSummary returns aggregated token and cost usage for the authenticated user.
+func (s *AIChatService) GetUsageSummary(ctx context.Context, userID uuid.UUID, days int) (*model.ChatUsageSummary, error) {
+	if s.chatRepo == nil {
+		return nil, errors.New("chat repository is not configured")
+	}
+	return s.chatRepo.GetUsageSummary(ctx, userID, days)
 }
 
 // CreateConversation creates a new conversation without invoking the LLM.
@@ -180,6 +207,346 @@ type preparedChatInput struct {
 	LLMMessages  []llms.MessageContent
 	BaseCurrency string
 	HistoryCount int
+}
+
+type modelPricing struct {
+	InputUSDPer1K  float64
+	OutputUSDPer1K float64
+}
+
+var estimatedModelPricingUSD = map[string]modelPricing{
+	"gpt-4o-mini":             {InputUSDPer1K: 0.00015, OutputUSDPer1K: 0.00060},
+	"gpt-4o":                  {InputUSDPer1K: 0.00500, OutputUSDPer1K: 0.01500},
+	"gemini-1.5-flash":        {InputUSDPer1K: 0.000075, OutputUSDPer1K: 0.00030},
+	"gemini-1.5-pro":          {InputUSDPer1K: 0.00125, OutputUSDPer1K: 0.00500},
+	"gemini-2.0-flash":        {InputUSDPer1K: 0.00010, OutputUSDPer1K: 0.00040},
+	"llama-3.3-70b":           {InputUSDPer1K: 0.00060, OutputUSDPer1K: 0.00080},
+	"llama-3.3-70b-versatile": {InputUSDPer1K: 0.00060, OutputUSDPer1K: 0.00080},
+	"llama-3.1-8b":            {InputUSDPer1K: 0.00005, OutputUSDPer1K: 0.00008},
+}
+
+type chatUsageTracker struct {
+	provider         string
+	model            string
+	thinkingMode     string
+	promptTokens     int
+	completionTokens int
+	totalTokens      int
+	estimatedCostUSD float64
+	billedCostUSD    float64
+	hasBilledCost    bool
+}
+
+func newChatUsageTracker(provider, modelName string, mode model.ChatThinkingMode) *chatUsageTracker {
+	return &chatUsageTracker{
+		provider:     provider,
+		model:        modelName,
+		thinkingMode: string(mode),
+	}
+}
+
+func (u *chatUsageTracker) addResponse(response *llms.ContentResponse) {
+	if response == nil || len(response.Choices) == 0 || response.Choices[0] == nil {
+		return
+	}
+
+	promptTokens, completionTokens, totalTokens, billedCost := extractUsageFromGenerationInfo(response.Choices[0].GenerationInfo)
+	if totalTokens == 0 {
+		totalTokens = promptTokens + completionTokens
+	}
+
+	u.promptTokens += promptTokens
+	u.completionTokens += completionTokens
+	u.totalTokens += totalTokens
+
+	if estimatedCost := estimateCostUSDForModel(u.model, promptTokens, completionTokens); estimatedCost > 0 {
+		u.estimatedCostUSD += estimatedCost
+	}
+
+	if billedCost != nil {
+		u.hasBilledCost = true
+		u.billedCostUSD += *billedCost
+	}
+}
+
+func (u *chatUsageTracker) usage() model.ChatUsage {
+	return model.ChatUsage{
+		PromptTokens:     u.promptTokens,
+		CompletionTokens: u.completionTokens,
+		TotalTokens:      u.totalTokens,
+	}
+}
+
+func (u *chatUsageTracker) estimatedCostPtr() *float64 {
+	if u.estimatedCostUSD <= 0 {
+		return nil
+	}
+	v := roundUSD(u.estimatedCostUSD)
+	return &v
+}
+
+func (u *chatUsageTracker) billedCostPtr() *float64 {
+	if !u.hasBilledCost {
+		return nil
+	}
+	v := roundUSD(u.billedCostUSD)
+	return &v
+}
+
+func (u *chatUsageTracker) billingSource() string {
+	if u.hasBilledCost && u.estimatedCostUSD > 0 {
+		return "hybrid"
+	}
+	if u.hasBilledCost {
+		return "exact"
+	}
+	return "estimated"
+}
+
+func (u *chatUsageTracker) toMessageMeta() *repository.ChatMessageMeta {
+	return &repository.ChatMessageMeta{
+		Provider:         u.provider,
+		Model:            u.model,
+		ThinkingMode:     u.thinkingMode,
+		PromptTokens:     u.promptTokens,
+		CompletionTokens: u.completionTokens,
+		TotalTokens:      u.totalTokens,
+		EstimatedCostUSD: u.estimatedCostPtr(),
+		BilledCostUSD:    u.billedCostPtr(),
+		BillingSource:    u.billingSource(),
+	}
+}
+
+func roundUSD(value float64) float64 {
+	const factor = 1_000_000
+	return float64(int(value*factor+0.5)) / factor
+}
+
+func extractUsageFromGenerationInfo(generationInfo map[string]any) (promptTokens int, completionTokens int, totalTokens int, billedCost *float64) {
+	if generationInfo == nil {
+		return 0, 0, 0, nil
+	}
+
+	promptTokens = intFromAny(
+		generationInfo["PromptTokens"],
+		generationInfo["prompt_tokens"],
+		generationInfo["input_tokens"],
+		generationInfo["promptTokenCount"],
+	)
+	completionTokens = intFromAny(
+		generationInfo["CompletionTokens"],
+		generationInfo["completion_tokens"],
+		generationInfo["output_tokens"],
+		generationInfo["candidatesTokenCount"],
+	)
+	totalTokens = intFromAny(
+		generationInfo["TotalTokens"],
+		generationInfo["total_tokens"],
+		generationInfo["totalTokenCount"],
+	)
+
+	// Some providers nest token usage in a usage object.
+	if usageObj, ok := generationInfo["usage"].(map[string]any); ok {
+		if promptTokens == 0 {
+			promptTokens = intFromAny(usageObj["prompt_tokens"], usageObj["input_tokens"], usageObj["promptTokenCount"])
+		}
+		if completionTokens == 0 {
+			completionTokens = intFromAny(usageObj["completion_tokens"], usageObj["output_tokens"], usageObj["candidatesTokenCount"])
+		}
+		if totalTokens == 0 {
+			totalTokens = intFromAny(usageObj["total_tokens"], usageObj["totalTokenCount"])
+		}
+		if billedCost == nil {
+			if value, ok := floatFromAny(usageObj["billed_cost_usd"], usageObj["cost_usd"], usageObj["billed_cost"]); ok {
+				billedCost = &value
+			}
+		}
+	}
+
+	if billedCost == nil {
+		if value, ok := floatFromAny(
+			generationInfo["billed_cost_usd"],
+			generationInfo["cost_usd"],
+			generationInfo["billed_cost"],
+		); ok {
+			billedCost = &value
+		}
+	}
+
+	return promptTokens, completionTokens, totalTokens, billedCost
+}
+
+func intFromAny(values ...any) int {
+	for _, value := range values {
+		switch v := value.(type) {
+		case int:
+			return v
+		case int8:
+			return int(v)
+		case int16:
+			return int(v)
+		case int32:
+			return int(v)
+		case int64:
+			return int(v)
+		case float32:
+			return int(v)
+		case float64:
+			return int(v)
+		case string:
+			v = strings.TrimSpace(v)
+			if v == "" {
+				continue
+			}
+			var parsed int
+			if _, err := fmt.Sscanf(v, "%d", &parsed); err == nil {
+				return parsed
+			}
+		}
+	}
+	return 0
+}
+
+func floatFromAny(values ...any) (float64, bool) {
+	for _, value := range values {
+		switch v := value.(type) {
+		case float32:
+			return float64(v), true
+		case float64:
+			return v, true
+		case int:
+			return float64(v), true
+		case int32:
+			return float64(v), true
+		case int64:
+			return float64(v), true
+		case string:
+			v = strings.TrimSpace(v)
+			if v == "" {
+				continue
+			}
+			var parsed float64
+			if _, err := fmt.Sscanf(v, "%f", &parsed); err == nil {
+				return parsed, true
+			}
+		}
+	}
+	return 0, false
+}
+
+func estimateCostUSDForModel(modelName string, promptTokens, completionTokens int) float64 {
+	if promptTokens == 0 && completionTokens == 0 {
+		return 0
+	}
+	modelName = strings.ToLower(strings.TrimSpace(modelName))
+	if modelName == "" {
+		return 0
+	}
+
+	var pricing modelPricing
+	found := false
+	for key, candidate := range estimatedModelPricingUSD {
+		if strings.Contains(modelName, key) {
+			pricing = candidate
+			found = true
+			break
+		}
+	}
+	if !found {
+		return 0
+	}
+
+	return (float64(promptTokens)/1000.0)*pricing.InputUSDPer1K + (float64(completionTokens)/1000.0)*pricing.OutputUSDPer1K
+}
+
+func (s *AIChatService) fastModelName() string {
+	if strings.TrimSpace(s.fastModel) != "" {
+		return strings.TrimSpace(s.fastModel)
+	}
+	return s.aiService.GetDefaultModel()
+}
+
+func (s *AIChatService) thinkingModelName() string {
+	if strings.TrimSpace(s.thinkingModel) != "" {
+		return strings.TrimSpace(s.thinkingModel)
+	}
+	return s.fastModelName()
+}
+
+func (s *AIChatService) effectiveThinkingMode(requested model.ChatThinkingMode, message string) model.ChatThinkingMode {
+	mode := requested
+	if !mode.IsValid() {
+		mode = s.defaultMode
+	}
+	if !mode.IsValid() {
+		mode = model.ChatThinkingModeAuto
+	}
+
+	if mode == model.ChatThinkingModeAuto {
+		if looksComplexPrompt(message) {
+			return model.ChatThinkingModeThinking
+		}
+		return model.ChatThinkingModeFast
+	}
+
+	return mode
+}
+
+func looksComplexPrompt(message string) bool {
+	text := strings.ToLower(strings.TrimSpace(message))
+	if text == "" {
+		return false
+	}
+
+	if len([]rune(text)) >= 260 {
+		return true
+	}
+	if strings.Count(text, "\n") >= 3 {
+		return true
+	}
+	if strings.Count(text, "?") >= 2 {
+		return true
+	}
+
+	complexSignals := 0
+	for _, signal := range []string{
+		"analy", "strategy", "plan", "roadmap", "step by step", "optimiz", "trade-off", "tradeoff",
+		"scenario", "compare", "forecast", "projection", "portfolio", "allocation", "debt", "budget",
+		"investment", "tax", "cash flow", "what if",
+	} {
+		if strings.Contains(text, signal) {
+			complexSignals++
+		}
+	}
+
+	return complexSignals >= 2
+}
+
+func (s *AIChatService) initLLMForMode(ctx context.Context, mode model.ChatThinkingMode) (llms.Model, model.ChatThinkingMode, string, error) {
+	requestedModel := s.fastModelName()
+	switch mode {
+	case model.ChatThinkingModeThinking:
+		requestedModel = s.thinkingModelName()
+	case model.ChatThinkingModeFast:
+		requestedModel = s.fastModelName()
+	}
+
+	llm, resolvedModel, err := s.aiService.getLLMForModel(ctx, requestedModel)
+	if err == nil {
+		return llm, mode, resolvedModel, nil
+	}
+
+	// Fallback to fast model if thinking model is unavailable.
+	if mode == model.ChatThinkingModeThinking {
+		fallback := s.fastModelName()
+		if fallback != requestedModel {
+			if fallbackLLM, fallbackModel, fallbackErr := s.aiService.getLLMForModel(ctx, fallback); fallbackErr == nil {
+				return fallbackLLM, model.ChatThinkingModeFast, fallbackModel, nil
+			}
+		}
+	}
+
+	return nil, mode, "", err
 }
 
 func (s *AIChatService) resolveConversation(
@@ -271,8 +638,9 @@ func (s *AIChatService) persistAssistantResponse(
 	conversationID uuid.UUID,
 	userMessage string,
 	aiResponse string,
+	meta *repository.ChatMessageMeta,
 ) (*model.ChatMessage, error) {
-	aiMsg, err := s.chatRepo.AddMessage(ctx, conversationID, "assistant", aiResponse, 0)
+	aiMsg, err := s.chatRepo.AddMessageWithMeta(ctx, conversationID, "assistant", aiResponse, 0, meta)
 	if err != nil {
 		return nil, fmt.Errorf("saving AI message: %w", err)
 	}
@@ -322,6 +690,7 @@ func (s *AIChatService) executeToolWithTrace(
 		result = fmt.Sprintf("Tool '%s' failed: %v. Please answer based on the available context.", tc.Name, execErr)
 		emitChatTrace(ctx, userID, conversationID, "tool_execution_failed", map[string]interface{}{
 			"tool":        tc.Name,
+			"tool_args":   tc.Params,
 			"duration_ms": time.Since(toolStartedAt).Milliseconds(),
 			"error":       execErr.Error(),
 		}, onTrace)
@@ -330,6 +699,7 @@ func (s *AIChatService) executeToolWithTrace(
 
 	emitChatTrace(ctx, userID, conversationID, "tool_execution_completed", map[string]interface{}{
 		"tool":        tc.Name,
+		"tool_args":   tc.Params,
 		"duration_ms": time.Since(toolStartedAt).Milliseconds(),
 		"result_size": len(result),
 	}, onTrace)
@@ -418,12 +788,21 @@ func emitChunkedText(onChunk func(chunk string) error, text string) (int, int, e
 	return chunkCount, len(runes), nil
 }
 
-// Chat processes a user message and returns an AI response with full context
-func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName string, conversationID string, message string) (*model.ChatResponse, error) {
+// Chat processes a user message and returns an AI response with full context.
+func (s *AIChatService) Chat(
+	ctx context.Context,
+	userID uuid.UUID,
+	userName string,
+	conversationID string,
+	message string,
+	thinkingMode model.ChatThinkingMode,
+) (*model.ChatResponse, error) {
 	requestStartedAt := time.Now()
+	effectiveMode := s.effectiveThinkingMode(thinkingMode, message)
 	emitChatTrace(ctx, userID, conversationID, "chat_request_started", map[string]interface{}{
 		"message_length": len(message),
 		"streaming":      false,
+		"thinking_mode":  effectiveMode,
 	}, nil)
 
 	convID, createdConversation, err := s.resolveConversation(ctx, userID, conversationID, message)
@@ -448,16 +827,28 @@ func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName str
 	}, nil)
 
 	// Call the AI with tool resolution loop
-	llm, err := s.aiService.getLLM(ctx)
+	llm, finalMode, modelName, err := s.initLLMForMode(ctx, effectiveMode)
 	if err != nil {
 		return nil, fmt.Errorf("getting LLM: %w", err)
 	}
+	usageTracker := newChatUsageTracker(s.aiService.GetProvider(), modelName, finalMode)
 	emitChatTrace(ctx, userID, convID.String(), "llm_initialized", map[string]interface{}{
 		"provider": s.aiService.provider,
+		"model":    modelName,
+		"mode":     finalMode,
 	}, nil)
 
 	llmStartedAt := time.Now()
-	aiResponse, err := s.resolveToolCalls(ctx, llm, prepared.LLMMessages, userID, prepared.BaseCurrency, convID.String(), nil)
+	aiResponse, err := s.resolveToolCalls(
+		ctx,
+		llm,
+		prepared.LLMMessages,
+		userID,
+		prepared.BaseCurrency,
+		convID.String(),
+		nil,
+		usageTracker,
+	)
 	if err != nil {
 		return nil, failChatWithWrap(ctx, userID, convID.String(), requestStartedAt, nil, "calling AI: %w", err)
 	}
@@ -466,18 +857,34 @@ func (s *AIChatService) Chat(ctx context.Context, userID uuid.UUID, userName str
 		"response_length": len(aiResponse),
 	}, nil)
 
-	aiMsg, err := s.persistAssistantResponse(ctx, userID, convID, message, aiResponse)
+	aiMsg, err := s.persistAssistantResponse(ctx, userID, convID, message, aiResponse, usageTracker.toMessageMeta())
 	if err != nil {
 		return nil, err
 	}
 
 	emitChatTrace(ctx, userID, convID.String(), "chat_request_completed", map[string]interface{}{
-		"duration_ms": time.Since(requestStartedAt).Milliseconds(),
+		"duration_ms":        time.Since(requestStartedAt).Milliseconds(),
+		"prompt_tokens":      usageTracker.promptTokens,
+		"completion_tokens":  usageTracker.completionTokens,
+		"total_tokens":       usageTracker.totalTokens,
+		"estimated_cost_usd": usageTracker.estimatedCostUSD,
+		"billed_cost_usd":    usageTracker.billedCostUSD,
+		"billing_source":     usageTracker.billingSource(),
 	}, nil)
 
+	usage := usageTracker.usage()
+
 	return &model.ChatResponse{
-		ConversationID: convID.String(),
-		Message:        *aiMsg,
+		ConversationID:   convID.String(),
+		Message:          *aiMsg,
+		TokensUsed:       usage.TotalTokens,
+		Provider:         usageTracker.provider,
+		Model:            usageTracker.model,
+		ThinkingMode:     string(finalMode),
+		Usage:            usage,
+		EstimatedCostUSD: usageTracker.estimatedCostPtr(),
+		BilledCostUSD:    usageTracker.billedCostPtr(),
+		BillingSource:    usageTracker.billingSource(),
 	}, nil
 }
 
@@ -489,14 +896,17 @@ func (s *AIChatService) ChatStream(
 	userName string,
 	conversationID string,
 	message string,
+	thinkingMode model.ChatThinkingMode,
 	onStart func(conversationID string),
 	onChunk func(chunk string) error,
 	onTrace chatTraceCallback,
 ) (*model.ChatResponse, error) {
 	requestStartedAt := time.Now()
+	effectiveMode := s.effectiveThinkingMode(thinkingMode, message)
 	emitChatTrace(ctx, userID, conversationID, "chat_request_started", map[string]interface{}{
 		"message_length": len(message),
 		"streaming":      true,
+		"thinking_mode":  effectiveMode,
 	}, onTrace)
 
 	convID, createdConversation, err := s.resolveConversation(ctx, userID, conversationID, message)
@@ -526,12 +936,15 @@ func (s *AIChatService) ChatStream(
 	}, onTrace)
 
 	// Call the AI (with tool resolution, then stream final response)
-	llm, err := s.aiService.getLLM(ctx)
+	llm, finalMode, modelName, err := s.initLLMForMode(ctx, effectiveMode)
 	if err != nil {
 		return nil, fmt.Errorf("getting LLM: %w", err)
 	}
+	usageTracker := newChatUsageTracker(s.aiService.GetProvider(), modelName, finalMode)
 	emitChatTrace(ctx, userID, convID.String(), "llm_initialized", map[string]interface{}{
 		"provider": s.aiService.provider,
+		"model":    modelName,
+		"mode":     finalMode,
 	}, onTrace)
 
 	// First call: non-streaming to check for tool calls
@@ -540,6 +953,7 @@ func (s *AIChatService) ChatStream(
 	if err != nil {
 		return nil, failChatWithWrap(ctx, userID, convID.String(), requestStartedAt, onTrace, "calling ai: %w", err)
 	}
+	usageTracker.addResponse(firstResponse)
 	if len(firstResponse.Choices) == 0 {
 		return nil, failChatWithError(ctx, userID, convID.String(), requestStartedAt, onTrace, errNoAIResponse)
 	}
@@ -558,7 +972,8 @@ func (s *AIChatService) ChatStream(
 
 	if tc != nil {
 		emitChatTrace(ctx, userID, convID.String(), "tool_call_detected", map[string]interface{}{
-			"tool": tc.Name,
+			"tool":      tc.Name,
+			"tool_args": tc.Params,
 		}, onTrace)
 
 		// Tool call detected — execute it, then resolve remaining tool chain non-streaming.
@@ -578,6 +993,7 @@ func (s *AIChatService) ChatStream(
 			convID.String(),
 			onTrace,
 			2,
+			usageTracker,
 		)
 		if err != nil {
 			return nil, failChatWithWrap(ctx, userID, convID.String(), requestStartedAt, onTrace, "calling ai (tool loop): %w", err)
@@ -625,6 +1041,7 @@ func (s *AIChatService) ChatStream(
 				return nil, failChatWithWrap(ctx, userID, convID.String(), requestStartedAt, onTrace, "calling ai: %w", err)
 			}
 		}
+		usageTracker.addResponse(response)
 
 		if len(response.Choices) == 0 {
 			return nil, failChatWithError(ctx, userID, convID.String(), requestStartedAt, onTrace, errNoAIResponse)
@@ -647,19 +1064,35 @@ func (s *AIChatService) ChatStream(
 		aiResponse = stripToolCallMarkers(aiResponse)
 	}
 
-	aiMsg, err := s.persistAssistantResponse(ctx, userID, convID, message, aiResponse)
+	aiMsg, err := s.persistAssistantResponse(ctx, userID, convID, message, aiResponse, usageTracker.toMessageMeta())
 	if err != nil {
 		return nil, failChatWithError(ctx, userID, convID.String(), requestStartedAt, onTrace, err)
 	}
 	emitChatTrace(ctx, userID, convID.String(), "chat_request_completed", map[string]interface{}{
-		"duration_ms":  time.Since(requestStartedAt).Milliseconds(),
-		"chunk_count":  streamChunkCount,
-		"stream_chars": streamChars,
+		"duration_ms":        time.Since(requestStartedAt).Milliseconds(),
+		"chunk_count":        streamChunkCount,
+		"stream_chars":       streamChars,
+		"prompt_tokens":      usageTracker.promptTokens,
+		"completion_tokens":  usageTracker.completionTokens,
+		"total_tokens":       usageTracker.totalTokens,
+		"estimated_cost_usd": usageTracker.estimatedCostUSD,
+		"billed_cost_usd":    usageTracker.billedCostUSD,
+		"billing_source":     usageTracker.billingSource(),
 	}, onTrace)
 
+	usage := usageTracker.usage()
+
 	return &model.ChatResponse{
-		ConversationID: convID.String(),
-		Message:        *aiMsg,
+		ConversationID:   convID.String(),
+		Message:          *aiMsg,
+		TokensUsed:       usage.TotalTokens,
+		Provider:         usageTracker.provider,
+		Model:            usageTracker.model,
+		ThinkingMode:     string(finalMode),
+		Usage:            usage,
+		EstimatedCostUSD: usageTracker.estimatedCostPtr(),
+		BilledCostUSD:    usageTracker.billedCostPtr(),
+		BillingSource:    usageTracker.billingSource(),
 	}, nil
 }
 
@@ -867,10 +1300,11 @@ func (s *AIChatService) buildSystemPrompt(userName string, fctx *model.Financial
 
 ## RESPONSE FORMAT
 
-- Do **not** use markdown tables in the main body of your response
-- Give the answer as natural prose with short paragraphs or bullets
-- If a numeric summary is helpful, include **one** small table only at the very end under a "Summary" heading
-- If no numeric summary is needed, do not include any table
+- Be prose-first and conversational. Sound like a real advisor speaking naturally.
+- Prefer 2-6 short paragraphs. Use bullets only when they improve clarity.
+- Do **not** use markdown tables in the main body.
+- If structured tabular data is truly needed, add one table at the very end under a clear "Summary Table" heading.
+- Keep any table separate from the main explanation so clients can render it in a dedicated modal.
 
 ## CAPABILITIES
 
@@ -901,8 +1335,9 @@ func (s *AIChatService) resolveToolCalls(
 	currency string,
 	conversationID string,
 	onTrace chatTraceCallback,
+	usageTracker *chatUsageTracker,
 ) (string, error) {
-	return s.resolveToolCallsWithLimit(ctx, llm, messages, userID, currency, conversationID, onTrace, 3)
+	return s.resolveToolCallsWithLimit(ctx, llm, messages, userID, currency, conversationID, onTrace, 3, usageTracker)
 }
 
 func (s *AIChatService) resolveToolCallsWithLimit(
@@ -914,6 +1349,7 @@ func (s *AIChatService) resolveToolCallsWithLimit(
 	conversationID string,
 	onTrace chatTraceCallback,
 	maxIterations int,
+	usageTracker *chatUsageTracker,
 ) (string, error) {
 	for i := 0; i < maxIterations; i++ {
 		iterationStartedAt := time.Now()
@@ -924,6 +1360,9 @@ func (s *AIChatService) resolveToolCallsWithLimit(
 				"error":     err.Error(),
 			}, onTrace)
 			return "", fmt.Errorf("generating content: %w", err)
+		}
+		if usageTracker != nil {
+			usageTracker.addResponse(response)
 		}
 		if len(response.Choices) == 0 {
 			emitChatTrace(ctx, userID, conversationID, "llm_iteration_failed", map[string]interface{}{
@@ -964,6 +1403,9 @@ func (s *AIChatService) resolveToolCallsWithLimit(
 			"error": err.Error(),
 		}, onTrace)
 		return "", fmt.Errorf("generating final content: %w", err)
+	}
+	if usageTracker != nil {
+		usageTracker.addResponse(response)
 	}
 	if len(response.Choices) == 0 {
 		emitChatTrace(ctx, userID, conversationID, "llm_final_failed", map[string]interface{}{

@@ -26,6 +26,9 @@ type WalletServiceAPI interface {
 	DeleteTransaction(ctx context.Context, userID, txID uuid.UUID) error
 	UpdateTransaction(ctx context.Context, userID, txID uuid.UUID, req *model.UpdateTransactionRequest) (*model.Transaction, error)
 	ImportTransactions(ctx context.Context, userID uuid.UUID, req []model.TransactionRequest) (int, error)
+	GetTransactionTags(ctx context.Context, userID, txID uuid.UUID) ([]model.Tag, error)
+	AddTransactionTag(ctx context.Context, userID, txID, tagID uuid.UUID) error
+	RemoveTransactionTag(ctx context.Context, userID, txID, tagID uuid.UUID) error
 }
 
 // CategoryServiceAPI is the handler-facing contract for category operations.

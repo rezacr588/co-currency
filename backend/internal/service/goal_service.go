@@ -14,6 +14,7 @@ import (
 
 var (
 	ErrInvalidGoalType            = errors.New("invalid goal type")
+	ErrInvalidGoalWorkflowStatus  = errors.New("invalid goal workflow status")
 	ErrGoalContributionNotAllowed = errors.New("goal contributions are only available for financial goals")
 )
 
@@ -90,15 +91,25 @@ func (s *GoalService) CreateGoal(ctx context.Context, userID uuid.UUID, req *mod
 	}
 
 	goal := &model.Goal{
-		UserID:        userID,
-		Name:          name,
-		Type:          goalType,
-		Description:   strings.TrimSpace(req.Description),
-		TargetAmount:  req.TargetAmount,
-		CurrentAmount: 0,
-		Currency:      currency,
-		Unit:          unit,
-		Category:      strings.TrimSpace(req.Category),
+		UserID:         userID,
+		Name:           name,
+		Type:           goalType,
+		Description:    strings.TrimSpace(req.Description),
+		TargetAmount:   req.TargetAmount,
+		CurrentAmount:  0,
+		Currency:       currency,
+		Unit:           unit,
+		Category:       strings.TrimSpace(req.Category),
+		WorkflowStatus: model.GoalWorkflowStatusTodo,
+	}
+	if req.WorkflowStatus != "" {
+		if !req.WorkflowStatus.IsValid() {
+			return nil, ErrInvalidGoalWorkflowStatus
+		}
+		goal.WorkflowStatus = req.WorkflowStatus
+	}
+	if req.SortOrder != nil {
+		goal.SortOrder = *req.SortOrder
 	}
 
 	// Parse deadline if provided
@@ -166,6 +177,15 @@ func (s *GoalService) UpdateGoal(ctx context.Context, userID, goalID uuid.UUID, 
 	if req.Category != nil {
 		goal.Category = strings.TrimSpace(*req.Category)
 	}
+	if req.WorkflowStatus != nil {
+		if !req.WorkflowStatus.IsValid() {
+			return nil, ErrInvalidGoalWorkflowStatus
+		}
+		goal.WorkflowStatus = *req.WorkflowStatus
+	}
+	if req.SortOrder != nil {
+		goal.SortOrder = *req.SortOrder
+	}
 	if req.Deadline != nil {
 		deadlineText := strings.TrimSpace(*req.Deadline)
 		if deadlineText == "" {
@@ -181,6 +201,12 @@ func (s *GoalService) UpdateGoal(ctx context.Context, userID, goalID uuid.UUID, 
 
 	if goal.Type == "" {
 		goal.Type = model.GoalTypeFinancial
+	}
+	if goal.WorkflowStatus == "" {
+		goal.WorkflowStatus = model.GoalWorkflowStatusTodo
+	}
+	if goal.IsCompleted() && goal.WorkflowStatus != model.GoalWorkflowStatusArchived {
+		goal.WorkflowStatus = model.GoalWorkflowStatusDone
 	}
 
 	if goal.IsFinancial() {
@@ -241,6 +267,12 @@ func (s *GoalService) ContributeToGoal(ctx context.Context, userID, goalID uuid.
 			return nil, nil, repository.ErrInsufficientBalance
 		}
 		return nil, nil, fmt.Errorf("contributing to goal: %w", err)
+	}
+	if updatedGoal.IsCompleted() && updatedGoal.WorkflowStatus != model.GoalWorkflowStatusArchived {
+		updatedGoal.WorkflowStatus = model.GoalWorkflowStatusDone
+		if err := s.goalRepo.Update(ctx, updatedGoal); err != nil {
+			return nil, nil, fmt.Errorf("syncing goal workflow status: %w", err)
+		}
 	}
 
 	return updatedGoal, transaction, nil

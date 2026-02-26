@@ -104,7 +104,7 @@ func (h *GoalHandler) CreateGoal(w http.ResponseWriter, r *http.Request) {
 
 	goal, err := h.goalService.CreateGoal(r.Context(), userID, &req)
 	if err != nil {
-		if errors.Is(err, service.ErrInvalidGoalType) || isGoalValidationError(err) {
+		if errors.Is(err, service.ErrInvalidGoalType) || errors.Is(err, service.ErrInvalidGoalWorkflowStatus) || isGoalValidationError(err) {
 			httputil.BadRequestWithContext(r.Context(), w, err.Error(), err)
 			return
 		}
@@ -145,7 +145,7 @@ func (h *GoalHandler) UpdateGoal(w http.ResponseWriter, r *http.Request) {
 			httputil.NotFoundWithContext(r.Context(), w, "goal not found")
 			return
 		}
-		if errors.Is(err, service.ErrInvalidGoalType) || isGoalValidationError(err) {
+		if errors.Is(err, service.ErrInvalidGoalType) || errors.Is(err, service.ErrInvalidGoalWorkflowStatus) || isGoalValidationError(err) {
 			httputil.BadRequestWithContext(r.Context(), w, err.Error(), err)
 			return
 		}
@@ -257,6 +257,7 @@ func isGoalValidationError(err error) bool {
 		"currency is required",
 		"invalid deadline format",
 		"amount must be positive",
+		"invalid goal workflow status",
 	} {
 		if strings.Contains(msg, marker) {
 			return true

@@ -31,21 +31,48 @@ var GoalTypes = []GoalType{
 	GoalTypeOther,
 }
 
+type GoalWorkflowStatus string
+
+const (
+	GoalWorkflowStatusTodo       GoalWorkflowStatus = "todo"
+	GoalWorkflowStatusInProgress GoalWorkflowStatus = "in_progress"
+	GoalWorkflowStatusDone       GoalWorkflowStatus = "done"
+	GoalWorkflowStatusArchived   GoalWorkflowStatus = "archived"
+)
+
+var GoalWorkflowStatuses = []GoalWorkflowStatus{
+	GoalWorkflowStatusTodo,
+	GoalWorkflowStatusInProgress,
+	GoalWorkflowStatusDone,
+	GoalWorkflowStatusArchived,
+}
+
+func (s GoalWorkflowStatus) IsValid() bool {
+	for _, v := range GoalWorkflowStatuses {
+		if s == v {
+			return true
+		}
+	}
+	return false
+}
+
 // Goal represents a flexible goal (financial or non-financial).
 type Goal struct {
-	ID            uuid.UUID  `json:"id"`
-	UserID        uuid.UUID  `json:"user_id"`
-	Name          string     `json:"name"`
-	Type          GoalType   `json:"type"`
-	Description   string     `json:"description,omitempty"`
-	TargetAmount  float64    `json:"target_amount"`
-	CurrentAmount float64    `json:"current_amount"`
-	Currency      string     `json:"currency,omitempty"`
-	Unit          string     `json:"unit,omitempty"`
-	Category      string     `json:"category,omitempty"`
-	Deadline      *time.Time `json:"deadline,omitempty"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
+	ID             uuid.UUID          `json:"id"`
+	UserID         uuid.UUID          `json:"user_id"`
+	Name           string             `json:"name"`
+	Type           GoalType           `json:"type"`
+	Description    string             `json:"description,omitempty"`
+	TargetAmount   float64            `json:"target_amount"`
+	CurrentAmount  float64            `json:"current_amount"`
+	Currency       string             `json:"currency,omitempty"`
+	Unit           string             `json:"unit,omitempty"`
+	Category       string             `json:"category,omitempty"`
+	WorkflowStatus GoalWorkflowStatus `json:"workflow_status"`
+	SortOrder      float64            `json:"sort_order"`
+	Deadline       *time.Time         `json:"deadline,omitempty"`
+	CreatedAt      time.Time          `json:"created_at"`
+	UpdatedAt      time.Time          `json:"updated_at"`
 }
 
 // GoalProgress returns the progress percentage (0-100)
@@ -72,26 +99,30 @@ func (g *Goal) IsFinancial() bool {
 
 // CreateGoalRequest represents a request to create a goal
 type CreateGoalRequest struct {
-	Type         GoalType `json:"type,omitempty"`
-	Name         string   `json:"name"`
-	Description  string   `json:"description,omitempty"`
-	TargetAmount float64  `json:"target_amount"`
-	Currency     string   `json:"currency,omitempty"`
-	Unit         string   `json:"unit,omitempty"`
-	Category     string   `json:"category,omitempty"`
-	Deadline     string   `json:"deadline,omitempty"` // ISO date format
+	Type           GoalType           `json:"type,omitempty"`
+	Name           string             `json:"name"`
+	Description    string             `json:"description,omitempty"`
+	TargetAmount   float64            `json:"target_amount"`
+	Currency       string             `json:"currency,omitempty"`
+	Unit           string             `json:"unit,omitempty"`
+	Category       string             `json:"category,omitempty"`
+	WorkflowStatus GoalWorkflowStatus `json:"workflow_status,omitempty"`
+	SortOrder      *float64           `json:"sort_order,omitempty"`
+	Deadline       string             `json:"deadline,omitempty"` // ISO date format
 }
 
 // UpdateGoalRequest represents a request to update a goal
 type UpdateGoalRequest struct {
-	Type         *GoalType `json:"type,omitempty"`
-	Name         *string   `json:"name,omitempty"`
-	Description  *string   `json:"description,omitempty"`
-	TargetAmount *float64  `json:"target_amount,omitempty"`
-	Currency     *string   `json:"currency,omitempty"`
-	Unit         *string   `json:"unit,omitempty"`
-	Category     *string   `json:"category,omitempty"`
-	Deadline     *string   `json:"deadline,omitempty"` // ISO date format, empty string to remove
+	Type           *GoalType           `json:"type,omitempty"`
+	Name           *string             `json:"name,omitempty"`
+	Description    *string             `json:"description,omitempty"`
+	TargetAmount   *float64            `json:"target_amount,omitempty"`
+	Currency       *string             `json:"currency,omitempty"`
+	Unit           *string             `json:"unit,omitempty"`
+	Category       *string             `json:"category,omitempty"`
+	WorkflowStatus *GoalWorkflowStatus `json:"workflow_status,omitempty"`
+	SortOrder      *float64            `json:"sort_order,omitempty"`
+	Deadline       *string             `json:"deadline,omitempty"` // ISO date format, empty string to remove
 }
 
 // ContributeToGoalRequest represents a request to contribute to a goal

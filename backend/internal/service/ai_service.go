@@ -28,6 +28,8 @@ type AIService struct {
 	llm          llms.Model
 	llmOnce      sync.Once
 	llmErr       error
+	llmByModel   map[string]llms.Model
+	llmByModelMu sync.RWMutex
 	visionLLM    llms.Model
 	visionOnce   sync.Once
 	visionErr    error
@@ -63,69 +65,129 @@ func NewAIService(provider, apiKey, model, visionModel, cloudProject string) (*A
 		model:        model,
 		visionModel:  visionModel,
 		cloudProject: cloudProject,
+		llmByModel:   make(map[string]llms.Model),
 	}, nil
+}
+
+func (s *AIService) defaultTextModel() string {
+	switch s.provider {
+	case "cerebras":
+		if strings.TrimSpace(s.model) != "" {
+			return strings.TrimSpace(s.model)
+		}
+		return "llama-3.3-70b"
+	case "openai":
+		if strings.TrimSpace(s.model) != "" {
+			return strings.TrimSpace(s.model)
+		}
+		return "gpt-4o-mini"
+	case "groq":
+		if strings.TrimSpace(s.model) != "" {
+			return strings.TrimSpace(s.model)
+		}
+		return "llama-3.3-70b-versatile"
+	case "googleai", "gemini", "":
+		if strings.TrimSpace(s.model) != "" {
+			return strings.TrimSpace(s.model)
+		}
+		return "gemini-1.5-flash"
+	default:
+		if strings.TrimSpace(s.model) != "" {
+			return strings.TrimSpace(s.model)
+		}
+		return ""
+	}
+}
+
+func (s *AIService) newTextLLM(ctx context.Context, modelName string) (llms.Model, error) {
+	modelName = strings.TrimSpace(modelName)
+	if modelName == "" {
+		modelName = s.defaultTextModel()
+	}
+
+	switch s.provider {
+	case "cerebras":
+		return openai.New(
+			openai.WithToken(s.apiKey),
+			openai.WithBaseURL("https://api.cerebras.ai/v1"),
+			openai.WithModel(modelName),
+		)
+	case "openai":
+		return openai.New(
+			openai.WithToken(s.apiKey),
+			openai.WithModel(modelName),
+		)
+	case "groq":
+		return openai.New(
+			openai.WithToken(s.apiKey),
+			openai.WithBaseURL("https://api.groq.com/openai/v1"),
+			openai.WithModel(modelName),
+		)
+	case "googleai", "gemini", "":
+		opts := []googleai.Option{
+			googleai.WithAPIKey(s.apiKey),
+			googleai.WithDefaultModel(modelName),
+		}
+		if s.cloudProject != "" {
+			opts = append(opts, googleai.WithCloudProject(s.cloudProject))
+		}
+		return googleai.New(ctx, opts...)
+	default:
+		return nil, fmt.Errorf("unsupported AI provider: %s (supported: groq, cerebras, openai, googleai/gemini)", s.provider)
+	}
 }
 
 // getLLM initializes the LLM on first use (for text-only operations)
 // Thread-safe via sync.Once to prevent race conditions
 func (s *AIService) getLLM(ctx context.Context) (llms.Model, error) {
 	s.llmOnce.Do(func() {
-		var llm llms.Model
-		var err error
-
-		switch s.provider {
-		case "cerebras":
-			// Cerebras uses OpenAI-compatible API
-			model := s.model
-			if model == "" {
-				model = "llama-3.3-70b" // Default fallback
-			}
-			llm, err = openai.New(
-				openai.WithToken(s.apiKey),
-				openai.WithBaseURL("https://api.cerebras.ai/v1"),
-				openai.WithModel(model),
-			)
-		case "openai":
-			llm, err = openai.New(
-				openai.WithToken(s.apiKey),
-				openai.WithModel("gpt-4o-mini"),
-			)
-		case "groq":
-			model := s.model
-			if model == "" {
-				model = "llama-3.3-70b-versatile"
-			}
-			llm, err = openai.New(
-				openai.WithToken(s.apiKey),
-				openai.WithBaseURL("https://api.groq.com/openai/v1"),
-				openai.WithModel(model),
-			)
-		case "googleai", "gemini", "":
-			opts := []googleai.Option{
-				googleai.WithAPIKey(s.apiKey),
-				googleai.WithDefaultModel("gemini-1.5-flash"),
-			}
-			if s.cloudProject != "" {
-				opts = append(opts, googleai.WithCloudProject(s.cloudProject))
-			}
-			llm, err = googleai.New(ctx, opts...)
-		default:
-			s.llmErr = fmt.Errorf("unsupported AI provider: %s (supported: groq, cerebras, openai, googleai/gemini)", s.provider)
-			return
-		}
-
+		llm, err := s.newTextLLM(ctx, s.defaultTextModel())
 		if err != nil {
 			s.llmErr = fmt.Errorf("initializing AI provider: %w", err)
 			return
 		}
 
 		s.llm = llm
+		s.llmByModelMu.Lock()
+		s.llmByModel[s.defaultTextModel()] = llm
+		s.llmByModelMu.Unlock()
 	})
 
 	if s.llmErr != nil {
 		return nil, s.llmErr
 	}
 	return s.llm, nil
+}
+
+// getLLMForModel returns a text LLM for the requested model, caching by model name.
+func (s *AIService) getLLMForModel(ctx context.Context, modelName string) (llms.Model, string, error) {
+	modelName = strings.TrimSpace(modelName)
+	if modelName == "" {
+		modelName = s.defaultTextModel()
+	}
+
+	if modelName == s.defaultTextModel() {
+		llm, err := s.getLLM(ctx)
+		return llm, modelName, err
+	}
+
+	s.llmByModelMu.RLock()
+	if cached := s.llmByModel[modelName]; cached != nil {
+		s.llmByModelMu.RUnlock()
+		return cached, modelName, nil
+	}
+	s.llmByModelMu.RUnlock()
+
+	llm, err := s.newTextLLM(ctx, modelName)
+	if err != nil {
+		return nil, "", err
+	}
+
+	s.llmByModelMu.Lock()
+	s.llmByModel[modelName] = llm
+	s.llmByModelMu.Unlock()
+
+	return llm, modelName, nil
 }
 
 // getVisionLLM returns an LLM instance configured for vision/image tasks
@@ -508,6 +570,11 @@ func (s *AIService) IsConfigured() bool {
 // GetProvider returns the configured AI provider name
 func (s *AIService) GetProvider() string {
 	return s.provider
+}
+
+// GetDefaultModel returns the resolved default text model name.
+func (s *AIService) GetDefaultModel() string {
+	return s.defaultTextModel()
 }
 
 const detectIntentPromptTemplate = `Classify the user's intent. Return ONLY a JSON object with one field "intent".

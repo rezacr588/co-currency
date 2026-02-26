@@ -234,6 +234,107 @@ func (h *WalletHandler) UpdateTransaction(w http.ResponseWriter, r *http.Request
 	httputil.Success(w, tx)
 }
 
+// GetTransactionTags handles GET /api/v1/wallet/transactions/{id}/tags.
+func (h *WalletHandler) GetTransactionTags(w http.ResponseWriter, r *http.Request) {
+	if !requireService(w, h.walletService != nil, "wallet service not available - database connection failed") {
+		return
+	}
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	txID, ok := parseTransactionIDParam(w, r)
+	if !ok {
+		return
+	}
+
+	tags, err := h.walletService.GetTransactionTags(r.Context(), userID, txID)
+	if err != nil {
+		if errors.Is(err, repository.ErrTransactionNotFound) {
+			httputil.NotFoundWithContext(r.Context(), w, "transaction not found")
+			return
+		}
+		httputil.BadRequestWithContext(r.Context(), w, err.Error(), err)
+		return
+	}
+
+	httputil.Success(w, map[string]interface{}{"tags": tags})
+}
+
+// AddTransactionTag handles POST /api/v1/wallet/transactions/{id}/tags.
+func (h *WalletHandler) AddTransactionTag(w http.ResponseWriter, r *http.Request) {
+	if !requireService(w, h.walletService != nil, "wallet service not available - database connection failed") {
+		return
+	}
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+	txID, ok := parseTransactionIDParam(w, r)
+	if !ok {
+		return
+	}
+	var req struct {
+		TagID string `json:"tag_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
+		return
+	}
+	tagID, err := uuid.Parse(strings.TrimSpace(req.TagID))
+	if err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "invalid tag ID", err)
+		return
+	}
+	if err := h.walletService.AddTransactionTag(r.Context(), userID, txID, tagID); err != nil {
+		if errors.Is(err, repository.ErrTransactionNotFound) {
+			httputil.NotFoundWithContext(r.Context(), w, "transaction not found")
+			return
+		}
+		if errors.Is(err, repository.ErrTagNotFound) {
+			httputil.NotFoundWithContext(r.Context(), w, "tag not found")
+			return
+		}
+		httputil.BadRequestWithContext(r.Context(), w, err.Error(), err)
+		return
+	}
+	httputil.Success(w, map[string]string{"message": "tag added to transaction"})
+}
+
+// RemoveTransactionTag handles DELETE /api/v1/wallet/transactions/{id}/tags/{tagID}.
+func (h *WalletHandler) RemoveTransactionTag(w http.ResponseWriter, r *http.Request) {
+	if !requireService(w, h.walletService != nil, "wallet service not available - database connection failed") {
+		return
+	}
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+	txID, ok := parseTransactionIDParam(w, r)
+	if !ok {
+		return
+	}
+	tagID, err := uuid.Parse(chi.URLParam(r, "tagID"))
+	if err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "invalid tag ID", err)
+		return
+	}
+	if err := h.walletService.RemoveTransactionTag(r.Context(), userID, txID, tagID); err != nil {
+		if errors.Is(err, repository.ErrTransactionNotFound) {
+			httputil.NotFoundWithContext(r.Context(), w, "transaction not found")
+			return
+		}
+		if errors.Is(err, repository.ErrTagNotFound) {
+			httputil.NotFoundWithContext(r.Context(), w, "tag not found")
+			return
+		}
+		httputil.BadRequestWithContext(r.Context(), w, err.Error(), err)
+		return
+	}
+	httputil.Success(w, map[string]string{"message": "tag removed from transaction"})
+}
+
 // ImportTransactions handles POST /api/v1/wallet/transactions/import.
 func (h *WalletHandler) ImportTransactions(w http.ResponseWriter, r *http.Request) {
 	if !requireService(w, h.walletService != nil, "wallet service not available - database connection failed") {
@@ -291,6 +392,16 @@ func escapeCSVField(field string) string {
 
 func parsePaginationParams(w http.ResponseWriter, r *http.Request) (int, int, bool) {
 	return parsePaginationParamsWithMax(w, r, 500)
+}
+
+func parseTransactionIDParam(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
+	txIDStr := chi.URLParam(r, "id")
+	txID, err := uuid.Parse(txIDStr)
+	if err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "invalid transaction ID", err)
+		return uuid.Nil, false
+	}
+	return txID, true
 }
 
 func parsePaginationParamsWithMax(w http.ResponseWriter, r *http.Request, maxLimit int) (int, int, bool) {

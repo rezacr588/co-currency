@@ -18,6 +18,7 @@ import (
 	"github.com/rezacr588/currency-converter/internal/config"
 	"github.com/rezacr588/currency-converter/internal/handler"
 	"github.com/rezacr588/currency-converter/internal/middleware"
+	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/router"
 	"github.com/rezacr588/currency-converter/internal/service"
@@ -252,6 +253,7 @@ func main() {
 	var goalService *service.GoalService
 	var taskService *service.TaskService
 	var todoService *service.TodoService
+	var plannerService *service.PlannerService
 	var tagService *service.TagService
 	var categoryService *service.CategoryService
 	var budgetService *service.BudgetService
@@ -295,6 +297,12 @@ func main() {
 		tagRepo := repository.NewTagRepository(mainDB)
 		tagService = service.NewTagService(tagRepo)
 		log.Info().Msg("Tag service initialized")
+		taskService.SetTagRepository(tagRepo)
+		if walletService != nil {
+			walletService.SetTagRepository(tagRepo)
+		}
+		plannerService = service.NewPlannerService(taskRepo, goalRepo, taskService)
+		log.Info().Msg("Planner service initialized")
 
 		categoryRepo := repository.NewCategoryRepository(mainDB)
 		if err := categoryRepo.InitDefaultCategories(context.Background()); err != nil {
@@ -435,6 +443,11 @@ func main() {
 				noteRepo,
 				cfg.TavilyAPIKey,
 			)
+			aiChatService.SetThinkingConfig(
+				cfg.AIFastModel,
+				cfg.AIThinkingModel,
+				model.ChatThinkingMode(cfg.AIThinkingModeDefault),
+			)
 			log.Info().Msg("AI Chat service initialized with full context")
 		}
 	}
@@ -481,6 +494,7 @@ func main() {
 	var goalHandler *handler.GoalHandler
 	var taskHandler *handler.TaskHandler
 	var todoHandler *handler.TodoHandler
+	var plannerHandler *handler.PlannerHandler
 	var tagHandler *handler.TagHandler
 	var budgetHandler *handler.BudgetHandler
 	var recurringHandler *handler.RecurringHandler
@@ -494,6 +508,9 @@ func main() {
 	}
 	if todoService != nil {
 		todoHandler = handler.NewTodoHandler(todoService)
+	}
+	if plannerService != nil {
+		plannerHandler = handler.NewPlannerHandler(plannerService)
 	}
 	if tagService != nil {
 		tagHandler = handler.NewTagHandler(tagService)
@@ -572,6 +589,7 @@ func main() {
 		Goal:          goalHandler,
 		Todo:          todoHandler,
 		Task:          taskHandler,
+		Planner:       plannerHandler,
 		Tag:           tagHandler,
 		Budget:        budgetHandler,
 		Recurring:     recurringHandler,

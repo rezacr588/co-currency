@@ -15,6 +15,7 @@ import (
 type WalletService struct {
 	walletRepo      *repository.WalletRepository
 	exchangeService *ExchangeService
+	tagRepo         *repository.TagRepository
 }
 
 // NewWalletService creates a new WalletService
@@ -23,6 +24,10 @@ func NewWalletService(walletRepo *repository.WalletRepository, exchangeService *
 		walletRepo:      walletRepo,
 		exchangeService: exchangeService,
 	}
+}
+
+func (s *WalletService) SetTagRepository(tagRepo *repository.TagRepository) {
+	s.tagRepo = tagRepo
 }
 
 // GetBalances retrieves all balances for a user
@@ -334,4 +339,68 @@ func (s *WalletService) ImportTransactions(ctx context.Context, userID uuid.UUID
 		count++
 	}
 	return count, nil
+}
+
+func (s *WalletService) GetTransactionTags(ctx context.Context, userID, txID uuid.UUID) ([]model.Tag, error) {
+	if s.tagRepo == nil {
+		return nil, errors.New("tag repository is not configured")
+	}
+	if _, err := s.walletRepo.GetTransaction(ctx, userID, txID); err != nil {
+		if errors.Is(err, repository.ErrTransactionNotFound) {
+			return nil, repository.ErrTransactionNotFound
+		}
+		return nil, fmt.Errorf("getting transaction: %w", err)
+	}
+	tags, err := s.tagRepo.GetTagsForTransaction(ctx, txID)
+	if err != nil {
+		return nil, fmt.Errorf("getting transaction tags: %w", err)
+	}
+	if tags == nil {
+		tags = []model.Tag{}
+	}
+	return tags, nil
+}
+
+func (s *WalletService) AddTransactionTag(ctx context.Context, userID, txID, tagID uuid.UUID) error {
+	if s.tagRepo == nil {
+		return errors.New("tag repository is not configured")
+	}
+	if _, err := s.walletRepo.GetTransaction(ctx, userID, txID); err != nil {
+		if errors.Is(err, repository.ErrTransactionNotFound) {
+			return repository.ErrTransactionNotFound
+		}
+		return fmt.Errorf("getting transaction: %w", err)
+	}
+	if _, err := s.tagRepo.GetByID(ctx, userID, tagID); err != nil {
+		if errors.Is(err, repository.ErrTagNotFound) {
+			return repository.ErrTagNotFound
+		}
+		return fmt.Errorf("getting tag: %w", err)
+	}
+	if err := s.tagRepo.AddTagToTransaction(ctx, txID, tagID); err != nil {
+		return fmt.Errorf("adding transaction tag: %w", err)
+	}
+	return nil
+}
+
+func (s *WalletService) RemoveTransactionTag(ctx context.Context, userID, txID, tagID uuid.UUID) error {
+	if s.tagRepo == nil {
+		return errors.New("tag repository is not configured")
+	}
+	if _, err := s.walletRepo.GetTransaction(ctx, userID, txID); err != nil {
+		if errors.Is(err, repository.ErrTransactionNotFound) {
+			return repository.ErrTransactionNotFound
+		}
+		return fmt.Errorf("getting transaction: %w", err)
+	}
+	if _, err := s.tagRepo.GetByID(ctx, userID, tagID); err != nil {
+		if errors.Is(err, repository.ErrTagNotFound) {
+			return repository.ErrTagNotFound
+		}
+		return fmt.Errorf("getting tag: %w", err)
+	}
+	if err := s.tagRepo.RemoveTagFromTransaction(ctx, txID, tagID); err != nil {
+		return fmt.Errorf("removing transaction tag: %w", err)
+	}
+	return nil
 }

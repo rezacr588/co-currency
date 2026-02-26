@@ -19,6 +19,9 @@ type walletServiceStub struct {
 	deleteTransactionFn       func(ctx context.Context, userID, txID uuid.UUID) error
 	updateTransactionFn       func(ctx context.Context, userID, txID uuid.UUID, req *model.UpdateTransactionRequest) (*model.Transaction, error)
 	importTransactionsFn      func(ctx context.Context, userID uuid.UUID, req []model.TransactionRequest) (int, error)
+	getTransactionTagsFn      func(ctx context.Context, userID, txID uuid.UUID) ([]model.Tag, error)
+	addTransactionTagFn       func(ctx context.Context, userID, txID, tagID uuid.UUID) error
+	removeTransactionTagFn    func(ctx context.Context, userID, txID, tagID uuid.UUID) error
 }
 
 func (s *walletServiceStub) GetBalances(ctx context.Context, userID uuid.UUID) ([]model.WalletBalance, error) {
@@ -96,6 +99,27 @@ func (s *walletServiceStub) ImportTransactions(ctx context.Context, userID uuid.
 		return s.importTransactionsFn(ctx, userID, req)
 	}
 	return 0, nil
+}
+
+func (s *walletServiceStub) GetTransactionTags(ctx context.Context, userID, txID uuid.UUID) ([]model.Tag, error) {
+	if s.getTransactionTagsFn != nil {
+		return s.getTransactionTagsFn(ctx, userID, txID)
+	}
+	return []model.Tag{}, nil
+}
+
+func (s *walletServiceStub) AddTransactionTag(ctx context.Context, userID, txID, tagID uuid.UUID) error {
+	if s.addTransactionTagFn != nil {
+		return s.addTransactionTagFn(ctx, userID, txID, tagID)
+	}
+	return nil
+}
+
+func (s *walletServiceStub) RemoveTransactionTag(ctx context.Context, userID, txID, tagID uuid.UUID) error {
+	if s.removeTransactionTagFn != nil {
+		return s.removeTransactionTagFn(ctx, userID, txID, tagID)
+	}
+	return nil
 }
 
 type categoryServiceStub struct {

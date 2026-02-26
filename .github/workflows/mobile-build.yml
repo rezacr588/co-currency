@@ -31,7 +31,8 @@ jobs:
         id: check
         run: |
           # Files that require a new native build when changed
-          NATIVE_FILES="app/package.json app/app.json app/eas.json"
+          # package.json is handled separately below to avoid rebuilding for non-native edits
+          NATIVE_FILES="app/app.json app/eas.json"
 
           # Check if any native files changed in this commit
           CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
@@ -44,11 +45,11 @@ jobs:
             fi
           done
 
-          # Also check for new native dependencies in package.json
+          # Check for native dependency changes in package.json
           if echo "$CHANGED" | grep -q "^app/package.json$"; then
-            # Check if expo or react-native related packages changed
-            if git diff HEAD~1 HEAD -- app/package.json | grep -E '"(expo-|react-native|@expo)' > /dev/null 2>&1; then
-              echo "Native dependency changed in package.json"
+            # Trigger APK build only when Expo/React Native dependencies changed
+            if git diff HEAD~1 HEAD -- app/package.json | grep -E '^[+-].*"(expo-|react-native|@expo)' > /dev/null 2>&1; then
+              echo "Native dependency changed in app/package.json"
               NATIVE_CHANGED="true"
             fi
           fi

@@ -48,6 +48,7 @@ type TodoItem struct {
 	Description   string       `json:"description,omitempty"`
 	Status        TodoStatus   `json:"status"`
 	Priority      string       `json:"priority,omitempty"`
+	SortOrder     float64      `json:"sort_order,omitempty"`
 	DueDate       *time.Time   `json:"due_date,omitempty"`
 	Progress      float64      `json:"progress,omitempty"` // mainly for goals
 	GoalType      GoalType     `json:"goal_type,omitempty"`
