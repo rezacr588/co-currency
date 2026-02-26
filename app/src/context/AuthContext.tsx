@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback } from 'react';
 import { useRouter, useSegments } from 'expo-router';
+import { QueryClient, useQueryClient } from '@tanstack/react-query';
 import {
   api,
   setAuthToken,
@@ -25,6 +26,21 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AUTH_SCOPED_QUERY_KEYS = new Set(['planner-board', 'tasks', 'goals', 'tags']);
+
+export function isAuthScopedQueryKey(queryKey: readonly unknown[]): boolean {
+  const [head] = queryKey;
+  return typeof head === 'string' && AUTH_SCOPED_QUERY_KEYS.has(head);
+}
+
+export async function clearAuthScopedQueries(queryClient: QueryClient): Promise<void> {
+  await queryClient.cancelQueries({
+    predicate: (query) => isAuthScopedQueryKey(query.queryKey),
+  });
+  queryClient.removeQueries({
+    predicate: (query) => isAuthScopedQueryKey(query.queryKey),
+  });
+}
 
 // This hook protects routes by checking auth state
 function useProtectedRoute(user: User | null, isLoading: boolean) {
@@ -60,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   // Protect routes based on auth state
   useProtectedRoute(user, isLoading);
@@ -179,9 +196,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await clearAuthToken();
+    await clearAuthScopedQueries(queryClient);
     setUser(null);
     router.replace('/login');
-  }, [router]);
+  }, [queryClient, router]);
 
   const handleOAuthCallback = useCallback(async (token: string, refreshToken: string) => {
     await setAuthToken(token);

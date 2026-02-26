@@ -18,6 +18,7 @@ import { TrendingUp, TrendingDown, Check, Search, Plus, Trash2, Sparkles } from 
 import styled, { useTheme } from 'styled-components/native';
 import { api } from '../../../src/api';
 import { useLanguage } from '../../../src/context/LanguageContext';
+import { useAuth } from '../../../src/context/AuthContext';
 import { formatCompactCurrency, getCurrencyDisplay } from '../../../src/utils/format';
 import { CATEGORY_ICONS, CategoryIcon } from '../../../src/constants/icons';
 import { COMMON_CURRENCIES } from '../../../src/constants/currencies';
@@ -28,6 +29,7 @@ import { Button } from '../../../src/components/ui/Button';
 import { H2, Caption, BodyMedium } from '../../../src/components/ui/styled';
 import type { Category, TransactionRequest } from '../../../src/types/wallet';
 import type { AddTransactionStep } from '../../../src/navigation/mode';
+import { linkTaskToTransactionIfNeeded } from '../../../src/utils/taskLinking';
 
 const ScreenContainer = styled(SafeAreaView)`
   flex: 1;
@@ -115,6 +117,7 @@ export default function AddTransactionScreen() {
   const { t } = useLanguage();
   const theme = useTheme();
   const router = useRouter();
+  const { user } = useAuth();
   const params = useLocalSearchParams<{
     type?: string;
     amount?: string;
@@ -154,10 +157,12 @@ export default function AddTransactionScreen() {
   const [step, setStep] = useState<AddTransactionStep>('basics');
   const [isSuggestingCategory, setIsSuggestingCategory] = useState(false);
   const { showToast } = useToast();
+  const userID = user?.id || '';
   const parsedAmount = Number.parseFloat(amount);
   const hasValidAmount = Number.isFinite(parsedAmount) && parsedAmount > 0;
   const stepIndex = ADD_TRANSACTION_STEPS.indexOf(step);
   const returnTo = typeof params.return_to === 'string' && params.return_to.trim() ? decodeURIComponent(params.return_to) : '';
+  const linkedTaskID = typeof params.linked_task_id === 'string' ? params.linked_task_id.trim() : '';
 
   useEffect(() => {
     if (typeof params.type === 'string' && (params.type === 'credit' || params.type === 'debit')) {
@@ -298,12 +303,35 @@ export default function AddTransactionScreen() {
 
   const mutation = useMutation({
     mutationFn: (data: TransactionRequest) => api.wallet.addTransaction(data),
-    onSuccess: () => {
+    onSuccess: async (createdTransaction) => {
       setError('');
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
       queryClient.invalidateQueries({ queryKey: ['planner-board'] });
+      if (userID) {
+        queryClient.invalidateQueries({ queryKey: ['planner-board', userID] });
+      }
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      if (userID) {
+        queryClient.invalidateQueries({ queryKey: ['goals', userID] });
+      }
+
+      try {
+        await linkTaskToTransactionIfNeeded({
+          linkedTaskID,
+          transactionID: createdTransaction.id,
+          updateTask: api.tasks.update,
+        });
+      } catch (linkError) {
+        showToast(
+          linkError instanceof Error
+            ? `Transaction saved, but task link failed: ${linkError.message}`
+            : 'Transaction saved, but task link failed.',
+          'warning'
+        );
+      }
+
       api.badges.check().then(() => {
         queryClient.invalidateQueries({ queryKey: ['badges'] });
       }).catch(() => {});

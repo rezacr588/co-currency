@@ -80,6 +80,7 @@ import type {
   TodoItem,
 } from '../../src/types/planner';
 import { readJSON, removeStorage, writeJSON } from '../../src/utils/storage';
+import { isValidPlannerDueDate } from '../../src/utils/plannerDate';
 
 const COLUMN_ORDER: PlannerStatus[] = ['todo', 'in_progress', 'done', 'archived'];
 const TASK_WIZARD_DRAFT_VERSION = 1;
@@ -128,12 +129,6 @@ function draftStorageKey(userID: string): string {
 
 function createTempTaskID(): string {
   return `temp-task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function isValidDueDate(value: string): boolean {
-  const normalized = value.trim();
-  if (!normalized) return true;
-  return !Number.isNaN(Date.parse(normalized));
 }
 
 function statusToLabel(status: PlannerStatus): string {
@@ -239,6 +234,7 @@ function PlannerCard({
   const translateY = useSharedValue(0);
   const lift = useSharedValue(0);
   const isTask = item.type === 'task';
+  const canCompleteTask = isTask && item.status !== 'done' && item.status !== 'archived';
 
   const gesture = Gesture.Pan()
     .activateAfterLongPress(220)
@@ -369,9 +365,9 @@ function PlannerCard({
                   onPress={() => onAddTransaction?.(item.id)}
                   disabled={isLaunchingTransaction}
                   style={({ pressed }) => [{
-                    minWidth: 46,
-                    paddingHorizontal: 8,
-                    height: 30,
+                    minWidth: 56,
+                    paddingHorizontal: 10,
+                    height: 44,
                     borderRadius: 9,
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -389,31 +385,33 @@ function PlannerCard({
                     </Text>
                   )}
                 </Pressable>
-                <Pressable
-                  onPress={() => onCompleteTask(item.id)}
-                  style={({ pressed }) => [{
-                    width: 30,
-                    height: 30,
-                    borderRadius: 8,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: colors.success + '20',
-                  }, pressed && { opacity: 0.72 }]}
-                >
-                  <Check size={14} color={colors.success} />
-                </Pressable>
+                {canCompleteTask ? (
+                  <Pressable
+                    onPress={() => onCompleteTask(item.id)}
+                    style={({ pressed }) => [{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 10,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: colors.success + '20',
+                    }, pressed && { opacity: 0.72 }]}
+                  >
+                    <Check size={16} color={colors.success} />
+                  </Pressable>
+                ) : null}
                 <Pressable
                   onPress={() => onDeleteTask(item.id)}
                   style={({ pressed }) => [{
-                    width: 30,
-                    height: 30,
-                    borderRadius: 8,
+                    width: 44,
+                    height: 44,
+                    borderRadius: 10,
                     alignItems: 'center',
                     justifyContent: 'center',
                     backgroundColor: colors.danger + '18',
                   }, pressed && { opacity: 0.72 }]}
                 >
-                  <Trash2 size={14} color={colors.danger} />
+                  <Trash2 size={16} color={colors.danger} />
                 </Pressable>
               </View>
             ) : null}
@@ -475,8 +473,12 @@ export default function PlannerScreen() {
   const [subtasks, setSubtasks] = useState<TaskSubtask[]>([]);
   const [subtaskDraft, setSubtaskDraft] = useState('');
 
+  const boardQueryKey = useMemo(() => ['planner-board', userID], [userID]);
+  const tagsQueryKey = useMemo(() => ['tags', userID], [userID]);
+  const goalsQueryKey = useMemo(() => ['goals', userID], [userID]);
+
   const boardQuery = useQuery({
-    queryKey: ['planner-board'],
+    queryKey: boardQueryKey,
     queryFn: () => api.planner.getBoard(),
     enabled: !!userID,
     staleTime: 15 * 1000,
@@ -484,13 +486,13 @@ export default function PlannerScreen() {
   });
 
   const tagsQuery = useQuery({
-    queryKey: ['tags'],
+    queryKey: tagsQueryKey,
     queryFn: () => api.tags.list(),
     enabled: !!userID,
   });
 
   const goalsQuery = useQuery({
-    queryKey: ['goals'],
+    queryKey: goalsQueryKey,
     queryFn: () => api.goals.list(),
     enabled: !!userID,
   });
@@ -541,6 +543,7 @@ export default function PlannerScreen() {
       setCachedBoard(null);
       setOutbox([]);
       setFundingRequiredMap({});
+      setFundingRequired(null);
       return;
     }
 
@@ -617,8 +620,12 @@ export default function PlannerScreen() {
       if (result.synced > 0 || result.needs_refresh) {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['planner-board'] }),
+          queryClient.invalidateQueries({ queryKey: boardQueryKey }),
           queryClient.invalidateQueries({ queryKey: ['tasks'] }),
           queryClient.invalidateQueries({ queryKey: ['goals'] }),
+          queryClient.invalidateQueries({ queryKey: goalsQueryKey }),
+          queryClient.invalidateQueries({ queryKey: ['tags'] }),
+          queryClient.invalidateQueries({ queryKey: tagsQueryKey }),
           queryClient.invalidateQueries({ queryKey: ['wallet'] }),
           queryClient.invalidateQueries({ queryKey: ['wallet', 'transactions'] }),
           queryClient.invalidateQueries({ queryKey: ['reports'] }),
@@ -629,7 +636,7 @@ export default function PlannerScreen() {
       setIsSyncing(false);
       syncInFlightRef.current = false;
     }
-  }, [boardQuery, queryClient, showToast, userID]);
+  }, [boardQuery, boardQueryKey, goalsQueryKey, queryClient, showToast, tagsQueryKey, userID]);
 
   const pendingCount = useMemo(
     () => outbox.filter((op) => op.status === 'pending' || op.status === 'syncing').length,
@@ -695,6 +702,47 @@ export default function PlannerScreen() {
 
     return base;
   }, [fundingRequiredMap, outbox]);
+
+  useEffect(() => {
+    if (!userID) return;
+    if (!boardQuery.data && !cachedBoard) return;
+
+    const goalItemsByID = new Map<string, TodoItem>();
+    for (const column of canonicalBoard.columns) {
+      for (const item of column.items) {
+        if (item.type === 'goal') {
+          goalItemsByID.set(item.id, item);
+        }
+      }
+    }
+
+    const resolvedGoalIDs = Object.keys(fundingRequiredMap).filter((goalID) => {
+      const goalItem = goalItemsByID.get(goalID);
+      if (!goalItem) {
+        return true;
+      }
+      return goalItem.status === 'done';
+    });
+
+    if (resolvedGoalIDs.length === 0) {
+      return;
+    }
+
+    setFundingRequiredMap((current) => {
+      const next = { ...current };
+      for (const goalID of resolvedGoalIDs) {
+        delete next[goalID];
+      }
+      return next;
+    });
+
+    setFundingRequired((current) => {
+      if (!current) return current;
+      return resolvedGoalIDs.includes(current.goal_id) ? null : current;
+    });
+
+    void Promise.all(resolvedGoalIDs.map((goalID) => clearPlannerFundingRequired(userID, goalID)));
+  }, [boardQuery.data, cachedBoard, canonicalBoard, fundingRequiredMap, userID]);
 
   const summaryCards = useMemo(() => summarize(effectiveBoard), [effectiveBoard]);
 
@@ -819,24 +867,41 @@ export default function PlannerScreen() {
     [syncOutboxNow, userID]
   );
 
-  const handleDeleteTask = useCallback(
-    async (taskID: string) => {
-      if (!userID) return;
-      try {
-        await enqueuePlannerOp({
-          user_id: userID,
-          op_type: 'task_delete',
-          entity_type: 'task',
-          entity_id: taskID,
-          payload: {},
-        });
-        void syncOutboxNow();
-      } catch (error) {
-        Alert.alert('Could not queue task delete', error instanceof Error ? error.message : 'Unknown error');
-      }
-    },
-    [syncOutboxNow, userID]
-  );
+  const queueDeleteTask = useCallback(async (taskID: string) => {
+    if (!userID) return;
+    try {
+      await enqueuePlannerOp({
+        user_id: userID,
+        op_type: 'task_delete',
+        entity_type: 'task',
+        entity_id: taskID,
+        payload: {},
+      });
+      void syncOutboxNow();
+    } catch (error) {
+      Alert.alert('Could not queue task delete', error instanceof Error ? error.message : 'Unknown error');
+    }
+  }, [syncOutboxNow, userID]);
+
+  const handleDeleteTask = useCallback((taskID: string) => {
+    Alert.alert(
+      'Delete task?',
+      'This task will be removed from your planner.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void queueDeleteTask(taskID);
+          },
+        },
+      ]
+    );
+  }, [queueDeleteTask]);
 
   const addSubtask = useCallback(() => {
     const text = subtaskDraft.trim();
@@ -941,6 +1006,13 @@ export default function PlannerScreen() {
     isTaskWizardVisible,
   ]);
 
+  const dueDateValidationError = useMemo(() => {
+    if (isValidPlannerDueDate(dueDate)) {
+      return null;
+    }
+    return 'Use YYYY-MM-DD (for example, 2026-03-01).';
+  }, [dueDate]);
+
   const validateWizardStep = useCallback((step: TaskWizardStep): string | null => {
     if (step === 'basics') {
       if (!title.trim()) {
@@ -949,8 +1021,8 @@ export default function PlannerScreen() {
     }
 
     if (step === 'schedule') {
-      if (!isValidDueDate(dueDate)) {
-        return 'Due date must be a valid ISO date string.';
+      if (dueDateValidationError) {
+        return dueDateValidationError;
       }
     }
 
@@ -965,7 +1037,7 @@ export default function PlannerScreen() {
     }
 
     return null;
-  }, [autoLedgerEnabled, dueDate, ledgerAmount, ledgerCurrency, title]);
+  }, [autoLedgerEnabled, dueDateValidationError, ledgerAmount, ledgerCurrency, title]);
 
   const wizardSteps: TaskWizardStep[] = ['basics', 'schedule', 'organization', 'finance_review'];
 
@@ -991,6 +1063,13 @@ export default function PlannerScreen() {
 
   const submitTaskWizard = useCallback(async () => {
     if (!userID) return;
+
+    const scheduleError = validateWizardStep('schedule');
+    if (scheduleError) {
+      setWizardStep('schedule');
+      Alert.alert('Could not create task', scheduleError);
+      return;
+    }
 
     const error = validateWizardStep('finance_review');
     if (error) {
@@ -1634,11 +1713,11 @@ export default function PlannerScreen() {
                         setReminderMode('aggressive');
                       }
                     }}
-                    placeholder="Due date (ISO, optional)"
+                    placeholder="Due date (YYYY-MM-DD, optional)"
                     placeholderTextColor={colors.placeholder}
                     style={{
                       borderWidth: 1,
-                      borderColor: colors.border,
+                      borderColor: dueDateValidationError ? colors.danger : colors.border,
                       backgroundColor: colors.card,
                       borderRadius: 12,
                       paddingHorizontal: 12,
@@ -1646,6 +1725,9 @@ export default function PlannerScreen() {
                       color: colors.foreground,
                     }}
                   />
+                  <Text style={{ color: dueDateValidationError ? colors.danger : colors.mutedForeground, fontSize: 11 }}>
+                    {dueDateValidationError ?? 'Format: YYYY-MM-DD'}
+                  </Text>
 
                   <View>
                     <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 8 }}>Priority</Text>
@@ -2076,14 +2158,6 @@ export default function PlannerScreen() {
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
               <Pressable
                 onPress={() => {
-                  if (fundingRequired && userID) {
-                    void clearPlannerFundingRequired(userID, fundingRequired.goal_id);
-                    setFundingRequiredMap((current) => {
-                      const next = { ...current };
-                      delete next[fundingRequired.goal_id];
-                      return next;
-                    });
-                  }
                   setFundingRequired(null);
                   router.push('/(app)/(tabs)/goals');
                 }}

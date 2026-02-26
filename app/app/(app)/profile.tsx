@@ -21,7 +21,6 @@ import {
   LogOut,
   ChevronRight,
   ChevronLeft,
-  Shield,
   Bell,
   Wallet,
   CreditCard,
@@ -35,7 +34,6 @@ import {
   Check,
   Lock,
   MessageCircle,
-  Image,
   StickyNote,
   Fingerprint,
   Eye,
@@ -47,7 +45,6 @@ import { useTheme as useStyledTheme } from 'styled-components/native';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useSettings } from '../../src/context/SettingsContext';
 import { api } from '../../src/api';
-import { haptics } from '../../src/utils/haptics';
 import { Toggle } from '../../src/components/ui/Toggle';
 
 const LANGUAGES = [
@@ -68,7 +65,8 @@ export default function ProfileScreen() {
   const { width } = useWindowDimensions();
 
   const isDesktop = width >= 1024;
-  const isTablet = width >= 768;
+  const desktopMaxWidth = 1280;
+  const strongBorder = colors.borderStrong || colors.border;
 
   // Edit profile state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -124,8 +122,33 @@ export default function ProfileScreen() {
     title: string;
     children: React.ReactNode;
   }) => (
-    <View style={{ backgroundColor: colors.card, borderRadius: 12, overflow: 'hidden' }}>
-      <Text style={{ fontSize: 14, color: colors.mutedForeground, padding: 16, paddingBottom: 8 }}>{title}</Text>
+    <View
+      style={{
+        backgroundColor: colors.card,
+        borderRadius: isDesktop ? 18 : 12,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: isDesktop ? strongBorder + '80' : colors.border,
+        shadowColor: '#0f172a',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: isDesktop ? 0.08 : 0,
+        shadowRadius: isDesktop ? 18 : 0,
+        elevation: isDesktop ? 2 : 0,
+      }}
+    >
+      <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 }}>
+        <Text
+          style={{
+            fontSize: isDesktop ? 11 : 14,
+            color: colors.mutedForeground,
+            fontFamily: isDesktop ? 'Inter_600SemiBold' : undefined,
+            letterSpacing: isDesktop ? 0.8 : 0,
+            textTransform: isDesktop ? 'uppercase' : 'none',
+          }}
+        >
+          {title}
+        </Text>
+      </View>
       {children}
     </View>
   );
@@ -150,14 +173,62 @@ export default function ProfileScreen() {
     <Pressable
       onPress={onPress}
       disabled={!onPress}
-      style={({ pressed }) => [{ cursor: onPress ? 'pointer' : undefined, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: !isLast ? 1 : 0, borderBottomColor: colors.border }, pressed && onPress && { opacity: 0.7 }]}
+      style={({ pressed }) => [{
+        cursor: onPress ? 'pointer' : undefined,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: isDesktop ? 14 : 16,
+        minHeight: 56,
+        borderBottomWidth: !isLast ? 1 : 0,
+        borderBottomColor: colors.border,
+        opacity: pressed && onPress ? 0.72 : 1,
+      }]}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        {icon}
-        <Text style={{ color: colors.foreground, marginLeft: 12 }}>{label}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0 }}>
+        <View
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 10,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: (iconColor || colors.accent) + '1A',
+            borderWidth: 1,
+            borderColor: (iconColor || colors.accent) + '33',
+          }}
+        >
+          {icon}
+        </View>
+        <Text
+          style={{
+            color: colors.foreground,
+            marginLeft: 12,
+            fontFamily: isDesktop ? 'Inter_500Medium' : undefined,
+            flexShrink: 1,
+          }}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        {value && <Text style={{ color: colors.mutedForeground, marginRight: 8 }}>{value}</Text>}
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
+        {value && (
+          <View
+            style={{
+              marginRight: 8,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.muted,
+              paddingHorizontal: 8,
+              paddingVertical: 3,
+            }}
+          >
+            <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{value}</Text>
+          </View>
+        )}
         {showChevron && onPress && <ChevronRight size={20} color={colors.placeholder} />}
       </View>
     </Pressable>
@@ -168,14 +239,16 @@ export default function ProfileScreen() {
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
-          padding: isDesktop ? 32 : 16,
-          maxWidth: isDesktop ? 1200 : undefined,
+          paddingHorizontal: isDesktop ? 28 : 16,
+          paddingTop: isDesktop ? 24 : 16,
+          paddingBottom: isDesktop ? 40 : 24,
+          maxWidth: isDesktop ? desktopMaxWidth : undefined,
           alignSelf: isDesktop ? 'center' : undefined,
           width: '100%',
         }}
       >
         {/* Header */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: isDesktop ? 20 : 24 }}>
           {!isDesktop && (
             <Pressable
               onPress={() => router.back()}
@@ -185,43 +258,109 @@ export default function ProfileScreen() {
               <ChevronLeft size={24} color={colors.placeholder} />
             </Pressable>
           )}
-          <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('profile')}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: isDesktop ? 30 : 24, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
+              {t('profile')}
+            </Text>
+            <Text style={{ color: colors.mutedForeground, marginTop: 4 }}>
+              {t('profileSubtitle') || 'Manage your account details and security'}
+            </Text>
+          </View>
         </View>
+
+        {isDesktop ? (
+          <View
+            style={{
+              backgroundColor: colors.card,
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: strongBorder + '80',
+              padding: 20,
+              marginBottom: 20,
+              shadowColor: '#0f172a',
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.08,
+              shadowRadius: 16,
+              elevation: 2,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View
+                  style={{
+                    backgroundColor: colors.accent + '22',
+                    borderWidth: 1,
+                    borderColor: colors.accent + '55',
+                    padding: 14,
+                    borderRadius: 9999,
+                  }}
+                >
+                  <User size={34} color={colors.accent} />
+                </View>
+                <View style={{ marginLeft: 14 }}>
+                  <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{user?.name}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                    <Mail size={14} color={colors.placeholder} />
+                    <Text style={{ color: colors.mutedForeground, marginLeft: 6 }}>{user?.email}</Text>
+                  </View>
+                </View>
+              </View>
+
+              <Pressable
+                onPress={openEditModal}
+                style={({ pressed }) => [{
+                  backgroundColor: colors.accent,
+                  borderRadius: 10,
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  opacity: pressed ? 0.82 : 1,
+                }]}
+              >
+                <Pencil size={15} color={colors.accentForeground} />
+                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>
+                  {t('editProfile')}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
 
         {/* Desktop: Two column layout, Mobile: Single column */}
         <View
           style={{
             flexDirection: isDesktop ? 'row' : 'column',
-            gap: 24,
+            gap: isDesktop ? 20 : 24,
+            alignItems: 'flex-start',
           }}
         >
           {/* Left Column - User Info & Appearance */}
-          <View style={{ flex: isDesktop ? 1 : undefined }}>
-            {/* User Info Card */}
-            <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
-              <View style={{ flexDirection: isDesktop ? 'row' : 'column', alignItems: 'center' }}>
-                <View style={{ backgroundColor: colors.primary + '33', padding: 16, borderRadius: 9999 }}>
-                  <User size={48} color={colors.accent} />
-                </View>
-                <View style={{ marginLeft: isDesktop ? 16 : 0, flex: isDesktop ? 1 : undefined, marginTop: isDesktop ? 0 : 16, alignItems: isDesktop ? undefined : 'center' }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{user?.name}</Text>
-                    <Pressable
-                      onPress={openEditModal}
-                      hitSlop={12}
-                      style={{ cursor: 'pointer', marginLeft: 8, padding: 4 }}
-                    >
-                      <Pencil size={16} color={colors.placeholder} />
-                    </Pressable>
+          <View style={{ width: isDesktop ? 360 : '100%' }}>
+            {!isDesktop && (
+              <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+                <View style={{ flexDirection: 'column', alignItems: 'center' }}>
+                  <View style={{ backgroundColor: colors.primary + '33', padding: 16, borderRadius: 9999 }}>
+                    <User size={48} color={colors.accent} />
                   </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-                    <Mail size={16} color={colors.placeholder} />
-                    <Text style={{ color: colors.mutedForeground, marginLeft: 8 }}>{user?.email}</Text>
+                  <View style={{ marginTop: 16, alignItems: 'center' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{user?.name}</Text>
+                      <Pressable
+                        onPress={openEditModal}
+                        hitSlop={12}
+                        style={{ cursor: 'pointer', marginLeft: 8, padding: 4 }}
+                      >
+                        <Pencil size={16} color={colors.placeholder} />
+                      </Pressable>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                      <Mail size={16} color={colors.placeholder} />
+                      <Text style={{ color: colors.mutedForeground, marginLeft: 8 }}>{user?.email}</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-              {/* Edit Profile Button (mobile) */}
-              {!isDesktop && (
+
                 <Pressable
                   onPress={openEditModal}
                   style={{ cursor: 'pointer', backgroundColor: colors.secondary, marginTop: 16, padding: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
@@ -229,8 +368,8 @@ export default function ProfileScreen() {
                   <Pencil size={16} color={colors.accent} />
                   <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium', marginLeft: 8 }}>{t('editProfile')}</Text>
                 </Pressable>
-              )}
-            </View>
+              </View>
+            )}
 
             {/* Appearance Settings */}
             <SettingsSection title={t('appearance')}>
@@ -257,83 +396,155 @@ export default function ProfileScreen() {
                   <Pressable
                     key={lang.code}
                     onPress={() => setLanguage(lang.code)}
-                    style={({ pressed }) => [{ cursor: 'pointer', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 }, pressed && { opacity: 0.7 }]}
+                    style={({ pressed }) => [{
+                      cursor: 'pointer',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingHorizontal: 16,
+                      paddingVertical: 14,
+                      borderBottomWidth: lang.code === LANGUAGES[LANGUAGES.length - 1].code ? 0 : 1,
+                      borderBottomColor: colors.border,
+                      opacity: pressed ? 0.72 : 1,
+                      backgroundColor: language === lang.code ? colors.accent + '14' : 'transparent',
+                    }]}
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Text style={{ fontSize: 20, marginRight: 12 }}>{lang.flag}</Text>
-                      <Text style={{ color: colors.foreground }}>{lang.name}</Text>
+                      <Text style={{ color: colors.foreground, fontFamily: language === lang.code ? 'Inter_500Medium' : undefined }}>
+                        {lang.name}
+                      </Text>
                     </View>
                     {language === lang.code && (
-                      <View style={{ width: 8, height: 8, backgroundColor: colors.accent, borderRadius: 9999 }} />
+                      <View
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: 9999,
+                          borderWidth: 1,
+                          borderColor: colors.accent + '66',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: colors.accent + '22',
+                        }}
+                      >
+                        <View style={{ width: 8, height: 8, backgroundColor: colors.accent, borderRadius: 9999 }} />
+                      </View>
                     )}
                   </Pressable>
                 ))}
               </SettingsSection>
             </View>
+
+            {isDesktop && (
+              <Pressable
+                onPress={handleLogout}
+                style={({ pressed }) => [{
+                  cursor: 'pointer',
+                  backgroundColor: colors.danger + '14',
+                  borderWidth: 1,
+                  borderColor: colors.danger + '40',
+                  padding: 16,
+                  borderRadius: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginTop: 16,
+                  opacity: pressed ? 0.72 : 1,
+                }]}
+              >
+                <LogOut size={20} color={colors.danger} />
+                <Text style={{ color: colors.danger, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>{t('logout')}</Text>
+              </Pressable>
+            )}
           </View>
 
           {/* Right Column - Finance & Account */}
-          <View style={{ flex: isDesktop ? 1 : undefined }}>
-            {/* Finance Management */}
-            <SettingsSection title={t('financeManagement')}>
-              <SettingsItem
-                icon={<Wallet size={20} color={colors.accent} />}
-                label={t('budgets')}
-                onPress={() => router.push('/budgets')}
-              />
-              <SettingsItem
-                icon={<Repeat size={20} color={colors.accent} />}
-                label={t('recurringTransactions')}
-                onPress={() => router.push('/recurring')}
-              />
-              <SettingsItem
-                icon={<CreditCard size={20} color={colors.accent} />}
-                label={t('subscriptions')}
-                onPress={() => router.push('/subscriptions')}
-                isLast
-              />
-            </SettingsSection>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 16 }}>
+              <View style={{ flex: 1 }}>
+                <SettingsSection title={t('financeManagement')}>
+                  <SettingsItem
+                    icon={<Wallet size={20} color={colors.accent} />}
+                    label={t('budgets')}
+                    onPress={() => router.push('/budgets')}
+                  />
+                  <SettingsItem
+                    icon={<Repeat size={20} color={colors.accent} />}
+                    label={t('recurringTransactions')}
+                    onPress={() => router.push('/recurring')}
+                  />
+                  <SettingsItem
+                    icon={<CreditCard size={20} color={colors.accent} />}
+                    label={t('subscriptions')}
+                    onPress={() => router.push('/subscriptions')}
+                    isLast
+                  />
+                </SettingsSection>
+              </View>
 
-            {/* Tools & Features */}
-            <View style={{ marginTop: 16 }}>
-              <SettingsSection title={t('toolsAndFeatures') || 'Tools & Features'}>
-                <SettingsItem
-                  icon={<StickyNote size={20} color={colors.accent} />}
-                  label={t('notes') || 'Notes'}
-                  onPress={() => router.push('/notes')}
-                />
-                <SettingsItem
-                  icon={<Trophy size={20} color={colors.accent} />}
-                  label={t('badges') || 'Badges'}
-                  onPress={() => router.push('/badges')}
-                />
-                <SettingsItem
-                  icon={<Target size={20} color={colors.accent} />}
-                  label={t('challenges') || 'Challenges'}
-                  onPress={() => router.push('/challenges')}
-                />
-                <SettingsItem
-                  icon={<History size={20} color={colors.accent} />}
-                  label={t('historicalRates') || 'Historical Rates'}
-                  onPress={() => router.push('/historical')}
-                />
-                <SettingsItem
-                  icon={<Info size={20} color={colors.placeholder} />}
-                  label={t('aboutUs') || 'About Us'}
-                  onPress={() => router.push('/(public)/about')}
-                  isLast
-                />
-              </SettingsSection>
+              <View style={{ flex: 1 }}>
+                <SettingsSection title={t('toolsAndFeatures') || 'Tools & Features'}>
+                  <SettingsItem
+                    icon={<StickyNote size={20} color={colors.accent} />}
+                    label={t('notes') || 'Notes'}
+                    onPress={() => router.push('/notes')}
+                  />
+                  <SettingsItem
+                    icon={<Trophy size={20} color={colors.accent} />}
+                    label={t('badges') || 'Badges'}
+                    onPress={() => router.push('/badges')}
+                  />
+                  <SettingsItem
+                    icon={<Target size={20} color={colors.accent} />}
+                    label={t('challenges') || 'Challenges'}
+                    onPress={() => router.push('/challenges')}
+                  />
+                  <SettingsItem
+                    icon={<History size={20} color={colors.accent} />}
+                    label={t('historicalRates') || 'Historical Rates'}
+                    onPress={() => router.push('/historical')}
+                  />
+                  <SettingsItem
+                    icon={<Info size={20} color={colors.placeholder} />}
+                    label={t('aboutUs') || 'About Us'}
+                    onPress={() => router.push('/(public)/about')}
+                    isLast
+                  />
+                </SettingsSection>
+              </View>
             </View>
 
             {/* Security & Privacy */}
             <View style={{ marginTop: 16 }}>
               <SettingsSection title={t('securityAndPrivacy') || 'Security & Privacy'}>
-                {/* Biometric Lock */}
                 {isBiometricAvailable && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingHorizontal: 16,
+                      paddingVertical: 14,
+                      borderBottomWidth: 1,
+                      borderBottomColor: colors.border,
+                    }}
+                  >
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 16 }}>
-                      <Fingerprint size={20} color={colors.accent} />
+                      <View
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 10,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: colors.accent + '1A',
+                          borderWidth: 1,
+                          borderColor: colors.accent + '33',
+                        }}
+                      >
+                        <Fingerprint size={20} color={colors.accent} />
+                      </View>
                       <View style={{ marginLeft: 12, flex: 1 }}>
                         <Text style={{ color: colors.foreground }}>{biometricType || t('biometricLock') || 'Biometric Lock'}</Text>
                         <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 2 }}>
@@ -348,14 +559,36 @@ export default function ProfileScreen() {
                   </View>
                 )}
 
-                {/* Hide Balances */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    borderBottomWidth: 1,
+                    borderBottomColor: colors.border,
+                  }}
+                >
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 16 }}>
-                    {settings.hideBalances ? (
-                      <EyeOff size={20} color={colors.accent} />
-                    ) : (
-                      <Eye size={20} color={colors.accent} />
-                    )}
+                    <View
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: 10,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: colors.accent + '1A',
+                        borderWidth: 1,
+                        borderColor: colors.accent + '33',
+                      }}
+                    >
+                      {settings.hideBalances ? (
+                        <EyeOff size={20} color={colors.accent} />
+                      ) : (
+                        <Eye size={20} color={colors.accent} />
+                      )}
+                    </View>
                     <View style={{ marginLeft: 12, flex: 1 }}>
                       <Text style={{ color: colors.foreground }}>{t('hideBalances') || 'Hide Balances'}</Text>
                       <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 2 }}>
@@ -369,7 +602,6 @@ export default function ProfileScreen() {
                   />
                 </View>
 
-                {/* Change Password */}
                 <SettingsItem
                   icon={<Lock size={20} color={colors.accent} />}
                   label={t('changePassword')}
@@ -379,38 +611,50 @@ export default function ProfileScreen() {
               </SettingsSection>
             </View>
 
-            {/* Account Settings */}
-            <View style={{ marginTop: 16 }}>
-              <SettingsSection title={t('account')}>
-                <SettingsItem
-                  icon={<Bell size={20} color={colors.accent} />}
-                  label={t('notifications')}
-                  onPress={() => router.push('/notification-settings')}
-                  isLast
-                />
-              </SettingsSection>
+            <View style={{ marginTop: 16, flexDirection: isDesktop ? 'row' : 'column', gap: 16 }}>
+              <View style={{ flex: isDesktop ? 1 : undefined }}>
+                <SettingsSection title={t('account')}>
+                  <SettingsItem
+                    icon={<Bell size={20} color={colors.accent} />}
+                    label={t('notifications')}
+                    onPress={() => router.push('/notification-settings')}
+                    isLast
+                  />
+                </SettingsSection>
+              </View>
+              <View style={{ flex: isDesktop ? 1 : undefined }}>
+                <SettingsSection title={t('aiFeatures')}>
+                  <SettingsItem
+                    icon={<MessageCircle size={20} color={colors.info} />}
+                    label={t('aiAdvisor')}
+                    onPress={() => router.push('/(app)/(tabs)/wallet/chat')}
+                    isLast
+                  />
+                </SettingsSection>
+              </View>
             </View>
 
-            {/* AI Features */}
-            <View style={{ marginTop: 16 }}>
-              <SettingsSection title={t('aiFeatures')}>
-                <SettingsItem
-                  icon={<MessageCircle size={20} color={colors.info} />}
-                  label={t('aiAdvisor')}
-                  onPress={() => router.push('/(app)/(tabs)/wallet/chat')}
-                  isLast
-                />
-              </SettingsSection>
-            </View>
-
-            {/* Logout */}
-            <Pressable
-              onPress={handleLogout}
-              style={{ cursor: 'pointer', backgroundColor: colors.danger + '1a', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16 }}
-            >
-              <LogOut size={20} color={colors.danger} />
-              <Text style={{ color: colors.danger, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>{t('logout')}</Text>
-            </Pressable>
+            {!isDesktop && (
+              <Pressable
+                onPress={handleLogout}
+                style={({ pressed }) => [{
+                  cursor: 'pointer',
+                  backgroundColor: colors.danger + '14',
+                  borderWidth: 1,
+                  borderColor: colors.danger + '40',
+                  padding: 16,
+                  borderRadius: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginTop: 16,
+                  opacity: pressed ? 0.72 : 1,
+                }]}
+              >
+                <LogOut size={20} color={colors.danger} />
+                <Text style={{ color: colors.danger, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>{t('logout')}</Text>
+              </Pressable>
+            )}
           </View>
         </View>
 
