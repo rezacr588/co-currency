@@ -10,12 +10,11 @@ import {
   Sun,
   User,
 } from 'lucide-react-native';
-import type GorhomBottomSheet from '@gorhom/bottom-sheet';
 import { useTheme } from 'styled-components/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme as useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { AppMode, getModeFromPath, switchAppMode } from '../../navigation/mode';
-import { BottomSheet } from '../ui/BottomSheet';
 import { AppSwitcherMenu, type AppSwitcherMenuAction } from './AppSwitcherMenu';
 
 export type AppSwitcherTriggerVariant = 'floating_tab' | 'header_inline';
@@ -49,6 +48,7 @@ export function AppSwitcherTrigger({ variant = 'header_inline', style }: AppSwit
   const { isDark, toggleTheme } = useAppTheme();
   const { user, logout } = useAuth();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isDesktopOrTablet = width >= 768;
   const pathname = usePathname();
   const router = useRouter();
@@ -65,9 +65,9 @@ export function AppSwitcherTrigger({ variant = 'header_inline', style }: AppSwit
       .join('') || 'U';
 
   const triggerRef = useRef<View>(null);
-  const sheetRef = useRef<GorhomBottomSheet>(null);
 
   const [isDesktopMenuVisible, setIsDesktopMenuVisible] = useState(false);
+  const [isMobileMenuVisible, setIsMobileMenuVisible] = useState(false);
   const [anchor, setAnchor] = useState<AnchorRect>(DEFAULT_ANCHOR);
   const [isSwitchingMode, setIsSwitchingMode] = useState(false);
 
@@ -76,13 +76,8 @@ export function AppSwitcherTrigger({ variant = 'header_inline', style }: AppSwit
   }, []);
 
   const closeMobileMenu = useCallback(() => {
-    sheetRef.current?.close();
+    setIsMobileMenuVisible(false);
   }, []);
-
-  const closeMenu = useCallback(() => {
-    closeDesktopMenu();
-    closeMobileMenu();
-  }, [closeDesktopMenu, closeMobileMenu]);
 
   const switchMode = useCallback(
     async (mode: AppMode) => {
@@ -189,7 +184,7 @@ export function AppSwitcherTrigger({ variant = 'header_inline', style }: AppSwit
       return;
     }
 
-    sheetRef.current?.snapToIndex(0);
+    setIsMobileMenuVisible(true);
   }, [isDesktopOrTablet]);
 
   const triggerStyle: ViewStyle =
@@ -309,20 +304,57 @@ export function AppSwitcherTrigger({ variant = 'header_inline', style }: AppSwit
       </Modal>
 
       {!isDesktopOrTablet ? (
-        <BottomSheet
-          ref={sheetRef}
-          title="Quick Menu"
-          snapPoints={['68%']}
-          enableDynamicSizing={false}
-          onClose={closeMenu}
+        <Modal
+          visible={isMobileMenuVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={closeMobileMenu}
         >
-          <AppSwitcherMenu
-            title={`Hi ${firstName}`}
-            subtitle={`Current app: ${modeLabel(activeMode)}`}
-            actions={actions}
-            onClose={closeMenu}
-          />
-        </BottomSheet>
+          <Pressable
+            onPress={closeMobileMenu}
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(0,0,0,0.35)',
+              justifyContent: 'flex-end',
+            }}
+          >
+            <Pressable
+              onPress={(event) => event.stopPropagation()}
+              style={{
+                borderTopLeftRadius: 22,
+                borderTopRightRadius: 22,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.background,
+                paddingHorizontal: 16,
+                paddingTop: 14,
+                paddingBottom: Math.max(insets.bottom, 16),
+                shadowColor: colors.accent,
+                shadowOpacity: 0.2,
+                shadowRadius: 14,
+                shadowOffset: { width: 0, height: -4 },
+                elevation: 6,
+              }}
+            >
+              <Text
+                style={{
+                  color: colors.foreground,
+                  fontFamily: 'Inter_700Bold',
+                  fontSize: 18,
+                  marginBottom: 12,
+                }}
+              >
+                Quick Menu
+              </Text>
+              <AppSwitcherMenu
+                title={`Hi ${firstName}`}
+                subtitle={`Current app: ${modeLabel(activeMode)}`}
+                actions={actions}
+                onClose={closeMobileMenu}
+              />
+            </Pressable>
+          </Pressable>
+        </Modal>
       ) : null}
     </>
   );
