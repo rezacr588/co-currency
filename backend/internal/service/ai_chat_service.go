@@ -304,11 +304,12 @@ func (u *chatUsageTracker) billingSource() string {
 	return "estimated"
 }
 
-func (u *chatUsageTracker) toMessageMeta() *repository.ChatMessageMeta {
+func (u *chatUsageTracker) toMessageMeta(toolsUsed []model.ChatToolUsage) *repository.ChatMessageMeta {
 	return &repository.ChatMessageMeta{
 		Provider:         u.provider,
 		Model:            u.model,
 		ThinkingMode:     u.thinkingMode,
+		ToolsUsed:        toolsUsed,
 		PromptTokens:     u.promptTokens,
 		CompletionTokens: u.completionTokens,
 		TotalTokens:      u.totalTokens,
@@ -316,6 +317,50 @@ func (u *chatUsageTracker) toMessageMeta() *repository.ChatMessageMeta {
 		BilledCostUSD:    u.billedCostPtr(),
 		BillingSource:    u.billingSource(),
 	}
+}
+
+type chatToolUsageTracker struct {
+	order  []string
+	counts map[string]int
+}
+
+func newChatToolUsageTracker() *chatToolUsageTracker {
+	return &chatToolUsageTracker{
+		order:  make([]string, 0, 4),
+		counts: make(map[string]int),
+	}
+}
+
+func (t *chatToolUsageTracker) add(name string) {
+	if t == nil {
+		return
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return
+	}
+	if _, ok := t.counts[name]; !ok {
+		t.order = append(t.order, name)
+	}
+	t.counts[name]++
+}
+
+func (t *chatToolUsageTracker) snapshot() []model.ChatToolUsage {
+	if t == nil || len(t.order) == 0 {
+		return nil
+	}
+	result := make([]model.ChatToolUsage, 0, len(t.order))
+	for _, name := range t.order {
+		count := t.counts[name]
+		if count < 1 {
+			continue
+		}
+		result = append(result, model.ChatToolUsage{
+			Name:  name,
+			Count: count,
+		})
+	}
+	return result
 }
 
 func roundUSD(value float64) float64 {
@@ -761,7 +806,9 @@ func (s *AIChatService) executeToolWithTrace(
 	tc *ToolCall,
 	onTrace chatTraceCallback,
 	logContext string,
+	toolUsageTracker *chatToolUsageTracker,
 ) string {
+	toolUsageTracker.add(tc.Name)
 	toolStartedAt := time.Now()
 	result, execErr := s.toolExecutor.Execute(ctx, userID, currency, tc)
 	if execErr != nil {
@@ -917,6 +964,7 @@ func (s *AIChatService) Chat(
 		return nil, fmt.Errorf("getting LLM: %w", err)
 	}
 	usageTracker := newChatUsageTracker(s.aiService.GetProvider(), modelName, finalMode)
+	toolUsageTracker := newChatToolUsageTracker()
 	emitChatTrace(ctx, userID, convID.String(), "llm_initialized", map[string]interface{}{
 		"provider": s.aiService.provider,
 		"model":    modelName,
@@ -933,6 +981,7 @@ func (s *AIChatService) Chat(
 		convID.String(),
 		nil,
 		usageTracker,
+		toolUsageTracker,
 	)
 	if err != nil {
 		return nil, failChatWithWrap(ctx, userID, convID.String(), requestStartedAt, nil, "calling AI: %w", err)
@@ -942,7 +991,7 @@ func (s *AIChatService) Chat(
 		"response_length": len(aiResponse),
 	}, nil)
 
-	aiMsg, err := s.persistAssistantResponse(ctx, userID, convID, message, aiResponse, usageTracker.toMessageMeta())
+	aiMsg, err := s.persistAssistantResponse(ctx, userID, convID, message, aiResponse, usageTracker.toMessageMeta(toolUsageTracker.snapshot()))
 	if err != nil {
 		return nil, err
 	}
@@ -1026,6 +1075,7 @@ func (s *AIChatService) ChatStream(
 		return nil, fmt.Errorf("getting LLM: %w", err)
 	}
 	usageTracker := newChatUsageTracker(s.aiService.GetProvider(), modelName, finalMode)
+	toolUsageTracker := newChatToolUsageTracker()
 	emitChatTrace(ctx, userID, convID.String(), "llm_initialized", map[string]interface{}{
 		"provider": s.aiService.provider,
 		"model":    modelName,
@@ -1081,7 +1131,7 @@ func (s *AIChatService) ChatStream(
 			Parts: []llms.ContentPart{llms.TextPart(firstText)},
 			Role:  llms.ChatMessageTypeAI,
 		})
-		result := s.executeToolWithTrace(ctx, userID, prepared.BaseCurrency, convID.String(), tc, onTrace, "chat_stream_initial_tool")
+		result := s.executeToolWithTrace(ctx, userID, prepared.BaseCurrency, convID.String(), tc, onTrace, "chat_stream_initial_tool", toolUsageTracker)
 		messages = appendToolResultMessage(messages, tc.Name, result)
 
 		aiResponse, err = s.resolveToolCallsWithLimit(
@@ -1094,6 +1144,7 @@ func (s *AIChatService) ChatStream(
 			onTrace,
 			2,
 			usageTracker,
+			toolUsageTracker,
 		)
 		if err != nil {
 			return nil, failChatWithWrap(ctx, userID, convID.String(), requestStartedAt, onTrace, "calling ai (tool loop): %w", err)
@@ -1120,7 +1171,7 @@ func (s *AIChatService) ChatStream(
 		}
 	}
 
-	aiMsg, err := s.persistAssistantResponse(ctx, userID, convID, message, aiResponse, usageTracker.toMessageMeta())
+	aiMsg, err := s.persistAssistantResponse(ctx, userID, convID, message, aiResponse, usageTracker.toMessageMeta(toolUsageTracker.snapshot()))
 	if err != nil {
 		return nil, failChatWithError(ctx, userID, convID.String(), requestStartedAt, onTrace, err)
 	}
@@ -1392,8 +1443,9 @@ func (s *AIChatService) resolveToolCalls(
 	conversationID string,
 	onTrace chatTraceCallback,
 	usageTracker *chatUsageTracker,
+	toolUsageTracker *chatToolUsageTracker,
 ) (string, error) {
-	return s.resolveToolCallsWithLimit(ctx, llm, messages, userID, currency, conversationID, onTrace, 3, usageTracker)
+	return s.resolveToolCallsWithLimit(ctx, llm, messages, userID, currency, conversationID, onTrace, 3, usageTracker, toolUsageTracker)
 }
 
 func (s *AIChatService) resolveToolCallsWithLimit(
@@ -1406,6 +1458,7 @@ func (s *AIChatService) resolveToolCallsWithLimit(
 	onTrace chatTraceCallback,
 	maxIterations int,
 	usageTracker *chatUsageTracker,
+	toolUsageTracker *chatToolUsageTracker,
 ) (string, error) {
 	for i := 0; i < maxIterations; i++ {
 		iterationStartedAt := time.Now()
@@ -1442,7 +1495,7 @@ func (s *AIChatService) resolveToolCallsWithLimit(
 		}
 
 		// Execute the tool
-		result := s.executeToolWithTrace(ctx, userID, currency, conversationID, tc, onTrace, "resolve_tool_calls")
+		result := s.executeToolWithTrace(ctx, userID, currency, conversationID, tc, onTrace, "resolve_tool_calls", toolUsageTracker)
 
 		// Append the AI response and tool result to messages for the next iteration
 		messages = append(messages, llms.MessageContent{

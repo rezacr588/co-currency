@@ -72,6 +72,7 @@ describe('chat stream helpers', () => {
         conversation_id: 'conv-1',
         role: 'assistant',
         content: 'Hello',
+        tools_used: [{ name: 'web_search', count: 1 }],
         created_at: '2026-01-01T00:00:00.000Z',
       },
       usage: {

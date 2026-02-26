@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -20,6 +21,7 @@ type ChatMessageMeta struct {
 	Provider         string
 	Model            string
 	ThinkingMode     string
+	ToolsUsed        []model.ChatToolUsage
 	PromptTokens     int
 	CompletionTokens int
 	TotalTokens      int
@@ -138,6 +140,7 @@ func (r *ChatRepository) AddMessageWithMeta(ctx context.Context, conversationID 
 		msg.Provider = meta.Provider
 		msg.Model = meta.Model
 		msg.ThinkingMode = meta.ThinkingMode
+		msg.ToolsUsed = meta.ToolsUsed
 		msg.PromptTokens = meta.PromptTokens
 		msg.CompletionTokens = meta.CompletionTokens
 		msg.TotalTokens = meta.TotalTokens
@@ -148,18 +151,22 @@ func (r *ChatRepository) AddMessageWithMeta(ctx context.Context, conversationID 
 	if msg.BillingSource == "" {
 		msg.BillingSource = "estimated"
 	}
+	toolsUsedJSON, err := marshalChatToolsUsed(msg.ToolsUsed)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling tools used: %w", err)
+	}
 
 	query := `
 		INSERT INTO chat_messages (
 			id, conversation_id, role, content, tokens_used, provider, model, thinking_mode,
-			prompt_tokens, completion_tokens, total_tokens, estimated_cost_usd, billed_cost_usd, billing_source, created_at
+			prompt_tokens, completion_tokens, total_tokens, estimated_cost_usd, billed_cost_usd, billing_source, tools_used, created_at
 		)
 		VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8,
-			$9, $10, $11, $12, $13, $14, $15
+			$9, $10, $11, $12, $13, $14, $15, $16
 		)
 	`
-	_, err := r.pool.Exec(
+	_, err = r.pool.Exec(
 		ctx,
 		query,
 		msg.ID,
@@ -176,6 +183,7 @@ func (r *ChatRepository) AddMessageWithMeta(ctx context.Context, conversationID 
 		msg.EstimatedCostUSD,
 		msg.BilledCostUSD,
 		msg.BillingSource,
+		toolsUsedJSON,
 		msg.CreatedAt,
 	)
 	if err != nil {
@@ -197,7 +205,7 @@ func (r *ChatRepository) GetMessages(ctx context.Context, conversationID uuid.UU
 		SELECT
 			id, conversation_id, role, content, COALESCE(tokens_used, 0), COALESCE(provider, ''), COALESCE(model, ''),
 			COALESCE(thinking_mode, ''), COALESCE(prompt_tokens, 0), COALESCE(completion_tokens, 0), COALESCE(total_tokens, 0),
-			estimated_cost_usd, billed_cost_usd, COALESCE(billing_source, ''), created_at
+			estimated_cost_usd, billed_cost_usd, COALESCE(billing_source, ''), COALESCE(tools_used, '[]'::jsonb), created_at
 		FROM chat_messages
 		WHERE conversation_id = $1
 		ORDER BY created_at ASC
@@ -211,6 +219,7 @@ func (r *ChatRepository) GetMessages(ctx context.Context, conversationID uuid.UU
 	var messages []model.ChatMessage
 	for rows.Next() {
 		var msg model.ChatMessage
+		var toolsUsedRaw []byte
 		if err := rows.Scan(
 			&msg.ID,
 			&msg.ConversationID,
@@ -226,9 +235,13 @@ func (r *ChatRepository) GetMessages(ctx context.Context, conversationID uuid.UU
 			&msg.EstimatedCostUSD,
 			&msg.BilledCostUSD,
 			&msg.BillingSource,
+			&toolsUsedRaw,
 			&msg.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scanning message: %w", err)
+		}
+		if err := unmarshalChatToolsUsed(toolsUsedRaw, &msg.ToolsUsed); err != nil {
+			return nil, fmt.Errorf("scanning message tools used: %w", err)
 		}
 		messages = append(messages, msg)
 	}
@@ -242,7 +255,7 @@ func (r *ChatRepository) GetRecentMessages(ctx context.Context, conversationID u
 		SELECT
 			id, conversation_id, role, content, COALESCE(tokens_used, 0), COALESCE(provider, ''), COALESCE(model, ''),
 			COALESCE(thinking_mode, ''), COALESCE(prompt_tokens, 0), COALESCE(completion_tokens, 0), COALESCE(total_tokens, 0),
-			estimated_cost_usd, billed_cost_usd, COALESCE(billing_source, ''), created_at
+			estimated_cost_usd, billed_cost_usd, COALESCE(billing_source, ''), COALESCE(tools_used, '[]'::jsonb), created_at
 		FROM chat_messages
 		WHERE conversation_id = $1
 		ORDER BY created_at DESC
@@ -257,6 +270,7 @@ func (r *ChatRepository) GetRecentMessages(ctx context.Context, conversationID u
 	var messages []model.ChatMessage
 	for rows.Next() {
 		var msg model.ChatMessage
+		var toolsUsedRaw []byte
 		if err := rows.Scan(
 			&msg.ID,
 			&msg.ConversationID,
@@ -272,9 +286,13 @@ func (r *ChatRepository) GetRecentMessages(ctx context.Context, conversationID u
 			&msg.EstimatedCostUSD,
 			&msg.BilledCostUSD,
 			&msg.BillingSource,
+			&toolsUsedRaw,
 			&msg.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scanning message: %w", err)
+		}
+		if err := unmarshalChatToolsUsed(toolsUsedRaw, &msg.ToolsUsed); err != nil {
+			return nil, fmt.Errorf("scanning recent message tools used: %w", err)
 		}
 		messages = append(messages, msg)
 	}
@@ -307,6 +325,7 @@ func (r *ChatRepository) GetUsageSummary(ctx context.Context, userID uuid.UUID, 
 		Currency: "USD",
 		Daily:    []model.ChatUsageDaily{},
 		ByModel:  []model.ChatUsageByModel{},
+		ByTool:   []model.ChatUsageByTool{},
 	}
 
 	totalsQuery := fmt.Sprintf(`
@@ -423,6 +442,40 @@ func (r *ChatRepository) GetUsageSummary(ctx context.Context, userID uuid.UUID, 
 		summary.ByModel = append(summary.ByModel, row)
 	}
 
+	byToolQuery := `
+		SELECT
+			COALESCE(NULLIF(tool.value->>'name', ''), 'unknown') AS name,
+			COALESCE(SUM(
+				CASE
+					WHEN (tool.value->>'count') ~ '^[0-9]+$' THEN (tool.value->>'count')::int
+					ELSE 1
+				END
+			), 0)::int AS calls,
+			COUNT(*)::int AS messages
+		FROM chat_messages m
+		INNER JOIN chat_conversations c ON c.id = m.conversation_id
+		CROSS JOIN LATERAL jsonb_array_elements(COALESCE(m.tools_used, '[]'::jsonb)) AS tool(value)
+		WHERE c.user_id = $1
+			AND m.role = 'assistant'
+			AND m.created_at >= NOW() - make_interval(days => $2)
+		GROUP BY name
+		ORDER BY calls DESC, name ASC
+	`
+
+	toolRows, err := r.pool.Query(ctx, byToolQuery, userID, days)
+	if err != nil {
+		return nil, fmt.Errorf("getting tool usage: %w", err)
+	}
+	defer toolRows.Close()
+
+	for toolRows.Next() {
+		var row model.ChatUsageByTool
+		if err := toolRows.Scan(&row.Name, &row.Calls, &row.Messages); err != nil {
+			return nil, fmt.Errorf("scanning tool usage: %w", err)
+		}
+		summary.ByTool = append(summary.ByTool, row)
+	}
+
 	return summary, nil
 }
 
@@ -431,4 +484,28 @@ func nullableChatText(value string) *string {
 		return nil
 	}
 	return &value
+}
+
+func marshalChatToolsUsed(tools []model.ChatToolUsage) ([]byte, error) {
+	if len(tools) == 0 {
+		return []byte("[]"), nil
+	}
+	return json.Marshal(tools)
+}
+
+func unmarshalChatToolsUsed(raw []byte, dest *[]model.ChatToolUsage) error {
+	if dest == nil {
+		return nil
+	}
+	if len(raw) == 0 {
+		*dest = []model.ChatToolUsage{}
+		return nil
+	}
+	if err := json.Unmarshal(raw, dest); err != nil {
+		return err
+	}
+	if *dest == nil {
+		*dest = []model.ChatToolUsage{}
+	}
+	return nil
 }

@@ -67,3 +67,32 @@ func TestExtractUsageFromGenerationInfo_MixedNumericTypes(t *testing.T) {
 		t.Fatalf("unexpected mixed-type billed cost: %#v", billed)
 	}
 }
+
+func TestChatToolUsageTracker_SnapshotPreservesOrderAndCounts(t *testing.T) {
+	tracker := newChatToolUsageTracker()
+	tracker.add("search_transactions")
+	tracker.add("web_search")
+	tracker.add("search_transactions")
+	tracker.add(" ")
+	tracker.add("")
+
+	got := tracker.snapshot()
+	if len(got) != 2 {
+		t.Fatalf("expected 2 tool rows, got %d", len(got))
+	}
+
+	if got[0].Name != "search_transactions" || got[0].Count != 2 {
+		t.Fatalf("unexpected first tool row: %+v", got[0])
+	}
+	if got[1].Name != "web_search" || got[1].Count != 1 {
+		t.Fatalf("unexpected second tool row: %+v", got[1])
+	}
+}
+
+func TestChatToolUsageTracker_NilSafe(t *testing.T) {
+	var tracker *chatToolUsageTracker
+	tracker.add("web_search")
+	if out := tracker.snapshot(); out != nil {
+		t.Fatalf("expected nil snapshot for nil tracker, got %+v", out)
+	}
+}

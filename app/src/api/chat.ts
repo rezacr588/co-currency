@@ -6,6 +6,10 @@ export interface ChatMessage {
   conversation_id: string;
   role: 'user' | 'assistant';
   content: string;
+  tools_used?: Array<{
+    name: string;
+    count: number;
+  }>;
   tokens_used?: number;
   provider?: string;
   model?: string;
@@ -219,6 +223,11 @@ export interface ChatUsageSummary {
     estimated_cost_usd: number;
     billed_cost_usd: number;
     billing_source: 'exact' | 'estimated' | 'hybrid' | string;
+  }>;
+  by_tool: Array<{
+    name: string;
+    calls: number;
+    messages: number;
   }>;
 }
 

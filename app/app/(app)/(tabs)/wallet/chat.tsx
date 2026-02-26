@@ -14,7 +14,7 @@ import {
   StyleSheet,
   Modal,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Markdown from 'react-native-markdown-display';
@@ -27,7 +27,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   RotateCcw,
-  KanbanSquare,
   Cpu,
   Coins,
   Activity,
@@ -97,6 +96,75 @@ function formatUsd(value: number | undefined): string {
   return `$${value.toFixed(4)}`;
 }
 
+type ToolUsageItem = {
+  name: string;
+  count: number;
+};
+
+const TOOL_DISPLAY_NAMES: Record<string, string> = {
+  search_transactions: 'Transactions API',
+  get_monthly_report: 'Monthly Report API',
+  get_category_report: 'Category Report API',
+  get_spending_trends: 'Spending Trends API',
+  get_financial_forecast: 'Forecast API',
+  get_health_score: 'Health Score API',
+  get_subscriptions: 'Subscriptions API',
+  search_notes: 'Notes Search API',
+  web_search: 'Web Search API',
+};
+
+function getToolDisplayName(toolName: string): string {
+  if (!toolName) return 'Tool';
+  if (TOOL_DISPLAY_NAMES[toolName]) {
+    return TOOL_DISPLAY_NAMES[toolName];
+  }
+  return toolName
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function aggregateToolUsageFromTrace(events: ChatStreamTraceEvent[] | undefined): ToolUsageItem[] {
+  if (!events || events.length === 0) return [];
+  const usage = new Map<string, number>();
+  let sawExecutionStage = false;
+
+  events.forEach((event) => {
+    if (!event || typeof event.tool_name !== 'string' || !event.tool_name) return;
+    const stage = typeof event.stage === 'string' ? event.stage : '';
+    if (stage === 'tool_execution_completed' || stage === 'tool_execution_failed') {
+      sawExecutionStage = true;
+      usage.set(event.tool_name, (usage.get(event.tool_name) || 0) + 1);
+    }
+  });
+
+  if (!sawExecutionStage) {
+    events.forEach((event) => {
+      if (!event || typeof event.tool_name !== 'string' || !event.tool_name) return;
+      const stage = typeof event.stage === 'string' ? event.stage : '';
+      if (stage !== 'tool_call_detected') {
+        return;
+      }
+      usage.set(event.tool_name, (usage.get(event.tool_name) || 0) + 1);
+    });
+  }
+
+  return Array.from(usage.entries())
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+
+function getMessageToolUsage(message: ChatMessage | undefined, traceEvents: ChatStreamTraceEvent[] | undefined): ToolUsageItem[] {
+  if (message?.tools_used && message.tools_used.length > 0) {
+    return message.tools_used
+      .filter((tool) => Boolean(tool?.name))
+      .map((tool) => ({ name: tool.name, count: Math.max(1, Number(tool.count) || 1) }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }
+  return aggregateToolUsageFromTrace(traceEvents);
+}
+
 
 type PendingAction =
   | {
@@ -149,7 +217,6 @@ export default function AIChatScreen() {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
-  const router = useRouter();
   const queryClient = useQueryClient();
   const { conversationId } = useLocalSearchParams<{ conversationId?: string }>();
   const { width } = useWindowDimensions();
@@ -815,9 +882,25 @@ export default function AIChatScreen() {
 
   const messages: ChatMessage[] = currentConversation?.messages || [];
   const conversations: Conversation[] = conversationsData?.conversations || [];
-  const activeTraceEvents = selectedActivityMessageID
-    ? traceByMessageID[selectedActivityMessageID] || []
+  const messageByID = useMemo(() => {
+    const index: Record<string, ChatMessage> = {};
+    messages.forEach((msg) => {
+      index[msg.id] = msg;
+    });
+    return index;
+  }, [messages]);
+  const latestAssistantMessageID = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      if (messages[i].role === 'assistant') return messages[i].id;
+    }
+    return null;
+  }, [messages]);
+  const effectiveActivityMessageID = selectedActivityMessageID || (liveTrace.length === 0 ? latestAssistantMessageID : null);
+  const activeTraceEvents = effectiveActivityMessageID
+    ? traceByMessageID[effectiveActivityMessageID] || []
     : liveTrace;
+  const activeActivityMessage = effectiveActivityMessageID ? messageByID[effectiveActivityMessageID] : undefined;
+  const activeToolUsage = getMessageToolUsage(activeActivityMessage, activeTraceEvents);
   const hasTypedMessage = message.trim().length > 0;
   const canSendMessage =
     (hasTypedMessage || !!attachment) &&
@@ -1748,6 +1831,12 @@ export default function AIChatScreen() {
                   (() => {
                     const { body, table } = extractFirstMarkdownTable(msg.content);
                     const messageTrace = traceByMessageID[msg.id] || [];
+                    const messageToolUsage = getMessageToolUsage(msg, messageTrace);
+                    const activityLabel = messageToolUsage.length > 0
+                      ? `${messageToolUsage.length} tool${messageToolUsage.length === 1 ? '' : 's'}`
+                      : messageTrace.length > 0
+                        ? `${messageTrace.length} step${messageTrace.length === 1 ? '' : 's'}`
+                        : '';
                     const tokenCount = msg.total_tokens || msg.tokens_used;
                     const hasUsageMeta = Boolean(msg.provider || msg.model || msg.thinking_mode || tokenCount || msg.estimated_cost_usd || msg.billed_cost_usd);
                     return (
@@ -1780,6 +1869,34 @@ export default function AIChatScreen() {
                               Open Table
                             </Text>
                           </Pressable>
+                        ) : null}
+
+                        {messageToolUsage.length > 0 ? (
+                          <View style={{ marginTop: 8 }}>
+                            <Text style={{ color: colors.mutedForeground, fontSize: 10, marginBottom: 5 }}>
+                              Tools used
+                            </Text>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                              {messageToolUsage.map((tool) => (
+                                <View
+                                  key={`${msg.id}-${tool.name}`}
+                                  style={{
+                                    paddingHorizontal: 7,
+                                    paddingVertical: 4,
+                                    borderRadius: 999,
+                                    borderWidth: 1,
+                                    borderColor: colors.border,
+                                    backgroundColor: colors.secondary,
+                                  }}
+                                >
+                                  <Text style={{ color: colors.foreground, fontSize: 10 }}>
+                                    {getToolDisplayName(tool.name)}
+                                    {tool.count > 1 ? ` ×${tool.count}` : ''}
+                                  </Text>
+                                </View>
+                              ))}
+                            </View>
+                          </View>
                         ) : null}
 
                         {hasUsageMeta ? (
@@ -1833,7 +1950,7 @@ export default function AIChatScreen() {
                         >
                           <Activity size={11} color={colors.mutedForeground} />
                           <Text style={{ color: colors.mutedForeground, fontSize: 10, marginLeft: 4 }}>
-                            Agent Activity {messageTrace.length > 0 ? `(${messageTrace.length})` : ''}
+                            Agent Activity {activityLabel ? `(${activityLabel})` : ''}
                           </Text>
                         </Pressable>
                       </View>
@@ -1892,7 +2009,7 @@ export default function AIChatScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Pressable
                   onPress={() => {
-                    setSelectedActivityMessageID(null);
+                    setSelectedActivityMessageID(liveTrace.length > 0 ? null : latestAssistantMessageID);
                     setIsActivityModalVisible(true);
                   }}
                   accessibilityRole="button"
@@ -1938,29 +2055,6 @@ export default function AIChatScreen() {
                 >
                   <Coins size={13} color={colors.foreground} />
                   <Text style={{ fontSize: 11, color: colors.foreground, marginLeft: 5 }}>Usage</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => router.push('/todo' as any)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Open planner"
-                  hitSlop={6}
-                  style={({ pressed }) => [
-                    {
-                      backgroundColor: colors.secondary,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      paddingHorizontal: 10,
-                      paddingVertical: 8,
-                      minHeight: 36,
-                      borderRadius: 9999,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                    },
-                    pressed && { opacity: 0.74 },
-                  ]}
-                >
-                  <KanbanSquare size={13} color={colors.foreground} />
-                  <Text style={{ fontSize: 11, color: colors.foreground, marginLeft: 5 }}>Planner</Text>
                 </Pressable>
                 <Pressable
                   onPress={handleNewConversation}
@@ -2229,7 +2323,7 @@ export default function AIChatScreen() {
                 </Pressable>
               </View>
               <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: Math.max(insets.bottom, 18) }}>
-                {activeTraceEvents.length === 0 ? (
+                {activeTraceEvents.length === 0 && activeToolUsage.length === 0 ? (
                   <EmptyState
                     icon={Activity}
                     title={t('noActivity') || 'No activity'}
@@ -2237,47 +2331,86 @@ export default function AIChatScreen() {
                     variant="compact"
                   />
                 ) : (
-                  activeTraceEvents.map((event, index) => (
-                    <View
-                      key={`${event.sequence_id || index}-${event.stage || event.step || index}`}
-                      style={{
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                        borderRadius: 12,
-                        backgroundColor: colors.card,
-                        padding: 10,
-                        marginBottom: 10,
-                      }}
-                    >
-                      <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>
-                        {event.stage || event.step || 'event'}
-                      </Text>
-                      <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 2 }}>
-                        #{event.sequence_id || index + 1}
-                        {event.timestamp ? ` · ${new Date(event.timestamp).toLocaleTimeString()}` : ''}
-                      </Text>
-                      {event.tool_name ? (
-                        <Text style={{ color: colors.foreground, fontSize: 12, marginTop: 6 }}>
-                          Tool: {String(event.tool_name)}
+                  <View>
+                    {activeToolUsage.length > 0 ? (
+                      <View
+                        style={{
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          borderRadius: 12,
+                          backgroundColor: colors.card,
+                          padding: 10,
+                          marginBottom: 10,
+                        }}
+                      >
+                        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>
+                          Tools Used
                         </Text>
-                      ) : null}
-                      {event.duration_ms ? (
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                          {activeToolUsage.map((tool) => (
+                            <View
+                              key={`active-tool-${tool.name}`}
+                              style={{
+                                paddingHorizontal: 8,
+                                paddingVertical: 5,
+                                borderRadius: 999,
+                                borderWidth: 1,
+                                borderColor: colors.border,
+                                backgroundColor: colors.secondary,
+                              }}
+                            >
+                              <Text style={{ color: colors.foreground, fontSize: 11 }}>
+                                {getToolDisplayName(tool.name)}
+                                {tool.count > 1 ? ` ×${tool.count}` : ''}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    ) : null}
+
+                    {activeTraceEvents.map((event, index) => (
+                      <View
+                        key={`${event.sequence_id || index}-${event.stage || event.step || index}`}
+                        style={{
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          borderRadius: 12,
+                          backgroundColor: colors.card,
+                          padding: 10,
+                          marginBottom: 10,
+                        }}
+                      >
+                        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>
+                          {event.stage || event.step || 'event'}
+                        </Text>
                         <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 2 }}>
-                          Duration: {String(event.duration_ms)} ms
+                          #{event.sequence_id || index + 1}
+                          {event.timestamp ? ` · ${new Date(event.timestamp).toLocaleTimeString()}` : ''}
                         </Text>
-                      ) : null}
-                      {event.error ? (
-                        <Text style={{ color: colors.danger, fontSize: 11, marginTop: 4 }}>
-                          Error: {String(event.error)}
-                        </Text>
-                      ) : null}
-                      {event.raw ? (
-                        <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 6 }} numberOfLines={8}>
-                          {JSON.stringify(event.raw)}
-                        </Text>
-                      ) : null}
-                    </View>
-                  ))
+                        {event.tool_name ? (
+                          <Text style={{ color: colors.foreground, fontSize: 12, marginTop: 6 }}>
+                            Tool: {getToolDisplayName(String(event.tool_name))}
+                          </Text>
+                        ) : null}
+                        {event.duration_ms ? (
+                          <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 2 }}>
+                            Duration: {String(event.duration_ms)} ms
+                          </Text>
+                        ) : null}
+                        {event.error ? (
+                          <Text style={{ color: colors.danger, fontSize: 11, marginTop: 4 }}>
+                            Error: {String(event.error)}
+                          </Text>
+                        ) : null}
+                        {event.raw ? (
+                          <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 6 }} numberOfLines={8}>
+                            {JSON.stringify(event.raw)}
+                          </Text>
+                        ) : null}
+                      </View>
+                    ))}
+                  </View>
                 )}
               </ScrollView>
             </View>
@@ -2373,6 +2506,28 @@ export default function AIChatScreen() {
                         </View>
                       ))
                     )}
+
+                    <View style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 10, backgroundColor: colors.card }}>
+                      <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>
+                        Tool Usage
+                      </Text>
+                      {(usageSummary.by_tool ?? []).length === 0 ? (
+                        <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 6 }}>
+                          No tool calls recorded in this period.
+                        </Text>
+                      ) : (
+                        (usageSummary.by_tool ?? []).map((toolUsage) => (
+                          <View key={`usage-tool-${toolUsage.name}`} style={{ marginTop: 6 }}>
+                            <Text style={{ color: colors.foreground, fontSize: 12 }}>
+                              {getToolDisplayName(toolUsage.name)}
+                            </Text>
+                            <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 1 }}>
+                              {toolUsage.calls} call{toolUsage.calls === 1 ? '' : 's'} across {toolUsage.messages} message{toolUsage.messages === 1 ? '' : 's'}
+                            </Text>
+                          </View>
+                        ))
+                      )}
+                    </View>
                   </View>
                 )}
               </ScrollView>

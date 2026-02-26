@@ -17,21 +17,22 @@ type ChatConversation struct {
 
 // ChatMessage represents a message in a conversation
 type ChatMessage struct {
-	ID               uuid.UUID `json:"id"`
-	ConversationID   uuid.UUID `json:"conversation_id"`
-	Role             string    `json:"role"` // "user" or "assistant"
-	Content          string    `json:"content"`
-	TokensUsed       int       `json:"tokens_used,omitempty"`
-	Provider         string    `json:"provider,omitempty"`
-	Model            string    `json:"model,omitempty"`
-	ThinkingMode     string    `json:"thinking_mode,omitempty"`
-	PromptTokens     int       `json:"prompt_tokens,omitempty"`
-	CompletionTokens int       `json:"completion_tokens,omitempty"`
-	TotalTokens      int       `json:"total_tokens,omitempty"`
-	EstimatedCostUSD *float64  `json:"estimated_cost_usd,omitempty"`
-	BilledCostUSD    *float64  `json:"billed_cost_usd,omitempty"`
-	BillingSource    string    `json:"billing_source,omitempty"`
-	CreatedAt        time.Time `json:"created_at"`
+	ID               uuid.UUID       `json:"id"`
+	ConversationID   uuid.UUID       `json:"conversation_id"`
+	Role             string          `json:"role"` // "user" or "assistant"
+	Content          string          `json:"content"`
+	ToolsUsed        []ChatToolUsage `json:"tools_used,omitempty"`
+	TokensUsed       int             `json:"tokens_used,omitempty"`
+	Provider         string          `json:"provider,omitempty"`
+	Model            string          `json:"model,omitempty"`
+	ThinkingMode     string          `json:"thinking_mode,omitempty"`
+	PromptTokens     int             `json:"prompt_tokens,omitempty"`
+	CompletionTokens int             `json:"completion_tokens,omitempty"`
+	TotalTokens      int             `json:"total_tokens,omitempty"`
+	EstimatedCostUSD *float64        `json:"estimated_cost_usd,omitempty"`
+	BilledCostUSD    *float64        `json:"billed_cost_usd,omitempty"`
+	BillingSource    string          `json:"billing_source,omitempty"`
+	CreatedAt        time.Time       `json:"created_at"`
 }
 
 type ChatThinkingMode string
@@ -61,6 +62,11 @@ type ChatUsage struct {
 	PromptTokens     int `json:"prompt_tokens"`
 	CompletionTokens int `json:"completion_tokens"`
 	TotalTokens      int `json:"total_tokens"`
+}
+
+type ChatToolUsage struct {
+	Name  string `json:"name"`
+	Count int    `json:"count"`
 }
 
 type ChatUsageTotals struct {
@@ -94,11 +100,18 @@ type ChatUsageByModel struct {
 	BillingSource    string  `json:"billing_source"`
 }
 
+type ChatUsageByTool struct {
+	Name     string `json:"name"`
+	Calls    int    `json:"calls"`
+	Messages int    `json:"messages"`
+}
+
 type ChatUsageSummary struct {
 	Days     int                `json:"days"`
 	Totals   ChatUsageTotals    `json:"totals"`
 	Daily    []ChatUsageDaily   `json:"daily"`
 	ByModel  []ChatUsageByModel `json:"by_model"`
+	ByTool   []ChatUsageByTool  `json:"by_tool"`
 	Currency string             `json:"currency"`
 }
 
