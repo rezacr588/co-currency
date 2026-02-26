@@ -3,6 +3,8 @@ package service
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/rezacr588/currency-converter/internal/model"
 )
 
 func TestExtractUsageFromGenerationInfo_OpenAIKeys(t *testing.T) {
@@ -65,6 +67,41 @@ func TestExtractUsageFromGenerationInfo_MixedNumericTypes(t *testing.T) {
 	}
 	if billed == nil || *billed != 0.004 {
 		t.Fatalf("unexpected mixed-type billed cost: %#v", billed)
+	}
+}
+
+func TestChatUsageTracker_ToMessageMetaIncludesToolsAndUsage(t *testing.T) {
+	tracker := newChatUsageTracker("openai", "gpt-4o-mini", model.ChatThinkingModeFast)
+	tracker.promptTokens = 111
+	tracker.completionTokens = 22
+	tracker.totalTokens = 133
+	tracker.estimatedCostUSD = 0.1234567
+	tracker.billedCostUSD = 0.7654321
+	tracker.hasBilledCost = true
+
+	tools := []model.ChatToolUsage{{Name: "web_search", Count: 2}}
+	meta := tracker.toMessageMeta(tools)
+
+	if meta.Provider != "openai" || meta.Model != "gpt-4o-mini" {
+		t.Fatalf("unexpected provider/model: %s/%s", meta.Provider, meta.Model)
+	}
+	if meta.ThinkingMode != string(model.ChatThinkingModeFast) {
+		t.Fatalf("unexpected thinking mode: %s", meta.ThinkingMode)
+	}
+	if len(meta.ToolsUsed) != 1 || meta.ToolsUsed[0].Name != "web_search" || meta.ToolsUsed[0].Count != 2 {
+		t.Fatalf("unexpected tools: %+v", meta.ToolsUsed)
+	}
+	if meta.PromptTokens != 111 || meta.CompletionTokens != 22 || meta.TotalTokens != 133 {
+		t.Fatalf("unexpected tokens in meta: %+v", meta)
+	}
+	if meta.EstimatedCostUSD == nil || *meta.EstimatedCostUSD != 0.123457 {
+		t.Fatalf("unexpected estimated cost: %#v", meta.EstimatedCostUSD)
+	}
+	if meta.BilledCostUSD == nil || *meta.BilledCostUSD != 0.765432 {
+		t.Fatalf("unexpected billed cost: %#v", meta.BilledCostUSD)
+	}
+	if meta.BillingSource != "hybrid" {
+		t.Fatalf("unexpected billing source: %s", meta.BillingSource)
 	}
 }
 

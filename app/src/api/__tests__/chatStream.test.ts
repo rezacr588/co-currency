@@ -45,6 +45,15 @@ describe('chat stream helpers', () => {
     expect(callbacks.onDelta).toHaveBeenCalledWith({ type: 'delta', content: 'hi' });
   });
 
+  it('ignores delta payloads with non-string content', () => {
+    const callbacks = {
+      onDelta: jest.fn(),
+    };
+
+    expect(handleChatStreamPayload({ type: 'delta', content: 123 }, callbacks).kind).toBe('none');
+    expect(callbacks.onDelta).not.toHaveBeenCalled();
+  });
+
   it('returns normalized error result for error payloads', () => {
     expect(handleChatStreamPayload({ type: 'error', error: 'boom' }, {})).toEqual({
       kind: 'error',
@@ -101,8 +110,28 @@ describe('chat stream helpers', () => {
         thinking_mode: undefined,
         trace_id: 'trace-1',
       });
+      expect(result.response.message.tools_used).toEqual([{ name: 'web_search', count: 1 }]);
     }
 
     expect(callbacks.onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores unknown payload types', () => {
+    const callbacks = {
+      onStart: jest.fn(),
+      onDelta: jest.fn(),
+      onTrace: jest.fn(),
+      onDone: jest.fn(),
+      onHeartbeat: jest.fn(),
+    };
+
+    const result = handleChatStreamPayload({ type: 'noop' }, callbacks);
+
+    expect(result).toEqual({ kind: 'none' });
+    expect(callbacks.onStart).not.toHaveBeenCalled();
+    expect(callbacks.onDelta).not.toHaveBeenCalled();
+    expect(callbacks.onTrace).not.toHaveBeenCalled();
+    expect(callbacks.onDone).not.toHaveBeenCalled();
+    expect(callbacks.onHeartbeat).not.toHaveBeenCalled();
   });
 });

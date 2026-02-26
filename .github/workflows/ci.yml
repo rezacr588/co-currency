@@ -48,9 +48,28 @@ jobs:
           api_token: ${{ secrets.KOYEB_TOKEN }}
 
       - name: Deploy to Koyeb
+        timeout-minutes: 10
         run: |
-          koyeb service update terrible-moselle/co-currency \
-            --docker ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          # Retry deploy to absorb transient Koyeb/API TLS/network issues.
+          attempts=4
+          delay=10
+          for i in $(seq 1 "$attempts"); do
+            echo "Deploy attempt ${i}/${attempts}..."
+            if koyeb service update terrible-moselle/co-currency \
+              --docker ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}; then
+              echo "Deploy succeeded on attempt ${i}."
+              exit 0
+            fi
+
+            if [ "$i" -lt "$attempts" ]; then
+              echo "Deploy attempt ${i} failed. Retrying in ${delay}s..."
+              sleep "$delay"
+              delay=$((delay * 2))
+            fi
+          done
+
+          echo "Deploy failed after ${attempts} attempts."
+          exit 1
 
   # Tests run in parallel but don't block deploy
   test:
