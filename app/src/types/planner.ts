@@ -1,5 +1,6 @@
 export type PlannerStatus = 'todo' | 'in_progress' | 'done' | 'archived';
 export type PlannerItemType = 'task' | 'goal';
+export type TaskWizardStep = 'basics' | 'schedule' | 'organization' | 'finance_review';
 
 export interface TaskSubtask {
   id: string;
@@ -49,6 +50,9 @@ export interface TodoItem {
   unit?: string;
   created_at: string;
   updated_at: string;
+  is_pending_sync?: boolean;
+  sync_error?: string;
+  pending_verification?: boolean;
 }
 
 export interface PlannerColumn {
@@ -100,4 +104,34 @@ export interface GoalFundingRequired {
   currency: string;
   message: string;
   error_code: 'goal_funding_required' | string;
+}
+
+export interface PlannerPendingMarker {
+  entity_id: string;
+  entity_type: PlannerItemType;
+  is_pending_sync: boolean;
+  sync_error?: string;
+  pending_verification?: boolean;
+}
+
+export interface TaskWizardDraft {
+  version: number;
+  updated_at: number;
+  step: TaskWizardStep;
+  title: string;
+  description: string;
+  due_date: string;
+  status: PlannerStatus;
+  priority: 'low' | 'medium' | 'high';
+  reminder_mode: 'off' | 'aggressive';
+  selected_tag_ids: string[];
+  subtasks: TaskSubtask[];
+  goal_id?: string;
+  auto_ledger_enabled: boolean;
+  ledger_type: 'credit' | 'debit';
+  ledger_amount: string;
+  ledger_currency: string;
+  ledger_wallet_currency: string;
+  ledger_category: string;
+  ledger_description: string;
 }

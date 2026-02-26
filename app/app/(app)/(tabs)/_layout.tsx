@@ -9,7 +9,6 @@ import {
   BarChart3,
   Plus,
   User,
-  Settings,
   Trophy,
   History,
   Menu,
@@ -17,13 +16,15 @@ import {
   LogOut,
   ChevronRight,
   KanbanSquare,
+  Sun,
+  Moon,
 } from 'lucide-react-native';
-import { useTheme } from '../../../src/context/ThemeContext';
+import { useTheme as useThemeContext } from '../../../src/context/ThemeContext';
 import { useTheme as useStyledTheme } from 'styled-components/native';
 import { useLanguage } from '../../../src/context/LanguageContext';
 import { useAuth } from '../../../src/context/AuthContext';
 import { ErrorBoundary } from '../../../src/components/ui/ErrorBoundary';
-import { ModeSwitch } from '../../../src/components/navigation/ModeSwitch';
+import { AppSwitcherTrigger } from '../../../src/components/navigation/AppSwitcherTrigger';
 
 const SIDEBAR_WIDTH = 280;
 const SIDEBAR_COLLAPSED_WIDTH = 80;
@@ -200,10 +201,9 @@ function DesktopSidebar({
 function DesktopNavbar() {
   const { t } = useLanguage();
   const { user } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
+  const { isDark } = useThemeContext();
   const styledTheme = useStyledTheme();
   const colors = styledTheme.colors;
-  const router = useRouter();
 
   return (
     <View style={{ backgroundColor: colors.background, borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 24, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -213,34 +213,29 @@ function DesktopNavbar() {
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <ModeSwitch />
-        <Pressable
-          onPress={toggleTheme}
-          hitSlop={6}
-          style={({ pressed }) => [{ cursor: 'pointer', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: colors.border }, pressed && { opacity: 0.7 }]}
-          accessibilityLabel={t('toggleTheme') || 'Toggle theme'}
-          accessibilityRole="button"
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            backgroundColor: colors.secondary,
+            borderWidth: 1,
+            borderColor: colors.border,
+            paddingVertical: 6,
+            paddingHorizontal: 10,
+            borderRadius: 12,
+          }}
         >
-          <LayoutDashboard size={18} color={colors.secondaryForeground} />
-        </Pressable>
-        <Pressable
-          onPress={() => router.push('/(app)/profile')}
-          style={({ pressed }) => [{ cursor: 'pointer', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.secondary, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }, pressed && { opacity: 0.7 }]}
-          accessibilityLabel={t('profile') || 'Profile'}
-          accessibilityRole="button"
-        >
-          <View style={{ backgroundColor: colors.muted, padding: 6, borderRadius: 9999 }}>
-            <User size={14} color={colors.secondaryForeground} />
-          </View>
-          <Text style={{ fontFamily: 'Inter_500Medium', color: colors.foreground, fontSize: 14 }}>{user?.name?.split(' ')[0]}</Text>
-        </Pressable>
+          {isDark ? <Moon size={14} color={colors.accent} /> : <Sun size={14} color={colors.accent} />}
+          <Text style={{ fontFamily: 'Inter_500Medium', color: colors.foreground, fontSize: 13 }}>{user?.name?.split(' ')[0]}</Text>
+        </View>
+        <AppSwitcherTrigger variant="header_inline" />
       </View>
     </View>
   );
 }
 
 function TabsLayoutInner() {
-  const { isDark } = useTheme();
   const styledTheme = useStyledTheme();
   const colors = styledTheme.colors;
   const { t } = useLanguage();
@@ -303,10 +298,10 @@ function TabsLayoutInner() {
               borderBottomWidth: 1,
               borderBottomColor: colors.border,
               backgroundColor: colors.background,
-              alignItems: 'flex-start',
+              alignItems: 'flex-end',
             }}
           >
-            <ModeSwitch />
+            <AppSwitcherTrigger variant="header_inline" />
           </View>
           <Tabs
             screenOptions={{
@@ -334,20 +329,6 @@ function TabsLayoutInner() {
   // Mobile layout - bottom tabs
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View
-        style={{
-          paddingTop: Math.max(insets.top, 8),
-          paddingBottom: 8,
-          paddingHorizontal: 12,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.border,
-          backgroundColor: colors.background,
-          alignItems: 'flex-start',
-        }}
-      >
-        <ModeSwitch />
-      </View>
-
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -420,6 +401,17 @@ function TabsLayoutInner() {
         />
         <Tabs.Screen name="goals" options={{ href: null }} />
       </Tabs>
+
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: 'absolute',
+          right: 14,
+          bottom: insets.bottom + 68,
+        }}
+      >
+        <AppSwitcherTrigger variant="floating_tab" />
+      </View>
     </View>
   );
 }
