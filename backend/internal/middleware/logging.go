@@ -1,6 +1,9 @@
 package middleware
 
 import (
+	"bufio"
+	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -14,6 +17,11 @@ type responseWriter struct {
 	status int
 }
 
+var (
+	_ http.Flusher  = (*responseWriter)(nil)
+	_ http.Hijacker = (*responseWriter)(nil)
+)
+
 func (rw *responseWriter) WriteHeader(code int) {
 	rw.status = code
 	rw.ResponseWriter.WriteHeader(code)
@@ -23,6 +31,15 @@ func (rw *responseWriter) Flush() {
 	if flusher, ok := rw.ResponseWriter.(http.Flusher); ok {
 		flusher.Flush()
 	}
+}
+
+func (rw *responseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hijacker, ok := rw.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, fmt.Errorf("underlying response writer does not implement http.Hijacker")
+	}
+
+	return hijacker.Hijack()
 }
 
 // Logging middleware logs HTTP requests with trace ID
