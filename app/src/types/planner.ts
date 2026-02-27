@@ -50,6 +50,9 @@ export interface TodoItem {
   unit?: string;
   created_at: string;
   updated_at: string;
+  subtask_total?: number;
+  subtask_done?: number;
+  tag_names?: string[];
   is_pending_sync?: boolean;
   sync_error?: string;
   pending_verification?: boolean;
