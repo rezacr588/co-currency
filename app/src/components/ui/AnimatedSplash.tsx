@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -19,6 +19,11 @@ export function AnimatedSplash({ onAnimationComplete }: AnimatedSplashProps) {
   const [showTagline, setShowTagline] = useState(false);
   const onCompleteRef = useRef(onAnimationComplete);
   onCompleteRef.current = onAnimationComplete;
+
+  // Stable function reference for runOnJS — must not be inline in worklet
+  const handleComplete = useCallback(() => {
+    onCompleteRef.current();
+  }, []);
 
   // Animation values
   const logoScale = useSharedValue(0.3);
@@ -49,13 +54,13 @@ export function AnimatedSplash({ onAnimationComplete }: AnimatedSplashProps) {
       2200,
       withTiming(0, { duration: 400, easing: Easing.ease }, (finished) => {
         if (finished) {
-          runOnJS(() => onCompleteRef.current())();
+          runOnJS(handleComplete)();
         }
       })
     );
 
     return () => clearTimeout(taglineTimer);
-  }, []);
+  }, [handleComplete]);
 
   const logoAnimatedStyle = useAnimatedStyle(() => ({
     opacity: logoOpacity.value,
