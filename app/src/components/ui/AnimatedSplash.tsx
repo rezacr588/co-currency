@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { View, Text, Image, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -11,14 +11,14 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 
-const { width, height } = Dimensions.get('window');
-
 interface AnimatedSplashProps {
   onAnimationComplete: () => void;
 }
 
 export function AnimatedSplash({ onAnimationComplete }: AnimatedSplashProps) {
   const [showTagline, setShowTagline] = useState(false);
+  const onCompleteRef = useRef(onAnimationComplete);
+  onCompleteRef.current = onAnimationComplete;
 
   // Animation values
   const logoScale = useSharedValue(0.3);
@@ -42,17 +42,19 @@ export function AnimatedSplash({ onAnimationComplete }: AnimatedSplashProps) {
     taglineOpacity.value = withDelay(800, withTiming(1, { duration: 400 }));
 
     // Show tagline state
-    setTimeout(() => setShowTagline(true), 800);
+    const taglineTimer = setTimeout(() => setShowTagline(true), 800);
 
     // Fade out everything and call completion
     containerOpacity.value = withDelay(
       2200,
       withTiming(0, { duration: 400, easing: Easing.ease }, (finished) => {
         if (finished) {
-          runOnJS(onAnimationComplete)();
+          runOnJS(() => onCompleteRef.current())();
         }
       })
     );
+
+    return () => clearTimeout(taglineTimer);
   }, []);
 
   const logoAnimatedStyle = useAnimatedStyle(() => ({

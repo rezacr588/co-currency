@@ -11,7 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
 import {
   User,
@@ -63,10 +63,12 @@ export default function ProfileScreen() {
   const { settings, updateSettings, isBiometricAvailable, biometricType } = useSettings();
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const isDesktop = width >= 1024;
   const desktopMaxWidth = 1280;
   const strongBorder = colors.borderStrong || colors.border;
+  const sectionGap = isDesktop ? 20 : 16;
 
   // Edit profile state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -125,7 +127,7 @@ export default function ProfileScreen() {
     <View
       style={{
         backgroundColor: colors.card,
-        borderRadius: isDesktop ? 18 : 12,
+        borderRadius: isDesktop ? 18 : 14,
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: isDesktop ? strongBorder + '80' : colors.border,
@@ -136,14 +138,14 @@ export default function ProfileScreen() {
         elevation: isDesktop ? 2 : 0,
       }}
     >
-      <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 }}>
+      <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6 }}>
         <Text
           style={{
-            fontSize: isDesktop ? 11 : 14,
+            fontSize: isDesktop ? 11 : 13,
             color: colors.mutedForeground,
-            fontFamily: isDesktop ? 'Inter_600SemiBold' : undefined,
-            letterSpacing: isDesktop ? 0.8 : 0,
-            textTransform: isDesktop ? 'uppercase' : 'none',
+            fontFamily: 'Inter_600SemiBold',
+            letterSpacing: 0.5,
+            textTransform: 'uppercase',
           }}
         >
           {title}
@@ -241,30 +243,32 @@ export default function ProfileScreen() {
         contentContainerStyle={{
           paddingHorizontal: isDesktop ? 28 : 16,
           paddingTop: isDesktop ? 24 : 16,
-          paddingBottom: isDesktop ? 40 : 24,
+          paddingBottom: isDesktop ? 40 : Math.max(insets.bottom, 16) + 24,
           maxWidth: isDesktop ? desktopMaxWidth : undefined,
           alignSelf: isDesktop ? 'center' : undefined,
           width: '100%',
         }}
       >
         {/* Header */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: isDesktop ? 20 : 24 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: isDesktop ? 20 : 20 }}>
           {!isDesktop && (
             <Pressable
               onPress={() => router.back()}
               hitSlop={8}
-              style={{ cursor: 'pointer', padding: 8, marginRight: 8 }}
+              style={{ cursor: 'pointer', padding: 8, marginRight: 4 }}
             >
-              <ChevronLeft size={24} color={colors.placeholder} />
+              <ChevronLeft size={24} color={colors.foreground} />
             </Pressable>
           )}
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: isDesktop ? 30 : 24, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
+            <Text style={{ fontSize: isDesktop ? 30 : 22, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
               {t('profile')}
             </Text>
-            <Text style={{ color: colors.mutedForeground, marginTop: 4 }}>
-              {t('profileSubtitle') || 'Manage your account details and security'}
-            </Text>
+            {isDesktop && (
+              <Text style={{ color: colors.mutedForeground, marginTop: 4 }}>
+                {t('profileSubtitle') || 'Manage your account details and security'}
+              </Text>
+            )}
           </View>
         </View>
 
@@ -331,42 +335,45 @@ export default function ProfileScreen() {
         <View
           style={{
             flexDirection: isDesktop ? 'row' : 'column',
-            gap: isDesktop ? 20 : 24,
+            gap: isDesktop ? 20 : sectionGap,
             alignItems: 'flex-start',
           }}
         >
           {/* Left Column - User Info & Appearance */}
-          <View style={{ width: isDesktop ? 360 : '100%' }}>
+          <View style={{ width: isDesktop ? 360 : '100%', gap: isDesktop ? 0 : sectionGap }}>
             {!isDesktop && (
-              <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
-                <View style={{ flexDirection: 'column', alignItems: 'center' }}>
-                  <View style={{ backgroundColor: colors.primary + '33', padding: 16, borderRadius: 9999 }}>
-                    <User size={48} color={colors.accent} />
+              <View style={{ backgroundColor: colors.card, padding: 20, borderRadius: 14, borderWidth: 1, borderColor: colors.border, marginBottom: sectionGap }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ backgroundColor: colors.accent + '1A', borderWidth: 1, borderColor: colors.accent + '33', padding: 14, borderRadius: 9999 }}>
+                    <User size={32} color={colors.accent} />
                   </View>
-                  <View style={{ marginTop: 16, alignItems: 'center' }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{user?.name}</Text>
-                      <Pressable
-                        onPress={openEditModal}
-                        hitSlop={12}
-                        style={{ cursor: 'pointer', marginLeft: 8, padding: 4 }}
-                      >
-                        <Pencil size={16} color={colors.placeholder} />
-                      </Pressable>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-                      <Mail size={16} color={colors.placeholder} />
-                      <Text style={{ color: colors.mutedForeground, marginLeft: 8 }}>{user?.email}</Text>
+                  <View style={{ marginLeft: 14, flex: 1 }}>
+                    <Text style={{ fontSize: 18, fontFamily: 'Inter_700Bold', color: colors.foreground }} numberOfLines={1}>{user?.name}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                      <Mail size={14} color={colors.placeholder} />
+                      <Text style={{ color: colors.mutedForeground, marginLeft: 6, fontSize: 14 }} numberOfLines={1}>{user?.email}</Text>
                     </View>
                   </View>
                 </View>
 
                 <Pressable
                   onPress={openEditModal}
-                  style={{ cursor: 'pointer', backgroundColor: colors.secondary, marginTop: 16, padding: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
+                  style={({ pressed }) => [{
+                    cursor: 'pointer',
+                    backgroundColor: colors.accent + '14',
+                    borderWidth: 1,
+                    borderColor: colors.accent + '33',
+                    marginTop: 16,
+                    padding: 12,
+                    borderRadius: 10,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: pressed ? 0.72 : 1,
+                  }]}
                 >
                   <Pencil size={16} color={colors.accent} />
-                  <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium', marginLeft: 8 }}>{t('editProfile')}</Text>
+                  <Text style={{ color: colors.accent, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>{t('editProfile')}</Text>
                 </Pressable>
               </View>
             )}
@@ -390,7 +397,7 @@ export default function ProfileScreen() {
             </SettingsSection>
 
             {/* Language Settings */}
-            <View style={{ marginTop: 16 }}>
+            <View style={{ marginTop: isDesktop ? 16 : 0 }}>
               <SettingsSection title={t('language')}>
                 {LANGUAGES.map((lang) => (
                   <Pressable
@@ -460,8 +467,8 @@ export default function ProfileScreen() {
           </View>
 
           {/* Right Column - Finance & Account */}
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 16 }}>
+          <View style={{ flex: 1, minWidth: 0, width: isDesktop ? undefined : '100%' }}>
+            <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: sectionGap }}>
               <View style={{ flex: 1 }}>
                 <SettingsSection title={t('financeManagement')}>
                   <SettingsItem
@@ -516,7 +523,7 @@ export default function ProfileScreen() {
             </View>
 
             {/* Security & Privacy */}
-            <View style={{ marginTop: 16 }}>
+            <View style={{ marginTop: sectionGap }}>
               <SettingsSection title={t('securityAndPrivacy') || 'Security & Privacy'}>
                 {isBiometricAvailable && (
                   <View
@@ -611,7 +618,7 @@ export default function ProfileScreen() {
               </SettingsSection>
             </View>
 
-            <View style={{ marginTop: 16, flexDirection: isDesktop ? 'row' : 'column', gap: 16 }}>
+            <View style={{ marginTop: sectionGap, flexDirection: isDesktop ? 'row' : 'column', gap: sectionGap }}>
               <View style={{ flex: isDesktop ? 1 : undefined }}>
                 <SettingsSection title={t('account')}>
                   <SettingsItem
@@ -647,7 +654,7 @@ export default function ProfileScreen() {
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginTop: 16,
+                  marginTop: sectionGap,
                   opacity: pressed ? 0.72 : 1,
                 }]}
               >
@@ -659,8 +666,8 @@ export default function ProfileScreen() {
         </View>
 
         {/* App Info */}
-        <View style={{ alignItems: 'center', marginTop: 32 }}>
-          <Text style={{ color: colors.mutedForeground }}>CoFinance v1.0.0</Text>
+        <View style={{ alignItems: 'center', marginTop: 24 }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>CoFinance v1.0.0</Text>
         </View>
       </ScrollView>
 

@@ -106,11 +106,11 @@ const CategoryChip = styled.Pressable<{ $active: boolean }>`
 const FALLBACK_CATEGORIES = Object.keys(CATEGORY_ICONS);
 const CURRENCIES = [...COMMON_CURRENCIES];
 const ADD_TRANSACTION_STEPS: AddTransactionStep[] = ['basics', 'currency', 'category', 'review'];
-const STEP_LABELS: Record<AddTransactionStep, string> = {
-  basics: 'Basics',
-  currency: 'Currency',
-  category: 'Category',
-  review: 'Review',
+const STEP_LABEL_KEYS: Record<AddTransactionStep, { key: string; fallback: string }> = {
+  basics: { key: 'stepBasics', fallback: 'Basics' },
+  currency: { key: 'currency', fallback: 'Currency' },
+  category: { key: 'category', fallback: 'Category' },
+  review: { key: 'stepReview', fallback: 'Review' },
 };
 
 export default function AddTransactionScreen() {
@@ -507,7 +507,7 @@ export default function AddTransactionScreen() {
                         fontSize: 11,
                       }}
                     >
-                      {`${index + 1}. ${STEP_LABELS[item]}`}
+                      {`${index + 1}. ${(t(STEP_LABEL_KEYS[item].key) || STEP_LABEL_KEYS[item].fallback)}`}
                     </Caption>
                   </View>
                 );
@@ -892,19 +892,19 @@ export default function AddTransactionScreen() {
                   onPress={() => setStep('basics')}
                   style={({ pressed }) => [{ paddingHorizontal: 10, paddingVertical: 8, borderRadius: theme.radii.md, borderWidth: 1, borderColor: theme.colors.border }, pressed && { opacity: 0.76 }]}
                 >
-                  <Caption>{STEP_LABELS.basics}</Caption>
+                  <Caption>{t(STEP_LABEL_KEYS.basics.key) || STEP_LABEL_KEYS.basics.fallback}</Caption>
                 </Pressable>
                 <Pressable
                   onPress={() => setStep('currency')}
                   style={({ pressed }) => [{ paddingHorizontal: 10, paddingVertical: 8, borderRadius: theme.radii.md, borderWidth: 1, borderColor: theme.colors.border }, pressed && { opacity: 0.76 }]}
                 >
-                  <Caption>{STEP_LABELS.currency}</Caption>
+                  <Caption>{t(STEP_LABEL_KEYS.currency.key) || STEP_LABEL_KEYS.currency.fallback}</Caption>
                 </Pressable>
                 <Pressable
                   onPress={() => setStep('category')}
                   style={({ pressed }) => [{ paddingHorizontal: 10, paddingVertical: 8, borderRadius: theme.radii.md, borderWidth: 1, borderColor: theme.colors.border }, pressed && { opacity: 0.76 }]}
                 >
-                  <Caption>{STEP_LABELS.category}</Caption>
+                  <Caption>{t(STEP_LABEL_KEYS.category.key) || STEP_LABEL_KEYS.category.fallback}</Caption>
                 </Pressable>
               </View>
             </SectionCard>

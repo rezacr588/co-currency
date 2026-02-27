@@ -648,6 +648,12 @@ export default function PlannerScreen() {
     [outbox]
   );
 
+  const pendingCountRef = useRef(pendingCount);
+  pendingCountRef.current = pendingCount;
+
+  const syncOutboxNowRef = useRef(syncOutboxNow);
+  syncOutboxNowRef.current = syncOutboxNow;
+
   useEffect(() => {
     if (!userID) return;
 
@@ -658,8 +664,8 @@ export default function PlannerScreen() {
       if (!active) return;
       setIsOnline(online);
 
-      if (online && pendingCount > 0) {
-        await syncOutboxNow();
+      if (online && pendingCountRef.current > 0) {
+        await syncOutboxNowRef.current();
       }
     };
 
@@ -680,7 +686,7 @@ export default function PlannerScreen() {
       clearInterval(interval);
       appStateSub.remove();
     };
-  }, [pendingCount, syncOutboxNow, userID]);
+  }, [userID]);
 
   const canonicalBoard = boardQuery.data ?? cachedBoard ?? emptyBoard();
   const effectiveBoard = useMemo(

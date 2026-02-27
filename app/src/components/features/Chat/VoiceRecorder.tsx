@@ -19,6 +19,7 @@ export function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRecorderPr
   const [elapsed, setElapsed] = useState(0);
   const recordingRef = useRef<Audio.Recording | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedRef = useRef(0);
 
   const MAX_DURATION = 120; // 2 minutes
 
@@ -60,13 +61,11 @@ export function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRecorderPr
       haptics.light();
 
       timerRef.current = setInterval(() => {
-        setElapsed((prev) => {
-          if (prev >= MAX_DURATION - 1) {
-            handleStop();
-            return prev;
-          }
-          return prev + 1;
-        });
+        elapsedRef.current += 1;
+        setElapsed(elapsedRef.current);
+        if (elapsedRef.current >= MAX_DURATION) {
+          handleStop();
+        }
       }, 1000);
     } catch (error) {
       console.error('Failed to start recording:', error);

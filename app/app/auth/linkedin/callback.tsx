@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,15 +14,20 @@ export default function LinkedInCallbackScreen() {
   const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
   const colors = theme.colors;
+  const hasHandled = useRef(false);
 
   useEffect(() => {
+    if (hasHandled.current) return;
+    hasHandled.current = true;
+
+    let redirectTimer: ReturnType<typeof setTimeout>;
+
     async function handleCallback() {
       const { token, refresh_token, error: errorParam } = params;
 
       if (errorParam) {
         setError(typeof errorParam === 'string' ? errorParam : 'Unknown error');
-        // Redirect to login with error after a delay
-        setTimeout(() => {
+        redirectTimer = setTimeout(() => {
           router.replace(`/login?error=${encodeURIComponent(typeof errorParam === 'string' ? errorParam : 'Unknown error')}`);
         }, 2000);
         return;
@@ -41,20 +46,22 @@ export default function LinkedInCallbackScreen() {
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Authentication failed';
           setError(message);
-          setTimeout(() => {
+          redirectTimer = setTimeout(() => {
             router.replace(`/login?error=${encodeURIComponent(message)}`);
           }, 2000);
         }
       } else {
         setError('Invalid callback parameters');
-        setTimeout(() => {
+        redirectTimer = setTimeout(() => {
           router.replace('/login?error=Invalid%20callback%20parameters');
         }, 2000);
       }
     }
 
     handleCallback();
-  }, [params, handleOAuthCallback, router]);
+
+    return () => clearTimeout(redirectTimer);
+  }, []);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }}>

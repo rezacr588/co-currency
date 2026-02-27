@@ -63,7 +63,8 @@ export function CollapsibleSection({
 
   const contentStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
-    display: opacity.value === 0 ? 'none' : 'flex',
+    overflow: 'hidden' as const,
+    maxHeight: opacity.value === 0 ? 0 : 9999,
   }));
 
   if (!initialized) return null;

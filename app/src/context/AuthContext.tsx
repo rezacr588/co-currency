@@ -6,6 +6,7 @@ import {
   setAuthToken,
   setRefreshToken,
   getAuthToken,
+  getRefreshToken,
   clearAuthToken,
   setOnAuthError,
   loadTokens,
@@ -26,11 +27,12 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const AUTH_SCOPED_QUERY_KEYS = new Set(['planner-board', 'tasks', 'goals', 'tags']);
+// Query keys that are NOT user-scoped (safe to keep across sessions)
+const PUBLIC_QUERY_KEYS = new Set(['currencies', 'exchange-rates', 'news']);
 
 export function isAuthScopedQueryKey(queryKey: readonly unknown[]): boolean {
   const [head] = queryKey;
-  return typeof head === 'string' && AUTH_SCOPED_QUERY_KEYS.has(head);
+  return typeof head === 'string' && !PUBLIC_QUERY_KEYS.has(head);
 }
 
 export async function clearAuthScopedQueries(queryClient: QueryClient): Promise<void> {
@@ -195,6 +197,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = useCallback(async () => {
+    // Invalidate refresh token on server (best-effort, don't block on failure)
+    const refreshToken = getRefreshToken();
+    if (refreshToken) {
+      api.auth.logout(refreshToken).catch(() => {});
+    }
     await clearAuthToken();
     await clearAuthScopedQueries(queryClient);
     setUser(null);

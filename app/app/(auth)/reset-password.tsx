@@ -92,16 +92,16 @@ export default function ResetPasswordScreen() {
                 <XCircle size={40} color={colors.danger} />
               </View>
               <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 8, textAlign: 'center' }}>
-                Invalid Reset Link
+                {t('invalidResetLink') || 'Invalid Reset Link'}
               </Text>
               <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginBottom: 24 }}>
-                The password reset link is invalid or has expired.
+                {t('resetLinkExpired') || 'The password reset link is invalid or has expired.'}
               </Text>
               <Link href="/forgot-password" asChild>
                 <Pressable
                   style={{ cursor: 'pointer', backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}
                 >
-                  <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold' }}>Request New Link</Text>
+                  <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold' }}>{t('requestNewLink') || 'Request New Link'}</Text>
                 </Pressable>
               </Link>
             </View>
@@ -137,16 +137,16 @@ export default function ResetPasswordScreen() {
                 <CheckCircle size={40} color={colors.success} />
               </View>
               <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 8, textAlign: 'center' }}>
-                Password Reset Successful
+                {t('passwordResetSuccess') || 'Password Reset Successful'}
               </Text>
               <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginBottom: 24 }}>
-                Your password has been reset. Redirecting to login...
+                {t('redirectingToLogin') || 'Your password has been reset. Redirecting to login...'}
               </Text>
               <Link href="/login" asChild>
                 <Pressable
                   style={{ cursor: 'pointer', backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}
                 >
-                  <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold' }}>Go to Login</Text>
+                  <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold' }}>{t('goToLogin') || 'Go to Login'}</Text>
                 </Pressable>
               </Link>
             </View>
@@ -180,7 +180,7 @@ export default function ResetPasswordScreen() {
               {t('resetPassword') || 'Reset Password'}
             </Text>
             <Text style={{ color: colors.mutedForeground, textAlign: 'center' }}>
-              Enter your new password
+              {t('enterNewPassword') || 'Enter your new password'}
             </Text>
           </View>
 
@@ -235,7 +235,7 @@ export default function ResetPasswordScreen() {
 
           {/* Back to Login */}
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 32 }}>
-            <Text style={{ color: colors.mutedForeground }}>Remember your password? </Text>
+            <Text style={{ color: colors.mutedForeground }}>{t('rememberYourPassword') || 'Remember your password? '}</Text>
             <Link href="/login" asChild>
               <Pressable style={{ cursor: 'pointer' }}>
                 <Text style={{ color: colors.accent, fontFamily: 'Inter_600SemiBold' }}>{t('login')}</Text>

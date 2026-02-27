@@ -118,6 +118,8 @@ export function getRefreshToken(): string | null {
 export async function clearAuthToken(): Promise<void> {
   authTokenCache = null;
   refreshTokenCache = null;
+  tokensLoaded = false;
+  loadTokensPromise = null;
   await Promise.all([
     removeSecure(AUTH_TOKEN_KEY),
     removeSecure(REFRESH_TOKEN_KEY),
@@ -258,6 +260,10 @@ async function fetchWithRetry<T>(
         throw new Error(`Server error: ${errorMessage || `status ${response.status}`}`);
       }
 
+      // 204 No Content has no body to parse
+      if (response.status === 204) {
+        return undefined as T;
+      }
       return response.json();
     } catch (error) {
       lastError = error instanceof Error ? error : new Error('Unknown error');
@@ -268,9 +274,13 @@ async function fetchWithRetry<T>(
       }
 
       // Check if it's a network error, timeout, or server error (worth retrying)
+      const isAbortError =
+        (error as any)?.name === 'AbortError' ||
+        lastError.message.includes('Aborted') ||
+        lastError.message.includes('timeout');
       const isRetryable =
         error instanceof TypeError || // Network error
-        (error instanceof DOMException && error.name === 'AbortError') || // Timeout
+        isAbortError || // Timeout (platform-agnostic: DOMException on web, Error on native)
         (lastError.message && lastError.message.includes('Server error'));
 
       if (!isRetryable && lastError.message !== 'Session expired. Please log in again.') {

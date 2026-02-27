@@ -22,14 +22,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('dark');
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load theme from storage on mount
+  // Load theme from storage on mount, follow system if no stored preference
   useEffect(() => {
     async function loadTheme() {
       const stored = await readStorage(THEME_STORAGE_KEY);
       if (stored === 'light' || stored === 'dark') {
         setThemeState(stored);
-      } else if (systemColorScheme === 'light') {
-        setThemeState('light');
+      } else if (systemColorScheme) {
+        setThemeState(systemColorScheme);
       }
       setIsInitialized(true);
     }

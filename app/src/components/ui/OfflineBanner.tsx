@@ -56,7 +56,7 @@ export function OfflineBanner() {
       }).start();
     } else if (showBanner) {
       // Show "back online" briefly then hide
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         Animated.timing(translateY, {
           toValue: -50,
           duration: 300,
@@ -65,6 +65,7 @@ export function OfflineBanner() {
           setShowBanner(false);
         });
       }, 2000);
+      return () => clearTimeout(timer);
     }
   }, [isOnline, showBanner, translateY]);
 

@@ -329,6 +329,13 @@ export const translations = {
     resetLinkSent: 'Reset link sent to your email',
     invalidResetToken: 'Invalid or expired reset token',
     passwordResetSuccess: 'Password reset successfully',
+    invalidResetLink: 'Invalid Reset Link',
+    resetLinkExpired: 'The password reset link is invalid or has expired.',
+    requestNewLink: 'Request New Link',
+    goToLogin: 'Go to Login',
+    rememberYourPassword: 'Remember your password? ',
+    stepBasics: 'Basics',
+    stepReview: 'Review',
 
     // Goals
     financialGoals: 'Financial Goals',
@@ -1154,6 +1161,13 @@ export const translations = {
     resetLinkSent: 'لینک بازنشانی به ایمیل شما ارسال شد',
     invalidResetToken: 'توکن نامعتبر یا منقضی شده',
     passwordResetSuccess: 'رمز عبور با موفقیت بازنشانی شد',
+    invalidResetLink: 'لینک بازنشانی نامعتبر',
+    resetLinkExpired: 'لینک بازنشانی رمز عبور نامعتبر یا منقضی شده است.',
+    requestNewLink: 'درخواست لینک جدید',
+    goToLogin: 'رفتن به ورود',
+    rememberYourPassword: 'رمز عبور خود را به یاد دارید؟ ',
+    stepBasics: 'اصول',
+    stepReview: 'بررسی',
 
     // Goals
     financialGoals: 'اهداف مالی',
@@ -1979,6 +1993,13 @@ export const translations = {
     resetLinkSent: 'تم إرسال رابط إعادة التعيين إلى بريدك',
     invalidResetToken: 'رمز غير صالح أو منتهي الصلاحية',
     passwordResetSuccess: 'تم إعادة تعيين كلمة المرور بنجاح',
+    invalidResetLink: 'رابط إعادة التعيين غير صالح',
+    resetLinkExpired: 'رابط إعادة تعيين كلمة المرور غير صالح أو منتهي الصلاحية.',
+    requestNewLink: 'طلب رابط جديد',
+    goToLogin: 'الذهاب لتسجيل الدخول',
+    rememberYourPassword: 'تتذكر كلمة المرور؟ ',
+    stepBasics: 'الأساسيات',
+    stepReview: 'المراجعة',
 
     // Goals
     financialGoals: 'الأهداف المالية',
@@ -2804,6 +2825,13 @@ export const translations = {
     resetLinkSent: 'Sıfırlama bağlantısı e-postanıza gönderildi',
     invalidResetToken: 'Geçersiz veya süresi dolmuş token',
     passwordResetSuccess: 'Şifre başarıyla sıfırlandı',
+    invalidResetLink: 'Geçersiz Sıfırlama Bağlantısı',
+    resetLinkExpired: 'Şifre sıfırlama bağlantısı geçersiz veya süresi dolmuş.',
+    requestNewLink: 'Yeni Bağlantı İste',
+    goToLogin: 'Girişe Git',
+    rememberYourPassword: 'Şifrenizi hatırlıyor musunuz? ',
+    stepBasics: 'Temel',
+    stepReview: 'İnceleme',
 
     // Goals
     financialGoals: 'Finansal Hedefler',

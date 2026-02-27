@@ -1,5 +1,5 @@
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Lock, Fingerprint, ScanFace } from 'lucide-react-native';
 import { useSettings } from '../../context/SettingsContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -15,18 +15,7 @@ export function BiometricLock() {
   const [error, setError] = useState<string | null>(null);
   const hasAttempted = useRef(false);
 
-  // Auto-authenticate on mount
-  useEffect(() => {
-    if (isLocked && !hasAttempted.current) {
-      hasAttempted.current = true;
-      handleUnlock();
-    }
-    if (!isLocked) {
-      hasAttempted.current = false;
-    }
-  }, [isLocked]);
-
-  const handleUnlock = async () => {
+  const handleUnlock = useCallback(async () => {
     if (isAuthenticating) return;
 
     setIsAuthenticating(true);
@@ -42,7 +31,18 @@ export function BiometricLock() {
     }
 
     setIsAuthenticating(false);
-  };
+  }, [unlock, t]);
+
+  // Auto-authenticate on mount
+  useEffect(() => {
+    if (isLocked && !hasAttempted.current) {
+      hasAttempted.current = true;
+      handleUnlock();
+    }
+    if (!isLocked) {
+      hasAttempted.current = false;
+    }
+  }, [isLocked, handleUnlock]);
 
   if (!isLocked) return null;
 
