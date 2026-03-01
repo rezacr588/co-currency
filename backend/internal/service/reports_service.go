@@ -155,6 +155,18 @@ type WeeklyRecapReport struct {
 	GeneratedAt    time.Time           `json:"generated_at"`
 }
 
+// DateRangeReport represents a financial summary across an arbitrary date range
+type DateRangeReport struct {
+	FromDate   string              `json:"from_date"`
+	ToDate     string              `json:"to_date"`
+	Currency   string              `json:"currency"`
+	Income     float64             `json:"income"`
+	Expenses   float64             `json:"expenses"`
+	Net        float64             `json:"net"`
+	Savings    float64             `json:"savings_rate"`
+	Categories []CategoryBreakdown `json:"categories"`
+}
+
 func parseISODateRange(fromDate, toDate string) (time.Time, time.Time, error) {
 	from, err := time.Parse("2006-01-02", fromDate)
 	if err != nil {
@@ -263,6 +275,76 @@ func (s *ReportsService) GetMonthlyReport(ctx context.Context, userID uuid.UUID,
 		Expenses:   expenses,
 		Net:        net,
 		Savings:    savingsRate,
+		Categories: categories,
+	}, nil
+}
+
+// GetDateRangeReport generates a financial summary across an arbitrary date range
+func (s *ReportsService) GetDateRangeReport(ctx context.Context, userID uuid.UUID, fromDate, toDate, currency string) (*DateRangeReport, error) {
+	startDate, endDate, err := parseISODateRange(fromDate, toDate)
+	if err != nil {
+		return nil, err
+	}
+
+	var income, expenses float64
+	rateCache := make(map[string]float64)
+
+	typeTotals, err := s.walletRepo.GetTypeTotalsByCurrency(ctx, userID, startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("getting transaction type totals: %w", err)
+	}
+	for _, row := range typeTotals {
+		amount := s.convertAmountWithRateCache(ctx, row.Total, row.Currency, currency, rateCache)
+		switch row.Type {
+		case model.TransactionTypeCredit:
+			income += amount
+		case model.TransactionTypeDebit:
+			expenses += amount
+		}
+	}
+
+	categoryRows, err := s.walletRepo.GetCategoryTotalsByCurrency(ctx, userID, startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("getting category totals: %w", err)
+	}
+	categoryMap := make(map[string]CategoryBreakdown)
+	for _, row := range categoryRows {
+		amount := s.convertAmountWithRateCache(ctx, row.Total, row.Currency, currency, rateCache)
+		entry := categoryMap[row.Category]
+		entry.Category = row.Category
+		entry.Amount += amount
+		entry.Count += row.Count
+		categoryMap[row.Category] = entry
+	}
+
+	net := income - expenses
+	savingsRate := 0.0
+	if income > 0 {
+		savingsRate = (net / income) * 100
+	}
+
+	categories := make([]CategoryBreakdown, 0, len(categoryMap))
+	for _, entry := range categoryMap {
+		percentage := 0.0
+		if expenses > 0 {
+			percentage = (entry.Amount / expenses) * 100
+		}
+		entry.Percentage = percentage
+		categories = append(categories, entry)
+	}
+
+	sort.Slice(categories, func(i, j int) bool {
+		return categories[i].Amount > categories[j].Amount
+	})
+
+	return &DateRangeReport{
+		FromDate:   fromDate,
+		ToDate:     toDate,
+		Currency:   currency,
+		Income:     income,
+		Expenses:   expenses,
+		Net:        net,
+		Savings:    math.Round(savingsRate*10) / 10,
 		Categories: categories,
 	}, nil
 }

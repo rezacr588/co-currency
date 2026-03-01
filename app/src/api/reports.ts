@@ -2,6 +2,7 @@ import type {
   MonthlyReport,
   YearlyReport,
   CategoryReport,
+  DateRangeReport,
   TrendsReport,
   NetWorthReport,
   InsightResponse,
@@ -26,6 +27,10 @@ export const reports = {
         year: year || undefined,
         currency,
       })}`
+    ),
+  dateRange: (fromDate: string, toDate: string, currency?: string) =>
+    fetchAPI<DateRangeReport>(
+      `/reports/date-range${buildQuery({ from_date: fromDate, to_date: toDate, currency })}`
     ),
   category: (fromDate?: string, toDate?: string, currency?: string) =>
     fetchAPI<CategoryReport>(

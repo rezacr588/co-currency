@@ -57,7 +57,11 @@ export function getDateRangeFromPreset(preset: DatePreset): DateRange {
         label: `${currentYear - 1}`,
       };
     case 'all_time':
-      return { label: 'All Time' };
+      return {
+        fromDate: '2020-01-01',
+        toDate: now.toISOString().split('T')[0],
+        label: 'All Time',
+      };
     default:
       return { year: currentYear, month: currentMonth, label: `${FULL_MONTH_NAMES[currentMonth - 1]} ${currentYear}` };
   }

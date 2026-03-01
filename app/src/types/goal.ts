@@ -170,6 +170,17 @@ export interface CategoryReport {
   categories: CategoryBreakdown[];
 }
 
+export interface DateRangeReport {
+  from_date: string;
+  to_date: string;
+  currency: string;
+  income: number;
+  expenses: number;
+  net: number;
+  savings_rate: number;
+  categories: CategoryBreakdown[];
+}
+
 export interface TrendData {
   period: string;
   income: number;

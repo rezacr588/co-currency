@@ -10,7 +10,7 @@ import { safeMax } from '../../../utils/dateRange';
 import { CATEGORY_COLORS, StyledCategoryIcon } from '../../../constants/icons';
 import { CashFlowProjectionCard } from './CashFlowProjectionCard';
 import { SpendingAnomalyCard } from './SpendingAnomalyCard';
-import type { MonthlyReport, CategoryReport, TrendsReport, ForecastReport } from '../../../types/goal';
+import type { MonthlyReport, DateRangeReport, CategoryReport, TrendsReport, ForecastReport } from '../../../types/goal';
 
 // Shared chart components
 export function ComparisonBarChart({
@@ -189,31 +189,50 @@ export function MonthlyReportView({
   const theme = useTheme();
   const colors = theme.colors;
 
-  // Previous month for comparison
+  const isDateRangeMode = !!(fromDate && toDate);
+
+  // Previous month for comparison (only used in single-month mode)
   const prevMonth = useMemo(() => {
     if (month === 1) return { year: year - 1, month: 12 };
     return { year, month: month - 1 };
   }, [year, month]);
 
-  const { data: monthlyReport, isPending: isLoadingMonthly, isError: isMonthlyError } = useQuery({
-    queryKey: ['reports', 'monthly', year, month],
-    queryFn: () => api.reports.monthly(year, month),
+  // Date range report (used when fromDate & toDate are provided)
+  const { data: dateRangeReport, isPending: isLoadingDateRange, isError: isDateRangeError } = useQuery({
+    queryKey: ['reports', 'date-range', fromDate, toDate],
+    queryFn: () => api.reports.dateRange(fromDate!, toDate!),
+    enabled: isDateRangeMode,
     staleTime: 5 * 60 * 1000,
   });
+
+  // Monthly report (used in single-month mode)
+  const { data: monthlyReportRaw, isPending: isLoadingMonthly, isError: isMonthlyError } = useQuery({
+    queryKey: ['reports', 'monthly', year, month],
+    queryFn: () => api.reports.monthly(year, month),
+    enabled: !isDateRangeMode,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Unified report data
+  const monthlyReport: MonthlyReport | DateRangeReport | undefined = isDateRangeMode ? dateRangeReport : monthlyReportRaw;
+  const isReportError = isDateRangeMode ? isDateRangeError : isMonthlyError;
 
   const { data: prevMonthReport } = useQuery({
     queryKey: ['reports', 'monthly', prevMonth.year, prevMonth.month],
     queryFn: () => api.reports.monthly(prevMonth.year, prevMonth.month),
+    enabled: !isDateRangeMode,
     staleTime: 5 * 60 * 1000,
   });
 
-  // Month-over-month expense comparison
+  // Month-over-month expense comparison (only in single-month mode)
   const expenseChange = useMemo(() => {
+    if (isDateRangeMode) return null;
     if (!monthlyReport || !prevMonthReport || prevMonthReport.expenses <= 0) return null;
     return ((monthlyReport.expenses - prevMonthReport.expenses) / prevMonthReport.expenses) * 100;
-  }, [monthlyReport, prevMonthReport]);
+  }, [monthlyReport, prevMonthReport, isDateRangeMode]);
 
-  const { data: categoryReport, isPending: isLoadingCategory, isError: isCategoryError } = useQuery({
+  // Category data from date-range report or separate query
+  const { data: categoryReportSeparate, isPending: isLoadingCategory, isError: isCategoryError } = useQuery({
     queryKey: ['reports', 'category', fromDate, toDate, year, month],
     queryFn: () => {
       if (fromDate && toDate) {
@@ -226,8 +245,14 @@ export function MonthlyReportView({
         endDate.toISOString().split('T')[0]
       );
     },
+    enabled: !isDateRangeMode,
     staleTime: 5 * 60 * 1000,
   });
+
+  // Use categories from date-range report when available, otherwise from separate query
+  const categoryReport = isDateRangeMode && dateRangeReport
+    ? { categories: dateRangeReport.categories, currency: dateRangeReport.currency, from_date: dateRangeReport.from_date, to_date: dateRangeReport.to_date, total: dateRangeReport.expenses }
+    : categoryReportSeparate;
 
   const { data: trendsReport, isPending: isLoadingTrends } = useQuery({
     queryKey: ['reports', 'trends', 6],
@@ -241,7 +266,7 @@ export function MonthlyReportView({
     staleTime: 5 * 60 * 1000,
   });
 
-  const isPending = isLoadingMonthly || isLoadingCategory || isLoadingTrends || isLoadingForecast;
+  const isPending = (isDateRangeMode ? isLoadingDateRange : (isLoadingMonthly || isLoadingCategory)) || isLoadingTrends || isLoadingForecast;
 
   if (isPending) {
     return (
@@ -251,7 +276,7 @@ export function MonthlyReportView({
     );
   }
 
-  if (isMonthlyError) {
+  if (isReportError) {
     return (
       <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, alignItems: 'center' }}>
         <AlertCircle size={48} color={colors.danger} />

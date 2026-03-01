@@ -83,6 +83,38 @@ func (h *ReportsHandler) GetYearlyReport(w http.ResponseWriter, r *http.Request)
 	httputil.Success(w, report)
 }
 
+// GetDateRangeReport handles GET /api/v1/reports/date-range
+func (h *ReportsHandler) GetDateRangeReport(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	fromDate := r.URL.Query().Get("from_date")
+	toDate := r.URL.Query().Get("to_date")
+
+	now := time.Now()
+	if fromDate == "" {
+		fromDate = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
+	}
+	if toDate == "" {
+		toDate = now.Format("2006-01-02")
+	}
+
+	currency := r.URL.Query().Get("currency")
+	if currency == "" {
+		currency = "USD"
+	}
+
+	report, err := h.reportsService.GetDateRangeReport(r.Context(), userID, fromDate, toDate, currency)
+	if err != nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate date range report")
+		return
+	}
+
+	httputil.Success(w, report)
+}
+
 // GetCategoryReport handles GET /api/v1/reports/category
 func (h *ReportsHandler) GetCategoryReport(w http.ResponseWriter, r *http.Request) {
 	userID, ok := requireUserID(w, r)

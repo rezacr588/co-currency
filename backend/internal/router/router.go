@@ -257,6 +257,7 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 				r.Get("/weekly-recap", h.Reports.GetWeeklyRecap)
 				r.Get("/cashflow", h.Reports.GetCashFlowProjection)
 				r.Get("/anomalies", h.Reports.GetSpendingAnomalies)
+				r.Get("/date-range", h.Reports.GetDateRangeReport)
 			})
 		}
 
