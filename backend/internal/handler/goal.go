@@ -1,13 +1,10 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/service"
@@ -65,10 +62,8 @@ func (h *GoalHandler) GetGoal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	goalIDStr := chi.URLParam(r, "id")
-	goalID, err := uuid.Parse(goalIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid goal ID")
+	goalID, ok := parseUUIDParam(w, r, "id", "goal")
+	if !ok {
 		return
 	}
 
@@ -96,13 +91,12 @@ func (h *GoalHandler) CreateGoal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req model.CreateGoalRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
+	req, ok := decodeJSON[model.CreateGoalRequest](w, r)
+	if !ok {
 		return
 	}
 
-	goal, err := h.goalService.CreateGoal(r.Context(), userID, &req)
+	goal, err := h.goalService.CreateGoal(r.Context(), userID, req)
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidGoalType) || errors.Is(err, service.ErrInvalidGoalWorkflowStatus) || isGoalValidationError(err) {
 			httputil.BadRequestWithContext(r.Context(), w, err.Error(), err)
@@ -126,20 +120,17 @@ func (h *GoalHandler) UpdateGoal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	goalIDStr := chi.URLParam(r, "id")
-	goalID, err := uuid.Parse(goalIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid goal ID")
+	goalID, ok := parseUUIDParam(w, r, "id", "goal")
+	if !ok {
 		return
 	}
 
-	var req model.UpdateGoalRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
+	req, ok := decodeJSON[model.UpdateGoalRequest](w, r)
+	if !ok {
 		return
 	}
 
-	goal, err := h.goalService.UpdateGoal(r.Context(), userID, goalID, &req)
+	goal, err := h.goalService.UpdateGoal(r.Context(), userID, goalID, req)
 	if err != nil {
 		if errors.Is(err, repository.ErrGoalNotFound) {
 			httputil.NotFoundWithContext(r.Context(), w, "goal not found")
@@ -167,10 +158,8 @@ func (h *GoalHandler) DeleteGoal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	goalIDStr := chi.URLParam(r, "id")
-	goalID, err := uuid.Parse(goalIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid goal ID")
+	goalID, ok := parseUUIDParam(w, r, "id", "goal")
+	if !ok {
 		return
 	}
 
@@ -195,20 +184,17 @@ func (h *GoalHandler) ContributeToGoal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	goalIDStr := chi.URLParam(r, "id")
-	goalID, err := uuid.Parse(goalIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid goal ID")
+	goalID, ok := parseUUIDParam(w, r, "id", "goal")
+	if !ok {
 		return
 	}
 
-	var req model.ContributeToGoalRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
+	req, ok := decodeJSON[model.ContributeToGoalRequest](w, r)
+	if !ok {
 		return
 	}
 
-	goal, transaction, err := h.goalService.ContributeToGoal(r.Context(), userID, goalID, &req)
+	goal, transaction, err := h.goalService.ContributeToGoal(r.Context(), userID, goalID, req)
 	if err != nil {
 		if errors.Is(err, repository.ErrGoalNotFound) {
 			httputil.NotFoundWithContext(r.Context(), w, "goal not found")

@@ -45,7 +45,7 @@ func SetupTestServer(t *testing.T) *TestServer {
 	}
 
 	// Initialize database
-	db, err := repository.NewDatabase(dbURL)
+	db, err := repository.NewDatabase(dbURL, nil)
 	if err != nil {
 		t.Fatalf("Failed to connect to database: %v", err)
 	}

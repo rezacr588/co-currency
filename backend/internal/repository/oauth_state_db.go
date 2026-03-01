@@ -10,11 +10,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var (
-	ErrOAuthStateNotFound = errors.New("oauth state not found")
-	ErrOAuthStateExpired  = errors.New("oauth state expired")
-)
-
 // OAuthStateRepository handles database operations for OAuth state tokens
 type OAuthStateRepository struct {
 	pool *pgxpool.Pool

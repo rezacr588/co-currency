@@ -14,10 +14,6 @@ import (
 	"github.com/rezacr588/currency-converter/internal/model"
 )
 
-var (
-	ErrTaskNotFound = errors.New("task not found")
-)
-
 type TaskRepository struct {
 	pool *pgxpool.Pool
 }

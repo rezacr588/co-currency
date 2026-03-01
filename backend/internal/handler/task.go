@@ -1,12 +1,10 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
@@ -76,9 +74,8 @@ func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	taskID, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid task ID")
+	taskID, ok := parseUUIDParam(w, r, "id", "task")
+	if !ok {
 		return
 	}
 
@@ -104,13 +101,12 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req model.CreateTaskRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
+	req, ok := decodeJSON[model.CreateTaskRequest](w, r)
+	if !ok {
 		return
 	}
 
-	task, err := h.taskService.CreateTask(r.Context(), userID, &req)
+	task, err := h.taskService.CreateTask(r.Context(), userID, req)
 	if err != nil {
 		if errors.Is(err, repository.ErrGoalNotFound) {
 			httputil.NotFoundWithContext(r.Context(), w, "goal not found")
@@ -145,19 +141,17 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	taskID, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid task ID")
+	taskID, ok := parseUUIDParam(w, r, "id", "task")
+	if !ok {
 		return
 	}
 
-	var req model.UpdateTaskRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
+	req, ok := decodeJSON[model.UpdateTaskRequest](w, r)
+	if !ok {
 		return
 	}
 
-	task, err := h.taskService.UpdateTask(r.Context(), userID, taskID, &req)
+	task, err := h.taskService.UpdateTask(r.Context(), userID, taskID, req)
 	if err != nil {
 		if errors.Is(err, repository.ErrTaskNotFound) {
 			httputil.NotFoundWithContext(r.Context(), w, "task not found")
@@ -196,9 +190,8 @@ func (h *TaskHandler) CompleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	taskID, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid task ID")
+	taskID, ok := parseUUIDParam(w, r, "id", "task")
+	if !ok {
 		return
 	}
 
@@ -224,9 +217,8 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	taskID, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid task ID")
+	taskID, ok := parseUUIDParam(w, r, "id", "task")
+	if !ok {
 		return
 	}
 
@@ -250,9 +242,8 @@ func (h *TaskHandler) GetTaskTags(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	taskID, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid task ID")
+	taskID, ok := parseUUIDParam(w, r, "id", "task")
+	if !ok {
 		return
 	}
 	tags, err := h.taskService.GetTaskTags(r.Context(), userID, taskID)
@@ -273,16 +264,14 @@ func (h *TaskHandler) AddTaskTag(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	taskID, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid task ID")
+	taskID, ok := parseUUIDParam(w, r, "id", "task")
+	if !ok {
 		return
 	}
-	var req struct {
+	req, ok := decodeJSON[struct {
 		TagID string `json:"tag_id"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
+	}](w, r)
+	if !ok {
 		return
 	}
 	tagID, err := uuid.Parse(strings.TrimSpace(req.TagID))
@@ -311,14 +300,12 @@ func (h *TaskHandler) RemoveTaskTag(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	taskID, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid task ID")
+	taskID, ok := parseUUIDParam(w, r, "id", "task")
+	if !ok {
 		return
 	}
-	tagID, err := uuid.Parse(chi.URLParam(r, "tagID"))
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid tag ID")
+	tagID, ok := parseUUIDParam(w, r, "tagID", "tag")
+	if !ok {
 		return
 	}
 	if err := h.taskService.RemoveTaskTag(r.Context(), userID, taskID, tagID); err != nil {

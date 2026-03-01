@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -9,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
@@ -34,9 +32,9 @@ func (h *WalletHandler) GetTransactions(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	maxLimit := 500
+	maxLimit := h.maxAPILimit
 	if hasTransactionFilter(filter) {
-		maxLimit = 2000
+		maxLimit = h.maxFilterLimit
 	}
 
 	limit, offset, ok := parsePaginationParamsWithMax(w, r, maxLimit)
@@ -138,10 +136,8 @@ func (h *WalletHandler) GetTransaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	txIDStr := chi.URLParam(r, "id")
-	txID, err := uuid.Parse(txIDStr)
-	if err != nil {
-		httputil.BadRequest(w, "invalid transaction ID")
+	txID, ok := parseUUIDParam(w, r, "id", "transaction")
+	if !ok {
 		return
 	}
 
@@ -169,14 +165,12 @@ func (h *WalletHandler) DeleteTransaction(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	txIDStr := chi.URLParam(r, "id")
-	txID, err := uuid.Parse(txIDStr)
-	if err != nil {
-		httputil.BadRequest(w, "invalid transaction ID")
+	txID, ok := parseUUIDParam(w, r, "id", "transaction")
+	if !ok {
 		return
 	}
 
-	err = h.walletService.DeleteTransaction(r.Context(), userID, txID)
+	err := h.walletService.DeleteTransaction(r.Context(), userID, txID)
 	if err != nil {
 		if errors.Is(err, repository.ErrTransactionNotFound) {
 			httputil.NotFoundWithContext(r.Context(), w, "transaction not found")
@@ -204,20 +198,17 @@ func (h *WalletHandler) UpdateTransaction(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	txIDStr := chi.URLParam(r, "id")
-	txID, err := uuid.Parse(txIDStr)
-	if err != nil {
-		httputil.BadRequest(w, "invalid transaction ID")
+	txID, ok := parseUUIDParam(w, r, "id", "transaction")
+	if !ok {
 		return
 	}
 
-	var req model.UpdateTransactionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequest(w, "invalid request body")
+	req, ok := decodeJSON[model.UpdateTransactionRequest](w, r)
+	if !ok {
 		return
 	}
 
-	tx, err := h.walletService.UpdateTransaction(r.Context(), userID, txID, &req)
+	tx, err := h.walletService.UpdateTransaction(r.Context(), userID, txID, req)
 	if err != nil {
 		if errors.Is(err, repository.ErrTransactionNotFound) {
 			httputil.NotFound(w, "transaction not found")
@@ -275,11 +266,10 @@ func (h *WalletHandler) AddTransactionTag(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
-	var req struct {
+	req, ok := decodeJSON[struct {
 		TagID string `json:"tag_id"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
+	}](w, r)
+	if !ok {
 		return
 	}
 	tagID, err := uuid.Parse(strings.TrimSpace(req.TagID))
@@ -315,9 +305,8 @@ func (h *WalletHandler) RemoveTransactionTag(w http.ResponseWriter, r *http.Requ
 	if !ok {
 		return
 	}
-	tagID, err := uuid.Parse(chi.URLParam(r, "tagID"))
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid tag ID", err)
+	tagID, ok := parseUUIDParam(w, r, "tagID", "tag")
+	if !ok {
 		return
 	}
 	if err := h.walletService.RemoveTransactionTag(r.Context(), userID, txID, tagID); err != nil {
@@ -346,11 +335,10 @@ func (h *WalletHandler) ImportTransactions(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	var req struct {
+	req, ok := decodeJSON[struct {
 		Transactions []model.TransactionRequest `json:"transactions"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequest(w, "invalid request body")
+	}](w, r)
+	if !ok {
 		return
 	}
 
@@ -390,47 +378,8 @@ func escapeCSVField(field string) string {
 	return field
 }
 
-func parsePaginationParams(w http.ResponseWriter, r *http.Request) (int, int, bool) {
-	return parsePaginationParamsWithMax(w, r, 500)
-}
-
 func parseTransactionIDParam(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
-	txIDStr := chi.URLParam(r, "id")
-	txID, err := uuid.Parse(txIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid transaction ID", err)
-		return uuid.Nil, false
-	}
-	return txID, true
-}
-
-func parsePaginationParamsWithMax(w http.ResponseWriter, r *http.Request, maxLimit int) (int, int, bool) {
-	limit := 50
-	offset := 0
-
-	if l := r.URL.Query().Get("limit"); l != "" {
-		parsed, err := strconv.Atoi(l)
-		if err != nil {
-			httputil.BadRequest(w, "invalid limit parameter")
-			return 0, 0, false
-		}
-		if parsed <= 0 || parsed > maxLimit {
-			httputil.BadRequest(w, fmt.Sprintf("limit must be between 1 and %d", maxLimit))
-			return 0, 0, false
-		}
-		limit = parsed
-	}
-
-	if o := r.URL.Query().Get("offset"); o != "" {
-		parsed, err := strconv.Atoi(o)
-		if err != nil || parsed < 0 {
-			httputil.BadRequest(w, "invalid offset parameter")
-			return 0, 0, false
-		}
-		offset = parsed
-	}
-
-	return limit, offset, true
+	return parseUUIDParam(w, r, "id", "transaction")
 }
 
 func parseTransactionFilter(r *http.Request) (*model.TransactionFilter, error) {

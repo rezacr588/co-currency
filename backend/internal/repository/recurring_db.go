@@ -12,10 +12,6 @@ import (
 	"github.com/rezacr588/currency-converter/internal/model"
 )
 
-var (
-	ErrRecurringNotFound = errors.New("recurring transaction not found")
-)
-
 // RecurringRepository handles database operations for recurring transactions
 type RecurringRepository struct {
 	pool *pgxpool.Pool

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,8 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRefreshableQuery } from '../../src/hooks/useRefreshableQuery';
 import { useRouter } from 'expo-router';
 import {
   ChevronLeft,
@@ -40,10 +41,9 @@ export default function NotesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFormModal, setShowFormModal] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
 
   // Fetch notes with search
-  const { data, isPending, error, refetch } = useQuery({
+  const { data, isPending, error, refetch, refreshing, onRefresh } = useRefreshableQuery({
     queryKey: ['notes', searchQuery],
     queryFn: () => api.notes.list(searchQuery || undefined),
   });
@@ -112,12 +112,6 @@ export default function NotesScreen() {
       queryClient.invalidateQueries({ queryKey: ['notes'] });
     },
   });
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  }, [refetch]);
 
   const handleNotePress = (note: Note) => {
     router.push({

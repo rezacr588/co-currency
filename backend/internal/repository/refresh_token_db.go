@@ -13,11 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var (
-	ErrRefreshTokenNotFound = errors.New("refresh token not found")
-	ErrRefreshTokenExpired  = errors.New("refresh token expired")
-)
-
 // RefreshToken represents a refresh token in the database
 type RefreshToken struct {
 	ID        uuid.UUID

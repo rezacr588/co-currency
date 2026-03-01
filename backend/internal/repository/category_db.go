@@ -11,12 +11,6 @@ import (
 	"github.com/rezacr588/currency-converter/internal/model"
 )
 
-var (
-	ErrCategoryNotFound         = errors.New("category not found")
-	ErrCategoryDefaultProtected = errors.New("default category cannot be deleted")
-	ErrCategoryAlreadyExists    = errors.New("category already exists")
-)
-
 // CategoryRepository handles database operations for categories
 type CategoryRepository struct {
 	pool *pgxpool.Pool

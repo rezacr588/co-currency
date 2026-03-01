@@ -1,12 +1,9 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/service"
@@ -56,13 +53,12 @@ func (h *BudgetHandler) CreateBudget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req model.CreateBudgetRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(ctx, w, "invalid request body")
+	req, ok := decodeJSON[model.CreateBudgetRequest](w, r)
+	if !ok {
 		return
 	}
 
-	budget, err := h.budgetService.CreateBudget(ctx, userID, &req)
+	budget, err := h.budgetService.CreateBudget(ctx, userID, req)
 	if err != nil {
 		if errors.Is(err, repository.ErrBudgetExists) {
 			httputil.BadRequest(w, "budget already exists for this category and period")
@@ -83,20 +79,17 @@ func (h *BudgetHandler) UpdateBudget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	budgetIDStr := chi.URLParam(r, "id")
-	budgetID, err := uuid.Parse(budgetIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(ctx, w, "invalid budget ID")
+	budgetID, ok := parseUUIDParam(w, r, "id", "budget")
+	if !ok {
 		return
 	}
 
-	var req model.UpdateBudgetRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(ctx, w, "invalid request body")
+	req, ok := decodeJSON[model.UpdateBudgetRequest](w, r)
+	if !ok {
 		return
 	}
 
-	budget, err := h.budgetService.UpdateBudget(ctx, userID, budgetID, &req)
+	budget, err := h.budgetService.UpdateBudget(ctx, userID, budgetID, req)
 	if err != nil {
 		if errors.Is(err, repository.ErrBudgetNotFound) {
 			httputil.NotFoundWithContext(ctx, w, "budget not found")
@@ -117,10 +110,8 @@ func (h *BudgetHandler) DeleteBudget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	budgetIDStr := chi.URLParam(r, "id")
-	budgetID, err := uuid.Parse(budgetIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(ctx, w, "invalid budget ID")
+	budgetID, ok := parseUUIDParam(w, r, "id", "budget")
+	if !ok {
 		return
 	}
 

@@ -28,13 +28,12 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req model.RegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequest(w, "invalid request body")
+	req, ok := decodeJSON[model.RegisterRequest](w, r)
+	if !ok {
 		return
 	}
 
-	response, err := h.authService.Register(r.Context(), &req)
+	response, err := h.authService.Register(r.Context(), req)
 	if err != nil {
 		// Return the specific error message from the service
 		httputil.BadRequestWithContext(r.Context(), w, err.Error())
@@ -50,13 +49,12 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req model.LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
+	req, ok := decodeJSON[model.LoginRequest](w, r)
+	if !ok {
 		return
 	}
 
-	response, err := h.authService.Login(r.Context(), &req)
+	response, err := h.authService.Login(r.Context(), req)
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidCredentials) {
 			httputil.UnauthorizedWithContext(r.Context(), w, "invalid email or password")
@@ -84,9 +82,8 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req model.ForgotPasswordRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
+	req, ok := decodeJSON[model.ForgotPasswordRequest](w, r)
+	if !ok {
 		return
 	}
 
@@ -120,9 +117,8 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req model.ResetPasswordRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
+	req, ok := decodeJSON[model.ResetPasswordRequest](w, r)
+	if !ok {
 		return
 	}
 
@@ -176,9 +172,8 @@ func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req model.UpdateProfileRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
+	req, ok := decodeJSON[model.UpdateProfileRequest](w, r)
+	if !ok {
 		return
 	}
 
@@ -187,7 +182,7 @@ func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.authService.UpdateProfile(r.Context(), userID, &req)
+	user, err := h.authService.UpdateProfile(r.Context(), userID, req)
 	if err != nil {
 		if errors.Is(err, repository.ErrUserAlreadyExists) {
 			httputil.BadRequestWithContext(r.Context(), w, "email already registered")
@@ -211,9 +206,8 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req model.ChangePasswordRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
+	req, ok := decodeJSON[model.ChangePasswordRequest](w, r)
+	if !ok {
 		return
 	}
 
@@ -240,9 +234,8 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req model.RefreshTokenRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
+	req, ok := decodeJSON[model.RefreshTokenRequest](w, r)
+	if !ok {
 		return
 	}
 

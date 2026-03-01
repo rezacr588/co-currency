@@ -30,7 +30,7 @@ func TestWalletHandler_GetTransactions_FilteredHighLimitAllowed(t *testing.T) {
 			return []model.Transaction{}, 0, nil
 		},
 	}
-	w := &WalletHandler{walletService: stub}
+	w := &WalletHandler{walletService: stub, maxAPILimit: 500, maxFilterLimit: 2000}
 
 	req := withUser(httptest.NewRequest(http.MethodGet, "/api/v1/wallet/transactions?from_date=2026-01-01&to_date=2026-01-31&limit=1000", nil))
 	rr := httptest.NewRecorder()
@@ -46,7 +46,7 @@ func TestWalletHandler_GetTransactions_FilteredHighLimitAllowed(t *testing.T) {
 }
 
 func TestWalletHandler_GetTransactions_UnfilteredHighLimitRejected(t *testing.T) {
-	w := &WalletHandler{walletService: &walletServiceStub{}}
+	w := &WalletHandler{walletService: &walletServiceStub{}, maxAPILimit: 500, maxFilterLimit: 2000}
 	req := withUser(httptest.NewRequest(http.MethodGet, "/api/v1/wallet/transactions?limit=1000", nil))
 	rr := httptest.NewRecorder()
 
@@ -58,7 +58,7 @@ func TestWalletHandler_GetTransactions_UnfilteredHighLimitRejected(t *testing.T)
 }
 
 func TestWalletHandler_GetTransactions_InvalidOffsetRejected(t *testing.T) {
-	w := &WalletHandler{walletService: &walletServiceStub{}}
+	w := &WalletHandler{walletService: &walletServiceStub{}, maxAPILimit: 500, maxFilterLimit: 2000}
 	req := withUser(httptest.NewRequest(http.MethodGet, "/api/v1/wallet/transactions?offset=-1", nil))
 	rr := httptest.NewRecorder()
 
@@ -70,7 +70,7 @@ func TestWalletHandler_GetTransactions_InvalidOffsetRejected(t *testing.T) {
 }
 
 func TestWalletHandler_GetTransactions_InvalidFromTimestampRejected(t *testing.T) {
-	w := &WalletHandler{walletService: &walletServiceStub{}}
+	w := &WalletHandler{walletService: &walletServiceStub{}, maxAPILimit: 500, maxFilterLimit: 2000}
 	req := withUser(httptest.NewRequest(http.MethodGet, "/api/v1/wallet/transactions?from_ts=not-a-time", nil))
 	rr := httptest.NewRecorder()
 
@@ -82,7 +82,7 @@ func TestWalletHandler_GetTransactions_InvalidFromTimestampRejected(t *testing.T
 }
 
 func TestWalletHandler_GetTransactions_InvalidTimestampRangeRejected(t *testing.T) {
-	w := &WalletHandler{walletService: &walletServiceStub{}}
+	w := &WalletHandler{walletService: &walletServiceStub{}, maxAPILimit: 500, maxFilterLimit: 2000}
 	req := withUser(httptest.NewRequest(http.MethodGet, "/api/v1/wallet/transactions?from_ts=2026-02-01T00:00:00Z&to_ts=2026-01-01T00:00:00Z", nil))
 	rr := httptest.NewRecorder()
 

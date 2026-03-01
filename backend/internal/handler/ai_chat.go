@@ -315,11 +315,11 @@ func (h *AIChatHandler) ChatStream(w http.ResponseWriter, r *http.Request) {
 	traceParam := strings.TrimSpace(strings.ToLower(r.URL.Query().Get("trace")))
 	streamTrace := traceParam == "1" || traceParam == "true" || traceParam == "yes"
 
-	var req model.ChatRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "Invalid request body", err)
+	reqPtr, ok := decodeJSON[model.ChatRequest](w, r)
+	if !ok {
 		return
 	}
+	req := *reqPtr
 	req.Message = strings.TrimSpace(req.Message)
 
 	if req.Message == "" {

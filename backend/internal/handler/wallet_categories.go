@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/service"
@@ -87,10 +85,8 @@ func (h *WalletHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	categoryIDStr := chi.URLParam(r, "id")
-	categoryID, err := uuid.Parse(categoryIDStr)
-	if err != nil {
-		httputil.BadRequest(w, "invalid category ID")
+	categoryID, ok := parseUUIDParam(w, r, "id", "category")
+	if !ok {
 		return
 	}
 

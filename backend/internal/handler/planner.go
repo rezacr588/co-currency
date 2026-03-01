@@ -1,13 +1,11 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/service"
@@ -43,17 +41,15 @@ func (h *PlannerHandler) MoveItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	itemType := strings.TrimSpace(chi.URLParam(r, "type"))
-	itemID, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid item ID", err)
+	itemID, ok := parseUUIDParam(w, r, "id", "item")
+	if !ok {
 		return
 	}
-	var req model.MovePlannerItemRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
+	req, ok := decodeJSON[model.MovePlannerItemRequest](w, r)
+	if !ok {
 		return
 	}
-	item, err := h.plannerService.MoveItem(r.Context(), userID, itemType, itemID, &req)
+	item, err := h.plannerService.MoveItem(r.Context(), userID, itemType, itemID, req)
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidPlannerItemType) || errors.Is(err, service.ErrInvalidTodoStatus) {
 			httputil.BadRequestWithContext(r.Context(), w, err.Error(), err)
@@ -86,9 +82,8 @@ func (h *PlannerHandler) MarkGoalDone(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	goalID, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid goal ID", err)
+	goalID, ok := parseUUIDParam(w, r, "id", "goal")
+	if !ok {
 		return
 	}
 	goal, err := h.plannerService.MarkGoalDone(r.Context(), userID, goalID)

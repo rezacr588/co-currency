@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -97,11 +96,10 @@ func (h *AIHandler) ParseReceiptText(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req struct {
+	req, ok := decodeJSON[struct {
 		Text string `json:"text"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
+	}](w, r)
+	if !ok {
 		return
 	}
 
@@ -126,9 +124,8 @@ func (h *AIHandler) ApplyParsed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req model.ApplyParsedRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
+	req, ok := decodeJSON[model.ApplyParsedRequest](w, r)
+	if !ok {
 		return
 	}
 
@@ -173,11 +170,10 @@ func (h *AIHandler) DetectIntent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req struct {
+	req, ok := decodeJSON[struct {
 		Text string `json:"text"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
+	}](w, r)
+	if !ok {
 		return
 	}
 
@@ -202,11 +198,10 @@ func (h *AIHandler) SmartParse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req struct {
+	req, ok := decodeJSON[struct {
 		Text string `json:"text"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
+	}](w, r)
+	if !ok {
 		return
 	}
 
@@ -236,9 +231,8 @@ func (h *AIHandler) ApplyRecurring(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req model.ApplyRecurringRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
+	req, ok := decodeJSON[model.ApplyRecurringRequest](w, r)
+	if !ok {
 		return
 	}
 
@@ -288,9 +282,8 @@ func (h *AIHandler) ApplyGoalContribution(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var req model.ApplyGoalContributionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
+	req, ok := decodeJSON[model.ApplyGoalContributionRequest](w, r)
+	if !ok {
 		return
 	}
 

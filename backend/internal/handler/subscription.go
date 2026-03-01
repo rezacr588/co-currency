@@ -1,13 +1,10 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/service"
@@ -72,10 +69,8 @@ func (h *SubscriptionHandler) GetSubscription(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	subscriptionIDStr := chi.URLParam(r, "id")
-	subscriptionID, err := uuid.Parse(subscriptionIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid subscription ID")
+	subscriptionID, ok := parseUUIDParam(w, r, "id", "subscription")
+	if !ok {
 		return
 	}
 
@@ -111,13 +106,12 @@ func (h *SubscriptionHandler) CreateSubscription(w http.ResponseWriter, r *http.
 		return
 	}
 
-	var req model.CreateSubscriptionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
+	req, ok := decodeJSON[model.CreateSubscriptionRequest](w, r)
+	if !ok {
 		return
 	}
 
-	subscription, err := h.subscriptionService.CreateSubscription(r.Context(), userID, &req)
+	subscription, err := h.subscriptionService.CreateSubscription(r.Context(), userID, req)
 	if err != nil {
 		httputil.BadRequestWithContext(r.Context(), w, "failed to create subscription")
 		return
@@ -147,20 +141,17 @@ func (h *SubscriptionHandler) UpdateSubscription(w http.ResponseWriter, r *http.
 		return
 	}
 
-	subscriptionIDStr := chi.URLParam(r, "id")
-	subscriptionID, err := uuid.Parse(subscriptionIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid subscription ID")
+	subscriptionID, ok := parseUUIDParam(w, r, "id", "subscription")
+	if !ok {
 		return
 	}
 
-	var req model.UpdateSubscriptionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
+	req, ok := decodeJSON[model.UpdateSubscriptionRequest](w, r)
+	if !ok {
 		return
 	}
 
-	subscription, err := h.subscriptionService.UpdateSubscription(r.Context(), userID, subscriptionID, &req)
+	subscription, err := h.subscriptionService.UpdateSubscription(r.Context(), userID, subscriptionID, req)
 	if err != nil {
 		if errors.Is(err, repository.ErrSubscriptionNotFound) {
 			httputil.NotFoundWithContext(r.Context(), w, "subscription not found")
@@ -193,10 +184,8 @@ func (h *SubscriptionHandler) DeleteSubscription(w http.ResponseWriter, r *http.
 		return
 	}
 
-	subscriptionIDStr := chi.URLParam(r, "id")
-	subscriptionID, err := uuid.Parse(subscriptionIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid subscription ID")
+	subscriptionID, ok := parseUUIDParam(w, r, "id", "subscription")
+	if !ok {
 		return
 	}
 

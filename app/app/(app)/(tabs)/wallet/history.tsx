@@ -17,6 +17,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useRefreshableQuery } from '../../../../src/hooks/useRefreshableQuery';
 import {
   ArrowLeft,
   Filter,
@@ -51,7 +52,6 @@ export default function TransactionHistoryScreen() {
   const { t } = useLanguage();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
@@ -100,16 +100,10 @@ export default function TransactionHistoryScreen() {
 
   const hasActiveFilters = filterCategory || filterType || filterFromDate || filterToDate;
 
-  const { data, isPending, refetch } = useQuery({
+  const { data, isPending, refetch, refreshing, onRefresh } = useRefreshableQuery({
     queryKey: ['wallet', 'transactions', 'all', filter],
     queryFn: () => api.wallet.getTransactions(100, 0, hasActiveFilters ? filter : undefined),
   });
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  }, [refetch]);
 
   // Fetch notes for selected transaction
   const { data: notesData, isPending: isLoadingNotes, refetch: refetchNotes } = useQuery({

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -45,6 +44,14 @@ var _ CategoryServiceAPI = (*service.CategoryService)(nil)
 type WalletHandler struct {
 	walletService   WalletServiceAPI
 	categoryService CategoryServiceAPI
+	maxAPILimit     int // max pagination limit for unfiltered requests (default 500)
+	maxFilterLimit  int // max pagination limit for filtered requests (default 2000)
+}
+
+// SetPaginationLimits overrides the default API and filtered pagination limits.
+func (h *WalletHandler) SetPaginationLimits(apiLimit, filterLimit int) {
+	h.maxAPILimit = apiLimit
+	h.maxFilterLimit = filterLimit
 }
 
 // NewWalletHandler creates a new WalletHandler.
@@ -53,7 +60,7 @@ func NewWalletHandler(walletService *service.WalletService) *WalletHandler {
 	if walletService != nil {
 		walletAPI = walletService
 	}
-	return &WalletHandler{walletService: walletAPI}
+	return &WalletHandler{walletService: walletAPI, maxAPILimit: 500, maxFilterLimit: 2000}
 }
 
 // NewWalletHandlerWithCategories creates a new WalletHandler with category support.
@@ -71,6 +78,8 @@ func NewWalletHandlerWithCategories(walletService *service.WalletService, catego
 	return &WalletHandler{
 		walletService:   walletAPI,
 		categoryService: categoryAPI,
+		maxAPILimit:     500,
+		maxFilterLimit:  2000,
 	}
 }
 
@@ -127,13 +136,12 @@ func (h *WalletHandler) AddTransaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req model.TransactionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequest(w, "invalid request body")
+	req, ok := decodeJSON[model.TransactionRequest](w, r)
+	if !ok {
 		return
 	}
 
-	tx, err := h.walletService.AddTransaction(r.Context(), userID, &req)
+	tx, err := h.walletService.AddTransaction(r.Context(), userID, req)
 	if err != nil {
 		if errors.Is(err, repository.ErrInsufficientBalance) {
 			httputil.BadRequest(w, "insufficient balance")
@@ -157,13 +165,12 @@ func (h *WalletHandler) ConvertBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req model.ConvertBalanceRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequest(w, "invalid request body")
+	req, ok := decodeJSON[model.ConvertBalanceRequest](w, r)
+	if !ok {
 		return
 	}
 
-	result, err := h.walletService.ConvertBalance(r.Context(), userID, &req)
+	result, err := h.walletService.ConvertBalance(r.Context(), userID, req)
 	if err != nil {
 		if errors.Is(err, repository.ErrInsufficientBalance) {
 			httputil.BadRequest(w, "insufficient balance")

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRefreshableQuery } from '../../src/hooks/useRefreshableQuery';
 import {
   ArrowLeft,
   Plus,
@@ -58,7 +59,6 @@ export default function LoansScreen() {
   const bottomPadding = isDesktop ? insets.bottom : insets.bottom + 96;
   const iconColor = colors.foreground;
 
-  const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
@@ -78,7 +78,7 @@ export default function LoansScreen() {
   const [paymentNotes, setPaymentNotes] = useState('');
 
   // Queries
-  const { data: loansData, isPending, refetch } = useQuery({
+  const { data: loansData, isPending, refetch, refreshing, onRefresh } = useRefreshableQuery({
     queryKey: ['loans', filter === 'all' ? undefined : filter],
     queryFn: () => api.loans.list(undefined, filter === 'all' ? undefined : filter),
   });
@@ -135,12 +135,6 @@ export default function LoansScreen() {
       queryClient.invalidateQueries({ queryKey: ['loans'] });
     },
   });
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  }, [refetch]);
 
   const resetForm = () => {
     setFormType('borrowed');

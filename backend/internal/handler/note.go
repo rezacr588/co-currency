@@ -1,12 +1,9 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/service"
@@ -58,10 +55,8 @@ func (h *NoteHandler) GetNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	noteIDStr := chi.URLParam(r, "id")
-	noteID, err := uuid.Parse(noteIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid note ID")
+	noteID, ok := parseUUIDParam(w, r, "id", "note")
+	if !ok {
 		return
 	}
 
@@ -87,13 +82,12 @@ func (h *NoteHandler) CreateNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req model.CreateNoteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
+	req, ok := decodeJSON[model.CreateNoteRequest](w, r)
+	if !ok {
 		return
 	}
 
-	note, err := h.noteService.CreateNote(r.Context(), userID, &req)
+	note, err := h.noteService.CreateNote(r.Context(), userID, req)
 	if err != nil {
 		httputil.BadRequestWithContext(r.Context(), w, err.Error())
 		return
@@ -111,20 +105,17 @@ func (h *NoteHandler) UpdateNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	noteIDStr := chi.URLParam(r, "id")
-	noteID, err := uuid.Parse(noteIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid note ID")
+	noteID, ok := parseUUIDParam(w, r, "id", "note")
+	if !ok {
 		return
 	}
 
-	var req model.UpdateNoteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
+	req, ok := decodeJSON[model.UpdateNoteRequest](w, r)
+	if !ok {
 		return
 	}
 
-	note, err := h.noteService.UpdateNote(r.Context(), userID, noteID, &req)
+	note, err := h.noteService.UpdateNote(r.Context(), userID, noteID, req)
 	if err != nil {
 		if errors.Is(err, repository.ErrNoteNotFound) {
 			httputil.NotFoundWithContext(r.Context(), w, "note not found")
@@ -146,10 +137,8 @@ func (h *NoteHandler) DeleteNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	noteIDStr := chi.URLParam(r, "id")
-	noteID, err := uuid.Parse(noteIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid note ID")
+	noteID, ok := parseUUIDParam(w, r, "id", "note")
+	if !ok {
 		return
 	}
 
@@ -174,10 +163,8 @@ func (h *NoteHandler) TogglePin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	noteIDStr := chi.URLParam(r, "id")
-	noteID, err := uuid.Parse(noteIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid note ID")
+	noteID, ok := parseUUIDParam(w, r, "id", "note")
+	if !ok {
 		return
 	}
 
@@ -210,10 +197,8 @@ func (h *NoteHandler) GetNotesByTransaction(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	transactionIDStr := chi.URLParam(r, "transactionId")
-	transactionID, err := uuid.Parse(transactionIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid transaction ID")
+	transactionID, ok := parseUUIDParam(w, r, "transactionId", "transaction")
+	if !ok {
 		return
 	}
 

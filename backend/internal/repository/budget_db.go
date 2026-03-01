@@ -12,11 +12,6 @@ import (
 	"github.com/rezacr588/currency-converter/internal/model"
 )
 
-var (
-	ErrBudgetNotFound = errors.New("budget not found")
-	ErrBudgetExists   = errors.New("budget already exists for this category and period")
-)
-
 // BudgetRepository handles database operations for budgets
 type BudgetRepository struct {
 	pool *pgxpool.Pool

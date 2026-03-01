@@ -13,10 +13,6 @@ import (
 	"github.com/rezacr588/currency-converter/internal/model"
 )
 
-var (
-	ErrGoalNotFound = errors.New("goal not found")
-)
-
 // GoalRepository handles database operations for goals.
 type GoalRepository struct {
 	pool *pgxpool.Pool

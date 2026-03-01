@@ -25,10 +25,23 @@ type Config struct {
 	HTTPShutdownTimeout   time.Duration `env:"HTTP_SHUTDOWN_TIMEOUT" envDefault:"20s"`
 	HTTPMaxHeaderBytes    int           `env:"HTTP_MAX_HEADER_BYTES" envDefault:"1048576"` // 1 MiB
 
-	// IRR database and crawler settings
-	DatabaseURL        string        `env:"DATABASE_URL" envDefault:""`
+	// Database pool settings
+	DatabaseURL         string        `env:"DATABASE_URL" envDefault:""`
+	DBMaxConns          int32         `env:"DB_MAX_CONNS" envDefault:"10"`
+	DBMinConns          int32         `env:"DB_MIN_CONNS" envDefault:"2"`
+	DBMaxConnLifetime   time.Duration `env:"DB_MAX_CONN_LIFETIME" envDefault:"30m"`
+	DBMaxConnIdleTime   time.Duration `env:"DB_MAX_CONN_IDLE_TIME" envDefault:"5m"`
+	DBHealthCheckPeriod time.Duration `env:"DB_HEALTH_CHECK_PERIOD" envDefault:"30s"`
+
+	// IRR crawler settings
 	IRRCrawlerInterval time.Duration `env:"IRR_CRAWLER_INTERVAL" envDefault:"5m"`
 	IRRCrawlerEnabled  bool          `env:"IRR_CRAWLER_ENABLED" envDefault:"true"`
+
+	// Pagination limits
+	PaginationDefaultLimit   int `env:"PAGINATION_DEFAULT_LIMIT" envDefault:"50"`
+	PaginationMaxAPILimit    int `env:"PAGINATION_MAX_API_LIMIT" envDefault:"500"`
+	PaginationMaxFilterLimit int `env:"PAGINATION_MAX_FILTER_LIMIT" envDefault:"2000"`
+	PaginationMaxRepoLimit   int `env:"PAGINATION_MAX_REPO_LIMIT" envDefault:"10000"`
 
 	// JWT Authentication
 	JWTSecret string `env:"JWT_SECRET" envDefault:"change-me-in-production-to-a-secure-secret"`
@@ -108,6 +121,19 @@ func Load() (*Config, error) {
 	}
 	if cfg.HTTPMaxHeaderBytes <= 0 {
 		return nil, fmt.Errorf("HTTP_MAX_HEADER_BYTES must be greater than 0, got %d", cfg.HTTPMaxHeaderBytes)
+	}
+
+	// Validate DB pool settings
+	if cfg.DBMaxConns < 1 {
+		return nil, fmt.Errorf("DB_MAX_CONNS must be >= 1, got %d", cfg.DBMaxConns)
+	}
+	if cfg.DBMinConns < 0 || cfg.DBMinConns > cfg.DBMaxConns {
+		return nil, fmt.Errorf("DB_MIN_CONNS must be between 0 and DB_MAX_CONNS (%d), got %d", cfg.DBMaxConns, cfg.DBMinConns)
+	}
+
+	// Validate pagination limits
+	if cfg.PaginationMaxAPILimit < 1 {
+		return nil, fmt.Errorf("PAGINATION_MAX_API_LIMIT must be >= 1, got %d", cfg.PaginationMaxAPILimit)
 	}
 
 	mode := strings.ToLower(strings.TrimSpace(cfg.AIThinkingModeDefault))

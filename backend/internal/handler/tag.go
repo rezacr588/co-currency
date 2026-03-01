@@ -1,12 +1,9 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/service"
@@ -48,13 +45,12 @@ func (h *TagHandler) CreateTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req model.CreateTagRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
+	req, ok := decodeJSON[model.CreateTagRequest](w, r)
+	if !ok {
 		return
 	}
 
-	tag, err := h.tagService.CreateTag(r.Context(), userID, &req)
+	tag, err := h.tagService.CreateTag(r.Context(), userID, req)
 	if err != nil {
 		if errors.Is(err, repository.ErrTagExists) {
 			httputil.BadRequest(w, "tag already exists")
@@ -74,10 +70,8 @@ func (h *TagHandler) DeleteTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tagIDStr := chi.URLParam(r, "id")
-	tagID, err := uuid.Parse(tagIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid tag ID")
+	tagID, ok := parseUUIDParam(w, r, "id", "tag")
+	if !ok {
 		return
 	}
 

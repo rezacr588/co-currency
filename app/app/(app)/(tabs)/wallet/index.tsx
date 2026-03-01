@@ -1,8 +1,8 @@
 import { View, Text, ScrollView, Pressable, RefreshControl, useWindowDimensions } from 'react-native';
 import { Link } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useRefreshControl } from '../../../../src/hooks/useRefreshableQuery';
 import { Plus, ArrowLeftRight, History, MessageCircle, Target, PiggyBank, BarChart3, Wallet, KanbanSquare } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
@@ -15,7 +15,6 @@ export default function WalletScreen() {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
-  const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -51,11 +50,7 @@ export default function WalletScreen() {
     queryFn: () => api.wallet.getTransactions(10),
   });
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await Promise.all([refetchSummary(), refetchBalances(), refetchTransactions()]);
-    setRefreshing(false);
-  }, [refetchSummary, refetchBalances, refetchTransactions]);
+  const { refreshing, onRefresh } = useRefreshControl(refetchSummary, refetchBalances, refetchTransactions);
 
   const balances = balancesData?.balances || [];
   const transactions = transactionsData?.transactions || [];

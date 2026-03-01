@@ -11,10 +11,6 @@ import (
 	"github.com/rezacr588/currency-converter/internal/model"
 )
 
-var (
-	ErrSubscriptionNotFound = errors.New("subscription not found")
-)
-
 // SubscriptionRepository handles subscription database operations
 type SubscriptionRepository struct {
 	db *Database

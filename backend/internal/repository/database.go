@@ -15,10 +15,36 @@ type Database struct {
 	pool *pgxpool.Pool
 }
 
-// NewDatabase creates a new database connection pool with robust configuration
-func NewDatabase(databaseURL string) (*Database, error) {
+// DBPoolConfig holds connection pool tuning parameters.
+type DBPoolConfig struct {
+	MaxConns          int32
+	MinConns          int32
+	MaxConnLifetime   time.Duration
+	MaxConnIdleTime   time.Duration
+	HealthCheckPeriod time.Duration
+}
+
+// DefaultDBPoolConfig returns production-safe defaults.
+func DefaultDBPoolConfig() DBPoolConfig {
+	return DBPoolConfig{
+		MaxConns:          10,
+		MinConns:          2,
+		MaxConnLifetime:   30 * time.Minute,
+		MaxConnIdleTime:   5 * time.Minute,
+		HealthCheckPeriod: 30 * time.Second,
+	}
+}
+
+// NewDatabase creates a new database connection pool with robust configuration.
+// Pass nil for poolCfg to use defaults (for backward compatibility).
+func NewDatabase(databaseURL string, poolCfg *DBPoolConfig) (*Database, error) {
 	if databaseURL == "" {
 		return nil, fmt.Errorf("DATABASE_URL is required")
+	}
+
+	defaults := DefaultDBPoolConfig()
+	if poolCfg == nil {
+		poolCfg = &defaults
 	}
 
 	// Parse the connection string and apply robust pool configuration
@@ -27,12 +53,12 @@ func NewDatabase(databaseURL string) (*Database, error) {
 		return nil, fmt.Errorf("parsing database URL: %w", err)
 	}
 
-	// Connection pool settings for production robustness
-	config.MaxConns = 10                        // Maximum connections in pool
-	config.MinConns = 2                         // Keep minimum connections alive
-	config.MaxConnLifetime = 30 * time.Minute   // Max lifetime of a connection
-	config.MaxConnIdleTime = 5 * time.Minute    // Close idle connections after this
-	config.HealthCheckPeriod = 30 * time.Second // Periodic health checks
+	// Connection pool settings
+	config.MaxConns = poolCfg.MaxConns
+	config.MinConns = poolCfg.MinConns
+	config.MaxConnLifetime = poolCfg.MaxConnLifetime
+	config.MaxConnIdleTime = poolCfg.MaxConnIdleTime
+	config.HealthCheckPeriod = poolCfg.HealthCheckPeriod
 
 	// Connection timeouts
 	config.ConnConfig.ConnectTimeout = 10 * time.Second

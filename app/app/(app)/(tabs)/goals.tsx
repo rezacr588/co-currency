@@ -13,7 +13,8 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRefreshableQuery } from '../../../src/hooks/useRefreshableQuery';
 import { Plus, Target, CheckCircle, X, DollarSign, Calendar, Pencil, Trash2 } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
 import { api } from '../../../src/api';
@@ -48,7 +49,6 @@ export default function GoalsScreen() {
   const theme = useTheme();
   const colors = theme.colors;
   const queryClient = useQueryClient();
-  const [refreshing, setRefreshing] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
@@ -59,7 +59,7 @@ export default function GoalsScreen() {
   const isTablet = width >= 768;
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
-  const { data, isPending, isError, refetch } = useQuery({
+  const { data, isPending, isError, refetch, refreshing, onRefresh } = useRefreshableQuery({
     queryKey: ['goals'],
     queryFn: () => api.goals.list(),
   });
@@ -98,12 +98,6 @@ export default function GoalsScreen() {
     setEditingGoal(goal);
     setShowEditModal(true);
   }, []);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  };
 
   const goals: Goal[] = data?.goals || [];
   const activeGoals = goals.filter((g) => !g.is_completed);

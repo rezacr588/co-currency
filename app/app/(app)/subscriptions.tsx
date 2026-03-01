@@ -14,6 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRefreshableQuery } from '../../src/hooks/useRefreshableQuery';
 import {
   Plus,
   ArrowLeft,
@@ -51,7 +52,6 @@ export default function SubscriptionsScreen() {
   const colors = theme.colors;
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [refreshing, setRefreshing] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const { width } = useWindowDimensions();
 
@@ -65,7 +65,7 @@ export default function SubscriptionsScreen() {
   };
   const columns = getGridColumns();
 
-  const { data, isPending, isError, refetch } = useQuery({
+  const { data, isPending, isError, refetch, refreshing, onRefresh } = useRefreshableQuery({
     queryKey: ['subscriptions'],
     queryFn: () => api.subscriptions.list(),
   });
@@ -74,12 +74,6 @@ export default function SubscriptionsScreen() {
     queryKey: ['subscriptions', 'summary'],
     queryFn: () => api.subscriptions.getSummary(),
   });
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  };
 
   const subscriptions = data?.subscriptions || [];
   const activeSubscriptions = subscriptions.filter((s) => s.status === 'active');

@@ -12,11 +12,6 @@ import (
 	"github.com/rezacr588/currency-converter/internal/model"
 )
 
-var (
-	ErrTagNotFound = errors.New("tag not found")
-	ErrTagExists   = errors.New("tag already exists")
-)
-
 // TagRepository handles database operations for tags
 type TagRepository struct {
 	pool *pgxpool.Pool

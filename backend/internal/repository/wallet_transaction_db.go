@@ -5,33 +5,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rs/zerolog/log"
 )
 
-var (
-	ErrInsufficientBalance = errors.New("insufficient balance")
-	ErrBalanceNotFound     = errors.New("balance not found")
-	ErrTransactionNotFound = errors.New("transaction not found")
-)
-
-type transactionScanner interface {
-	Scan(dest ...interface{}) error
-}
-
+// AggregatedTypeTotal holds aggregated transaction totals by type and currency.
 type AggregatedTypeTotal struct {
 	Type     string
 	Currency string
 	Total    float64
 }
 
+// AggregatedCategoryTotal holds aggregated debit totals by category and currency.
 type AggregatedCategoryTotal struct {
 	Category string
 	Currency string
@@ -39,233 +28,12 @@ type AggregatedCategoryTotal struct {
 	Count    int
 }
 
+// AggregatedMonthlyTypeTotal holds monthly aggregated totals by type and currency.
 type AggregatedMonthlyTypeTotal struct {
 	Period   time.Time
 	Type     string
 	Currency string
 	Total    float64
-}
-
-func scanTransaction(scanner transactionScanner) (*model.Transaction, error) {
-	var t model.Transaction
-	var aiData []byte
-	var category *string
-	var icon *string
-	var description *string
-
-	if err := scanner.Scan(
-		&t.ID, &t.UserID, &t.Type, &t.Amount, &t.Currency,
-		&t.ToAmount, &t.ToCurrency, &t.Rate, &t.Source, &category, &icon, &aiData, &description, &t.CreatedAt,
-	); err != nil {
-		return nil, err
-	}
-
-	if aiData != nil {
-		t.AIExtractedData = json.RawMessage(aiData)
-	}
-	if category != nil {
-		t.Category = *category
-	}
-	if icon != nil {
-		t.Icon = *icon
-	}
-	if description != nil {
-		t.Description = *description
-	}
-
-	return &t, nil
-}
-
-// isBalanceConstraintError checks if the error is a CHECK constraint violation for non-negative balance
-func isBalanceConstraintError(err error) bool {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
-		// PostgreSQL error code 23514 is check_violation
-		if pgErr.Code == "23514" && strings.Contains(pgErr.ConstraintName, "non_negative") {
-			return true
-		}
-	}
-	return false
-}
-
-func (r *WalletRepository) lockBalanceForUpdate(ctx context.Context, tx pgx.Tx, userID uuid.UUID, currency string) (float64, bool, error) {
-	var balance float64
-	err := tx.QueryRow(ctx, `
-		SELECT balance FROM wallet_balances
-		WHERE user_id = $1 AND currency = $2
-		FOR UPDATE
-	`, userID, currency).Scan(&balance)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, false, nil
-		}
-		return 0, false, err
-	}
-	return balance, true, nil
-}
-
-func (r *WalletRepository) applyBalanceDelta(ctx context.Context, tx pgx.Tx, userID uuid.UUID, currency string, delta float64, now time.Time, allowInsert bool) error {
-	var err error
-	if allowInsert {
-		_, err = tx.Exec(ctx, `
-			INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
-			VALUES ($1, $2, $3, $4, $5)
-			ON CONFLICT (user_id, currency) DO UPDATE SET
-				balance = wallet_balances.balance + EXCLUDED.balance,
-				updated_at = EXCLUDED.updated_at
-		`, uuid.New(), userID, currency, delta, now)
-	} else {
-		_, err = tx.Exec(ctx, `
-			UPDATE wallet_balances
-			SET balance = balance + $1, updated_at = $2
-			WHERE user_id = $3 AND currency = $4
-		`, delta, now, userID, currency)
-	}
-
-	if err != nil {
-		if isBalanceConstraintError(err) {
-			return ErrInsufficientBalance
-		}
-		return fmt.Errorf("updating balance: %w", err)
-	}
-	return nil
-}
-
-// WalletRepository handles database operations for wallet balances and transactions
-type WalletRepository struct {
-	pool *pgxpool.Pool
-}
-
-// NewWalletRepository creates a new WalletRepository
-func NewWalletRepository(db *Database) *WalletRepository {
-	return &WalletRepository{pool: db.Pool()}
-}
-
-// GetBalances retrieves all balances for a user
-func (r *WalletRepository) GetBalances(ctx context.Context, userID uuid.UUID) ([]model.WalletBalance, error) {
-	query := `
-		SELECT id, user_id, currency, balance, updated_at
-		FROM wallet_balances
-		WHERE user_id = $1
-		ORDER BY currency
-	`
-
-	rows, err := r.pool.Query(ctx, query, userID)
-	if err != nil {
-		return nil, fmt.Errorf("querying balances: %w", err)
-	}
-	defer rows.Close()
-
-	var balances []model.WalletBalance
-	for rows.Next() {
-		var b model.WalletBalance
-		if err := rows.Scan(&b.ID, &b.UserID, &b.Currency, &b.Balance, &b.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("scanning balance: %w", err)
-		}
-		balances = append(balances, b)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating balances: %w", err)
-	}
-
-	return balances, nil
-}
-
-// GetBalance retrieves a specific currency balance for a user
-func (r *WalletRepository) GetBalance(ctx context.Context, userID uuid.UUID, currency string) (*model.WalletBalance, error) {
-	query := `
-		SELECT id, user_id, currency, balance, updated_at
-		FROM wallet_balances
-		WHERE user_id = $1 AND currency = $2
-	`
-
-	b := &model.WalletBalance{}
-	err := r.pool.QueryRow(ctx, query, userID, currency).Scan(
-		&b.ID, &b.UserID, &b.Currency, &b.Balance, &b.UpdatedAt,
-	)
-
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrBalanceNotFound
-		}
-		return nil, fmt.Errorf("getting balance: %w", err)
-	}
-
-	return b, nil
-}
-
-// UpdateBalance updates or creates a balance for a user
-func (r *WalletRepository) UpdateBalance(ctx context.Context, userID uuid.UUID, currency string, delta float64) (*model.WalletBalance, error) {
-	// Use upsert with returning
-	query := `
-		INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
-		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (user_id, currency) DO UPDATE SET
-			balance = wallet_balances.balance + EXCLUDED.balance,
-			updated_at = EXCLUDED.updated_at
-		RETURNING id, user_id, currency, balance, updated_at
-	`
-
-	now := time.Now()
-	b := &model.WalletBalance{}
-
-	err := r.pool.QueryRow(ctx, query,
-		uuid.New(),
-		userID,
-		currency,
-		delta,
-		now,
-	).Scan(&b.ID, &b.UserID, &b.Currency, &b.Balance, &b.UpdatedAt)
-
-	if err != nil {
-		return nil, fmt.Errorf("updating balance: %w", err)
-	}
-
-	// Check if balance went negative (shouldn't happen for debits)
-	if b.Balance < 0 {
-		// Rollback by reversing the delta
-		_, err := r.pool.Exec(ctx, `
-			UPDATE wallet_balances
-			SET balance = balance - $1, updated_at = $2
-			WHERE user_id = $3 AND currency = $4
-		`, delta, now, userID, currency)
-		if err != nil {
-			return nil, fmt.Errorf("rolling back negative balance: %w", err)
-		}
-		return nil, ErrInsufficientBalance
-	}
-
-	return b, nil
-}
-
-// SetBalance sets an absolute balance for a user (used for corrections)
-func (r *WalletRepository) SetBalance(ctx context.Context, userID uuid.UUID, currency string, balance float64) (*model.WalletBalance, error) {
-	query := `
-		INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
-		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (user_id, currency) DO UPDATE SET
-			balance = EXCLUDED.balance,
-			updated_at = EXCLUDED.updated_at
-		RETURNING id, user_id, currency, balance, updated_at
-	`
-
-	now := time.Now()
-	b := &model.WalletBalance{}
-
-	err := r.pool.QueryRow(ctx, query,
-		uuid.New(),
-		userID,
-		currency,
-		balance,
-		now,
-	).Scan(&b.ID, &b.UserID, &b.Currency, &b.Balance, &b.UpdatedAt)
-
-	if err != nil {
-		return nil, fmt.Errorf("setting balance: %w", err)
-	}
-
-	return b, nil
 }
 
 // CreateTransaction records a new transaction
@@ -781,70 +549,6 @@ func (r *WalletRepository) AddCrossCurrencyTransactionAtomic(ctx context.Context
 	`, transaction.ID, transaction.UserID, transaction.Type, transaction.Amount, transaction.Currency,
 		transaction.ToAmount, transaction.ToCurrency, transaction.Rate, transaction.Source,
 		transaction.Category, transaction.Icon, transaction.AIExtractedData, transaction.Description, transaction.CreatedAt)
-	if err != nil {
-		return nil, fmt.Errorf("recording transaction: %w", err)
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("committing transaction: %w", err)
-	}
-
-	return transaction, nil
-}
-
-// ExecuteConversion performs an atomic currency conversion
-func (r *WalletRepository) ExecuteConversion(ctx context.Context, userID uuid.UUID, fromCurrency, toCurrency string, fromAmount, toAmount, rate float64) (*model.Transaction, error) {
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("beginning transaction: %w", err)
-	}
-	defer func() {
-		if rbErr := tx.Rollback(ctx); rbErr != nil && !errors.Is(rbErr, pgx.ErrTxClosed) {
-			log.Error().Err(rbErr).Msg("Failed to rollback ExecuteConversion")
-		}
-	}()
-
-	now := time.Now()
-
-	// Check if user has sufficient balance with row-level lock to prevent race conditions
-	currentBalance, _, err := r.lockBalanceForUpdate(ctx, tx, userID, fromCurrency)
-	if err != nil {
-		return nil, fmt.Errorf("checking balance: %w", err)
-	}
-	if currentBalance < fromAmount {
-		return nil, ErrInsufficientBalance
-	}
-
-	if err := r.applyBalanceDelta(ctx, tx, userID, fromCurrency, -fromAmount, now, false); err != nil {
-		if errors.Is(err, ErrInsufficientBalance) {
-			return nil, ErrInsufficientBalance
-		}
-		return nil, fmt.Errorf("debiting source currency: %w", err)
-	}
-
-	if err := r.applyBalanceDelta(ctx, tx, userID, toCurrency, toAmount, now, true); err != nil {
-		return nil, fmt.Errorf("crediting target currency: %w", err)
-	}
-
-	// Record the transaction
-	transaction := &model.Transaction{
-		ID:         uuid.New(),
-		UserID:     userID,
-		Type:       model.TransactionTypeConvert,
-		Amount:     fromAmount,
-		Currency:   fromCurrency,
-		ToAmount:   &toAmount,
-		ToCurrency: &toCurrency,
-		Rate:       &rate,
-		Source:     "manual",
-		CreatedAt:  now,
-	}
-
-	_, err = tx.Exec(ctx, `
-		INSERT INTO transactions (id, user_id, type, amount, currency, to_amount, to_currency, rate, source, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-	`, transaction.ID, transaction.UserID, transaction.Type, transaction.Amount, transaction.Currency,
-		transaction.ToAmount, transaction.ToCurrency, transaction.Rate, transaction.Source, transaction.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("recording transaction: %w", err)
 	}

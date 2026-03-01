@@ -12,10 +12,6 @@ import (
 	"github.com/rezacr588/currency-converter/internal/model"
 )
 
-var (
-	ErrNoteNotFound = errors.New("note not found")
-)
-
 // NoteRepository handles database operations for notes
 type NoteRepository struct {
 	pool *pgxpool.Pool

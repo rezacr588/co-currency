@@ -6,32 +6,34 @@ import type {
 } from '../types/goal';
 import type { Transaction } from '../types/wallet';
 import { fetchAPI } from './base';
+import { createCRUDApi } from './crud';
+
+type GoalResponse = { goal: Goal; progress: number; is_completed: boolean };
+
+const crud = createCRUDApi<
+  { goals: Goal[] },
+  GoalResponse,
+  CreateGoalRequest,
+  GoalResponse,
+  UpdateGoalRequest
+>('/goals');
 
 export const goals = {
-  list: () => fetchAPI<{ goals: Goal[] }>('/goals'),
-  get: (id: string) =>
-    fetchAPI<{ goal: Goal; progress: number; is_completed: boolean }>(`/goals/${id}`),
-  create: (data: CreateGoalRequest) =>
-    fetchAPI<{ goal: Goal; progress: number; is_completed: boolean }>('/goals', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  update: (id: string, data: UpdateGoalRequest) =>
-    fetchAPI<{ goal: Goal; progress: number; is_completed: boolean }>(`/goals/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
+  ...crud,
+
   delete: (id: string) =>
     fetchAPI<{ message: string }>(`/goals/${id}`, {
       method: 'DELETE',
     }),
+
   contribute: (id: string, data: ContributeToGoalRequest) =>
-    fetchAPI<{ goal: Goal; progress: number; is_completed: boolean; transaction: Transaction }>(
+    fetchAPI<GoalResponse & { transaction: Transaction }>(
       `/goals/${id}/contribute`,
       {
         method: 'POST',
         body: JSON.stringify(data),
       }
     ),
+
   getCategories: () => fetchAPI<{ categories: string[] }>('/goals/categories'),
 };

@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRefreshableQuery } from '../../src/hooks/useRefreshableQuery';
 import { Plus, ArrowLeft, X, PieChart, AlertTriangle } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
@@ -34,7 +35,6 @@ export default function BudgetsScreen() {
   const colors = theme.colors;
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [refreshing, setRefreshing] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const { width } = useWindowDimensions();
 
@@ -48,16 +48,10 @@ export default function BudgetsScreen() {
   };
   const columns = getGridColumns();
 
-  const { data, isPending, isError, refetch } = useQuery({
+  const { data, isPending, isError, refetch, refreshing, onRefresh } = useRefreshableQuery({
     queryKey: ['budgets'],
     queryFn: () => api.budgets.list(),
   });
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  };
 
   const budgets = data?.budgets || [];
 

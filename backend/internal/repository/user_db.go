@@ -12,13 +12,6 @@ import (
 	"github.com/rezacr588/currency-converter/internal/model"
 )
 
-var (
-	ErrUserNotFound      = errors.New("user not found")
-	ErrUserAlreadyExists = errors.New("user already exists")
-	ErrAccountLocked     = errors.New("account is temporarily locked")
-	ErrInvalidResetToken = errors.New("invalid or expired reset token")
-)
-
 // UserRepository handles database operations for users
 type UserRepository struct {
 	pool *pgxpool.Pool

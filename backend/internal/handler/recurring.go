@@ -1,12 +1,9 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/service"
@@ -48,13 +45,12 @@ func (h *RecurringHandler) CreateRecurring(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	var req model.CreateRecurringRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
+	req, ok := decodeJSON[model.CreateRecurringRequest](w, r)
+	if !ok {
 		return
 	}
 
-	recurring, err := h.recurringService.CreateRecurring(r.Context(), userID, &req)
+	recurring, err := h.recurringService.CreateRecurring(r.Context(), userID, req)
 	if err != nil {
 		httputil.BadRequestWithContext(r.Context(), w, "failed to create recurring transaction")
 		return
@@ -70,20 +66,17 @@ func (h *RecurringHandler) UpdateRecurring(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	recurringIDStr := chi.URLParam(r, "id")
-	recurringID, err := uuid.Parse(recurringIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid recurring transaction ID")
+	recurringID, ok := parseUUIDParam(w, r, "id", "recurring transaction")
+	if !ok {
 		return
 	}
 
-	var req model.UpdateRecurringRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid request body")
+	req, ok := decodeJSON[model.UpdateRecurringRequest](w, r)
+	if !ok {
 		return
 	}
 
-	recurring, err := h.recurringService.UpdateRecurring(r.Context(), userID, recurringID, &req)
+	recurring, err := h.recurringService.UpdateRecurring(r.Context(), userID, recurringID, req)
 	if err != nil {
 		if errors.Is(err, repository.ErrRecurringNotFound) {
 			httputil.NotFoundWithContext(r.Context(), w, "recurring transaction not found")
@@ -103,10 +96,8 @@ func (h *RecurringHandler) DeleteRecurring(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	recurringIDStr := chi.URLParam(r, "id")
-	recurringID, err := uuid.Parse(recurringIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid recurring transaction ID")
+	recurringID, ok := parseUUIDParam(w, r, "id", "recurring transaction")
+	if !ok {
 		return
 	}
 
@@ -131,10 +122,8 @@ func (h *RecurringHandler) ExecuteRecurring(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	recurringIDStr := chi.URLParam(r, "id")
-	recurringID, err := uuid.Parse(recurringIDStr)
-	if err != nil {
-		httputil.BadRequestWithContext(r.Context(), w, "invalid recurring transaction ID")
+	recurringID, ok := parseUUIDParam(w, r, "id", "recurring transaction")
+	if !ok {
 		return
 	}
 

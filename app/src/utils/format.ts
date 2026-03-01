@@ -179,3 +179,99 @@ export function formatTime(date: string): string {
 
   return new Intl.DateTimeFormat(locale, options).format(d);
 }
+
+// --- Regional numeral and locale utilities ---
+
+export type LocaleCode = 'en' | 'fa' | 'ar' | 'tr';
+
+const PERSIAN_NUMERALS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+const ARABIC_NUMERALS = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+
+export function toPersianNumerals(num: string | number): string {
+  const str = String(num);
+  return str.replace(/[0-9]/g, (d) => PERSIAN_NUMERALS[parseInt(d, 10)]);
+}
+
+export function toArabicNumerals(num: string | number): string {
+  const str = String(num);
+  return str.replace(/[0-9]/g, (d) => ARABIC_NUMERALS[parseInt(d, 10)]);
+}
+
+export function toLocalizedNumerals(num: string | number, locale: LocaleCode): string {
+  switch (locale) {
+    case 'fa':
+      return toPersianNumerals(num);
+    case 'ar':
+      return toArabicNumerals(num);
+    default:
+      return String(num);
+  }
+}
+
+export function formatPercent(
+  value: number,
+  locale: LocaleCode,
+  decimals = 0
+): string {
+  const localeMap: Record<LocaleCode, string> = {
+    en: 'en-US',
+    fa: 'fa-IR',
+    ar: 'ar-SA',
+    tr: 'tr-TR',
+  };
+  return new Intl.NumberFormat(localeMap[locale], {
+    style: 'percent',
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(value);
+}
+
+export function getDecimalSeparator(locale: LocaleCode): string {
+  const separators: Record<LocaleCode, string> = {
+    en: '.',
+    fa: '٫',
+    ar: '٫',
+    tr: ',',
+  };
+  return separators[locale];
+}
+
+export function getThousandsSeparator(locale: LocaleCode): string {
+  const separators: Record<LocaleCode, string> = {
+    en: ',',
+    fa: '٬',
+    ar: '٬',
+    tr: '.',
+  };
+  return separators[locale];
+}
+
+export function parseLocalizedNumber(str: string, locale: LocaleCode): number {
+  let normalized = str;
+
+  if (locale === 'fa') {
+    normalized = normalized.replace(/[۰-۹]/g, (d) => {
+      return String(d.charCodeAt(0) - '۰'.charCodeAt(0));
+    });
+  } else if (locale === 'ar') {
+    normalized = normalized.replace(/[٠-٩]/g, (d) => {
+      return String(d.charCodeAt(0) - '٠'.charCodeAt(0));
+    });
+  }
+
+  const decimalSep = getDecimalSeparator(locale);
+  const thousandsSep = getThousandsSeparator(locale);
+
+  normalized = normalized.replace(new RegExp(`\\${thousandsSep}`, 'g'), '');
+  normalized = normalized.replace(decimalSep, '.');
+
+  return parseFloat(normalized);
+}
+
+export function getTextDirection(locale: LocaleCode): 'ltr' | 'rtl' {
+  return locale === 'fa' || locale === 'ar' ? 'rtl' : 'ltr';
+}
+
+export function isRTL(locale: LocaleCode): boolean {
+  return locale === 'fa' || locale === 'ar';
+}
