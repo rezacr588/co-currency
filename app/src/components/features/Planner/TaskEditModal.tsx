@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Calendar, DollarSign } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
@@ -90,6 +90,7 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
         <View
           style={{
@@ -104,20 +105,32 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
             paddingBottom: Math.max(insets.bottom + 12, 20),
           }}
         >
+          {/* Drag handle */}
+          <View style={{ alignItems: 'center', paddingBottom: 10 }}>
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+          </View>
+
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 17 }}>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 18 }}>
               {t('plannerEditTask') || 'Edit Task'}
             </Text>
-            <Pressable onPress={onClose}>
-              <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>{t('plannerClose') || 'Close'}</Text>
+            <Pressable
+              onPress={onClose}
+              hitSlop={8}
+              style={({ pressed }) => [{
+                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
+                backgroundColor: colors.muted,
+              }, pressed && { opacity: 0.72 }]}
+            >
+              <Text style={{ color: colors.mutedForeground, fontSize: 13, fontFamily: 'Inter_500Medium' }}>{t('plannerClose') || 'Close'}</Text>
             </Pressable>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            <View style={{ gap: 12 }}>
+            <View style={{ gap: 14 }}>
               <View>
-                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6 }}>
-                  {t('plannerTaskTitle') || 'Title'}
+                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6, fontFamily: 'Inter_600SemiBold' }}>
+                  {t('plannerTaskTitle') || 'Title'} *
                 </Text>
                 <TextInput
                   value={title}
@@ -125,51 +138,63 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
                   placeholder={t('plannerTaskTitle') || 'Task title'}
                   placeholderTextColor={colors.placeholder}
                   style={{
-                    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card,
-                    borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: colors.foreground,
+                    borderWidth: 1, borderColor: title.trim() ? colors.accent + '44' : colors.border,
+                    backgroundColor: colors.card,
+                    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: colors.foreground,
+                    fontSize: 15, fontFamily: 'Inter_500Medium',
                   }}
                 />
               </View>
 
               <View>
-                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6, fontFamily: 'Inter_600SemiBold' }}>
                   {t('plannerDescription') || 'Description'}
                 </Text>
                 <TextInput
                   value={description}
                   onChangeText={setDescription}
-                  placeholder={t('plannerDescription') || 'Description'}
+                  placeholder={t('plannerDescription') || 'Add details (optional)'}
                   placeholderTextColor={colors.placeholder}
                   multiline
                   style={{
                     borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card,
-                    borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
+                    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
                     color: colors.foreground, minHeight: 82, textAlignVertical: 'top',
+                    fontSize: 14,
                   }}
                 />
               </View>
 
               <View>
-                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6 }}>
-                  {t('plannerSelectDueDate') || 'Due date'}
+                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6, fontFamily: 'Inter_600SemiBold' }}>
+                  {t('plannerSelectDueDate') || 'Due Date'}
                 </Text>
                 <Pressable
                   onPress={() => setShowDatePicker(true)}
-                  style={{
-                    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card,
-                    borderRadius: 12, paddingHorizontal: 12, paddingVertical: 12,
+                  style={({ pressed }) => [{
+                    borderWidth: 1, borderColor: dueDate ? colors.accent + '44' : colors.border,
+                    backgroundColor: colors.card,
+                    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14,
                     flexDirection: 'row', alignItems: 'center', gap: 8,
-                  }}
+                  }, pressed && { opacity: 0.8 }]}
                 >
-                  <Calendar size={14} color={colors.mutedForeground} />
-                  <Text style={{ color: dueDate ? colors.foreground : colors.placeholder, flex: 1 }}>
+                  <Calendar size={14} color={dueDate ? colors.accent : colors.mutedForeground} />
+                  <Text style={{ color: dueDate ? colors.foreground : colors.placeholder, flex: 1, fontFamily: dueDate ? 'Inter_500Medium' : undefined }}>
                     {dueDate || (t('plannerSelectDueDate') || 'Select due date')}
                   </Text>
+                  <View style={{
+                    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
+                    backgroundColor: colors.accent + '18',
+                  }}>
+                    <Text style={{ color: colors.accent, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>
+                      {t('plannerSelectDate') || 'Pick'}
+                    </Text>
+                  </View>
                 </Pressable>
               </View>
 
               <View>
-                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6, fontFamily: 'Inter_600SemiBold' }}>
                   {t('plannerPriority') || 'Priority'}
                 </Text>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -184,14 +209,14 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
                         }}
                         style={({ pressed }) => [{
                           flex: 1, alignItems: 'center', borderRadius: 10, borderWidth: 1,
-                          borderColor: priority === p ? colors.accent : colors.border,
+                          borderColor: priority === p ? badge.text + '55' : colors.border,
                           backgroundColor: priority === p ? badge.bg : colors.card,
-                          paddingVertical: 8,
+                          paddingVertical: 10,
                         }, pressed && { opacity: 0.72 }]}
                       >
                         <Text style={{
                           color: priority === p ? badge.text : colors.foreground,
-                          fontSize: 12, fontFamily: 'Inter_600SemiBold',
+                          fontSize: 13, fontFamily: 'Inter_600SemiBold',
                         }}>
                           {t(`priority${p.charAt(0).toUpperCase() + p.slice(1)}` as any) || p.charAt(0).toUpperCase() + p.slice(1)}
                         </Text>
@@ -202,7 +227,7 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
               </View>
 
               <View>
-                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6, fontFamily: 'Inter_600SemiBold' }}>
                   Status
                 </Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -211,12 +236,15 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
                       key={s}
                       onPress={() => setStatus(s)}
                       style={({ pressed }) => [{
-                        paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, borderWidth: 1,
+                        paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, borderWidth: 1,
                         borderColor: status === s ? colors.accent : colors.border,
                         backgroundColor: status === s ? colors.accent + '22' : colors.card,
                       }, pressed && { opacity: 0.72 }]}
                     >
-                      <Text style={{ color: status === s ? colors.accent : colors.foreground, fontSize: 12 }}>
+                      <Text style={{
+                        color: status === s ? colors.accent : colors.foreground,
+                        fontSize: 13, fontFamily: status === s ? 'Inter_600SemiBold' : 'Inter_500Medium',
+                      }}>
                         {statusLabel(s)}
                       </Text>
                     </Pressable>
@@ -225,7 +253,7 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
               </View>
 
               <View>
-                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6, fontFamily: 'Inter_600SemiBold' }}>
                   {t('plannerReminderMode') || 'Reminder mode'}
                 </Text>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -272,15 +300,18 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
             </View>
           </ScrollView>
 
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
+          {/* Separator */}
+          <View style={{ height: 1, backgroundColor: colors.border, marginTop: 14, marginBottom: 12 }} />
+
+          <View style={{ flexDirection: 'row', gap: 8 }}>
             <Pressable
               onPress={onClose}
               style={({ pressed }) => [{
                 flex: 1, borderRadius: 12, borderWidth: 1, borderColor: colors.border,
-                backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', paddingVertical: 12,
+                backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', paddingVertical: 14,
               }, pressed && { opacity: 0.72 }]}
             >
-              <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
+              <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>
                 {t('plannerClose') || 'Cancel'}
               </Text>
             </Pressable>
@@ -288,19 +319,21 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
             <Pressable
               onPress={handleSave}
               style={({ pressed }) => [{
-                flex: 1, borderRadius: 12, backgroundColor: colors.accent,
-                alignItems: 'center', justifyContent: 'center', paddingVertical: 12,
+                flex: 1.5, borderRadius: 12, backgroundColor: colors.accent,
+                alignItems: 'center', justifyContent: 'center', paddingVertical: 14,
                 shadowColor: colors.accent, shadowOpacity: 0.34, shadowRadius: 14,
                 shadowOffset: { width: 0, height: 0 },
+                elevation: 4,
               }, pressed && { opacity: 0.78 }]}
             >
-              <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_700Bold' }}>
+              <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_700Bold', fontSize: 14 }}>
                 {t('plannerSaveChanges') || 'Save Changes'}
               </Text>
             </Pressable>
           </View>
         </View>
       </View>
+      </KeyboardAvoidingView>
 
       <DatePickerModal
         visible={showDatePicker}

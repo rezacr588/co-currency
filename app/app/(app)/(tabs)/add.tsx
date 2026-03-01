@@ -336,6 +336,20 @@ export default function AddTransactionScreen() {
         queryClient.invalidateQueries({ queryKey: ['badges'] });
       }).catch(() => {});
       showToast(t('transactionAdded') || 'Transaction added', 'success');
+
+      // Reset form state so next visit starts clean
+      setType('debit');
+      setAmount('');
+      setCurrency('TRY');
+      setWalletCurrency('USD');
+      setEnableTargetConversion(true);
+      setCategory('other');
+      setCategorySearch('');
+      setNewCategoryName('');
+      setDescription('');
+      setStep('basics');
+      setShowAllCategories(false);
+
       if (returnTo) {
         router.replace(returnTo as any);
       } else {
@@ -517,6 +531,7 @@ export default function AddTransactionScreen() {
 
           {/* Desktop: Two column layout for type and amount */}
           {step === 'basics' && (
+          <>
           <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: isDesktop ? 24 : 0 }}>
             {/* Transaction Type */}
             <View style={{ marginBottom: theme.spacing.xl, flex: isDesktop ? 1 : undefined }}>
@@ -566,6 +581,30 @@ export default function AddTransactionScreen() {
               </AmountContainer>
             </View>
           </View>
+
+          {/* Source Currency */}
+          <View style={{ marginBottom: theme.spacing.xl }}>
+            <Caption style={{ marginBottom: theme.spacing.sm }}>{t('currency') || 'Currency'}</Caption>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+                {CURRENCIES.map((code) => {
+                  const display = getCurrencyDisplay(code);
+                  return (
+                    <CurrencyChip key={code} $active={currency === code} onPress={() => setCurrency(code)}>
+                      <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || '\uD83C\uDF10'}</Text>
+                      <BodyMedium
+                        $color={currency === code ? theme.colors.background : theme.colors.foreground}
+                        style={{ fontSize: 14 }}
+                      >
+                        {code}
+                      </BodyMedium>
+                    </CurrencyChip>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+          </>
           )}
 
           {/* Currency */}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
@@ -168,6 +168,7 @@ export function PlannerCard({
       { scale: (1 + lift.value * 0.024) * completionScale.value },
     ],
     zIndex: lift.value > 0 ? 40 : 1,
+    elevation: lift.value > 0 ? 12 : 4,
     shadowOpacity: 0.2 + lift.value * 0.28,
     shadowRadius: 12 + lift.value * 10,
   }));
@@ -256,16 +257,17 @@ export function PlannerCard({
                 {canCompleteTask && (
                   <Pressable
                     onPress={() => onCompleteTask(item.id)}
+                    hitSlop={6}
                     style={({ pressed }) => [{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 8,
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
                       alignItems: 'center',
                       justifyContent: 'center',
                       backgroundColor: colors.success + '18',
                     }, pressed && { opacity: 0.72 }]}
                   >
-                    <Check size={14} color={colors.success} />
+                    <Check size={16} color={colors.success} />
                   </Pressable>
                 )}
                 <GripHorizontal size={14} color={colors.mutedForeground} />
@@ -323,28 +325,39 @@ export function PlannerCard({
               ))}
             </View>
 
-            <View style={{ marginTop: 6 }}>
-              {!hintSeen && (
-                <Text style={{ color: colors.mutedForeground, fontSize: 10 }}>
-                  {t('plannerDragHint') || 'Long-press + drag to move'}
-                </Text>
-              )}
-              {marker?.is_pending_sync ? (
-                <Text style={{ color: colors.warning, fontSize: 10, fontFamily: 'Inter_600SemiBold' }}>
-                  {t('plannerPendingSync') || 'Pending sync'}
-                </Text>
-              ) : null}
-              {marker?.pending_verification ? (
-                <Text style={{ color: colors.warning, fontSize: 10, fontFamily: 'Inter_600SemiBold' }}>
-                  {t('plannerGoalFunding') || 'Pending funding verification'}
-                </Text>
-              ) : null}
-              {marker?.sync_error ? (
-                <Text style={{ color: colors.danger, fontSize: 10 }} numberOfLines={2}>
-                  {marker.sync_error}
-                </Text>
-              ) : null}
-            </View>
+            {(!hintSeen || marker?.is_pending_sync || marker?.pending_verification || marker?.sync_error) && (
+              <View style={{ marginTop: 8, gap: 3 }}>
+                {!hintSeen && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.muted, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, alignSelf: 'flex-start' }}>
+                    <GripHorizontal size={9} color={colors.mutedForeground} />
+                    <Text style={{ color: colors.mutedForeground, fontSize: 10, fontFamily: 'Inter_500Medium' }}>
+                      {t('plannerDragHint') || 'Long-press + drag to move'}
+                    </Text>
+                  </View>
+                )}
+                {marker?.is_pending_sync ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.warning + '18', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, alignSelf: 'flex-start' }}>
+                    <Text style={{ color: colors.warning, fontSize: 10, fontFamily: 'Inter_600SemiBold' }}>
+                      {t('plannerPendingSync') || 'Pending sync'}
+                    </Text>
+                  </View>
+                ) : null}
+                {marker?.pending_verification ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.warning + '18', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, alignSelf: 'flex-start' }}>
+                    <Text style={{ color: colors.warning, fontSize: 10, fontFamily: 'Inter_600SemiBold' }}>
+                      {t('plannerGoalFunding') || 'Pending funding verification'}
+                    </Text>
+                  </View>
+                ) : null}
+                {marker?.sync_error ? (
+                  <View style={{ backgroundColor: colors.danger + '14', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, alignSelf: 'flex-start' }}>
+                    <Text style={{ color: colors.danger, fontSize: 10 }} numberOfLines={2}>
+                      {marker.sync_error}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            )}
           </View>
         </Animated.View>
       </GestureDetector>

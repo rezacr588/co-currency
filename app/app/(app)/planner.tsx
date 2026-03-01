@@ -4,6 +4,7 @@ import {
   Alert,
   AppState,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -490,6 +491,7 @@ export default function PlannerScreen() {
           borderRadius: 18, borderWidth: 1, borderColor: meta.border,
           backgroundColor: colors.card, padding: 12,
           shadowColor: meta.glow, shadowOpacity: 0.46, shadowRadius: 15, shadowOffset: { width: 0, height: 2 },
+          elevation: 6,
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -549,9 +551,9 @@ export default function PlannerScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 }}>
             <Pressable
               onPress={() => router.back()}
-              style={({ pressed }) => [{ width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }, pressed && { opacity: 0.72 }]}
+              style={({ pressed }) => [{ width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, elevation: 2 }, pressed && { opacity: 0.72 }]}
             >
-              <ArrowLeft size={16} color={colors.foreground} />
+              <ArrowLeft size={18} color={colors.foreground} />
             </Pressable>
             <View style={{ flexShrink: 1 }}>
               <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 18 }}>
@@ -570,6 +572,7 @@ export default function PlannerScreen() {
                 flexDirection: 'row', alignItems: 'center', backgroundColor: colors.accent,
                 paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999,
                 shadowColor: colors.accent, shadowOpacity: 0.38, shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
+                elevation: 4,
               }, pressed && { opacity: 0.78 }]}
             >
               <Plus size={14} color={colors.accentForeground} />
@@ -725,6 +728,7 @@ export default function PlannerScreen() {
                     backgroundColor: active ? COLUMN_META[status].glow : colors.card,
                     shadowColor: active ? COLUMN_META[status].glow : 'transparent',
                     shadowOpacity: active ? 0.42 : 0, shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
+                    elevation: active ? 4 : 0,
                   }, pressed && { opacity: 0.74 }]}
                 >
                   <Text style={{ color: active ? colors.foreground : colors.mutedForeground, fontSize: 12, fontFamily: active ? 'Inter_700Bold' : 'Inter_600SemiBold' }}>
@@ -786,6 +790,7 @@ export default function PlannerScreen() {
                   backgroundColor: dragDirection === 'left' ? colors.accent + '26' : colors.card + '8A',
                   alignItems: 'center', justifyContent: 'center',
                   shadowColor: colors.accent, shadowOpacity: dragDirection === 'left' ? 0.36 : 0, shadowRadius: 14, shadowOffset: { width: 0, height: 0 },
+                  elevation: dragDirection === 'left' ? 6 : 0,
                 }}>
                   <ChevronLeft size={16} color={dragDirection === 'left' ? colors.accent : colors.mutedForeground} />
                 </View>
@@ -795,6 +800,7 @@ export default function PlannerScreen() {
                   backgroundColor: dragDirection === 'right' ? colors.accent + '26' : colors.card + '8A',
                   alignItems: 'center', justifyContent: 'center',
                   shadowColor: colors.accent, shadowOpacity: dragDirection === 'right' ? 0.36 : 0, shadowRadius: 14, shadowOffset: { width: 0, height: 0 },
+                  elevation: dragDirection === 'right' ? 6 : 0,
                 }}>
                   <ChevronRight size={16} color={dragDirection === 'right' ? colors.accent : colors.mutedForeground} />
                 </View>
@@ -819,6 +825,7 @@ export default function PlannerScreen() {
             flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
             paddingHorizontal: 14, paddingVertical: 10,
             shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
+            elevation: 8,
           }}>
             <Text style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_500Medium' }}>
               {t('plannerTaskCompleted') || 'Task completed'}

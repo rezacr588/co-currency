@@ -119,15 +119,41 @@ export function DatePickerModal({ visible, onClose, onSelect, initialDate, title
             paddingBottom: Math.max(insets.bottom + 12, 20),
           }}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 17 }}>
+          {/* Drag handle */}
+          <View style={{ alignItems: 'center', paddingBottom: 10 }}>
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 18 }}>
               {title || t('plannerSelectDate') || 'Select Date'}
             </Text>
-            <Pressable onPress={onClose}>
-              <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>
+            <Pressable
+              onPress={onClose}
+              hitSlop={8}
+              style={({ pressed }) => [{
+                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
+                backgroundColor: colors.muted,
+              }, pressed && { opacity: 0.72 }]}
+            >
+              <Text style={{ color: colors.mutedForeground, fontSize: 13, fontFamily: 'Inter_500Medium' }}>
                 {t('plannerClose') || 'Close'}
               </Text>
             </Pressable>
+          </View>
+
+          {/* Selected date preview */}
+          <View style={{
+            backgroundColor: colors.accent + '14', borderRadius: 10, borderWidth: 1,
+            borderColor: colors.accent + '33', paddingHorizontal: 14, paddingVertical: 10,
+            marginBottom: 14, alignItems: 'center',
+          }}>
+            <Text style={{ color: colors.accent, fontSize: 16, fontFamily: 'Inter_700Bold' }}>
+              {`${year}-${String(month).padStart(2, '0')}-${String(clampedDay).padStart(2, '0')}`}
+            </Text>
+            <Text style={{ color: colors.accent, fontSize: 12, fontFamily: 'Inter_500Medium', marginTop: 2, opacity: 0.8 }}>
+              {MONTH_NAMES_EN[month - 1]} {clampedDay}, {year}
+            </Text>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -173,7 +199,10 @@ export function DatePickerModal({ visible, onClose, onSelect, initialDate, title
             </View>
           </ScrollView>
 
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
+          {/* Separator */}
+          <View style={{ height: 1, backgroundColor: colors.border, marginTop: 14, marginBottom: 12 }} />
+
+          <View style={{ flexDirection: 'row', gap: 8 }}>
             <Pressable
               onPress={handleClear}
               style={({ pressed }) => [{
@@ -184,10 +213,10 @@ export function DatePickerModal({ visible, onClose, onSelect, initialDate, title
                 backgroundColor: colors.card,
                 alignItems: 'center',
                 justifyContent: 'center',
-                paddingVertical: 12,
+                paddingVertical: 14,
               }, pressed && { opacity: 0.72 }]}
             >
-              <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
+              <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>
                 {t('plannerClear') || 'Clear'}
               </Text>
             </Pressable>
@@ -195,19 +224,20 @@ export function DatePickerModal({ visible, onClose, onSelect, initialDate, title
             <Pressable
               onPress={handleConfirm}
               style={({ pressed }) => [{
-                flex: 1,
+                flex: 1.5,
                 borderRadius: 12,
                 backgroundColor: colors.accent,
                 alignItems: 'center',
                 justifyContent: 'center',
-                paddingVertical: 12,
+                paddingVertical: 14,
                 shadowColor: colors.accent,
                 shadowOpacity: 0.34,
                 shadowRadius: 14,
                 shadowOffset: { width: 0, height: 0 },
+                elevation: 4,
               }, pressed && { opacity: 0.78 }]}
             >
-              <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_700Bold' }}>
+              <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_700Bold', fontSize: 14 }}>
                 {t('plannerConfirm') || 'Confirm'}
               </Text>
             </Pressable>

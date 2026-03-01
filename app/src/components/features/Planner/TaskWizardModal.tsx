@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Plus, Tag, Trash2 } from 'lucide-react-native';
+import { ChevronRight, Plus, Tag, Trash2 } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
 import { DatePickerModal } from './DatePickerModal';
 import { CurrencyPicker } from '../../ui/CurrencyPicker';
@@ -137,17 +137,15 @@ export function TaskWizardModal({
 
   useEffect(() => {
     if (!visible) return;
-    if (!userId) {
-      resetWizard();
-      return;
-    }
+
+    // Always start with a clean slate immediately
+    resetWizard();
+
+    if (!userId) return;
 
     void (async () => {
       const stored = await readJSON<TaskWizardDraft>(draftStorageKey(userId));
-      if (!stored) {
-        resetWizard();
-        return;
-      }
+      if (!stored) return;
 
       Alert.alert(
         t('plannerResumeDraft') || 'Resume task draft?',
@@ -157,7 +155,6 @@ export function TaskWizardModal({
             text: t('plannerDiscardDraft') || 'Discard',
             style: 'destructive',
             onPress: () => {
-              resetWizard();
               void removeStorage(draftStorageKey(userId));
             },
           },
@@ -280,7 +277,7 @@ export function TaskWizardModal({
       await onSubmit(payload, selectedTagIDs);
       void haptics.success();
       resetWizard();
-      if (userId) void removeStorage(draftStorageKey(userId));
+      if (userId) await removeStorage(draftStorageKey(userId));
       onClose();
     } catch (err) {
       void haptics.error();
@@ -336,6 +333,7 @@ export function TaskWizardModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
         <View
           style={{
@@ -350,66 +348,116 @@ export function TaskWizardModal({
             paddingBottom: Math.max(insets.bottom + 12, 20),
           }}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 17 }}>
+          {/* Drag handle */}
+          <View style={{ alignItems: 'center', paddingBottom: 10 }}>
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 18 }}>
               {t('plannerTaskWizard') || 'Task Setup Wizard'}
             </Text>
-            <Pressable onPress={onClose}>
-              <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>{t('plannerClose') || 'Close'}</Text>
+            <Pressable
+              onPress={onClose}
+              hitSlop={8}
+              style={({ pressed }) => [{
+                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
+                backgroundColor: colors.muted,
+              }, pressed && { opacity: 0.72 }]}
+            >
+              <Text style={{ color: colors.mutedForeground, fontSize: 13, fontFamily: 'Inter_500Medium' }}>{t('plannerClose') || 'Close'}</Text>
             </Pressable>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 8 }}>
-            {WIZARD_STEPS.map((s) => {
+          {/* Step progress */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 4 }}>
+            {WIZARD_STEPS.map((s, idx) => {
               const active = step === s;
+              const completed = WIZARD_STEPS.indexOf(step) > idx;
+              const stepNum = idx + 1;
               return (
                 <Pressable
                   key={s}
                   onPress={() => setStep(s)}
-                  style={({ pressed }) => [{
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    borderColor: active ? colors.accent : colors.border,
-                    backgroundColor: active ? colors.accent + '22' : colors.card,
-                    paddingHorizontal: 12,
-                    paddingVertical: 7,
-                  }, pressed && { opacity: 0.74 }]}
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
                 >
-                  <Text style={{ color: active ? colors.accent : colors.foreground, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>
-                    {stepLabels[s]}
-                  </Text>
+                  <View style={{
+                    flex: 1, flexDirection: 'row', alignItems: 'center',
+                    backgroundColor: active ? colors.accent + '18' : completed ? colors.success + '14' : colors.card,
+                    borderWidth: 1,
+                    borderColor: active ? colors.accent + '55' : completed ? colors.success + '44' : colors.border,
+                    borderRadius: 10, paddingHorizontal: 8, paddingVertical: 8, gap: 6,
+                  }}>
+                    <View style={{
+                      width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: active ? colors.accent : completed ? colors.success : colors.muted,
+                    }}>
+                      <Text style={{
+                        color: active || completed ? '#fff' : colors.mutedForeground,
+                        fontSize: 11, fontFamily: 'Inter_700Bold',
+                      }}>
+                        {stepNum}
+                      </Text>
+                    </View>
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        flex: 1, fontSize: 11,
+                        color: active ? colors.accent : completed ? colors.success : colors.mutedForeground,
+                        fontFamily: active ? 'Inter_700Bold' : 'Inter_500Medium',
+                      }}
+                    >
+                      {stepLabels[s]}
+                    </Text>
+                  </View>
+                  {idx < WIZARD_STEPS.length - 1 && (
+                    <ChevronRight size={12} color={colors.border} style={{ marginHorizontal: 1 }} />
+                  )}
                 </Pressable>
               );
             })}
-          </ScrollView>
+          </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {step === 'basics' && (
-              <View style={{ gap: 10 }}>
-                <TextInput
-                  value={title}
-                  onChangeText={setTitle}
-                  placeholder={t('plannerTaskTitle') || 'Task title'}
-                  placeholderTextColor={colors.placeholder}
-                  style={{
-                    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card,
-                    borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: colors.foreground,
-                  }}
-                />
-                <TextInput
-                  value={description}
-                  onChangeText={setDescription}
-                  placeholder={t('plannerDescription') || 'Description'}
-                  placeholderTextColor={colors.placeholder}
-                  multiline
-                  style={{
-                    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card,
-                    borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
-                    color: colors.foreground, minHeight: 82, textAlignVertical: 'top',
-                  }}
-                />
+              <View style={{ gap: 14 }}>
                 <View>
-                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 8 }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6, fontFamily: 'Inter_600SemiBold' }}>
+                    {t('plannerTaskTitle') || 'Title'} *
+                  </Text>
+                  <TextInput
+                    value={title}
+                    onChangeText={setTitle}
+                    placeholder={t('plannerTaskTitle') || 'What needs to be done?'}
+                    placeholderTextColor={colors.placeholder}
+                    style={{
+                      borderWidth: 1, borderColor: title.trim() ? colors.accent + '44' : colors.border,
+                      backgroundColor: colors.card,
+                      borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: colors.foreground,
+                      fontSize: 15, fontFamily: 'Inter_500Medium',
+                    }}
+                  />
+                </View>
+                <View>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6, fontFamily: 'Inter_600SemiBold' }}>
+                    {t('plannerDescription') || 'Description'}
+                  </Text>
+                  <TextInput
+                    value={description}
+                    onChangeText={setDescription}
+                    placeholder={t('plannerDescription') || 'Add details (optional)'}
+                    placeholderTextColor={colors.placeholder}
+                    multiline
+                    style={{
+                      borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card,
+                      borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+                      color: colors.foreground, minHeight: 82, textAlignVertical: 'top',
+                      fontSize: 14,
+                    }}
+                  />
+                </View>
+                <View>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 8, fontFamily: 'Inter_600SemiBold' }}>
                     {t('plannerInitialColumn') || 'Initial column'}
                   </Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -418,12 +466,15 @@ export function TaskWizardModal({
                         key={s}
                         onPress={() => setSelectedStatus(s)}
                         style={({ pressed }) => [{
-                          paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, borderWidth: 1,
+                          paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, borderWidth: 1,
                           borderColor: selectedStatus === s ? colors.accent : colors.border,
                           backgroundColor: selectedStatus === s ? colors.accent + '22' : colors.card,
                         }, pressed && { opacity: 0.72 }]}
                       >
-                        <Text style={{ color: selectedStatus === s ? colors.accent : colors.foreground, fontSize: 12 }}>
+                        <Text style={{
+                          color: selectedStatus === s ? colors.accent : colors.foreground,
+                          fontSize: 13, fontFamily: selectedStatus === s ? 'Inter_600SemiBold' : 'Inter_500Medium',
+                        }}>
                           {statusLabel(s)}
                         </Text>
                       </Pressable>
@@ -434,31 +485,41 @@ export function TaskWizardModal({
             )}
 
             {step === 'schedule' && (
-              <View style={{ gap: 10 }}>
-                <Pressable
-                  onPress={() => setShowDatePicker(true)}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: dueDateValidationError ? colors.danger : colors.border,
-                    backgroundColor: colors.card,
-                    borderRadius: 12,
-                    paddingHorizontal: 12,
-                    paddingVertical: 12,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Text style={{ color: dueDate ? colors.foreground : colors.placeholder, fontSize: 14 }}>
-                    {dueDate || (t('plannerSelectDueDate') || 'Select due date (optional)')}
+              <View style={{ gap: 14 }}>
+                <View>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6, fontFamily: 'Inter_600SemiBold' }}>
+                    {t('plannerSelectDueDate') || 'Due Date'}
                   </Text>
-                  <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
-                    {t('plannerSelectDate') || 'Pick'}
-                  </Text>
-                </Pressable>
+                  <Pressable
+                    onPress={() => setShowDatePicker(true)}
+                    style={({ pressed }) => [{
+                      borderWidth: 1,
+                      borderColor: dueDateValidationError ? colors.danger : dueDate ? colors.accent + '44' : colors.border,
+                      backgroundColor: colors.card,
+                      borderRadius: 12,
+                      paddingHorizontal: 14,
+                      paddingVertical: 14,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }, pressed && { opacity: 0.8 }]}
+                  >
+                    <Text style={{ color: dueDate ? colors.foreground : colors.placeholder, fontSize: 14, fontFamily: dueDate ? 'Inter_500Medium' : undefined }}>
+                      {dueDate || (t('plannerSelectDueDate') || 'Select due date (optional)')}
+                    </Text>
+                    <View style={{
+                      paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
+                      backgroundColor: colors.accent + '18',
+                    }}>
+                      <Text style={{ color: colors.accent, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>
+                        {t('plannerSelectDate') || 'Pick'}
+                      </Text>
+                    </View>
+                  </Pressable>
+                </View>
 
                 <View>
-                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 8 }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 8, fontFamily: 'Inter_600SemiBold' }}>
                     {t('plannerPriority') || 'Priority'}
                   </Text>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -473,14 +534,14 @@ export function TaskWizardModal({
                           }}
                           style={({ pressed }) => [{
                             flex: 1, alignItems: 'center', borderRadius: 10, borderWidth: 1,
-                            borderColor: selectedPriority === p ? colors.accent : colors.border,
+                            borderColor: selectedPriority === p ? badge.text + '55' : colors.border,
                             backgroundColor: selectedPriority === p ? badge.bg : colors.card,
-                            paddingVertical: 8,
+                            paddingVertical: 10,
                           }, pressed && { opacity: 0.72 }]}
                         >
                           <Text style={{
                             color: selectedPriority === p ? badge.text : colors.foreground,
-                            fontSize: 12, fontFamily: 'Inter_600SemiBold',
+                            fontSize: 13, fontFamily: 'Inter_600SemiBold',
                           }}>
                             {t(`priority${p.charAt(0).toUpperCase() + p.slice(1)}` as any) || p.charAt(0).toUpperCase() + p.slice(1)}
                           </Text>
@@ -491,7 +552,7 @@ export function TaskWizardModal({
                 </View>
 
                 <View>
-                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 8 }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 8, fontFamily: 'Inter_600SemiBold' }}>
                     {t('plannerReminderMode') || 'Reminder mode'}
                   </Text>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -503,12 +564,12 @@ export function TaskWizardModal({
                           flex: 1, alignItems: 'center', borderRadius: 10, borderWidth: 1,
                           borderColor: reminderMode === mode ? colors.accent : colors.border,
                           backgroundColor: reminderMode === mode ? colors.accent + '22' : colors.card,
-                          paddingVertical: 8,
+                          paddingVertical: 10,
                         }, pressed && { opacity: 0.72 }]}
                       >
                         <Text style={{
                           color: reminderMode === mode ? colors.accent : colors.foreground,
-                          fontSize: 12, fontFamily: 'Inter_600SemiBold',
+                          fontSize: 13, fontFamily: 'Inter_600SemiBold',
                         }}>
                           {mode === 'aggressive' ? (t('plannerReminderAggressive') || 'Aggressive') : (t('plannerReminderOff') || 'Off')}
                         </Text>
@@ -789,18 +850,20 @@ export function TaskWizardModal({
             )}
           </ScrollView>
 
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
+          {/* Separator */}
+          <View style={{ height: 1, backgroundColor: colors.border, marginTop: 14, marginBottom: 12 }} />
+
+          <View style={{ flexDirection: 'row', gap: 8 }}>
             <Pressable
               onPress={handleDiscard}
+              hitSlop={4}
               style={({ pressed }) => [{
-                borderRadius: 12, borderWidth: 1, borderColor: colors.danger + '55',
-                backgroundColor: colors.danger + '16', alignItems: 'center', justifyContent: 'center',
-                paddingVertical: 12, paddingHorizontal: 14,
+                borderRadius: 12, borderWidth: 1, borderColor: colors.danger + '44',
+                backgroundColor: colors.danger + '10', alignItems: 'center', justifyContent: 'center',
+                paddingVertical: 14, paddingHorizontal: 16,
               }, pressed && { opacity: 0.72 }]}
             >
-              <Text style={{ color: colors.danger, fontFamily: 'Inter_600SemiBold', fontSize: 12 }}>
-                {t('plannerDiscardDraft') || 'Discard'}
-              </Text>
+              <Trash2 size={16} color={colors.danger} />
             </Pressable>
 
             <Pressable
@@ -808,11 +871,11 @@ export function TaskWizardModal({
               disabled={step === 'basics'}
               style={({ pressed }) => [{
                 flex: 1, borderRadius: 12, borderWidth: 1, borderColor: colors.border,
-                backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', paddingVertical: 12,
-                opacity: step === 'basics' ? 0.55 : pressed ? 0.72 : 1,
+                backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', paddingVertical: 14,
+                opacity: step === 'basics' ? 0.45 : pressed ? 0.72 : 1,
               }]}
             >
-              <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
+              <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>
                 {t('plannerBack') || 'Back'}
               </Text>
             </Pressable>
@@ -821,14 +884,15 @@ export function TaskWizardModal({
               <Pressable
                 onPress={goNext}
                 style={({ pressed }) => [{
-                  flex: 1, borderRadius: 12, backgroundColor: colors.accent,
-                  alignItems: 'center', justifyContent: 'center', paddingVertical: 12,
+                  flex: 1.5, borderRadius: 12, backgroundColor: colors.accent,
+                  alignItems: 'center', justifyContent: 'center', paddingVertical: 14,
                   shadowColor: colors.accent, shadowOpacity: 0.34, shadowRadius: 14,
                   shadowOffset: { width: 0, height: 0 },
+                  elevation: 4,
                   opacity: pressed ? 0.78 : 1,
                 }]}
               >
-                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_700Bold' }}>
+                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_700Bold', fontSize: 14 }}>
                   {t('plannerNext') || 'Next'}
                 </Text>
               </Pressable>
@@ -836,14 +900,15 @@ export function TaskWizardModal({
               <Pressable
                 onPress={handleSubmit}
                 style={({ pressed }) => [{
-                  flex: 1, borderRadius: 12, backgroundColor: colors.accent,
-                  alignItems: 'center', justifyContent: 'center', paddingVertical: 12,
+                  flex: 1.5, borderRadius: 12, backgroundColor: colors.accent,
+                  alignItems: 'center', justifyContent: 'center', paddingVertical: 14,
                   shadowColor: colors.accent, shadowOpacity: 0.34, shadowRadius: 14,
                   shadowOffset: { width: 0, height: 0 },
+                  elevation: 4,
                   opacity: pressed ? 0.78 : 1,
                 }]}
               >
-                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_700Bold' }}>
+                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_700Bold', fontSize: 14 }}>
                   {t('plannerCreateTask') || 'Create Task'}
                 </Text>
               </Pressable>
@@ -851,6 +916,7 @@ export function TaskWizardModal({
           </View>
         </View>
       </View>
+      </KeyboardAvoidingView>
 
       <DatePickerModal
         visible={showDatePicker}
