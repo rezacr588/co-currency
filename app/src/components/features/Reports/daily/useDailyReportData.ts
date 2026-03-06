@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../../api';
 import type { Transaction } from '../../../../types/wallet';
+import { formatDateKey } from '../../../../utils/dateRange';
 import {
   buildChartBuckets,
   buildDailyAggregation,
@@ -46,6 +47,8 @@ export interface UseDailyReportDataResult {
   goCurrentWindow: () => void;
   isCurrentWindow: boolean;
   rangeLabel: string;
+  windowFromDate: string;
+  windowToDate: string;
   selectedBucketRange: string;
   chartBuckets: ChartBucket[];
   selectedBucketIndex: number;
@@ -289,6 +292,8 @@ export function useDailyReportData(
 
   const rangeLabel = `${rangeWithYearFormatter.format(windowStart)} - ${rangeWithYearFormatter.format(windowEnd)}`;
   const selectedBucketRange = formatBucketRange(selectedBucket, rangeWithYearFormatter);
+  const windowFromDate = formatDateKey(windowStart, reportTimeZone);
+  const windowToDate = formatDateKey(windowEnd, reportTimeZone);
 
   return {
     timelinePreset,
@@ -303,6 +308,8 @@ export function useDailyReportData(
     goCurrentWindow: () => setWindowIndex(0),
     isCurrentWindow: windowIndex === 0,
     rangeLabel,
+    windowFromDate,
+    windowToDate,
     selectedBucketRange,
     chartBuckets,
     selectedBucketIndex,

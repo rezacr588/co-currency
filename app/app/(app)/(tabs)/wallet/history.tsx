@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useRefreshableQuery } from '../../../../src/hooks/useRefreshableQuery';
@@ -51,6 +51,11 @@ const CURRENCIES = [...COMMON_CURRENCIES];
 export default function TransactionHistoryScreen() {
   const { t } = useLanguage();
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    category?: string | string[];
+    from_date?: string | string[];
+    to_date?: string | string[];
+  }>();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -69,6 +74,20 @@ export default function TransactionHistoryScreen() {
   const [filterType, setFilterType] = useState<'credit' | 'debit' | null>(null);
   const [filterFromDate, setFilterFromDate] = useState<string>('');
   const [filterToDate, setFilterToDate] = useState<string>('');
+
+  useEffect(() => {
+    const readParam = (value?: string | string[]) => {
+      if (Array.isArray(value)) {
+        return value[0] || '';
+      }
+      return value || '';
+    };
+
+    const nextCategory = readParam(params.category);
+    setFilterCategory(nextCategory || null);
+    setFilterFromDate(readParam(params.from_date));
+    setFilterToDate(readParam(params.to_date));
+  }, [params.category, params.from_date, params.to_date]);
 
   // Edit state
   const [showEditModal, setShowEditModal] = useState(false);

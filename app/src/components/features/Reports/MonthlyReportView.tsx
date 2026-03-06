@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator, Pressable } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, BarChart3, PieChart, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react-native';
 import { api } from '../../../api';
@@ -11,6 +11,8 @@ import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 import { CATEGORY_COLORS, StyledCategoryIcon } from '../../../constants/icons';
 import { CashFlowProjectionCard } from './CashFlowProjectionCard';
 import { SpendingAnomalyCard } from './SpendingAnomalyCard';
+import { ReportHeadlineCard } from './ReportHeadlineCard';
+import type { ReportHistoryTarget } from './reportUX';
 import type { MonthlyReport, DateRangeReport } from '../../../types/goal';
 
 // Shared chart components
@@ -75,12 +77,16 @@ export function HorizontalBarChart({
   labelKey,
   valueKey,
   formatValue,
+  onPressItem,
+  getItemAccessibilityLabel,
 }: {
   data: any[];
   maxValue: number;
   labelKey: string;
   valueKey: string;
   formatValue?: (value: number) => string;
+  onPressItem?: (item: any) => void;
+  getItemAccessibilityLabel?: (item: any) => string;
 }) {
   const theme = useTheme();
   const colors = theme.colors;
@@ -91,8 +97,8 @@ export function HorizontalBarChart({
         const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
         const color = CATEGORY_COLORS[item[labelKey]?.toLowerCase()] || colors.accent;
 
-        return (
-          <View key={index}>
+        const content = (
+          <>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
               <Text style={{ color: colors.foreground, fontSize: 14, textTransform: 'capitalize' }}>{item[labelKey]}</Text>
               <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
@@ -109,7 +115,25 @@ export function HorizontalBarChart({
                 }}
               />
             </View>
-          </View>
+          </>
+        );
+
+        if (!onPressItem) {
+          return <View key={index}>{content}</View>;
+        }
+
+        return (
+          <Pressable
+            key={index}
+            onPress={() => onPressItem(item)}
+            style={({ pressed }) => ({
+              opacity: pressed ? 0.82 : 1,
+            })}
+            accessibilityRole="button"
+            accessibilityLabel={getItemAccessibilityLabel?.(item)}
+          >
+            {content}
+          </Pressable>
         );
       })}
     </View>
@@ -176,6 +200,8 @@ interface MonthlyReportViewProps {
   isTablet?: boolean;
   categoryCardWidth: number;
   categoryCols: number;
+  onOpenHistory?: (target: ReportHistoryTarget) => void;
+  showHeadline?: boolean;
 }
 
 export function MonthlyReportView({
@@ -187,6 +213,8 @@ export function MonthlyReportView({
   isTablet = false,
   categoryCardWidth,
   categoryCols,
+  onOpenHistory,
+  showHeadline = true,
 }: MonthlyReportViewProps) {
   const { t } = useLanguage();
   const theme = useTheme();
@@ -271,6 +299,39 @@ export function MonthlyReportView({
   });
 
   const isPending = (isDateRangeMode ? isLoadingDateRange : (isLoadingMonthly || isLoadingCategory)) || isLoadingTrends || isLoadingForecast;
+  const effectiveSummaryTitle = summaryTitle || (isDateRangeMode ? (t('selectedRangeSummary') || 'Selected Range Summary') : t('monthlySummary'));
+  const rangeTarget = useMemo(() => {
+    if (categoryReport?.from_date && categoryReport?.to_date) {
+      return {
+        fromDate: categoryReport.from_date,
+        toDate: categoryReport.to_date,
+      };
+    }
+
+    if (fromDate && toDate) {
+      return { fromDate, toDate };
+    }
+
+    return {
+      fromDate: buildDateKey(year, month, 1),
+      toDate: buildDateKey(year, month, getDaysInMonth(year, month)),
+    };
+  }, [categoryReport?.from_date, categoryReport?.to_date, fromDate, month, toDate, year]);
+  const headlineSummary = useMemo(() => {
+    if (!monthlyReport) {
+      return t('noDataAvailable');
+    }
+
+    const netLabel = monthlyReport.net >= 0
+      ? `${t('netPositiveThisPeriod') || 'Net positive this period'}: +${formatCompactCurrency(Math.abs(monthlyReport.net), monthlyReport.currency)}`
+      : `${t('netNegativeThisPeriod') || 'Net negative this period'}: -${formatCompactCurrency(Math.abs(monthlyReport.net), monthlyReport.currency)}`;
+
+    if (categoryReport?.categories?.[0]) {
+      return `${netLabel} | ${t('topCategory') || 'Top category'}: ${categoryReport.categories[0].category}`;
+    }
+
+    return netLabel;
+  }, [categoryReport?.categories, monthlyReport, t]);
 
   if (isPending) {
     return (
@@ -292,6 +353,13 @@ export function MonthlyReportView({
 
   return (
     <View>
+      {showHeadline ? (
+        <ReportHeadlineCard
+          summary={headlineSummary}
+          caption={isDateRangeMode ? (t('selectedRangeAnalysis') || 'Custom range analysis') : `${effectiveSummaryTitle}`}
+        />
+      ) : null}
+
       {/* Monthly Summary Card */}
       {monthlyReport && (
         <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
@@ -300,7 +368,7 @@ export function MonthlyReportView({
               <Calendar size={20} color={colors.placeholder} />
             </View>
             <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
-              {summaryTitle || t('monthlySummary')}
+              {effectiveSummaryTitle}
             </Text>
           </View>
 
@@ -372,6 +440,148 @@ export function MonthlyReportView({
         </View>
       )}
 
+      {/* Category Breakdown */}
+      {isCategoryError && (
+        <View style={{ backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', padding: 16, borderRadius: 12, marginBottom: 24 }}>
+          <Text style={{ color: colors.danger, fontSize: 14 }}>{t('failedToLoadCategories') || 'Failed to load category breakdown'}</Text>
+        </View>
+      )}
+      {categoryReport && categoryReport.categories.length > 0 && (
+        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginRight: 12 }}>
+              <PieChart size={20} color={colors.placeholder} />
+            </View>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('spendingByCategory')}</Text>
+          </View>
+
+          <View style={{ marginBottom: 24 }}>
+            <HorizontalBarChart
+              data={categoryReport.categories.slice(0, 6)}
+              maxValue={safeMax(categoryReport.categories.map((c) => c.amount))}
+              labelKey="category"
+              valueKey="amount"
+              formatValue={(v) => formatCompactCurrency(v, categoryReport.currency)}
+              onPressItem={
+                onOpenHistory
+                  ? (item) => onOpenHistory({ ...rangeTarget, category: item.category })
+                  : undefined
+              }
+              getItemAccessibilityLabel={(item) => `${t('topCategory') || 'Top category'} ${item.category}`}
+            />
+          </View>
+
+          <View style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 12,
+            marginTop: 16,
+          }}>
+            {categoryReport.categories.slice(0, 6).map((cat) => {
+              const categoryColor = CATEGORY_COLORS[cat.category.toLowerCase()] || colors.accent;
+              const cardContent = (
+                <>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <StyledCategoryIcon
+                        category={cat.category}
+                        size={16}
+                        backgroundOpacity={0.15}
+                        borderRadius={6}
+                        padding={6}
+                      />
+                      <Text style={{ fontFamily: 'Inter_500Medium', color: colors.foreground, textTransform: 'capitalize', marginLeft: 8 }}>
+                        {cat.category}
+                      </Text>
+                    </View>
+                    <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
+                      {formatCompactCurrency(cat.amount, categoryReport.currency)}
+                    </Text>
+                  </View>
+                  <View style={{ height: 8, backgroundColor: colors.secondary, borderRadius: 9999, overflow: 'hidden' }}>
+                    <View
+                      style={{
+                        height: '100%',
+                        borderRadius: 9999,
+                        width: `${cat.percentage}%`,
+                        backgroundColor: categoryColor,
+                      }}
+                    />
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
+                      {cat.count} {t('transactions')}
+                    </Text>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
+                      {formatNumber(cat.percentage, 1)}%
+                    </Text>
+                  </View>
+                </>
+              );
+
+              if (!onOpenHistory) {
+                return (
+                  <View
+                    key={cat.category}
+                    style={{
+                      backgroundColor: colors.secondary + '4d',
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      padding: 16,
+                      borderRadius: 12,
+                      width: categoryCardWidth,
+                      minWidth: categoryCols === 1 ? undefined : 200,
+                    }}
+                  >
+                    {cardContent}
+                  </View>
+                );
+              }
+
+              return (
+                <Pressable
+                  key={cat.category}
+                  onPress={() => onOpenHistory({ ...rangeTarget, category: cat.category })}
+                  style={({ pressed }) => ({
+                    backgroundColor: colors.secondary + '4d',
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    padding: 16,
+                    borderRadius: 12,
+                    width: categoryCardWidth,
+                    minWidth: categoryCols === 1 ? undefined : 200,
+                    opacity: pressed ? 0.84 : 1,
+                  })}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t('topCategory') || 'Top category'} ${cat.category}`}
+                >
+                  {cardContent}
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
+      {/* Trends Chart */}
+      {trendsReport && trendsReport.trends && trendsReport.trends.length > 0 && (
+        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginRight: 12 }}>
+              <BarChart3 size={20} color={colors.placeholder} />
+            </View>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('incomeVsExpenses')}</Text>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginLeft: 8 }}>
+              ({trendsReport.months} {t('months')})
+            </Text>
+          </View>
+          <TrendsChart data={trendsReport.trends} t={t} />
+        </View>
+      )}
+
+      {/* Spending Anomalies */}
+      <SpendingAnomalyCard />
+
       {/* Forecast Card */}
       {forecast && (
         <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
@@ -419,113 +629,6 @@ export function MonthlyReportView({
 
       {/* Cash Flow Projection */}
       <CashFlowProjectionCard />
-
-      {/* Spending Anomalies */}
-      <SpendingAnomalyCard />
-
-      {/* Trends Chart */}
-      {trendsReport && trendsReport.trends && trendsReport.trends.length > 0 && (
-        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginRight: 12 }}>
-              <BarChart3 size={20} color={colors.placeholder} />
-            </View>
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('incomeVsExpenses')}</Text>
-            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginLeft: 8 }}>
-              ({trendsReport.months} {t('months')})
-            </Text>
-          </View>
-          <TrendsChart data={trendsReport.trends} t={t} />
-        </View>
-      )}
-
-      {/* Category Breakdown */}
-      {isCategoryError && (
-        <View style={{ backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', padding: 16, borderRadius: 12, marginBottom: 24 }}>
-          <Text style={{ color: colors.danger, fontSize: 14 }}>{t('failedToLoadCategories') || 'Failed to load category breakdown'}</Text>
-        </View>
-      )}
-      {categoryReport && categoryReport.categories.length > 0 && (
-        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginRight: 12 }}>
-              <PieChart size={20} color={colors.placeholder} />
-            </View>
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('spendingByCategory')}</Text>
-          </View>
-
-          <View style={{ marginBottom: 24 }}>
-            <HorizontalBarChart
-              data={categoryReport.categories.slice(0, 6)}
-              maxValue={safeMax(categoryReport.categories.map((c) => c.amount))}
-              labelKey="category"
-              valueKey="amount"
-              formatValue={(v) => formatCompactCurrency(v, categoryReport.currency)}
-            />
-          </View>
-
-          <View style={{
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: 12,
-            marginTop: 16,
-          }}>
-            {categoryReport.categories.slice(0, 6).map((cat) => {
-              const categoryColor = CATEGORY_COLORS[cat.category.toLowerCase()] || colors.accent;
-              return (
-                <View
-                  key={cat.category}
-                  style={{
-                    backgroundColor: colors.secondary + '4d',
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                    padding: 16,
-                    borderRadius: 12,
-                    width: categoryCardWidth,
-                    minWidth: categoryCols === 1 ? undefined : 200,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <StyledCategoryIcon
-                        category={cat.category}
-                        size={16}
-                        backgroundOpacity={0.15}
-                        borderRadius={6}
-                        padding={6}
-                      />
-                      <Text style={{ fontFamily: 'Inter_500Medium', color: colors.foreground, textTransform: 'capitalize', marginLeft: 8 }}>
-                        {cat.category}
-                      </Text>
-                    </View>
-                    <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
-                      {formatCompactCurrency(cat.amount, categoryReport.currency)}
-                    </Text>
-                  </View>
-                  <View style={{ height: 8, backgroundColor: colors.secondary, borderRadius: 9999, overflow: 'hidden' }}>
-                    <View
-                      style={{
-                        height: '100%',
-                        borderRadius: 9999,
-                        width: `${cat.percentage}%`,
-                        backgroundColor: categoryColor,
-                      }}
-                    />
-                  </View>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
-                    <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
-                      {cat.count} {t('transactions')}
-                    </Text>
-                    <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
-                      {formatNumber(cat.percentage, 1)}%
-                    </Text>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-      )}
 
       {/* Empty State */}
       {!monthlyReport && !categoryReport && (

@@ -1,21 +1,25 @@
 import { useMemo } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, TrendingDown, TrendingUp, PieChart } from 'lucide-react-native';
 import { api } from '../../../api';
 import { StyledCategoryIcon } from '../../../constants/icons';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
-import { formatCompactCurrency } from '../../../utils/format';
+import { formatCompactCurrency, formatNumber } from '../../../utils/format';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
+import { formatDateKey } from '../../../utils/dateRange';
+import { ReportHeadlineCard } from './ReportHeadlineCard';
 import { DailyReportHeader } from './daily/DailyReportHeader';
 import { DailySelectedRangeCard } from './daily/DailySelectedRangeCard';
 import { DailyTimelineChart } from './daily/DailyTimelineChart';
 import { useDailyReportData } from './daily/useDailyReportData';
+import type { ReportHistoryTarget } from './reportUX';
 import type { ChartBucket } from './daily/types';
 
 interface DailyReportViewProps {
   isTablet?: boolean;
+  onOpenHistory?: (target: ReportHistoryTarget) => void;
 }
 
 function formatBucketRange(bucket: ChartBucket, formatter: Intl.DateTimeFormat): string {
@@ -26,7 +30,7 @@ function formatBucketRange(bucket: ChartBucket, formatter: Intl.DateTimeFormat):
   return `${formatter.format(bucket.startDate)} - ${formatter.format(bucket.endDate)}`;
 }
 
-export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
+export function DailyReportView({ isTablet = false, onOpenHistory }: DailyReportViewProps) {
   const { t, language } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
@@ -49,6 +53,32 @@ export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
   const report = useDailyReportData(language, reportTimeZone, primaryCurrency);
 
   const timelineLabel = t(report.timelineTranslationKey);
+  const selectedBucketRangeTarget = report.selectedBucket
+    ? {
+        fromDate: formatDateKey(report.selectedBucket.startDate, reportTimeZone),
+        toDate: formatDateKey(report.selectedBucket.endDate, reportTimeZone),
+      }
+    : null;
+  const windowRangeTarget = {
+    fromDate: report.windowFromDate,
+    toDate: report.windowToDate,
+  };
+
+  const headlineSummary = useMemo(() => {
+    if (report.comparedToLast < 0) {
+      return `${formatNumber(Math.abs(report.comparedToLast), 1)}% ${t('lowerExpenseThanPreviousPeriod') || 'lower expenses than the previous period'}`;
+    }
+
+    if (report.comparedToLast > 0) {
+      return `${formatNumber(report.comparedToLast, 1)}% ${t('higherExpenseThanPreviousPeriod') || 'higher expenses than the previous period'}`;
+    }
+
+    if (report.topCategories[0]) {
+      return `${t('topCategory') || 'Top category'}: ${report.topCategories[0].category}`;
+    }
+
+    return t('dailyReportStable') || 'This period is tracking close to the previous one.';
+  }, [report.comparedToLast, report.topCategories, t]);
 
   const chartRangeFormatter = useMemo(
     () => report.rangeWithYearFormatter,
@@ -75,6 +105,11 @@ export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
 
   return (
     <View>
+      <ReportHeadlineCard
+        summary={headlineSummary}
+        caption={`${timelineLabel} • ${report.rangeLabel}`}
+      />
+
       <DailyReportHeader
         t={t}
         timelinePreset={report.timelinePreset}
@@ -163,7 +198,26 @@ export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
                 </Text>
               </View>
               {report.topCategories.map((cat) => (
-                <View key={cat.category} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Pressable
+                  key={cat.category}
+                  onPress={() => {
+                    if (!onOpenHistory || !selectedBucketRangeTarget) return;
+                    onOpenHistory({
+                      ...windowRangeTarget,
+                      category: cat.category,
+                    });
+                  }}
+                  disabled={!onOpenHistory}
+                  style={({ pressed }) => ({
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 8,
+                    opacity: pressed ? 0.82 : 1,
+                  })}
+                  accessibilityRole={onOpenHistory ? 'button' : undefined}
+                  accessibilityLabel={`${t('topCategory') || 'Top category'} ${cat.category}`}
+                >
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                     <StyledCategoryIcon
                       category={cat.category}
@@ -182,7 +236,7 @@ export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
                       {Math.round(cat.percentage)}%
                     </Text>
                   </View>
-                </View>
+                </Pressable>
               ))}
             </View>
           )}
@@ -207,6 +261,11 @@ export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
         selectedTransactions={report.selectedTransactions}
         reportCurrency={report.reportCurrency}
         reportTimeZone={reportTimeZone}
+        onViewTransactions={
+          selectedBucketRangeTarget && onOpenHistory
+            ? () => onOpenHistory(selectedBucketRangeTarget)
+            : undefined
+        }
       />
     </View>
   );

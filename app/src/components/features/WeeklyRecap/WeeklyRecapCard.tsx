@@ -8,13 +8,20 @@ import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency } from '../../../utils/format';
 import { haptics } from '../../../utils/haptics';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
+import { formatReportDateRange } from '../Reports/reportUX';
 
 interface WeeklyRecapCardProps {
   compact?: boolean;
+  titleOverride?: string;
+  emptySubtitleOverride?: string;
 }
 
-export function WeeklyRecapCard({ compact = false }: WeeklyRecapCardProps) {
-  const { t } = useLanguage();
+export function WeeklyRecapCard({
+  compact = false,
+  titleOverride,
+  emptySubtitleOverride,
+}: WeeklyRecapCardProps) {
+  const { t, language } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
   const router = useRouter();
@@ -54,11 +61,6 @@ export function WeeklyRecapCard({ compact = false }: WeeklyRecapCardProps) {
     });
   };
 
-  const formatShortDate = (iso: string) => {
-    const d = new Date(iso + 'T00:00:00');
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
   const isLoading = isLoadingRecap || isRefetching;
 
   if (compact) {
@@ -72,10 +74,10 @@ export function WeeklyRecapCard({ compact = false }: WeeklyRecapCardProps) {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
-            {t('weeklyRecap') || 'Weekly Recap'}
+            {titleOverride || t('weeklyRecap') || 'Weekly Recap'}
           </Text>
           <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
-            {t('getPersonalizedInsights') || 'Get personalized insights'}
+            {emptySubtitleOverride || t('getPersonalizedInsights') || 'Get personalized insights'}
           </Text>
         </View>
         <ArrowRight size={18} color={colors.accent} />
@@ -93,12 +95,12 @@ export function WeeklyRecapCard({ compact = false }: WeeklyRecapCardProps) {
           </View>
           <View>
             <Text style={{ fontSize: 16, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
-              {t('weeklyRecap') || 'Weekly Recap'}
+              {titleOverride || t('weeklyRecap') || 'Weekly Recap'}
             </Text>
             <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
               {weeklyRecap
-                ? `${formatShortDate(weeklyRecap.week_start)} – ${formatShortDate(weeklyRecap.week_end)}`
-                : t('aiPoweredInsights') || 'AI-powered insights'}
+                ? formatReportDateRange(weeklyRecap.week_start, weeklyRecap.week_end, language, reportTimeZone)
+                : emptySubtitleOverride || t('aiPoweredInsights') || 'AI-powered insights'}
             </Text>
           </View>
         </View>

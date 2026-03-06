@@ -9,13 +9,16 @@ import { buildDateKey, getTimeZoneDateParts, shiftCalendarDate } from '../../../
 import { formatCompactCurrency, formatNumber } from '../../../utils/format';
 import { CATEGORY_COLORS, StyledCategoryIcon } from '../../../constants/icons';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
+import { ReportHeadlineCard } from './ReportHeadlineCard';
+import { formatReportDateRange, type ReportHistoryTarget } from './reportUX';
 
 interface WeeklyReportViewProps {
   isTablet?: boolean;
+  onOpenHistory?: (target: ReportHistoryTarget) => void;
 }
 
-export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
-  const { t } = useLanguage();
+export function WeeklyReportView({ isTablet = false, onOpenHistory }: WeeklyReportViewProps) {
+  const { t, language } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
   const { reportTimeZone } = useReportTimeZone();
@@ -71,11 +74,29 @@ export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
   // Format week range label
   const weekLabel = weekOffset === 0
     ? t('currentWeek')
-    : `${weeklyRecap.week_start} — ${weeklyRecap.week_end}`;
+    : formatReportDateRange(weeklyRecap.week_start, weeklyRecap.week_end, language, reportTimeZone);
   const summaryTitle = weekOffset === 0 ? t('thisWeek') : weekLabel;
+  const headlineSummary = comparePercent < 0
+    ? `${formatNumber(Math.abs(comparePercent), 1)}% ${t('lowerExpenseThanLastWeek') || 'lower expenses than last week'}`
+    : comparePercent > 0
+      ? `${formatNumber(comparePercent, 1)}% ${t('higherExpenseThanLastWeek') || 'higher expenses than last week'}`
+      : t('weeklySpendFlat') || 'Spending is close to last week.';
+  const rangeTarget = {
+    fromDate: weeklyRecap.week_start,
+    toDate: weeklyRecap.week_end,
+  };
 
   return (
     <View>
+      <ReportHeadlineCard
+        summary={headlineSummary}
+        caption={
+          weekOffset === 0
+            ? t('currentWeekSnapshot') || 'Current week snapshot'
+            : t('historicalWeekSnapshot') || 'Historical week snapshot'
+        }
+      />
+
       {/* Week Navigation */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, backgroundColor: colors.card, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12 }}>
         <Pressable
@@ -89,6 +110,11 @@ export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
           <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 14 }} numberOfLines={1}>
             {weekLabel}
           </Text>
+          {weekOffset > 0 ? (
+            <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 4 }}>
+              {t('historicalWeek') || 'Historical week'}
+            </Text>
+          ) : null}
         </View>
         <Pressable
           onPress={() => weekOffset > 0 && setWeekOffset(weekOffset - 1)}
@@ -181,6 +207,27 @@ export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
             {weeklyRecap.net_change >= 0 ? '+' : ''}{formatCompactCurrency(weeklyRecap.net_change, weeklyRecap.currency)}
           </Text>
         </View>
+
+        {onOpenHistory ? (
+          <Pressable
+            onPress={() => onOpenHistory(rangeTarget)}
+            style={({ pressed }) => ({
+              marginTop: 16,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: colors.accent,
+              borderRadius: 10,
+              paddingVertical: 12,
+              opacity: pressed ? 0.85 : 1,
+            })}
+            accessibilityRole="button"
+            accessibilityLabel={t('viewThisWeek') || 'View this week'}
+          >
+            <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold' }}>
+              {t('viewThisWeek') || 'View this week'}
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
 
       {/* Top Categories */}
@@ -200,7 +247,16 @@ export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
               const categoryColor = CATEGORY_COLORS[cat.category.toLowerCase()] || colors.accent;
 
               return (
-                <View key={cat.category}>
+                <Pressable
+                  key={cat.category}
+                  onPress={() => onOpenHistory?.({ ...rangeTarget, category: cat.category })}
+                  disabled={!onOpenHistory}
+                  style={({ pressed }) => ({
+                    opacity: pressed ? 0.82 : 1,
+                  })}
+                  accessibilityRole={onOpenHistory ? 'button' : undefined}
+                  accessibilityLabel={`${t('topCategory') || 'Top category'} ${cat.category}`}
+                >
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <StyledCategoryIcon
@@ -226,7 +282,7 @@ export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
                       }}
                     />
                   </View>
-                </View>
+                </Pressable>
               );
             })}
           </View>

@@ -1,8 +1,9 @@
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useTheme } from 'styled-components/native';
 import { StyledCategoryIcon } from '../../../../constants/icons';
 import { formatCompactCurrency, getTransactionCurrency } from '../../../../utils/format';
-import { formatDateKey } from '../../../../utils/dateRange';
+import { useLanguage } from '../../../../context/LanguageContext';
+import { createReportDateFormatter } from '../reportUX';
 import type { ChartBucket, NormalizedTransaction } from './types';
 
 interface DailySelectedRangeCardProps {
@@ -12,6 +13,7 @@ interface DailySelectedRangeCardProps {
   selectedTransactions: NormalizedTransaction[];
   reportCurrency: string;
   reportTimeZone: string;
+  onViewTransactions?: () => void;
 }
 
 function renderTransactionAmount(
@@ -34,9 +36,16 @@ export function DailySelectedRangeCard({
   selectedTransactions,
   reportCurrency,
   reportTimeZone,
+  onViewTransactions,
 }: DailySelectedRangeCardProps) {
+  const { language } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
+  const dateFormatter = createReportDateFormatter(
+    language,
+    { month: 'short', day: 'numeric', year: 'numeric' },
+    reportTimeZone
+  );
 
   return (
     <View style={{ backgroundColor: colors.card, padding: 20, borderRadius: 12 }}>
@@ -94,7 +103,7 @@ export function DailySelectedRangeCard({
                           {tx.description || tx.category || t('transactions')}
                         </Text>
                         <Text style={{ color: colors.mutedForeground, fontSize: 12 }} numberOfLines={1}>
-                          {formatDateKey(new Date(tx.created_at), reportTimeZone)}
+                          {dateFormatter.format(new Date(tx.created_at))}
                         </Text>
                       </View>
                     </View>
@@ -109,6 +118,26 @@ export function DailySelectedRangeCard({
           ) : (
             <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>{t('noActivity')}</Text>
           )}
+
+          {onViewTransactions ? (
+            <Pressable
+              onPress={onViewTransactions}
+              style={({ pressed }) => ({
+                marginTop: 16,
+                backgroundColor: colors.accent,
+                borderRadius: 10,
+                paddingVertical: 12,
+                alignItems: 'center',
+                opacity: pressed ? 0.85 : 1,
+              })}
+              accessibilityRole="button"
+              accessibilityLabel={t('viewTransactions') || 'View transactions'}
+            >
+              <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold' }}>
+                {t('viewTransactions') || 'View transactions'}
+              </Text>
+            </Pressable>
+          ) : null}
         </>
       ) : (
         <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>{t('noDataAvailable')}</Text>

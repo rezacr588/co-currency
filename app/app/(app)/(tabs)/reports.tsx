@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, RefreshControl, useWindowDimensions, Modal } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { Wallet, Calendar, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { api } from '../../../src/api';
@@ -25,27 +26,57 @@ import {
   MonthlyReportView,
   YearlyReportView,
 } from '../../../src/components/features/Reports';
+import { buildHistoryRouteParams, createReportDateFormatter, type ReportHistoryTarget } from '../../../src/components/features/Reports/reportUX';
 
-const LANGUAGE_LOCALES: Record<string, string> = {
-  en: 'en-US',
-  fa: 'fa-IR',
-  ar: 'ar-SA',
-  tr: 'tr-TR',
-};
+function ReportContextStrip({
+  timeZoneLabel,
+  activeLabel,
+}: {
+  timeZoneLabel: string;
+  activeLabel: string;
+}) {
+  const theme = useTheme();
+  const colors = theme.colors;
+  const { t } = useLanguage();
 
-function createDateFormatter(
-  language: string,
-  options: Intl.DateTimeFormatOptions,
-  timeZone?: string
-): Intl.DateTimeFormat {
-  const locale = LANGUAGE_LOCALES[language] || 'en-US';
-  const formatOptions: Intl.DateTimeFormatOptions = timeZone
-    ? { ...options, timeZone }
-    : { ...options };
-  if (language === 'fa') {
-    (formatOptions as Record<string, unknown>).calendar = 'persian';
-  }
-  return new Intl.DateTimeFormat(locale, formatOptions);
+  return (
+    <View
+      style={{
+        backgroundColor: colors.background,
+        paddingBottom: 16,
+        marginBottom: 16,
+      }}
+    >
+      <View
+        style={{
+          backgroundColor: colors.card,
+          borderWidth: 1,
+          borderColor: colors.border,
+          borderRadius: 14,
+          padding: 14,
+          gap: 10,
+        }}
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('analyticsTimeZone')}</Text>
+          <Text style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_600SemiBold' }}>
+            {timeZoneLabel}
+          </Text>
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+            {t('activeReportView') || 'Active View'}
+          </Text>
+          <Text
+            style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_600SemiBold', flexShrink: 1, marginLeft: 12, textAlign: 'right' }}
+            numberOfLines={1}
+          >
+            {activeLabel}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
 }
 
 // Month Picker Modal Component
@@ -378,8 +409,9 @@ export default function ReportsScreen() {
   const { t, language } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
+  const router = useRouter();
   const queryClient = useQueryClient();
-  const { reportTimeZone } = useReportTimeZone();
+  const { reportTimeZone, reportTimeZoneLabel } = useReportTimeZone();
   const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -405,12 +437,12 @@ export default function ReportsScreen() {
   const [selectedMonth, setSelectedMonth] = useState(reportToday.month);
 
   const monthShortLabels = useMemo(() => {
-    const formatter = createDateFormatter(language, { month: 'short' }, reportTimeZone);
+    const formatter = createReportDateFormatter(language, { month: 'short' }, reportTimeZone);
     return Array.from({ length: 12 }, (_, index) => formatter.format(getMonthLabelAnchor(index)));
   }, [language, reportTimeZone]);
 
   const monthLongLabels = useMemo(() => {
-    const formatter = createDateFormatter(language, { month: 'long' }, reportTimeZone);
+    const formatter = createReportDateFormatter(language, { month: 'long' }, reportTimeZone);
     return Array.from({ length: 12 }, (_, index) => formatter.format(getMonthLabelAnchor(index)));
   }, [language, reportTimeZone]);
 
@@ -475,6 +507,20 @@ export default function ReportsScreen() {
     setSelectedPreset('custom');
   };
 
+  const handleOpenHistory = (target: ReportHistoryTarget) => {
+    router.push({
+      pathname: '/(app)/(tabs)/wallet/history',
+      params: buildHistoryRouteParams(target),
+    });
+  };
+
+  const handleSelectReportMonth = ({ year, month }: { year: number; month: number }) => {
+    setPeriod('monthly');
+    setSelectedYear(year);
+    setSelectedMonth(month);
+    setSelectedPreset('custom');
+  };
+
   // Fetch networth for all views (shown above tabs)
   const { data: networth, isError: networthError } = useQuery({
     queryKey: ['reports', 'networth'],
@@ -489,10 +535,30 @@ export default function ReportsScreen() {
     setRefreshing(false);
   };
 
+  const activeReportLabel = useMemo(() => {
+    switch (period) {
+      case 'daily':
+        return t('dailyReport');
+      case 'weekly':
+        return t('weeklyReport');
+      case 'monthly':
+        return dateRange.label;
+      case 'yearly':
+        return t('yearlyReport');
+      case 'all_time':
+        return t('allTime');
+      default:
+        return t('monthlyReport');
+    }
+  }, [dateRange.label, period, t]);
+
+  const stickyHeaderIndex = networth && !networthError ? 2 : 1;
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
       <ScrollView
         style={{ flex: 1 }}
+        stickyHeaderIndices={[stickyHeaderIndex]}
         contentContainerStyle={{
           padding: isDesktop ? 32 : 24,
           maxWidth: 1400,
@@ -536,16 +602,21 @@ export default function ReportsScreen() {
           </View>
         )}
 
-        {/* Report Period Tabs */}
-        <ReportPeriodTabs selected={period} onSelect={setPeriod} />
+        <View style={{ backgroundColor: colors.background }}>
+          <ReportPeriodTabs selected={period} onSelect={setPeriod} />
+          <ReportContextStrip
+            timeZoneLabel={reportTimeZoneLabel}
+            activeLabel={activeReportLabel}
+          />
+        </View>
 
         {/* Conditional content based on period */}
         {period === 'daily' && (
-          <DailyReportView isTablet={isTablet} />
+          <DailyReportView isTablet={isTablet} onOpenHistory={handleOpenHistory} />
         )}
 
         {period === 'weekly' && (
-          <WeeklyReportView isTablet={isTablet} />
+          <WeeklyReportView isTablet={isTablet} onOpenHistory={handleOpenHistory} />
         )}
 
         {period === 'monthly' && (
@@ -575,12 +646,17 @@ export default function ReportsScreen() {
               isTablet={isTablet}
               categoryCardWidth={categoryCardWidth}
               categoryCols={categoryCols}
+              onOpenHistory={handleOpenHistory}
             />
           </>
         )}
 
         {period === 'yearly' && (
-          <YearlyReportView isTablet={isTablet} />
+          <YearlyReportView
+            isTablet={isTablet}
+            onOpenHistory={handleOpenHistory}
+            onSelectMonth={handleSelectReportMonth}
+          />
         )}
 
         {period === 'all_time' && (
@@ -588,6 +664,7 @@ export default function ReportsScreen() {
             isTablet={isTablet}
             categoryCardWidth={categoryCardWidth}
             categoryCols={categoryCols}
+            onOpenHistory={handleOpenHistory}
           />
         )}
       </ScrollView>

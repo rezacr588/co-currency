@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { View, Text } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { TrendingUp, AlertTriangle, Calendar, ArrowDown, ArrowUp } from 'lucide-react-native';
@@ -6,9 +7,72 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency } from '../../../utils/format';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
+import type { CashFlowEvent } from '../../../types/goal';
+import {
+  formatRelativeReportDateLabel,
+  formatReportDateKey,
+} from './reportUX';
+
+type UpcomingCashFlowEvent = CashFlowEvent & { date: string };
+
+interface EventGroup {
+  date: string;
+  relativeLabel: string;
+  absoluteLabel: string;
+  events: UpcomingCashFlowEvent[];
+  dayNet: number;
+}
+
+function getEventDirection(event: CashFlowEvent): 'credit' | 'debit' {
+  if (event.direction) {
+    return event.direction;
+  }
+
+  return event.type === 'subscription' ? 'debit' : 'credit';
+}
+
+function getEventBadgeLabel(event: CashFlowEvent, t: (key: string) => string): string {
+  if (event.type === 'subscription') {
+    return t('subscriptionLabel') || 'Subscription';
+  }
+
+  return getEventDirection(event) === 'credit'
+    ? (t('recurringIncome') || 'Recurring Income')
+    : (t('recurringExpense') || 'Recurring Expenses');
+}
+
+function groupEventsByDate(
+  events: UpcomingCashFlowEvent[],
+  language: string,
+  reportTimeZone: string,
+  t: (key: string) => string
+): EventGroup[] {
+  const groups = new Map<string, UpcomingCashFlowEvent[]>();
+
+  for (const event of events) {
+    const existing = groups.get(event.date) || [];
+    existing.push(event);
+    groups.set(event.date, existing);
+  }
+
+  return Array.from(groups.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([date, groupedEvents]) => ({
+      date,
+      relativeLabel: formatRelativeReportDateLabel(date, language, reportTimeZone, t),
+      absoluteLabel: formatReportDateKey(date, language, reportTimeZone, {
+        month: 'short',
+        day: 'numeric',
+      }),
+      events: groupedEvents,
+      dayNet: groupedEvents.reduce((sum, event) => {
+        return sum + (getEventDirection(event) === 'credit' ? event.amount : -event.amount);
+      }, 0),
+    }));
+}
 
 export function CashFlowProjectionCard() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
   const { reportTimeZone } = useReportTimeZone();
@@ -19,45 +83,70 @@ export function CashFlowProjectionCard() {
     staleTime: 5 * 60 * 1000,
   });
 
-  if (isPending || !report) return null;
+  const projections = report?.projections || [];
 
-  const projections = report.projections || [];
-  if (projections.length === 0) return null;
+  const chartData = useMemo(() => {
+    if (!report || projections.length === 0) {
+      return null;
+    }
 
-  // Calculate chart dimensions
-  const allBalances = [report.current_balance, ...projections.map((p) => p.balance)];
-  const maxBalance = Math.max(...allBalances);
-  const minBalance = Math.min(...allBalances);
-  const range = maxBalance - minBalance || 1;
-  const chartHeight = 120;
+    const allBalances = [report.current_balance, ...projections.map((p) => p.balance)];
+    const maxBalance = Math.max(...allBalances);
+    const minBalance = Math.min(...allBalances);
+    const range = maxBalance - minBalance || 1;
+    const chartHeight = 120;
+    const step = Math.max(1, Math.floor(projections.length / 15));
+    const sampledPoints = projections.filter((_, index) => index % step === 0 || index === projections.length - 1);
 
-  // Sample points for the chart (show every Nth day to fit)
-  const step = Math.max(1, Math.floor(projections.length / 15));
-  const sampledPoints = projections.filter((_, i) => i % step === 0 || i === projections.length - 1);
+    return {
+      chartHeight,
+      range,
+      minBalance,
+      sampledPoints,
+    };
+  }, [projections, report]);
 
-  // Collect upcoming events from next 5 days
-  const upcomingEvents = projections
-    .slice(0, 7)
-    .flatMap((p) =>
-      (p.events || []).map((e) => ({
-        ...e,
-        date: p.date,
-      }))
-    )
-    .slice(0, 5);
-  const hasUpcomingCredits = upcomingEvents.some((event) => event.direction === 'credit');
-  const hasUpcomingDebits = upcomingEvents.some(
-    (event) => event.direction === 'debit' || event.type === 'subscription'
+  const upcomingEvents = useMemo(() => {
+    return projections
+      .slice(0, 7)
+      .flatMap((projection) =>
+        (projection.events || []).map((event) => ({
+          ...event,
+          date: projection.date,
+        }))
+      );
+  }, [projections]);
+
+  const creditEvents = useMemo(
+    () => upcomingEvents.filter((event) => getEventDirection(event) === 'credit'),
+    [upcomingEvents]
   );
-  const upcomingEventsLabel = hasUpcomingCredits && hasUpcomingDebits
-    ? t('upcomingEvents') || 'Upcoming Events'
-    : hasUpcomingCredits
-      ? t('upcomingIncome') || 'Upcoming Income'
-      : t('upcomingCharges') || 'Upcoming Charges';
+  const debitEvents = useMemo(
+    () => upcomingEvents.filter((event) => getEventDirection(event) === 'debit'),
+    [upcomingEvents]
+  );
+  const groupedCreditEvents = useMemo(
+    () => groupEventsByDate(creditEvents, language, reportTimeZone, t),
+    [creditEvents, language, reportTimeZone, t]
+  );
+  const groupedDebitEvents = useMemo(
+    () => groupEventsByDate(debitEvents, language, reportTimeZone, t),
+    [debitEvents, language, reportTimeZone, t]
+  );
+  const hasMixedDirections = groupedCreditEvents.length > 0 && groupedDebitEvents.length > 0;
+  const lowestBalanceLabel = report
+    ? formatRelativeReportDateLabel(report.lowest_date, language, reportTimeZone, t)
+    : '';
+  const dangerDateLabel = report?.danger_date
+    ? formatRelativeReportDateLabel(report.danger_date, language, reportTimeZone, t)
+    : null;
+
+  if (isPending || !report || projections.length === 0 || !chartData) {
+    return null;
+  }
 
   return (
     <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
-      {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
         <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
           <TrendingUp size={20} color={colors.accent} />
@@ -72,14 +161,13 @@ export function CashFlowProjectionCard() {
         </View>
       </View>
 
-      {/* Balance Chart */}
-      <View style={{ height: chartHeight, marginBottom: 8 }}>
+      <View style={{ height: chartData.chartHeight, marginBottom: 8 }}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: '100%', gap: 2 }}>
-          {sampledPoints.map((point, index) => {
+          {chartData.sampledPoints.map((point, index) => {
             const normalizedHeight =
-              range > 0
-                ? ((point.balance - minBalance) / range) * (chartHeight - 20) + 10
-                : chartHeight / 2;
+              chartData.range > 0
+                ? ((point.balance - chartData.minBalance) / chartData.range) * (chartData.chartHeight - 20) + 10
+                : chartData.chartHeight / 2;
 
             const isNegative = point.balance < 0;
             const isLow =
@@ -107,18 +195,16 @@ export function CashFlowProjectionCard() {
             );
           })}
         </View>
-        {/* X-axis labels */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
           <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
-            {projections[0]?.date.slice(5) || ''}
+            {formatReportDateKey(projections[0]?.date || report.lowest_date, language, reportTimeZone)}
           </Text>
           <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
-            {projections[projections.length - 1]?.date.slice(5) || ''}
+            {formatReportDateKey(projections[projections.length - 1]?.date || report.lowest_date, language, reportTimeZone)}
           </Text>
         </View>
       </View>
 
-      {/* Legend */}
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginBottom: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.success, marginRight: 4 }} />
@@ -134,7 +220,6 @@ export function CashFlowProjectionCard() {
         </View>
       </View>
 
-      {/* Danger Zone Alert */}
       {report.danger_zone && report.danger_date && (
         <View style={{ backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
           <AlertTriangle size={20} color={colors.danger} />
@@ -143,14 +228,12 @@ export function CashFlowProjectionCard() {
               {t('dangerZone') || 'Danger Zone'}
             </Text>
             <Text style={{ color: colors.danger + 'cc', fontSize: 12, marginTop: 2 }}>
-              {t('balanceGoesNegative') || 'Balance projected to go negative on'}{' '}
-              {report.danger_date}
+              {`${t('closestRiskDay') || 'Closest risk day'}: ${dangerDateLabel} (${formatReportDateKey(report.danger_date, language, reportTimeZone)})`}
             </Text>
           </View>
         </View>
       )}
 
-      {/* Summary Stats */}
       <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
         <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
           <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
@@ -180,7 +263,9 @@ export function CashFlowProjectionCard() {
           >
             {formatCompactCurrency(report.lowest_balance, report.currency)}
           </Text>
-          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{report.lowest_date}</Text>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+            {`${lowestBalanceLabel} (${formatReportDateKey(report.lowest_date, language, reportTimeZone)})`}
+          </Text>
         </View>
         <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
           <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
@@ -195,7 +280,6 @@ export function CashFlowProjectionCard() {
         </View>
       </View>
 
-      {/* Recurring/Subscription breakdown */}
       {(report.summary.recurring_income > 0 ||
         report.summary.recurring_expense > 0 ||
         report.summary.subscription_cost > 0) && (
@@ -236,62 +320,159 @@ export function CashFlowProjectionCard() {
         </View>
       )}
 
-      {/* Upcoming Events */}
       {upcomingEvents.length > 0 && (
         <View>
-          <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: 8 }}>
-            {upcomingEventsLabel}
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: 10 }}>
+            {hasMixedDirections
+              ? (t('upcomingEvents') || 'Upcoming Events')
+              : groupedCreditEvents.length > 0
+                ? (t('upcomingIncome') || 'Upcoming Income')
+                : (t('upcomingCharges') || 'Upcoming Charges')}
           </Text>
-          {upcomingEvents.map((event, idx) => {
-            const isExpense = event.direction === 'debit' || event.type === 'subscription';
-            const eventTint = event.type === 'subscription'
-              ? colors.accent
-              : isExpense
-                ? colors.danger
-                : colors.success;
 
-            return (
-              <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border + '80' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+          {[
+            {
+              key: 'credits',
+              visible: groupedCreditEvents.length > 0,
+              title: hasMixedDirections ? (t('incomingSection') || 'Incoming') : null,
+              groups: groupedCreditEvents,
+              tone: colors.success,
+            },
+            {
+              key: 'debits',
+              visible: groupedDebitEvents.length > 0,
+              title: hasMixedDirections ? (t('outgoingSection') || 'Outgoing') : null,
+              groups: groupedDebitEvents,
+              tone: colors.danger,
+            },
+          ]
+            .filter((section) => section.visible)
+            .map((section) => (
+              <View key={section.key} style={{ marginBottom: section.key === 'debits' ? 0 : 16 }}>
+                {section.title ? (
+                  <Text style={{ color: section.tone, fontFamily: 'Inter_600SemiBold', marginBottom: 10 }}>
+                    {section.title}
+                  </Text>
+                ) : null}
+
+                {section.groups.map((group) => (
                   <View
+                    key={`${section.key}-${group.date}`}
                     style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: 4,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginRight: 8,
-                      backgroundColor: event.type === 'subscription' ? colors.accent + '20' : eventTint + '20',
+                      backgroundColor: colors.secondary + '40',
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      borderRadius: 12,
+                      padding: 12,
+                      marginBottom: 10,
                     }}
                   >
-                    {event.type === 'subscription' ? (
-                      <Calendar size={12} color={colors.accent} />
-                    ) : !isExpense ? (
-                      <ArrowUp size={12} color={eventTint} />
-                    ) : (
-                      <ArrowDown size={12} color={eventTint} />
-                    )}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                      <View>
+                        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
+                          {group.relativeLabel}
+                        </Text>
+                        <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+                          {group.absoluteLabel}
+                        </Text>
+                      </View>
+                      {group.events.length > 1 ? (
+                        <Text
+                          style={{
+                            color: group.dayNet >= 0 ? colors.success : colors.danger,
+                            fontSize: 12,
+                            fontFamily: 'Inter_600SemiBold',
+                          }}
+                        >
+                          {(t('dayNetImpact') || 'Day net') + ': '}
+                          {group.dayNet >= 0 ? '+' : ''}
+                          {formatCompactCurrency(group.dayNet, report.currency)}
+                        </Text>
+                      ) : null}
+                    </View>
+
+                    {group.events.map((event, index) => {
+                      const isExpense = getEventDirection(event) === 'debit';
+                      const eventTint = event.type === 'subscription'
+                        ? colors.accent
+                        : isExpense
+                          ? colors.danger
+                          : colors.success;
+
+                      return (
+                        <View
+                          key={`${group.date}-${event.description}-${index}`}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            paddingVertical: 8,
+                            borderBottomWidth: index === group.events.length - 1 ? 0 : 1,
+                            borderBottomColor: colors.border + '80',
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 12 }}>
+                            <View
+                              style={{
+                                width: 26,
+                                height: 26,
+                                borderRadius: 6,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginRight: 10,
+                                backgroundColor: event.type === 'subscription' ? colors.accent + '20' : eventTint + '20',
+                              }}
+                            >
+                              {event.type === 'subscription' ? (
+                                <Calendar size={12} color={colors.accent} />
+                              ) : isExpense ? (
+                                <ArrowDown size={12} color={eventTint} />
+                              ) : (
+                                <ArrowUp size={12} color={eventTint} />
+                              )}
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ color: colors.foreground, fontSize: 14 }} numberOfLines={1}>
+                                {event.description}
+                              </Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                                <View
+                                  style={{
+                                    backgroundColor: eventTint + '14',
+                                    borderRadius: 9999,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 3,
+                                  }}
+                                >
+                                  <Text style={{ color: eventTint, fontSize: 11, fontFamily: 'Inter_500Medium' }}>
+                                    {getEventBadgeLabel(event, t)}
+                                  </Text>
+                                </View>
+                                {event.category ? (
+                                  <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+                                    {event.category}
+                                  </Text>
+                                ) : null}
+                              </View>
+                            </View>
+                          </View>
+                          <Text
+                            style={{
+                              fontSize: 14,
+                              fontFamily: 'Inter_600SemiBold',
+                              color: isExpense ? colors.danger : colors.success,
+                            }}
+                          >
+                            {isExpense ? '-' : '+'}
+                            {formatCompactCurrency(event.amount, report.currency)}
+                          </Text>
+                        </View>
+                      );
+                    })}
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: colors.foreground, fontSize: 14 }} numberOfLines={1}>
-                      {event.description}
-                    </Text>
-                    <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{event.date}</Text>
-                  </View>
-                </View>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontFamily: 'Inter_500Medium',
-                    color: isExpense ? colors.danger : colors.success,
-                  }}
-                >
-                  {isExpense ? '-' : '+'}
-                  {formatCompactCurrency(event.amount, report.currency)}
-                </Text>
+                ))}
               </View>
-            );
-          })}
+            ))}
         </View>
       )}
     </View>
