@@ -136,7 +136,7 @@ export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
                 color: isPositiveCompare ? colors.success : comparePercent > 0 ? colors.danger : colors.mutedForeground,
               }}
             >
-              {comparePercent > 0 ? '+' : ''}{formatNumber(comparePercent, 1)}% {t('weekOverWeek')}
+              {comparePercent > 0 ? '+' : ''}{formatNumber(comparePercent, 1)}% {t('expensesVsLastWeek') || 'Expenses vs last week'}
             </Text>
           </View>
         </View>

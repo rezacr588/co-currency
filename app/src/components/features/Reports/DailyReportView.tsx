@@ -121,7 +121,9 @@ export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
         </View>
 
         <View style={{ backgroundColor: colors.accent + '1a', borderWidth: 1, borderColor: colors.accent + '40', borderRadius: 12, padding: 16, width: isTablet ? '48.5%' : '48%' }}>
-          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>{t('avgDaily')}</Text>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
+            {t('avgDailyNet') || `${t('avgDaily')} ${t('net')}`}
+          </Text>
           <Text style={{ fontSize: 18, fontFamily: 'Inter_700Bold', color: report.averageDailyNet >= 0 ? colors.success : colors.danger }}>
             {report.averageDailyNet >= 0 ? '+' : ''}
             {formatCompactCurrency(report.averageDailyNet, report.reportCurrency)}
@@ -147,7 +149,7 @@ export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
                   color: report.comparedToLast <= 0 ? colors.success : colors.danger,
                 }}
               >
-                {`${report.comparedToLast < 0 ? '' : '+'}${Math.round(report.comparedToLast)}% ${t('vsPreviousPeriod') || 'vs previous period'}`}
+                {`${report.comparedToLast < 0 ? '' : '+'}${Math.round(report.comparedToLast)}% ${t('expensesVsPreviousPeriod') || 'Expenses vs previous period'}`}
               </Text>
             </View>
           )}

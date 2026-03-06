@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react-native';
+import { Calendar, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, AlertCircle, PieChart, Sparkles } from 'lucide-react-native';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency, formatNumber } from '../../../utils/format';
-import { getMonthLabelAnchor, getTimeZoneDateParts, safeMax } from '../../../utils/dateRange';
+import { buildDateKey, getMonthLabelAnchor, getTimeZoneDateParts, safeMax } from '../../../utils/dateRange';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
+import { HorizontalBarChart } from './MonthlyReportView';
 
 const LANGUAGE_LOCALES: Record<string, string> = {
   en: 'en-US',
@@ -25,7 +26,10 @@ export function YearlyReportView({ isTablet = false }: YearlyReportViewProps) {
   const theme = useTheme();
   const colors = theme.colors;
   const { reportTimeZone } = useReportTimeZone();
-  const currentYear = getTimeZoneDateParts(new Date(), reportTimeZone).year;
+  const today = getTimeZoneDateParts(new Date(), reportTimeZone);
+  const currentYear = today.year;
+  const currentMonth = today.month;
+  const currentDateKey = buildDateKey(today.year, today.month, today.day);
   const [selectedYear, setSelectedYear] = useState(currentYear);
 
   useEffect(() => {
@@ -37,6 +41,21 @@ export function YearlyReportView({ isTablet = false }: YearlyReportViewProps) {
   const { data: yearlyReport, isPending, isError } = useQuery({
     queryKey: ['reports', 'yearly', selectedYear, reportTimeZone],
     queryFn: () => api.reports.yearly(selectedYear, undefined, reportTimeZone),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const yearRange = useMemo(() => {
+    const fromDate = buildDateKey(selectedYear, 1, 1);
+    const toDate = selectedYear === currentYear
+      ? currentDateKey
+      : buildDateKey(selectedYear, 12, 31);
+
+    return { fromDate, toDate };
+  }, [currentDateKey, currentYear, selectedYear]);
+
+  const { data: categoryReport, isError: isCategoryError } = useQuery({
+    queryKey: ['reports', 'category', yearRange.fromDate, yearRange.toDate, reportTimeZone],
+    queryFn: () => api.reports.category(yearRange.fromDate, yearRange.toDate, undefined, reportTimeZone),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -58,6 +77,36 @@ export function YearlyReportView({ isTablet = false }: YearlyReportViewProps) {
     return Array.from({ length: 12 }, (_, index) => formatter.format(getMonthLabelAnchor(index)));
   }, [language, reportTimeZone]);
 
+  const maxMonthlyValue = yearlyReport?.months && yearlyReport.months.length > 0
+    ? safeMax(yearlyReport.months.flatMap((m) => [m.income, m.expenses]))
+    : 1;
+
+  const monthsInScope = useMemo(() => {
+    if (!yearlyReport?.months) return [];
+    const visibleMonths = selectedYear === currentYear ? currentMonth : 12;
+    return yearlyReport.months.slice(0, visibleMonths);
+  }, [currentMonth, currentYear, selectedYear, yearlyReport?.months]);
+
+  const averageMonthlyIncome = useMemo(() => {
+    if (monthsInScope.length === 0) return 0;
+    return monthsInScope.reduce((sum, month) => sum + month.income, 0) / monthsInScope.length;
+  }, [monthsInScope]);
+
+  const averageMonthlyExpenses = useMemo(() => {
+    if (monthsInScope.length === 0) return 0;
+    return monthsInScope.reduce((sum, month) => sum + month.expenses, 0) / monthsInScope.length;
+  }, [monthsInScope]);
+
+  const bestNetMonth = useMemo(() => {
+    if (monthsInScope.length === 0) return null;
+    return monthsInScope.reduce((best, month) => (month.net > best.net ? month : best), monthsInScope[0]);
+  }, [monthsInScope]);
+
+  const highestExpenseMonth = useMemo(() => {
+    if (monthsInScope.length === 0) return null;
+    return monthsInScope.reduce((highest, month) => (month.expenses > highest.expenses ? month : highest), monthsInScope[0]);
+  }, [monthsInScope]);
+
   if (isPending) {
     return (
       <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 32 }}>
@@ -75,10 +124,6 @@ export function YearlyReportView({ isTablet = false }: YearlyReportViewProps) {
       </View>
     );
   }
-
-  const maxMonthlyValue = yearlyReport?.months && yearlyReport.months.length > 0
-    ? safeMax(yearlyReport.months.flatMap((m) => [m.income, m.expenses]))
-    : 1;
 
   return (
     <View>
@@ -172,7 +217,84 @@ export function YearlyReportView({ isTablet = false }: YearlyReportViewProps) {
                 </Text>
               </View>
             </View>
+
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
+              <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
+                  {t('avgMonthlyIncome') || 'Avg Monthly Income'}
+                </Text>
+                <Text style={{ color: colors.success, fontSize: 18, fontFamily: 'Inter_700Bold' }}>
+                  {formatCompactCurrency(averageMonthlyIncome, yearlyReport.currency)}
+                </Text>
+              </View>
+              <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
+                  {t('avgMonthlyExpenses') || 'Avg Monthly Expenses'}
+                </Text>
+                <Text style={{ color: colors.danger, fontSize: 18, fontFamily: 'Inter_700Bold' }}>
+                  {formatCompactCurrency(averageMonthlyExpenses, yearlyReport.currency)}
+                </Text>
+              </View>
+              {bestNetMonth && (
+                <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
+                    {t('bestMonth') || 'Best Month'}
+                  </Text>
+                  <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold', marginBottom: 2 }}>
+                    {monthLabels[bestNetMonth.month - 1]}
+                  </Text>
+                  <Text style={{ color: bestNetMonth.net >= 0 ? colors.success : colors.danger, fontSize: 18, fontFamily: 'Inter_700Bold' }}>
+                    {bestNetMonth.net >= 0 ? '+' : ''}{formatCompactCurrency(bestNetMonth.net, bestNetMonth.currency)}
+                  </Text>
+                </View>
+              )}
+              {highestExpenseMonth && (
+                <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
+                    {t('highestSpendingMonth') || 'Highest Spending Month'}
+                  </Text>
+                  <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold', marginBottom: 2 }}>
+                    {monthLabels[highestExpenseMonth.month - 1]}
+                  </Text>
+                  <Text style={{ color: colors.danger, fontSize: 18, fontFamily: 'Inter_700Bold' }}>
+                    {formatCompactCurrency(highestExpenseMonth.expenses, highestExpenseMonth.currency)}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
+
+          {bestNetMonth && highestExpenseMonth && (
+            <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
+                  <Sparkles size={20} color={colors.accent} />
+                </View>
+                <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
+                  {t('yearlyInsights') || 'Yearly Insights'}
+                </Text>
+              </View>
+
+              <View style={{ gap: 10 }}>
+                <View style={{ backgroundColor: colors.secondary + '4d', padding: 12, borderRadius: 8 }}>
+                  <Text style={{ color: colors.foreground, fontSize: 14 }}>
+                    {(t('bestMonth') || 'Best Month') + ': '}
+                    <Text style={{ fontFamily: 'Inter_600SemiBold' }}>
+                      {`${monthLabels[bestNetMonth.month - 1]} (${bestNetMonth.net >= 0 ? '+' : ''}${formatCompactCurrency(bestNetMonth.net, bestNetMonth.currency)})`}
+                    </Text>
+                  </Text>
+                </View>
+                <View style={{ backgroundColor: colors.secondary + '4d', padding: 12, borderRadius: 8 }}>
+                  <Text style={{ color: colors.foreground, fontSize: 14 }}>
+                    {(t('highestSpendingMonth') || 'Highest Spending Month') + ': '}
+                    <Text style={{ fontFamily: 'Inter_600SemiBold' }}>
+                      {`${monthLabels[highestExpenseMonth.month - 1]} (${formatCompactCurrency(highestExpenseMonth.expenses, highestExpenseMonth.currency)})`}
+                    </Text>
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
 
           {/* 12-Month Bar Chart */}
           {yearlyReport.months && yearlyReport.months.length > 0 && (
@@ -226,6 +348,35 @@ export function YearlyReportView({ isTablet = false }: YearlyReportViewProps) {
             </View>
           )}
 
+          {isCategoryError && (
+            <View style={{ backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', padding: 16, borderRadius: 12, marginBottom: 24 }}>
+              <Text style={{ color: colors.danger, fontSize: 14 }}>
+                {t('failedToLoadCategories') || 'Failed to load category breakdown'}
+              </Text>
+            </View>
+          )}
+
+          {categoryReport && categoryReport.categories.length > 0 && (
+            <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginRight: 12 }}>
+                  <PieChart size={20} color={colors.mutedForeground} />
+                </View>
+                <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
+                  {t('spendingByCategory')}
+                </Text>
+              </View>
+
+              <HorizontalBarChart
+                data={categoryReport.categories.slice(0, 6)}
+                maxValue={safeMax(categoryReport.categories.map((category) => category.amount))}
+                labelKey="category"
+                valueKey="amount"
+                formatValue={(value) => formatCompactCurrency(value, categoryReport.currency)}
+              />
+            </View>
+          )}
+
           {/* Monthly Breakdown List */}
           {yearlyReport.months && yearlyReport.months.length > 0 && (
             <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12 }}>
@@ -234,26 +385,42 @@ export function YearlyReportView({ isTablet = false }: YearlyReportViewProps) {
                 {yearlyReport.months.map((month) => (
                   <View
                     key={month.month}
-                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.secondary + '4d', padding: 12, borderRadius: 8 }}
+                    style={{ backgroundColor: colors.secondary + '4d', padding: 12, borderRadius: 8 }}
                   >
                     <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>
                       {monthLabels[month.month - 1]}
                     </Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                      <Text style={{ color: colors.success, fontSize: 14 }}>
-                        +{formatCompactCurrency(month.income, month.currency)}
-                      </Text>
-                      <Text style={{ color: colors.danger, fontSize: 14 }}>
-                        -{formatCompactCurrency(month.expenses, month.currency)}
-                      </Text>
-                      <Text
-                        style={{
-                          fontFamily: 'Inter_600SemiBold',
-                          color: month.net >= 0 ? colors.success : colors.danger,
-                        }}
-                      >
-                        {month.net >= 0 ? '+' : ''}{formatCompactCurrency(month.net, month.currency)}
-                      </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                      <View style={{ width: isTablet ? '31%' : '48%', backgroundColor: colors.success + '14', padding: 10, borderRadius: 8 }}>
+                        <Text style={{ color: colors.mutedForeground, fontSize: 11, marginBottom: 4 }}>
+                          {t('income')}
+                        </Text>
+                        <Text style={{ color: colors.success, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>
+                          +{formatCompactCurrency(month.income, month.currency)}
+                        </Text>
+                      </View>
+                      <View style={{ width: isTablet ? '31%' : '48%', backgroundColor: colors.danger + '14', padding: 10, borderRadius: 8 }}>
+                        <Text style={{ color: colors.mutedForeground, fontSize: 11, marginBottom: 4 }}>
+                          {t('expenses')}
+                        </Text>
+                        <Text style={{ color: colors.danger, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>
+                          -{formatCompactCurrency(month.expenses, month.currency)}
+                        </Text>
+                      </View>
+                      <View style={{ width: isTablet ? '31%' : '48%', backgroundColor: colors.secondary + '80', padding: 10, borderRadius: 8 }}>
+                        <Text style={{ color: colors.mutedForeground, fontSize: 11, marginBottom: 4 }}>
+                          {t('net')}
+                        </Text>
+                        <Text
+                          style={{
+                            color: month.net >= 0 ? colors.success : colors.danger,
+                            fontSize: 14,
+                            fontFamily: 'Inter_600SemiBold',
+                          }}
+                        >
+                          {month.net >= 0 ? '+' : ''}{formatCompactCurrency(month.net, month.currency)}
+                        </Text>
+                      </View>
                     </View>
                   </View>
                 ))}

@@ -117,45 +117,57 @@ export function WeeklyRecapCard({ compact = false }: WeeklyRecapCardProps) {
 
       {/* Weekly Stats Row */}
       {weeklyRecap && (
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16, backgroundColor: colors.muted + '80', padding: 12, borderRadius: 8 }}>
-          <View style={{ alignItems: 'center', flex: 1 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+          <View style={{ width: '48%', backgroundColor: colors.muted + '80', padding: 12, borderRadius: 8 }}>
             <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 4 }}>
-              {t('thisWeek') || 'This Week'}
+              {t('totalIncome')}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TrendingDown size={14} color="#ef4444" />
+              <TrendingUp size={14} color={colors.success} />
+              <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginLeft: 4 }}>
+                {formatCompactCurrency(weeklyRecap.total_income, weeklyRecap.currency)}
+              </Text>
+            </View>
+          </View>
+
+          <View style={{ width: '48%', backgroundColor: colors.muted + '80', padding: 12, borderRadius: 8 }}>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 4 }}>
+              {t('totalExpenses')}
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TrendingDown size={14} color={colors.danger} />
               <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginLeft: 4 }}>
                 {formatCompactCurrency(weeklyRecap.total_spent, weeklyRecap.currency)}
               </Text>
             </View>
           </View>
-          {weeklyRecap.compared_to_last !== 0 && (
-            <View style={{ alignItems: 'center', flex: 1 }}>
-              <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 4 }}>
-                {t('vsLastWeek') || 'vs Last Week'}
-              </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                {weeklyRecap.compared_to_last <= 0 ? (
-                  <TrendingDown size={14} color="#22c55e" />
-                ) : (
-                  <TrendingUp size={14} color="#ef4444" />
-                )}
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontFamily: 'Inter_600SemiBold',
-                    marginLeft: 4,
-                    color: weeklyRecap.compared_to_last <= 0 ? colors.success : colors.danger,
-                  }}
-                >
-                  {`${weeklyRecap.compared_to_last < 0 ? '' : '+'}${Math.round(weeklyRecap.compared_to_last)}%`}
-                </Text>
-              </View>
-            </View>
-          )}
-          <View style={{ alignItems: 'center', flex: 1 }}>
+
+          <View style={{ width: '48%', backgroundColor: colors.muted + '80', padding: 12, borderRadius: 8 }}>
             <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 4 }}>
-              {t('savingsRate') || 'Savings'}
+              {t('expensesVsLastWeek') || 'Expenses vs last week'}
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {weeklyRecap.compared_to_last <= 0 ? (
+                <TrendingDown size={14} color={colors.success} />
+              ) : (
+                <TrendingUp size={14} color={colors.danger} />
+              )}
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontFamily: 'Inter_600SemiBold',
+                  marginLeft: 4,
+                  color: weeklyRecap.compared_to_last <= 0 ? colors.success : colors.danger,
+                }}
+              >
+                {`${weeklyRecap.compared_to_last < 0 ? '' : '+'}${Math.round(weeklyRecap.compared_to_last)}%`}
+              </Text>
+            </View>
+          </View>
+
+          <View style={{ width: '48%', backgroundColor: colors.muted + '80', padding: 12, borderRadius: 8 }}>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 4 }}>
+              {t('savingsRate') || 'Savings Rate'}
             </Text>
             <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
               {weeklyRecap.total_income > 0

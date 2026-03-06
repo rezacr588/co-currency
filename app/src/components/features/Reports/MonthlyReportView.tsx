@@ -337,7 +337,7 @@ export function MonthlyReportView({
                     color: expenseChange <= 0 ? colors.success : colors.danger,
                   }}
                 >
-                  {expenseChange > 0 ? '+' : ''}{formatNumber(expenseChange, 1)}% {t('vsLastMonth')}
+                  {expenseChange > 0 ? '+' : ''}{formatNumber(expenseChange, 1)}% {t('expensesVsLastMonth') || 'Expenses vs last month'}
                 </Text>
               </View>
             </View>
