@@ -639,6 +639,8 @@ export const fa = {
   monthlyTotal: 'Monthly Total',
   yearlyTotal: 'Yearly Total',
   upcomingRenewals: 'Upcoming Renewals',
+  upcomingEvents: 'رویدادهای آینده',
+  upcomingIncome: 'درآمدهای آینده',
   noSubscriptions: 'No subscriptions yet',
   trackRecurringPayments: 'Start tracking your recurring payments and subscriptions',
   addFirstSubscription: 'Add your first subscription',

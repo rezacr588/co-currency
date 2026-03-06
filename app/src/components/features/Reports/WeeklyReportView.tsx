@@ -72,6 +72,7 @@ export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
   const weekLabel = weekOffset === 0
     ? t('currentWeek')
     : `${weeklyRecap.week_start} — ${weeklyRecap.week_end}`;
+  const summaryTitle = weekOffset === 0 ? t('thisWeek') : weekLabel;
 
   return (
     <View>
@@ -106,7 +107,7 @@ export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
             <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
               <Calendar size={20} color={colors.accent} />
             </View>
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('thisWeek')}</Text>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{summaryTitle}</Text>
           </View>
 
           {/* Week over Week Comparison */}

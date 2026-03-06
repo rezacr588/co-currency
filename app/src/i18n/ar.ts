@@ -639,6 +639,8 @@ export const ar = {
   monthlyTotal: 'Monthly Total',
   yearlyTotal: 'Yearly Total',
   upcomingRenewals: 'Upcoming Renewals',
+  upcomingEvents: 'الأحداث القادمة',
+  upcomingIncome: 'الإيرادات القادمة',
   noSubscriptions: 'No subscriptions yet',
   trackRecurringPayments: 'Start tracking your recurring payments and subscriptions',
   addFirstSubscription: 'Add your first subscription',

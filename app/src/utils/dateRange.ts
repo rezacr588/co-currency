@@ -25,6 +25,10 @@ export function buildDateKey(year: number, month: number, day: number): string {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
+export function getMonthLabelAnchor(monthIndex: number, year = 2024): Date {
+  return new Date(Date.UTC(year, monthIndex, 1, 12));
+}
+
 export function getTimeZoneDateParts(date: Date, timeZone = REPORT_TIME_ZONE): CalendarDateParts {
   const formatter = new Intl.DateTimeFormat('en-CA', {
     timeZone,

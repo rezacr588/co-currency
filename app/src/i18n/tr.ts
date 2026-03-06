@@ -639,6 +639,8 @@ export const tr = {
   monthlyTotal: 'Monthly Total',
   yearlyTotal: 'Yearly Total',
   upcomingRenewals: 'Upcoming Renewals',
+  upcomingEvents: 'Yaklaşan Hareketler',
+  upcomingIncome: 'Yaklaşan Gelirler',
   noSubscriptions: 'No subscriptions yet',
   trackRecurringPayments: 'Start tracking your recurring payments and subscriptions',
   addFirstSubscription: 'Add your first subscription',

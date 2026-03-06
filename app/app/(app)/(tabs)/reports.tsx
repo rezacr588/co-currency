@@ -13,6 +13,7 @@ import { useReportTimeZone } from '../../../src/hooks/useReportTimeZone';
 import {
   type DatePreset,
   getDateRangeFromPreset,
+  getMonthLabelAnchor,
   getTimeZoneDateParts,
 } from '../../../src/utils/dateRange';
 import {
@@ -405,12 +406,12 @@ export default function ReportsScreen() {
 
   const monthShortLabels = useMemo(() => {
     const formatter = createDateFormatter(language, { month: 'short' }, reportTimeZone);
-    return Array.from({ length: 12 }, (_, index) => formatter.format(new Date(2024, index, 1)));
+    return Array.from({ length: 12 }, (_, index) => formatter.format(getMonthLabelAnchor(index)));
   }, [language, reportTimeZone]);
 
   const monthLongLabels = useMemo(() => {
     const formatter = createDateFormatter(language, { month: 'long' }, reportTimeZone);
-    return Array.from({ length: 12 }, (_, index) => formatter.format(new Date(2024, index, 1)));
+    return Array.from({ length: 12 }, (_, index) => formatter.format(getMonthLabelAnchor(index)));
   }, [language, reportTimeZone]);
 
   // Get date range from current selection

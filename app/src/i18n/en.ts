@@ -641,6 +641,8 @@ export const en = {
   monthlyTotal: 'Monthly Total',
   yearlyTotal: 'Yearly Total',
   upcomingRenewals: 'Upcoming Renewals',
+  upcomingEvents: 'Upcoming Events',
+  upcomingIncome: 'Upcoming Income',
   noSubscriptions: 'No subscriptions yet',
   trackRecurringPayments: 'Start tracking your recurring payments and subscriptions',
   addFirstSubscription: 'Add your first subscription',

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react-native';
@@ -6,17 +6,22 @@ import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency, formatNumber } from '../../../utils/format';
-import { getTimeZoneDateParts, safeMax } from '../../../utils/dateRange';
+import { getMonthLabelAnchor, getTimeZoneDateParts, safeMax } from '../../../utils/dateRange';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const LANGUAGE_LOCALES: Record<string, string> = {
+  en: 'en-US',
+  fa: 'fa-IR',
+  ar: 'ar-SA',
+  tr: 'tr-TR',
+};
 
 interface YearlyReportViewProps {
   isTablet?: boolean;
 }
 
 export function YearlyReportView({ isTablet = false }: YearlyReportViewProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
   const { reportTimeZone } = useReportTimeZone();
@@ -34,6 +39,24 @@ export function YearlyReportView({ isTablet = false }: YearlyReportViewProps) {
     queryFn: () => api.reports.yearly(selectedYear, undefined, reportTimeZone),
     staleTime: 5 * 60 * 1000,
   });
+
+  const monthLabels = useMemo(() => {
+    const formatOptions: Intl.DateTimeFormatOptions = {
+      month: 'short',
+      timeZone: reportTimeZone,
+    };
+
+    if (language === 'fa') {
+      (formatOptions as Record<string, unknown>).calendar = 'persian';
+    }
+
+    const formatter = new Intl.DateTimeFormat(
+      LANGUAGE_LOCALES[language] || 'en-US',
+      formatOptions
+    );
+
+    return Array.from({ length: 12 }, (_, index) => formatter.format(getMonthLabelAnchor(index)));
+  }, [language, reportTimeZone]);
 
   if (isPending) {
     return (
@@ -162,7 +185,7 @@ export function YearlyReportView({ isTablet = false }: YearlyReportViewProps) {
               </View>
 
               <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 4, height: 140 }}>
-                {MONTH_NAMES.map((monthName, index) => {
+                {monthLabels.map((monthLabel, index) => {
                   const monthData = yearlyReport.months.find((m) => m.month === index + 1);
                   const incomeHeight = maxMonthlyValue > 0 && monthData
                     ? (monthData.income / maxMonthlyValue) * 100
@@ -172,7 +195,7 @@ export function YearlyReportView({ isTablet = false }: YearlyReportViewProps) {
                     : 0;
 
                   return (
-                    <View key={monthName} style={{ flex: 1, alignItems: 'center' }}>
+                    <View key={monthLabel} style={{ flex: 1, alignItems: 'center' }}>
                       <View style={{ flexDirection: 'row', gap: 2, alignItems: 'flex-end', height: 100 }}>
                         <View
                           style={{ width: 6, borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: colors.success, height: Math.max(incomeHeight, 2) }}
@@ -182,7 +205,7 @@ export function YearlyReportView({ isTablet = false }: YearlyReportViewProps) {
                         />
                       </View>
                       <Text style={{ color: colors.mutedForeground, fontSize: 10, marginTop: 4 }}>
-                        {monthName}
+                        {monthLabel}
                       </Text>
                     </View>
                   );
@@ -214,7 +237,7 @@ export function YearlyReportView({ isTablet = false }: YearlyReportViewProps) {
                     style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.secondary + '4d', padding: 12, borderRadius: 8 }}
                   >
                     <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>
-                      {MONTH_NAMES[month.month - 1]}
+                      {monthLabels[month.month - 1]}
                     </Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
                       <Text style={{ color: colors.success, fontSize: 14 }}>

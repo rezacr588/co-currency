@@ -1,6 +1,6 @@
 import { View, Text } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, AlertTriangle, Calendar, ArrowDown } from 'lucide-react-native';
+import { TrendingUp, AlertTriangle, Calendar, ArrowDown, ArrowUp } from 'lucide-react-native';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
@@ -45,6 +45,15 @@ export function CashFlowProjectionCard() {
       }))
     )
     .slice(0, 5);
+  const hasUpcomingCredits = upcomingEvents.some((event) => event.direction === 'credit');
+  const hasUpcomingDebits = upcomingEvents.some(
+    (event) => event.direction === 'debit' || event.type === 'subscription'
+  );
+  const upcomingEventsLabel = hasUpcomingCredits && hasUpcomingDebits
+    ? t('upcomingEvents') || 'Upcoming Events'
+    : hasUpcomingCredits
+      ? t('upcomingIncome') || 'Upcoming Income'
+      : t('upcomingCharges') || 'Upcoming Charges';
 
   return (
     <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
@@ -231,7 +240,7 @@ export function CashFlowProjectionCard() {
       {upcomingEvents.length > 0 && (
         <View>
           <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: 8 }}>
-            {t('upcomingCharges') || 'Upcoming Charges'}
+            {upcomingEventsLabel}
           </Text>
           {upcomingEvents.map((event, idx) => {
             const isExpense = event.direction === 'debit' || event.type === 'subscription';
@@ -257,6 +266,8 @@ export function CashFlowProjectionCard() {
                   >
                     {event.type === 'subscription' ? (
                       <Calendar size={12} color={colors.accent} />
+                    ) : !isExpense ? (
+                      <ArrowUp size={12} color={eventTint} />
                     ) : (
                       <ArrowDown size={12} color={eventTint} />
                     )}

@@ -2,6 +2,7 @@ import {
   REPORT_TIME_ZONE,
   formatDateKey,
   getDateRangeFromPreset,
+  getMonthLabelAnchor,
   shiftCalendarDate,
 } from '../dateRange';
 
@@ -34,5 +35,22 @@ describe('report date helpers', () => {
       month: 2,
       day: 22,
     });
+  });
+
+  it('uses a timezone-neutral month anchor for month labels', () => {
+    const januaryAnchor = getMonthLabelAnchor(0);
+
+    expect(
+      new Intl.DateTimeFormat('en-US', {
+        month: 'long',
+        timeZone: 'UTC',
+      }).format(januaryAnchor)
+    ).toBe('January');
+    expect(
+      new Intl.DateTimeFormat('en-US', {
+        month: 'long',
+        timeZone: 'America/Los_Angeles',
+      }).format(januaryAnchor)
+    ).toBe('January');
   });
 });
