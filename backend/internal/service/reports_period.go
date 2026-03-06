@@ -13,8 +13,7 @@ import (
 
 // GetMonthlyReport generates a monthly financial summary
 func (s *ReportsService) GetMonthlyReport(ctx context.Context, userID uuid.UUID, year, month int, currency string) (*MonthlyReport, error) {
-	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
-	endDate := startDate.AddDate(0, 1, 0).Add(-time.Nanosecond)
+	startDate, endDate := reportMonthBoundsForContext(ctx, year, time.Month(month))
 
 	var income, expenses float64
 	rateCache := make(map[string]float64)
@@ -82,7 +81,7 @@ func (s *ReportsService) GetMonthlyReport(ctx context.Context, userID uuid.UUID,
 
 // GetDateRangeReport generates a financial summary across an arbitrary date range
 func (s *ReportsService) GetDateRangeReport(ctx context.Context, userID uuid.UUID, fromDate, toDate, currency string) (*DateRangeReport, error) {
-	startDate, endDate, err := parseISODateRange(fromDate, toDate)
+	startDate, endDate, err := parseISODateRange(ctx, fromDate, toDate)
 	if err != nil {
 		return nil, err
 	}

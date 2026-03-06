@@ -1,8 +1,17 @@
 // Date range preset types
+import { DEFAULT_REPORT_TIME_ZONE } from './reportTimeZone';
+
 export type DatePreset = 'this_month' | 'last_month' | 'last_3_months' | 'last_6_months' | 'this_year' | 'last_year' | 'all_time' | 'custom';
 
 export const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 export const FULL_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+export const REPORT_TIME_ZONE = DEFAULT_REPORT_TIME_ZONE;
+
+export interface CalendarDateParts {
+  year: number;
+  month: number;
+  day: number;
+}
 
 export interface DateRange {
   year?: number;
@@ -12,11 +21,46 @@ export interface DateRange {
   label: string;
 }
 
+export function buildDateKey(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+export function getTimeZoneDateParts(date: Date, timeZone = REPORT_TIME_ZONE): CalendarDateParts {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = formatter.formatToParts(date);
+
+  const year = Number(parts.find((part) => part.type === 'year')?.value);
+  const month = Number(parts.find((part) => part.type === 'month')?.value);
+  const day = Number(parts.find((part) => part.type === 'day')?.value);
+
+  return { year, month, day };
+}
+
+export function shiftCalendarDate(parts: CalendarDateParts, days: number): CalendarDateParts {
+  const shifted = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 12));
+  shifted.setUTCDate(shifted.getUTCDate() + days);
+
+  return {
+    year: shifted.getUTCFullYear(),
+    month: shifted.getUTCMonth() + 1,
+    day: shifted.getUTCDate(),
+  };
+}
+
+export function getDaysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0, 12)).getUTCDate();
+}
+
 // Get date range from preset
-export function getDateRangeFromPreset(preset: DatePreset): DateRange {
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
+export function getDateRangeFromPreset(preset: DatePreset, timeZone = REPORT_TIME_ZONE): DateRange {
+  const today = getTimeZoneDateParts(new Date(), timeZone);
+  const currentYear = today.year;
+  const currentMonth = today.month;
 
   switch (preset) {
     case 'this_month':
@@ -27,20 +71,20 @@ export function getDateRangeFromPreset(preset: DatePreset): DateRange {
       return { year: lastMonthYear, month: lastMonth, label: `${FULL_MONTH_NAMES[lastMonth - 1]} ${lastMonthYear}` };
     }
     case 'last_3_months': {
-      const fromDate = new Date(currentYear, currentMonth - 3, 1);
-      const toDate = new Date(currentYear, currentMonth, 0);
+      const fromDate = new Date(Date.UTC(currentYear, currentMonth - 3, 1, 12));
+      const toDate = new Date(Date.UTC(currentYear, currentMonth, 0, 12));
       return {
-        fromDate: fromDate.toISOString().split('T')[0],
-        toDate: toDate.toISOString().split('T')[0],
+        fromDate: buildDateKey(fromDate.getUTCFullYear(), fromDate.getUTCMonth() + 1, fromDate.getUTCDate()),
+        toDate: buildDateKey(toDate.getUTCFullYear(), toDate.getUTCMonth() + 1, toDate.getUTCDate()),
         label: 'Last 3 Months',
       };
     }
     case 'last_6_months': {
-      const fromDate = new Date(currentYear, currentMonth - 6, 1);
-      const toDate = new Date(currentYear, currentMonth, 0);
+      const fromDate = new Date(Date.UTC(currentYear, currentMonth - 6, 1, 12));
+      const toDate = new Date(Date.UTC(currentYear, currentMonth, 0, 12));
       return {
-        fromDate: fromDate.toISOString().split('T')[0],
-        toDate: toDate.toISOString().split('T')[0],
+        fromDate: buildDateKey(fromDate.getUTCFullYear(), fromDate.getUTCMonth() + 1, fromDate.getUTCDate()),
+        toDate: buildDateKey(toDate.getUTCFullYear(), toDate.getUTCMonth() + 1, toDate.getUTCDate()),
         label: 'Last 6 Months',
       };
     }
@@ -59,7 +103,7 @@ export function getDateRangeFromPreset(preset: DatePreset): DateRange {
     case 'all_time':
       return {
         fromDate: '2020-01-01',
-        toDate: now.toISOString().split('T')[0],
+        toDate: buildDateKey(today.year, today.month, today.day),
         label: 'All Time',
       };
     default:
@@ -81,7 +125,12 @@ export function getWeekRange(date: Date): { start: Date; end: Date } {
 }
 
 // Format date to YYYY-MM-DD (using local timezone)
-export function formatDateKey(date: Date): string {
+export function formatDateKey(date: Date, timeZone?: string): string {
+  if (timeZone) {
+    const parts = getTimeZoneDateParts(date, timeZone);
+    return buildDateKey(parts.year, parts.month, parts.day);
+  }
+
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');

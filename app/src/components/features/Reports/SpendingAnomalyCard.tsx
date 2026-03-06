@@ -7,6 +7,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency } from '../../../utils/format';
 import { StyledCategoryIcon } from '../../../constants/icons';
+import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 import type { AnomalyReport } from '../../../types/goal';
 
 interface SpendingAnomalyCardProps {
@@ -18,10 +19,11 @@ export function SpendingAnomalyCard({ compact = false }: SpendingAnomalyCardProp
   const theme = useTheme();
   const colors = theme.colors;
   const [expanded, setExpanded] = useState(false);
+  const { reportTimeZone } = useReportTimeZone();
 
   const { data: report } = useQuery({
-    queryKey: ['reports', 'anomalies'],
-    queryFn: () => api.reports.anomalies(),
+    queryKey: ['reports', 'anomalies', reportTimeZone],
+    queryFn: () => api.reports.anomalies(undefined, reportTimeZone),
     staleTime: 5 * 60 * 1000,
   });
 

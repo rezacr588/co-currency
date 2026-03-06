@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"time"
@@ -19,6 +20,10 @@ func NewReportsHandler(reportsService *service.ReportsService) *ReportsHandler {
 	return &ReportsHandler{reportsService: reportsService}
 }
 
+func reportContext(r *http.Request) context.Context {
+	return service.WithReportTimeZone(r.Context(), r.URL.Query().Get("timezone"))
+}
+
 // GetMonthlyReport handles GET /api/v1/reports/monthly
 func (h *ReportsHandler) GetMonthlyReport(w http.ResponseWriter, r *http.Request) {
 	userID, ok := requireUserID(w, r)
@@ -27,8 +32,10 @@ func (h *ReportsHandler) GetMonthlyReport(w http.ResponseWriter, r *http.Request
 	}
 
 	// Parse optional year and month parameters
-	year := time.Now().Year()
-	month := int(time.Now().Month())
+	ctx := reportContext(r)
+	now := service.ReportNowForContext(ctx)
+	year := now.Year()
+	month := int(now.Month())
 
 	if y := r.URL.Query().Get("year"); y != "" {
 		if parsed, err := strconv.Atoi(y); err == nil {
@@ -46,7 +53,7 @@ func (h *ReportsHandler) GetMonthlyReport(w http.ResponseWriter, r *http.Request
 		currency = "USD"
 	}
 
-	report, err := h.reportsService.GetMonthlyReport(r.Context(), userID, year, month, currency)
+	report, err := h.reportsService.GetMonthlyReport(ctx, userID, year, month, currency)
 	if err != nil {
 		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate monthly report")
 		return
@@ -62,7 +69,8 @@ func (h *ReportsHandler) GetYearlyReport(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	year := time.Now().Year()
+	ctx := reportContext(r)
+	year := service.ReportNowForContext(ctx).Year()
 	if y := r.URL.Query().Get("year"); y != "" {
 		if parsed, err := strconv.Atoi(y); err == nil {
 			year = parsed
@@ -74,7 +82,7 @@ func (h *ReportsHandler) GetYearlyReport(w http.ResponseWriter, r *http.Request)
 		currency = "USD"
 	}
 
-	report, err := h.reportsService.GetYearlyReport(r.Context(), userID, year, currency)
+	report, err := h.reportsService.GetYearlyReport(ctx, userID, year, currency)
 	if err != nil {
 		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate yearly report")
 		return
@@ -93,7 +101,8 @@ func (h *ReportsHandler) GetDateRangeReport(w http.ResponseWriter, r *http.Reque
 	fromDate := r.URL.Query().Get("from_date")
 	toDate := r.URL.Query().Get("to_date")
 
-	now := time.Now()
+	ctx := reportContext(r)
+	now := service.ReportNowForContext(ctx)
 	if fromDate == "" {
 		fromDate = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
 	}
@@ -106,7 +115,7 @@ func (h *ReportsHandler) GetDateRangeReport(w http.ResponseWriter, r *http.Reque
 		currency = "USD"
 	}
 
-	report, err := h.reportsService.GetDateRangeReport(r.Context(), userID, fromDate, toDate, currency)
+	report, err := h.reportsService.GetDateRangeReport(ctx, userID, fromDate, toDate, currency)
 	if err != nil {
 		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate date range report")
 		return
@@ -127,7 +136,8 @@ func (h *ReportsHandler) GetCategoryReport(w http.ResponseWriter, r *http.Reques
 	toDate := r.URL.Query().Get("to_date")
 
 	// Default to current month if not specified
-	now := time.Now()
+	ctx := reportContext(r)
+	now := service.ReportNowForContext(ctx)
 	if fromDate == "" {
 		fromDate = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
 	}
@@ -140,7 +150,7 @@ func (h *ReportsHandler) GetCategoryReport(w http.ResponseWriter, r *http.Reques
 		currency = "USD"
 	}
 
-	report, err := h.reportsService.GetCategoryReport(r.Context(), userID, fromDate, toDate, currency)
+	report, err := h.reportsService.GetCategoryReport(ctx, userID, fromDate, toDate, currency)
 	if err != nil {
 		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate category report")
 		return
@@ -169,7 +179,8 @@ func (h *ReportsHandler) GetTrendsReport(w http.ResponseWriter, r *http.Request)
 		currency = "USD"
 	}
 
-	report, err := h.reportsService.GetTrendsReport(r.Context(), userID, months, currency)
+	ctx := reportContext(r)
+	report, err := h.reportsService.GetTrendsReport(ctx, userID, months, currency)
 	if err != nil {
 		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate trends report")
 		return
@@ -190,7 +201,7 @@ func (h *ReportsHandler) GetNetWorthReport(w http.ResponseWriter, r *http.Reques
 		currency = "USD"
 	}
 
-	report, err := h.reportsService.GetNetWorthReport(r.Context(), userID, currency)
+	report, err := h.reportsService.GetNetWorthReport(reportContext(r), userID, currency)
 	if err != nil {
 		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate net worth report")
 		return
@@ -211,7 +222,7 @@ func (h *ReportsHandler) GetForecast(w http.ResponseWriter, r *http.Request) {
 		currency = "USD"
 	}
 
-	report, err := h.reportsService.GetForecast(r.Context(), userID, currency)
+	report, err := h.reportsService.GetForecast(reportContext(r), userID, currency)
 	if err != nil {
 		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate forecast report")
 		return
@@ -232,7 +243,7 @@ func (h *ReportsHandler) GetInsights(w http.ResponseWriter, r *http.Request) {
 		currency = "USD"
 	}
 
-	insights, err := h.reportsService.GetInsights(r.Context(), userID, currency)
+	insights, err := h.reportsService.GetInsights(reportContext(r), userID, currency)
 	if err != nil {
 		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate insights")
 		return
@@ -253,7 +264,7 @@ func (h *ReportsHandler) GetHealthScore(w http.ResponseWriter, r *http.Request) 
 		currency = "USD"
 	}
 
-	healthScore, err := h.reportsService.GetHealthScore(r.Context(), userID, currency)
+	healthScore, err := h.reportsService.GetHealthScore(reportContext(r), userID, currency)
 	if err != nil {
 		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to calculate health score")
 		return
@@ -281,7 +292,7 @@ func (h *ReportsHandler) GetCashFlowProjection(w http.ResponseWriter, r *http.Re
 		}
 	}
 
-	report, err := h.reportsService.GetCashFlowProjection(r.Context(), userID, currency, days)
+	report, err := h.reportsService.GetCashFlowProjection(reportContext(r), userID, currency, days)
 	if err != nil {
 		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate cash flow projection")
 		return
@@ -302,7 +313,7 @@ func (h *ReportsHandler) GetSpendingAnomalies(w http.ResponseWriter, r *http.Req
 		currency = "USD"
 	}
 
-	report, err := h.reportsService.GetSpendingAnomalies(r.Context(), userID, currency)
+	report, err := h.reportsService.GetSpendingAnomalies(reportContext(r), userID, currency)
 	if err != nil {
 		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to detect spending anomalies")
 		return
@@ -323,15 +334,17 @@ func (h *ReportsHandler) GetWeeklyRecap(w http.ResponseWriter, r *http.Request) 
 		currency = "USD"
 	}
 
+	ctx := reportContext(r)
+
 	// Parse optional date parameter for week navigation
 	var referenceDate *time.Time
 	if dateStr := r.URL.Query().Get("date"); dateStr != "" {
-		if parsed, err := time.Parse("2006-01-02", dateStr); err == nil {
+		if parsed, err := time.ParseInLocation("2006-01-02", dateStr, service.ReportLocation(ctx)); err == nil {
 			referenceDate = &parsed
 		}
 	}
 
-	recap, err := h.reportsService.GetWeeklyRecap(r.Context(), userID, currency, referenceDate)
+	recap, err := h.reportsService.GetWeeklyRecap(ctx, userID, currency, referenceDate)
 	if err != nil {
 		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate weekly recap")
 		return

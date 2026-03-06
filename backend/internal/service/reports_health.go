@@ -26,7 +26,7 @@ func (s *ReportsService) GetInsights(ctx context.Context, userID uuid.UUID, curr
 // GetHealthScore calculates the user's financial health score
 func (s *ReportsService) GetHealthScore(ctx context.Context, userID uuid.UUID, currency string) (*HealthScoreReport, error) {
 	// Get current month's report
-	now := time.Now()
+	now := ReportNowForContext(ctx)
 	currentReport, err := s.GetMonthlyReport(ctx, userID, now.Year(), int(now.Month()), currency)
 	if err != nil {
 		return nil, err
@@ -82,7 +82,7 @@ func (s *ReportsService) GetHealthScore(ctx context.Context, userID uuid.UUID, c
 	// 4. Consistency (15% weight) - based on transaction frequency
 	consistency := 50.0
 	thirtyDaysAgo := now.AddDate(0, 0, -30)
-	dayCount, err := s.walletRepo.CountActiveTransactionDays(ctx, userID, thirtyDaysAgo.UTC(), now.UTC())
+	dayCount, err := s.walletRepo.CountActiveTransactionDays(ctx, userID, thirtyDaysAgo.UTC(), now.UTC(), ReportTimeZone(ctx))
 	if err == nil && dayCount > 0 {
 		if dayCount >= 20 {
 			consistency = 100.0
@@ -166,9 +166,10 @@ func (s *ReportsService) GetHealthScore(ctx context.Context, userID uuid.UUID, c
 
 // GetWeeklyRecap generates a weekly financial summary with AI insights
 func (s *ReportsService) GetWeeklyRecap(ctx context.Context, userID uuid.UUID, currency string, referenceDate *time.Time) (*WeeklyRecapReport, error) {
-	now := time.Now().UTC()
+	loc := ReportLocation(ctx)
+	now := ReportNowForContext(ctx)
 	if referenceDate != nil {
-		now = referenceDate.UTC()
+		now = referenceDate.In(loc)
 	}
 
 	// Calculate ISO 8601 week boundaries (Monday-Sunday)
@@ -177,17 +178,16 @@ func (s *ReportsService) GetWeeklyRecap(ctx context.Context, userID uuid.UUID, c
 		weekday = 7
 	}
 	daysSinceMonday := int(weekday) - 1
-	weekStart := time.Date(now.Year(), now.Month(), now.Day()-daysSinceMonday, 0, 0, 0, 0, time.UTC)
-	weekEnd := weekStart.AddDate(0, 0, 6)
-	weekEnd = time.Date(weekEnd.Year(), weekEnd.Month(), weekEnd.Day(), 23, 59, 59, 0, time.UTC)
+	weekStart := time.Date(now.Year(), now.Month(), now.Day()-daysSinceMonday, 0, 0, 0, 0, loc)
+	weekEnd := weekStart.AddDate(0, 0, 7).Add(-time.Nanosecond)
 
 	prevWeekStart := weekStart.AddDate(0, 0, -7)
-	prevWeekEnd := weekStart.Add(-time.Second) // Sunday 23:59:59 of previous week
+	prevWeekEnd := weekStart.Add(-time.Nanosecond)
 
 	// Get transactions for both weeks
 	filter := &model.TransactionFilter{
-		FromDate: prevWeekStart.Format("2006-01-02"),
-		ToDate:   weekEnd.Format("2006-01-02"),
+		FromTimestamp: prevWeekStart.UTC().Format(time.RFC3339),
+		ToTimestamp:   weekEnd.UTC().Format(time.RFC3339),
 	}
 	transactions, _, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, filter, 10000, 0)
 	if err != nil {
@@ -200,7 +200,8 @@ func (s *ReportsService) GetWeeklyRecap(ctx context.Context, userID uuid.UUID, c
 	categoryCounts := make(map[string]int)
 
 	for _, tx := range transactions {
-		if tx.CreatedAt.Before(weekStart) || tx.CreatedAt.After(weekEnd) {
+		txTime := tx.CreatedAt.In(loc)
+		if txTime.Before(weekStart) || txTime.After(weekEnd) {
 			continue
 		}
 
@@ -228,7 +229,8 @@ func (s *ReportsService) GetWeeklyRecap(ctx context.Context, userID uuid.UUID, c
 	// Calculate last week's totals for comparison
 	var lastWeekExpenses float64
 	for _, tx := range transactions {
-		if tx.CreatedAt.Before(prevWeekStart) || tx.CreatedAt.After(prevWeekEnd) {
+		txTime := tx.CreatedAt.In(loc)
+		if txTime.Before(prevWeekStart) || txTime.After(prevWeekEnd) {
 			continue
 		}
 
@@ -313,8 +315,8 @@ func (s *ReportsService) GetWeeklyRecap(ctx context.Context, userID uuid.UUID, c
 	}
 
 	return &WeeklyRecapReport{
-		WeekStart:      weekStart.Format("2006-01-02"),
-		WeekEnd:        weekEnd.Format("2006-01-02"),
+		WeekStart:      reportDateStringInLocation(weekStart, loc),
+		WeekEnd:        reportDateStringInLocation(weekEnd, loc),
 		TotalSpent:     thisWeekExpenses,
 		TotalIncome:    thisWeekIncome,
 		NetChange:      netChange,

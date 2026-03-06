@@ -2,6 +2,10 @@ import { createContext, useContext, useState, useEffect, useRef, ReactNode, useC
 import { Platform, AppState, AppStateStatus } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { readJSON, writeJSON } from '../utils/storage';
+import {
+  DEFAULT_REPORT_TIME_ZONE_PREFERENCE,
+  type ReportTimeZonePreference,
+} from '../utils/reportTimeZone';
 
 // Settings keys
 const SETTINGS_KEY = 'app_settings';
@@ -17,6 +21,7 @@ export interface AppSettings {
   weeklyRecap: boolean;
   // Display
   compactMode: boolean;
+  reportTimeZonePreference: ReportTimeZonePreference;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -27,6 +32,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   goalReminders: true,
   weeklyRecap: true,
   compactMode: false,
+  reportTimeZonePreference: DEFAULT_REPORT_TIME_ZONE_PREFERENCE,
 };
 
 interface SettingsContextType {

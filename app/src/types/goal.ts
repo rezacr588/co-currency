@@ -240,6 +240,7 @@ export interface ForecastReport {
 // Cash Flow Projection types
 export interface CashFlowEvent {
   type: 'recurring' | 'subscription' | 'loan' | 'historical_avg';
+  direction?: 'credit' | 'debit';
   description: string;
   amount: number;
   category?: string;

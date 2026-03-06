@@ -5,8 +5,10 @@ import { Calendar, TrendingUp, TrendingDown, Lightbulb, CheckCircle, AlertCircle
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
+import { buildDateKey, getTimeZoneDateParts, shiftCalendarDate } from '../../../utils/dateRange';
 import { formatCompactCurrency, formatNumber } from '../../../utils/format';
 import { CATEGORY_COLORS, StyledCategoryIcon } from '../../../constants/icons';
+import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 
 interface WeeklyReportViewProps {
   isTablet?: boolean;
@@ -16,18 +18,19 @@ export function WeeklyReportView({ isTablet = false }: WeeklyReportViewProps) {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
+  const { reportTimeZone } = useReportTimeZone();
   const [weekOffset, setWeekOffset] = useState(0);
 
   const referenceDate = useMemo(() => {
     if (weekOffset === 0) return undefined;
-    const d = new Date();
-    d.setDate(d.getDate() - weekOffset * 7);
-    return d.toISOString().split('T')[0];
-  }, [weekOffset]);
+    const today = getTimeZoneDateParts(new Date(), reportTimeZone);
+    const target = shiftCalendarDate(today, -weekOffset * 7);
+    return buildDateKey(target.year, target.month, target.day);
+  }, [reportTimeZone, weekOffset]);
 
   const { data: weeklyRecap, isPending, isError } = useQuery({
-    queryKey: ['reports', 'weekly-recap', weekOffset],
-    queryFn: () => api.reports.weeklyRecap(undefined, referenceDate),
+    queryKey: ['reports', 'weekly-recap', weekOffset, reportTimeZone],
+    queryFn: () => api.reports.weeklyRecap(undefined, referenceDate, reportTimeZone),
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
   });

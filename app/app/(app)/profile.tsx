@@ -38,6 +38,7 @@ import {
   Fingerprint,
   Eye,
   EyeOff,
+  Clock3,
 } from 'lucide-react-native';
 import { useAuth } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -46,6 +47,7 @@ import { useLanguage } from '../../src/context/LanguageContext';
 import { useSettings } from '../../src/context/SettingsContext';
 import { api } from '../../src/api';
 import { Toggle } from '../../src/components/ui/Toggle';
+import { getDeviceTimeZone, type ReportTimeZonePreference } from '../../src/utils/reportTimeZone';
 
 const LANGUAGES = [
   { code: 'en', name: 'English', flag: '🇺🇸' },
@@ -72,7 +74,36 @@ export default function ProfileScreen() {
 
   // Edit profile state
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showReportTimeZoneModal, setShowReportTimeZoneModal] = useState(false);
   const [editName, setEditName] = useState('');
+  const deviceTimeZone = getDeviceTimeZone();
+  const reportTimeZoneLabel =
+    settings.reportTimeZonePreference === 'device'
+      ? t('analyticsTimeZoneDevice')
+      : settings.reportTimeZonePreference === 'utc'
+        ? t('analyticsTimeZoneUtc')
+        : t('analyticsTimeZoneTurkish');
+  const reportTimeZoneOptions: {
+    preference: ReportTimeZonePreference;
+    label: string;
+    description: string;
+  }[] = [
+    {
+      preference: 'turkish',
+      label: t('analyticsTimeZoneTurkish'),
+      description: t('analyticsTimeZoneTurkishDesc'),
+    },
+    {
+      preference: 'device',
+      label: t('analyticsTimeZoneDevice'),
+      description: `${t('analyticsTimeZoneDeviceDesc')} (${deviceTimeZone})`,
+    },
+    {
+      preference: 'utc',
+      label: t('analyticsTimeZoneUtc'),
+      description: t('analyticsTimeZoneUtcDesc'),
+    },
+  ];
 
   const handleLogout = async () => {
     await logout();
@@ -392,6 +423,12 @@ export default function ProfileScreen() {
                 value={isDark ? t('dark') : t('light')}
                 onPress={toggleTheme}
                 showChevron={false}
+              />
+              <SettingsItem
+                icon={<Clock3 size={20} color={colors.accent} />}
+                label={t('analyticsTimeZone')}
+                value={reportTimeZoneLabel}
+                onPress={() => setShowReportTimeZoneModal(true)}
                 isLast
               />
             </SettingsSection>
@@ -751,6 +788,72 @@ export default function ProfileScreen() {
                   </>
                 )}
               </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={showReportTimeZoneModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowReportTimeZoneModal(false)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}
+          onPress={() => setShowReportTimeZoneModal(false)}
+        >
+          <Pressable
+            style={{ backgroundColor: colors.card, borderRadius: 16, padding: 24, margin: 16, width: isDesktop ? 420 : '90%', maxWidth: 420 }}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
+                {t('analyticsTimeZone')}
+              </Text>
+              <Pressable onPress={() => setShowReportTimeZoneModal(false)} hitSlop={8} style={{ cursor: 'pointer', padding: 8 }}>
+                <X size={24} color={colors.placeholder} />
+              </Pressable>
+            </View>
+
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 16 }}>
+              {t('analyticsTimeZoneDesc')}
+            </Text>
+
+            <View style={{ gap: 10 }}>
+              {reportTimeZoneOptions.map((option) => {
+                const isSelected = settings.reportTimeZonePreference === option.preference;
+                return (
+                  <Pressable
+                    key={option.preference}
+                    onPress={async () => {
+                      await updateSettings({ reportTimeZonePreference: option.preference });
+                      setShowReportTimeZoneModal(false);
+                    }}
+                    style={({ pressed }) => [{
+                      cursor: 'pointer',
+                      borderWidth: 1,
+                      borderColor: isSelected ? colors.accent : colors.border,
+                      backgroundColor: isSelected ? colors.accent + '12' : colors.secondary + '33',
+                      borderRadius: 12,
+                      padding: 14,
+                      opacity: pressed ? 0.72 : 1,
+                    }]}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flex: 1, paddingRight: 12 }}>
+                        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
+                          {option.label}
+                        </Text>
+                        <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 4 }}>
+                          {option.description}
+                        </Text>
+                      </View>
+                      {isSelected ? <Check size={18} color={colors.accent} /> : null}
+                    </View>
+                  </Pressable>
+                );
+              })}
             </View>
           </Pressable>
         </Pressable>

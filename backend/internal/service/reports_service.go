@@ -175,6 +175,7 @@ type CashFlowProjection struct {
 // CashFlowEvent represents a known future financial event
 type CashFlowEvent struct {
 	Type        string  `json:"type"`
+	Direction   string  `json:"direction,omitempty"`
 	Description string  `json:"description"`
 	Amount      float64 `json:"amount"`
 	Category    string  `json:"category,omitempty"`
@@ -223,18 +224,18 @@ type AnomalyReport struct {
 	Currency  string            `json:"currency"`
 }
 
-func parseISODateRange(fromDate, toDate string) (time.Time, time.Time, error) {
-	from, err := time.Parse("2006-01-02", fromDate)
+func parseISODateRange(ctx context.Context, fromDate, toDate string) (time.Time, time.Time, error) {
+	loc := ReportLocation(ctx)
+
+	from, err := time.ParseInLocation("2006-01-02", fromDate, loc)
 	if err != nil {
 		return time.Time{}, time.Time{}, fmt.Errorf("invalid from_date format (expected YYYY-MM-DD): %w", err)
 	}
-	to, err := time.Parse("2006-01-02", toDate)
+	to, err := time.ParseInLocation("2006-01-02", toDate, loc)
 	if err != nil {
 		return time.Time{}, time.Time{}, fmt.Errorf("invalid to_date format (expected YYYY-MM-DD): %w", err)
 	}
-	start := time.Date(from.Year(), from.Month(), from.Day(), 0, 0, 0, 0, time.UTC)
-	end := time.Date(to.Year(), to.Month(), to.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, 1).Add(-time.Nanosecond)
-	return start, end, nil
+	return reportDayStartInLocation(from, loc).UTC(), reportDayEndInLocation(to, loc).UTC(), nil
 }
 
 func (s *ReportsService) convertAmountWithRateCache(ctx context.Context, amount float64, fromCurrency, toCurrency string, rateCache map[string]float64) float64 {

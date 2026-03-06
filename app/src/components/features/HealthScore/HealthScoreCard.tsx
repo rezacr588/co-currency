@@ -5,6 +5,7 @@ import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { haptics } from '../../../utils/haptics';
+import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 
 interface HealthScoreData {
   score: number;
@@ -104,6 +105,7 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
+  const { reportTimeZone } = useReportTimeZone();
 
   const {
     data: healthScore,
@@ -111,8 +113,8 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
     refetch,
     isRefetching,
   } = useQuery<HealthScoreData>({
-    queryKey: ['reports', 'health-score'],
-    queryFn: () => api.reports.healthScore(),
+    queryKey: ['reports', 'health-score', reportTimeZone],
+    queryFn: () => api.reports.healthScore(undefined, reportTimeZone),
     staleTime: 30 * 60 * 1000, // 30 minutes
     retry: 1,
   });

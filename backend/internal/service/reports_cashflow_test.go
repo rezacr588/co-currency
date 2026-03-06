@@ -1234,3 +1234,37 @@ func TestMatchesRecurringDate_Weekly_AllWeekdays(t *testing.T) {
 		}
 	}
 }
+
+func TestMatchesRecurringDate_DoesNotMatchBeforeNextExecution(t *testing.T) {
+	rec := model.RecurringTransaction{
+		Frequency:     "monthly",
+		NextExecution: time.Date(2026, time.April, 20, 0, 0, 0, 0, reportsLocation),
+	}
+
+	dayBeforeAnchor := time.Date(2026, time.March, 20, 0, 0, 0, 0, reportsLocation)
+	if matchesRecurringDate(rec, dayBeforeAnchor) {
+		t.Fatal("expected monthly recurring not to match before next execution")
+	}
+
+	anchorDay := time.Date(2026, time.April, 20, 0, 0, 0, 0, reportsLocation)
+	if !matchesRecurringDate(rec, anchorDay) {
+		t.Fatal("expected monthly recurring to match on next execution day")
+	}
+}
+
+func TestMatchesSubscriptionDate_DoesNotMatchBeforeNextBillingDate(t *testing.T) {
+	sub := model.Subscription{
+		BillingCycle:    "quarterly",
+		NextBillingDate: time.Date(2026, time.May, 15, 0, 0, 0, 0, reportsLocation),
+	}
+
+	dayBeforeAnchor := time.Date(2026, time.February, 15, 0, 0, 0, 0, reportsLocation)
+	if matchesSubscriptionDate(sub, dayBeforeAnchor) {
+		t.Fatal("expected quarterly subscription not to match before next billing date")
+	}
+
+	anchorDay := time.Date(2026, time.May, 15, 0, 0, 0, 0, reportsLocation)
+	if !matchesSubscriptionDate(sub, anchorDay) {
+		t.Fatal("expected quarterly subscription to match on next billing day")
+	}
+}

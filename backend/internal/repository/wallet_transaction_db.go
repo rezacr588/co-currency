@@ -320,20 +320,20 @@ func (r *WalletRepository) GetCategoryTotalsByCurrency(ctx context.Context, user
 }
 
 // GetMonthlyTypeTotalsByCurrency returns monthly aggregated totals by type and currency for a date range.
-func (r *WalletRepository) GetMonthlyTypeTotalsByCurrency(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]AggregatedMonthlyTypeTotal, error) {
+func (r *WalletRepository) GetMonthlyTypeTotalsByCurrency(ctx context.Context, userID uuid.UUID, from, to time.Time, timeZone string) ([]AggregatedMonthlyTypeTotal, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT
-			DATE_TRUNC('month', created_at)::date AS period,
-			type,
-			currency,
-			COALESCE(SUM(amount), 0)::float8 AS total
-		FROM transactions
-		WHERE user_id = $1
-			AND created_at >= $2
-			AND created_at <= $3
-		GROUP BY DATE_TRUNC('month', created_at)::date, type, currency
-		ORDER BY period ASC
-	`, userID, from, to)
+			SELECT
+				DATE_TRUNC('month', created_at AT TIME ZONE $4)::date AS period,
+				type,
+				currency,
+				COALESCE(SUM(amount), 0)::float8 AS total
+			FROM transactions
+			WHERE user_id = $1
+				AND created_at >= $2
+				AND created_at <= $3
+			GROUP BY DATE_TRUNC('month', created_at AT TIME ZONE $4)::date, type, currency
+			ORDER BY period ASC
+		`, userID, from, to, timeZone)
 	if err != nil {
 		return nil, fmt.Errorf("querying monthly type totals: %w", err)
 	}
@@ -354,15 +354,15 @@ func (r *WalletRepository) GetMonthlyTypeTotalsByCurrency(ctx context.Context, u
 }
 
 // CountActiveTransactionDays returns the number of distinct days with at least one transaction in the range.
-func (r *WalletRepository) CountActiveTransactionDays(ctx context.Context, userID uuid.UUID, from, to time.Time) (int, error) {
+func (r *WalletRepository) CountActiveTransactionDays(ctx context.Context, userID uuid.UUID, from, to time.Time, timeZone string) (int, error) {
 	var dayCount int
 	if err := r.pool.QueryRow(ctx, `
-		SELECT COUNT(DISTINCT created_at::date)::int
-		FROM transactions
-		WHERE user_id = $1
-			AND created_at >= $2
+			SELECT COUNT(DISTINCT (created_at AT TIME ZONE $4)::date)::int
+			FROM transactions
+			WHERE user_id = $1
+				AND created_at >= $2
 			AND created_at <= $3
-	`, userID, from, to).Scan(&dayCount); err != nil {
+	`, userID, from, to, timeZone).Scan(&dayCount); err != nil {
 		return 0, fmt.Errorf("counting active transaction days: %w", err)
 	}
 	return dayCount, nil

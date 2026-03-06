@@ -9,9 +9,11 @@ import { useLanguage } from '../../../src/context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency, formatNumber } from '../../../src/utils/format';
 import { CATEGORY_COLORS } from '../../../src/constants/icons';
+import { useReportTimeZone } from '../../../src/hooks/useReportTimeZone';
 import {
   type DatePreset,
   getDateRangeFromPreset,
+  getTimeZoneDateParts,
 } from '../../../src/utils/dateRange';
 import {
   ReportPeriodTabs,
@@ -29,9 +31,15 @@ const LANGUAGE_LOCALES: Record<string, string> = {
   tr: 'tr-TR',
 };
 
-function createDateFormatter(language: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+function createDateFormatter(
+  language: string,
+  options: Intl.DateTimeFormatOptions,
+  timeZone?: string
+): Intl.DateTimeFormat {
   const locale = LANGUAGE_LOCALES[language] || 'en-US';
-  const formatOptions: Intl.DateTimeFormatOptions = { ...options };
+  const formatOptions: Intl.DateTimeFormatOptions = timeZone
+    ? { ...options, timeZone }
+    : { ...options };
   if (language === 'fa') {
     (formatOptions as Record<string, unknown>).calendar = 'persian';
   }
@@ -49,6 +57,7 @@ function MonthYearPicker({
   previousYearLabel,
   nextYearLabel,
   t,
+  reportTimeZone,
 }: {
   visible: boolean;
   onClose: () => void;
@@ -59,12 +68,14 @@ function MonthYearPicker({
   previousYearLabel: string;
   nextYearLabel: string;
   t: (key: string) => string;
+  reportTimeZone: string;
 }) {
   const theme = useTheme();
   const colors = theme.colors;
   const [viewYear, setViewYear] = useState(selectedYear);
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
+  const reportToday = useMemo(() => getTimeZoneDateParts(new Date(), reportTimeZone), [reportTimeZone]);
+  const currentYear = reportToday.year;
+  const currentMonth = reportToday.month;
 
   useEffect(() => {
     if (visible) {
@@ -178,6 +189,7 @@ function DateRangeSelector({
   previousYearLabel,
   nextYearLabel,
   t,
+  reportTimeZone,
 }: {
   selectedPreset: DatePreset;
   onPresetChange: (preset: DatePreset) => void;
@@ -190,6 +202,7 @@ function DateRangeSelector({
   previousYearLabel: string;
   nextYearLabel: string;
   t: (key: string) => string;
+  reportTimeZone: string;
 }) {
   const theme = useTheme();
   const colors = theme.colors;
@@ -269,6 +282,7 @@ function DateRangeSelector({
         previousYearLabel={previousYearLabel}
         nextYearLabel={nextYearLabel}
         t={t}
+        reportTimeZone={reportTimeZone}
       />
     </View>
   );
@@ -364,6 +378,7 @@ export default function ReportsScreen() {
   const theme = useTheme();
   const colors = theme.colors;
   const queryClient = useQueryClient();
+  const { reportTimeZone } = useReportTimeZone();
   const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -383,20 +398,20 @@ export default function ReportsScreen() {
   const [period, setPeriod] = useState<ReportPeriod>('monthly');
 
   // Date range state (for monthly view)
-  const now = new Date();
+  const reportToday = useMemo(() => getTimeZoneDateParts(new Date(), reportTimeZone), [reportTimeZone]);
   const [selectedPreset, setSelectedPreset] = useState<DatePreset>('this_month');
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(reportToday.year);
+  const [selectedMonth, setSelectedMonth] = useState(reportToday.month);
 
   const monthShortLabels = useMemo(() => {
-    const formatter = createDateFormatter(language, { month: 'short' });
+    const formatter = createDateFormatter(language, { month: 'short' }, reportTimeZone);
     return Array.from({ length: 12 }, (_, index) => formatter.format(new Date(2024, index, 1)));
-  }, [language]);
+  }, [language, reportTimeZone]);
 
   const monthLongLabels = useMemo(() => {
-    const formatter = createDateFormatter(language, { month: 'long' });
+    const formatter = createDateFormatter(language, { month: 'long' }, reportTimeZone);
     return Array.from({ length: 12 }, (_, index) => formatter.format(new Date(2024, index, 1)));
-  }, [language]);
+  }, [language, reportTimeZone]);
 
   // Get date range from current selection
   const dateRange = useMemo(() => {
@@ -408,7 +423,7 @@ export default function ReportsScreen() {
       };
     }
 
-    const baseRange = getDateRangeFromPreset(selectedPreset);
+    const baseRange = getDateRangeFromPreset(selectedPreset, reportTimeZone);
     const localizedLabelMap: Partial<Record<DatePreset, string>> = {
       last_3_months: t('threeMonths'),
       last_6_months: t('sixMonths'),
@@ -421,17 +436,32 @@ export default function ReportsScreen() {
       ...baseRange,
       label: localizedLabelMap[selectedPreset] || baseRange.label,
     };
-  }, [monthLongLabels, selectedMonth, selectedPreset, selectedYear, t]);
+  }, [monthLongLabels, reportTimeZone, selectedMonth, selectedPreset, selectedYear, t]);
+
+  useEffect(() => {
+    if (selectedPreset === 'this_month') {
+      setSelectedYear(reportToday.year);
+      setSelectedMonth(reportToday.month);
+      return;
+    }
+
+    if (selectedPreset === 'last_month') {
+      const lastMonth = reportToday.month === 1 ? 12 : reportToday.month - 1;
+      const lastMonthYear = reportToday.month === 1 ? reportToday.year - 1 : reportToday.year;
+      setSelectedYear(lastMonthYear);
+      setSelectedMonth(lastMonth);
+    }
+  }, [reportToday.month, reportToday.year, selectedPreset]);
 
   // Handle preset change
   const handlePresetChange = (preset: DatePreset) => {
     setSelectedPreset(preset);
     if (preset === 'this_month') {
-      setSelectedYear(now.getFullYear());
-      setSelectedMonth(now.getMonth() + 1);
+      setSelectedYear(reportToday.year);
+      setSelectedMonth(reportToday.month);
     } else if (preset === 'last_month') {
-      const lastMonth = now.getMonth() === 0 ? 12 : now.getMonth();
-      const lastMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+      const lastMonth = reportToday.month === 1 ? 12 : reportToday.month - 1;
+      const lastMonthYear = reportToday.month === 1 ? reportToday.year - 1 : reportToday.year;
       setSelectedYear(lastMonthYear);
       setSelectedMonth(lastMonth);
     }
@@ -532,6 +562,7 @@ export default function ReportsScreen() {
               previousYearLabel={t('previousYear')}
               nextYearLabel={t('nextYear')}
               t={t}
+              reportTimeZone={reportTimeZone}
             />
 
             {/* Monthly Report View */}

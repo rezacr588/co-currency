@@ -12,7 +12,7 @@ import (
 
 // GetCategoryReport generates a category-wise spending report
 func (s *ReportsService) GetCategoryReport(ctx context.Context, userID uuid.UUID, fromDate, toDate, currency string) (*CategoryReport, error) {
-	startDate, endDate, err := parseISODateRange(fromDate, toDate)
+	startDate, endDate, err := parseISODateRange(ctx, fromDate, toDate)
 	if err != nil {
 		return nil, err
 	}
@@ -65,15 +65,16 @@ func (s *ReportsService) GetTrendsReport(ctx context.Context, userID uuid.UUID, 
 	if months <= 0 {
 		months = 1
 	}
-	now := time.Now()
+	loc := ReportLocation(ctx)
+	now := ReportNowForContext(ctx)
 	trends := make([]TrendData, months)
 
 	// Calculate full date range for all months
-	currentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	currentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, loc)
 	rangeStart := currentMonth.AddDate(0, -(months - 1), 0)
 	rangeEnd := currentMonth.AddDate(0, 1, 0).Add(-time.Nanosecond)
 
-	monthlyRows, err := s.walletRepo.GetMonthlyTypeTotalsByCurrency(ctx, userID, rangeStart, rangeEnd)
+	monthlyRows, err := s.walletRepo.GetMonthlyTypeTotalsByCurrency(ctx, userID, rangeStart.UTC(), rangeEnd.UTC(), ReportTimeZone(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("getting monthly transaction totals: %w", err)
 	}
@@ -168,7 +169,7 @@ func (s *ReportsService) GetForecast(ctx context.Context, userID uuid.UUID, curr
 	}
 
 	// 2. Get last 30 days of transactions
-	endDate := time.Now()
+	endDate := ReportNowForContext(ctx)
 	startDate := endDate.AddDate(0, 0, -30)
 
 	totals, err := s.walletRepo.GetTypeTotalsByCurrency(ctx, userID, startDate.UTC(), endDate.UTC())
@@ -188,11 +189,7 @@ func (s *ReportsService) GetForecast(ctx context.Context, userID uuid.UUID, curr
 	}
 
 	// 3. Calculate averages using full elapsed days in range
-	activeDays := int(endDate.Sub(startDate).Hours()/24) + 1
-	if activeDays < 1 {
-		activeDays = 1
-	}
-	daysDivisor := float64(activeDays)
+	daysDivisor := 30.0
 	avgDailySpend := totalExpenses / daysDivisor
 	avgDailyIncome := totalIncome / daysDivisor
 	netDailyFlow := avgDailyIncome - avgDailySpend
@@ -203,7 +200,7 @@ func (s *ReportsService) GetForecast(ctx context.Context, userID uuid.UUID, curr
 	if netDailyFlow < 0 && nw.TotalBalance > 0 {
 		// Calculate how many days until balance reaches zero
 		daysUntilZero = int(nw.TotalBalance / (-netDailyFlow))
-		zeroDate := time.Now().AddDate(0, 0, daysUntilZero)
+		zeroDate := reportDayStartForContext(ctx, endDate).AddDate(0, 0, daysUntilZero)
 		estimatedZeroDate = &zeroDate
 	}
 

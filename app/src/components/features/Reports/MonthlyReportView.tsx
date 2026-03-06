@@ -6,11 +6,12 @@ import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency, formatNumber } from '../../../utils/format';
-import { safeMax } from '../../../utils/dateRange';
+import { buildDateKey, getDaysInMonth, safeMax } from '../../../utils/dateRange';
+import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 import { CATEGORY_COLORS, StyledCategoryIcon } from '../../../constants/icons';
 import { CashFlowProjectionCard } from './CashFlowProjectionCard';
 import { SpendingAnomalyCard } from './SpendingAnomalyCard';
-import type { MonthlyReport, DateRangeReport, CategoryReport, TrendsReport, ForecastReport } from '../../../types/goal';
+import type { MonthlyReport, DateRangeReport } from '../../../types/goal';
 
 // Shared chart components
 export function ComparisonBarChart({
@@ -188,6 +189,7 @@ export function MonthlyReportView({
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
+  const { reportTimeZone } = useReportTimeZone();
 
   const isDateRangeMode = !!(fromDate && toDate);
 
@@ -199,16 +201,16 @@ export function MonthlyReportView({
 
   // Date range report (used when fromDate & toDate are provided)
   const { data: dateRangeReport, isPending: isLoadingDateRange, isError: isDateRangeError } = useQuery({
-    queryKey: ['reports', 'date-range', fromDate, toDate],
-    queryFn: () => api.reports.dateRange(fromDate!, toDate!),
+    queryKey: ['reports', 'date-range', fromDate, toDate, reportTimeZone],
+    queryFn: () => api.reports.dateRange(fromDate!, toDate!, undefined, reportTimeZone),
     enabled: isDateRangeMode,
     staleTime: 5 * 60 * 1000,
   });
 
   // Monthly report (used in single-month mode)
   const { data: monthlyReportRaw, isPending: isLoadingMonthly, isError: isMonthlyError } = useQuery({
-    queryKey: ['reports', 'monthly', year, month],
-    queryFn: () => api.reports.monthly(year, month),
+    queryKey: ['reports', 'monthly', year, month, reportTimeZone],
+    queryFn: () => api.reports.monthly(year, month, undefined, reportTimeZone),
     enabled: !isDateRangeMode,
     staleTime: 5 * 60 * 1000,
   });
@@ -218,8 +220,8 @@ export function MonthlyReportView({
   const isReportError = isDateRangeMode ? isDateRangeError : isMonthlyError;
 
   const { data: prevMonthReport } = useQuery({
-    queryKey: ['reports', 'monthly', prevMonth.year, prevMonth.month],
-    queryFn: () => api.reports.monthly(prevMonth.year, prevMonth.month),
+    queryKey: ['reports', 'monthly', prevMonth.year, prevMonth.month, reportTimeZone],
+    queryFn: () => api.reports.monthly(prevMonth.year, prevMonth.month, undefined, reportTimeZone),
     enabled: !isDateRangeMode,
     staleTime: 5 * 60 * 1000,
   });
@@ -233,16 +235,16 @@ export function MonthlyReportView({
 
   // Category data from date-range report or separate query
   const { data: categoryReportSeparate, isPending: isLoadingCategory, isError: isCategoryError } = useQuery({
-    queryKey: ['reports', 'category', fromDate, toDate, year, month],
+    queryKey: ['reports', 'category', fromDate, toDate, year, month, reportTimeZone],
     queryFn: () => {
       if (fromDate && toDate) {
-        return api.reports.category(fromDate, toDate);
+        return api.reports.category(fromDate, toDate, undefined, reportTimeZone);
       }
-      const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0);
       return api.reports.category(
-        startDate.toISOString().split('T')[0],
-        endDate.toISOString().split('T')[0]
+        buildDateKey(year, month, 1),
+        buildDateKey(year, month, getDaysInMonth(year, month)),
+        undefined,
+        reportTimeZone
       );
     },
     enabled: !isDateRangeMode,
@@ -255,14 +257,14 @@ export function MonthlyReportView({
     : categoryReportSeparate;
 
   const { data: trendsReport, isPending: isLoadingTrends } = useQuery({
-    queryKey: ['reports', 'trends', 6],
-    queryFn: () => api.reports.trends(6),
+    queryKey: ['reports', 'trends', 6, reportTimeZone],
+    queryFn: () => api.reports.trends(6, undefined, reportTimeZone),
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: forecast, isPending: isLoadingForecast } = useQuery({
-    queryKey: ['reports', 'forecast'],
-    queryFn: () => api.reports.forecast(),
+    queryKey: ['reports', 'forecast', reportTimeZone],
+    queryFn: () => api.reports.forecast(undefined, reportTimeZone),
     staleTime: 5 * 60 * 1000,
   });
 

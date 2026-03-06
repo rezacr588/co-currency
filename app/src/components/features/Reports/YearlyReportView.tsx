@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react-native';
@@ -6,8 +6,8 @@ import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency, formatNumber } from '../../../utils/format';
-import { safeMax, getMonthName } from '../../../utils/dateRange';
-import type { YearlyReport } from '../../../types/goal';
+import { getTimeZoneDateParts, safeMax } from '../../../utils/dateRange';
+import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -19,12 +19,19 @@ export function YearlyReportView({ isTablet = false }: YearlyReportViewProps) {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
-  const currentYear = new Date().getFullYear();
+  const { reportTimeZone } = useReportTimeZone();
+  const currentYear = getTimeZoneDateParts(new Date(), reportTimeZone).year;
   const [selectedYear, setSelectedYear] = useState(currentYear);
 
+  useEffect(() => {
+    if (selectedYear > currentYear) {
+      setSelectedYear(currentYear);
+    }
+  }, [currentYear, selectedYear]);
+
   const { data: yearlyReport, isPending, isError } = useQuery({
-    queryKey: ['reports', 'yearly', selectedYear],
-    queryFn: () => api.reports.yearly(selectedYear),
+    queryKey: ['reports', 'yearly', selectedYear, reportTimeZone],
+    queryFn: () => api.reports.yearly(selectedYear, undefined, reportTimeZone),
     staleTime: 5 * 60 * 1000,
   });
 

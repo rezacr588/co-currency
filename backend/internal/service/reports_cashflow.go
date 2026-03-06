@@ -53,11 +53,12 @@ func (s *ReportsService) GetCashFlowProjection(ctx context.Context, userID uuid.
 	}
 
 	// 4. Get last 90 days of transactions for historical averages
-	now := time.Now()
+	loc := ReportLocation(ctx)
+	now := ReportNowForContext(ctx)
 	histStart := now.AddDate(0, 0, -90)
 	filter := &model.TransactionFilter{
-		FromDate: histStart.Format("2006-01-02"),
-		ToDate:   now.Format("2006-01-02"),
+		FromTimestamp: histStart.UTC().Format(time.RFC3339),
+		ToTimestamp:   now.UTC().Format(time.RFC3339),
 	}
 	transactions, _, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, filter, 10000, 0)
 	if err != nil {
@@ -80,7 +81,7 @@ func (s *ReportsService) GetCashFlowProjection(ctx context.Context, userID uuid.
 				amount = conversion.Result
 			}
 		}
-		wd := int(tx.CreatedAt.Weekday())
+		wd := int(reportWeekdayInLocation(tx.CreatedAt, loc))
 		if tx.Type == "credit" {
 			dayIncome[wd] += amount
 		} else if tx.Type == "debit" {
@@ -123,7 +124,7 @@ func (s *ReportsService) GetCashFlowProjection(ctx context.Context, userID uuid.
 				}
 			}
 		case "weekly":
-			wd := int(rec.NextExecution.Weekday())
+			wd := int(reportWeekdayInLocation(rec.NextExecution, loc))
 			if rec.Type == "credit" {
 				avgDayIncome[wd] = math.Max(0, avgDayIncome[wd]-recAmount)
 			} else {
@@ -170,7 +171,8 @@ func (s *ReportsService) GetCashFlowProjection(ctx context.Context, userID uuid.
 	projections := make([]CashFlowProjection, days)
 	balance := currentBalance
 	lowestBalance := currentBalance
-	lowestDate := now.Format("2006-01-02")
+	projectionStart := reportDayStartInLocation(now, loc)
+	lowestDate := reportDateStringInLocation(projectionStart, loc)
 	var dangerDate *string
 	dangerZone := false
 
@@ -178,8 +180,8 @@ func (s *ReportsService) GetCashFlowProjection(ctx context.Context, userID uuid.
 	var totalRecurringIncome, totalRecurringExpense, totalSubscriptionCost float64
 
 	for i := 0; i < days; i++ {
-		day := now.AddDate(0, 0, i+1)
-		dayStr := day.Format("2006-01-02")
+		day := projectionStart.AddDate(0, 0, i+1)
+		dayStr := reportDateStringInLocation(day, loc)
 		wd := int(day.Weekday())
 
 		var dailyIncome, dailyExpense float64
@@ -202,7 +204,7 @@ func (s *ReportsService) GetCashFlowProjection(ctx context.Context, userID uuid.
 				}
 			}
 
-			if matchesRecurringDate(rec, day) {
+			if matchesRecurringDate(rec, day, loc) {
 				desc := rec.Description
 				if desc == "" {
 					desc = rec.Category
@@ -212,6 +214,7 @@ func (s *ReportsService) GetCashFlowProjection(ctx context.Context, userID uuid.
 				}
 				events = append(events, CashFlowEvent{
 					Type:        "recurring",
+					Direction:   rec.Type,
 					Description: desc,
 					Amount:      recAmount,
 					Category:    rec.Category,
@@ -236,9 +239,10 @@ func (s *ReportsService) GetCashFlowProjection(ctx context.Context, userID uuid.
 				}
 			}
 
-			if matchesSubscriptionDate(sub, day) {
+			if matchesSubscriptionDate(sub, day, loc) {
 				events = append(events, CashFlowEvent{
 					Type:        "subscription",
+					Direction:   "debit",
 					Description: sub.Name,
 					Amount:      subAmount,
 					Category:    sub.Category,
@@ -297,34 +301,58 @@ func (s *ReportsService) GetCashFlowProjection(ctx context.Context, userID uuid.
 }
 
 // matchesRecurringDate checks if a recurring transaction falls on the given day
-func matchesRecurringDate(rec model.RecurringTransaction, day time.Time) bool {
-	next := rec.NextExecution
+func matchesRecurringDate(rec model.RecurringTransaction, day time.Time, locs ...*time.Location) bool {
+	loc := reportsLocation
+	if len(locs) > 0 && locs[0] != nil {
+		loc = locs[0]
+	}
+
+	next := reportDayStartInLocation(rec.NextExecution, loc)
+	day = reportDayStartInLocation(day, loc)
+	if day.Before(next) {
+		return false
+	}
 	switch rec.Frequency {
 	case "daily":
-		return true
+		return reportDayDiffInLocation(next, day, loc) >= 0
 	case "weekly":
-		return next.Weekday() == day.Weekday()
+		return reportDayDiffInLocation(next, day, loc)%7 == 0
 	case "monthly":
-		return matchesDayOfMonth(next.Day(), day)
+		return reportMonthDiffInLocation(next, day, loc) >= 0 && matchesDayOfMonth(next.Day(), day)
 	case "yearly":
-		return matchesDayOfMonth(next.Day(), day) && next.Month() == day.Month()
+		return day.In(loc).Year() >= next.In(loc).Year() &&
+			matchesDayOfMonth(next.Day(), day) &&
+			next.In(loc).Month() == day.In(loc).Month()
 	}
 	return false
 }
 
 // matchesSubscriptionDate checks if a subscription billing falls on the given day
-func matchesSubscriptionDate(sub model.Subscription, day time.Time) bool {
-	billingDay := sub.NextBillingDate.Day()
+func matchesSubscriptionDate(sub model.Subscription, day time.Time, locs ...*time.Location) bool {
+	loc := reportsLocation
+	if len(locs) > 0 && locs[0] != nil {
+		loc = locs[0]
+	}
+
+	nextBilling := reportDayStartInLocation(sub.NextBillingDate, loc)
+	day = reportDayStartInLocation(day, loc)
+	if day.Before(nextBilling) {
+		return false
+	}
+
+	billingDay := nextBilling.Day()
 	switch sub.BillingCycle {
 	case "weekly":
-		return sub.NextBillingDate.Weekday() == day.Weekday()
+		return reportDayDiffInLocation(nextBilling, day, loc)%7 == 0
 	case "monthly":
 		return matchesDayOfMonth(billingDay, day)
 	case "quarterly":
-		monthDiff := (int(day.Month()) - int(sub.NextBillingDate.Month()) + 12) % 12
+		monthDiff := reportMonthDiffInLocation(nextBilling, day, loc)
 		return matchesDayOfMonth(billingDay, day) && monthDiff%3 == 0
 	case "yearly":
-		return matchesDayOfMonth(billingDay, day) && sub.NextBillingDate.Month() == day.Month()
+		return day.In(loc).Year() >= nextBilling.In(loc).Year() &&
+			matchesDayOfMonth(billingDay, day) &&
+			nextBilling.In(loc).Month() == day.In(loc).Month()
 	}
 	return false
 }
@@ -341,13 +369,14 @@ func matchesDayOfMonth(targetDay int, day time.Time) bool {
 
 // GetSpendingAnomalies detects unusual spending patterns
 func (s *ReportsService) GetSpendingAnomalies(ctx context.Context, userID uuid.UUID, currency string) (*AnomalyReport, error) {
-	now := time.Now()
+	loc := ReportLocation(ctx)
+	now := ReportNowForContext(ctx)
 	startDate := now.AddDate(0, 0, -90)
 
 	filter := &model.TransactionFilter{
-		FromDate: startDate.Format("2006-01-02"),
-		ToDate:   now.Format("2006-01-02"),
-		Type:     "debit",
+		FromTimestamp: startDate.UTC().Format(time.RFC3339),
+		ToTimestamp:   now.UTC().Format(time.RFC3339),
+		Type:          "debit",
 	}
 	transactions, _, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, filter, 10000, 0)
 	if err != nil {
@@ -420,7 +449,8 @@ func (s *ReportsService) GetSpendingAnomalies(ctx context.Context, userID uuid.U
 	anomalies := make([]SpendingAnomaly, 0)
 
 	for _, ct := range convertedTxs {
-		if ct.tx.CreatedAt.Before(sevenDaysAgo) {
+		txTime := ct.tx.CreatedAt.In(loc)
+		if txTime.Before(sevenDaysAgo) {
 			continue
 		}
 
@@ -443,7 +473,7 @@ func (s *ReportsService) GetSpendingAnomalies(ctx context.Context, userID uuid.U
 				Amount:        math.Round(ct.amount*100) / 100,
 				Currency:      currency,
 				Category:      ct.category,
-				Date:          ct.tx.CreatedAt.Format("2006-01-02"),
+				Date:          reportDateStringInLocation(ct.tx.CreatedAt, loc),
 				AverageAmount: math.Round(analysis.mean*100) / 100,
 				Deviation:     math.Round(deviation*10) / 10,
 				Message:       fmt.Sprintf("Your %s spend of %.2f is %.1fx your average", ct.category, ct.amount, deviation),

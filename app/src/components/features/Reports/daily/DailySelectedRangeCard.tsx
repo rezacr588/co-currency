@@ -11,6 +11,7 @@ interface DailySelectedRangeCardProps {
   selectedBucketRange: string;
   selectedTransactions: NormalizedTransaction[];
   reportCurrency: string;
+  reportTimeZone: string;
 }
 
 function renderTransactionAmount(
@@ -32,6 +33,7 @@ export function DailySelectedRangeCard({
   selectedBucketRange,
   selectedTransactions,
   reportCurrency,
+  reportTimeZone,
 }: DailySelectedRangeCardProps) {
   const theme = useTheme();
   const colors = theme.colors;
@@ -92,7 +94,7 @@ export function DailySelectedRangeCard({
                           {tx.description || tx.category || t('transactions')}
                         </Text>
                         <Text style={{ color: colors.mutedForeground, fontSize: 12 }} numberOfLines={1}>
-                          {formatDateKey(new Date(tx.created_at))}
+                          {formatDateKey(new Date(tx.created_at), reportTimeZone)}
                         </Text>
                       </View>
                     </View>

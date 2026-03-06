@@ -7,6 +7,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency } from '../../../utils/format';
 import { haptics } from '../../../utils/haptics';
+import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 
 interface WeeklyRecapCardProps {
   compact?: boolean;
@@ -17,6 +18,7 @@ export function WeeklyRecapCard({ compact = false }: WeeklyRecapCardProps) {
   const theme = useTheme();
   const colors = theme.colors;
   const router = useRouter();
+  const { reportTimeZone } = useReportTimeZone();
 
   // Fetch weekly recap data (ISO 8601 Monday-Sunday)
   const {
@@ -25,16 +27,16 @@ export function WeeklyRecapCard({ compact = false }: WeeklyRecapCardProps) {
     refetch: refetchRecap,
     isRefetching,
   } = useQuery({
-    queryKey: ['reports', 'weekly-recap'],
-    queryFn: () => api.reports.weeklyRecap(),
+    queryKey: ['reports', 'weekly-recap', reportTimeZone],
+    queryFn: () => api.reports.weeklyRecap(undefined, undefined, reportTimeZone),
     staleTime: 10 * 60 * 1000, // 10 minutes
     retry: 1,
   });
 
   // Fetch AI insights as secondary display
   const { data: insights, isPending: isLoadingInsights } = useQuery({
-    queryKey: ['reports', 'insights'],
-    queryFn: () => api.reports.insights(),
+    queryKey: ['reports', 'insights', reportTimeZone],
+    queryFn: () => api.reports.insights(undefined, reportTimeZone),
     staleTime: 30 * 60 * 1000,
     retry: 1,
   });

@@ -4,17 +4,18 @@ import { TrendingUp, AlertTriangle, Calendar, ArrowDown } from 'lucide-react-nat
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
-import { formatCompactCurrency, formatNumber } from '../../../utils/format';
-import type { CashFlowReport } from '../../../types/goal';
+import { formatCompactCurrency } from '../../../utils/format';
+import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 
 export function CashFlowProjectionCard() {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
+  const { reportTimeZone } = useReportTimeZone();
 
   const { data: report, isPending } = useQuery({
-    queryKey: ['reports', 'cashflow'],
-    queryFn: () => api.reports.cashflow(30),
+    queryKey: ['reports', 'cashflow', reportTimeZone],
+    queryFn: () => api.reports.cashflow(30, undefined, reportTimeZone),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -232,48 +233,54 @@ export function CashFlowProjectionCard() {
           <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: 8 }}>
             {t('upcomingCharges') || 'Upcoming Charges'}
           </Text>
-          {upcomingEvents.map((event, idx) => (
-            <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border + '80' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                <View
+          {upcomingEvents.map((event, idx) => {
+            const isExpense = event.direction === 'debit' || event.type === 'subscription';
+            const eventTint = event.type === 'subscription'
+              ? colors.accent
+              : isExpense
+                ? colors.danger
+                : colors.success;
+
+            return (
+              <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border + '80' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                  <View
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: 4,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 8,
+                      backgroundColor: event.type === 'subscription' ? colors.accent + '20' : eventTint + '20',
+                    }}
+                  >
+                    {event.type === 'subscription' ? (
+                      <Calendar size={12} color={colors.accent} />
+                    ) : (
+                      <ArrowDown size={12} color={eventTint} />
+                    )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.foreground, fontSize: 14 }} numberOfLines={1}>
+                      {event.description}
+                    </Text>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{event.date}</Text>
+                  </View>
+                </View>
+                <Text
                   style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: 4,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: 8,
-                    backgroundColor:
-                      event.type === 'subscription'
-                        ? colors.accent + '20'
-                        : colors.success + '20',
+                    fontSize: 14,
+                    fontFamily: 'Inter_500Medium',
+                    color: isExpense ? colors.danger : colors.success,
                   }}
                 >
-                  {event.type === 'subscription' ? (
-                    <Calendar size={12} color={colors.accent} />
-                  ) : (
-                    <ArrowDown size={12} color={colors.success} />
-                  )}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.foreground, fontSize: 14 }} numberOfLines={1}>
-                    {event.description}
-                  </Text>
-                  <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{event.date}</Text>
-                </View>
+                  {isExpense ? '-' : '+'}
+                  {formatCompactCurrency(event.amount, report.currency)}
+                </Text>
               </View>
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontFamily: 'Inter_500Medium',
-                  color: event.type === 'recurring' ? colors.foreground : colors.danger,
-                }}
-              >
-                {event.type === 'subscription' ? '-' : ''}
-                {formatCompactCurrency(event.amount, report.currency)}
-              </Text>
-            </View>
-          ))}
+            );
+          })}
         </View>
       )}
     </View>

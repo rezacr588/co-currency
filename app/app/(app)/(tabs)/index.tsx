@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { api } from '../../../src/api';
 import { useAuth } from '../../../src/context/AuthContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
+import { useReportTimeZone } from '../../../src/hooks/useReportTimeZone';
 import { formatCompactCurrency, formatDate, formatTransactionAmount } from '../../../src/utils/format';
 import { StyledCategoryIcon } from '../../../src/constants/icons';
 import { Skeleton } from '../../../src/components/ui/Skeleton';
@@ -145,6 +146,7 @@ export default function DashboardScreen() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const theme = useTheme();
+  const { reportTimeZone } = useReportTimeZone();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -159,8 +161,8 @@ export default function DashboardScreen() {
   });
 
   const { data: monthlyReport, isError: isMonthlyError, refetch: refetchMonthly } = useQuery({
-    queryKey: ['reports', 'monthly'],
-    queryFn: () => api.reports.monthly(),
+    queryKey: ['reports', 'monthly', reportTimeZone],
+    queryFn: () => api.reports.monthly(undefined, undefined, undefined, reportTimeZone),
     staleTime: 2 * 60 * 1000,
   });
 
@@ -179,8 +181,8 @@ export default function DashboardScreen() {
   const budgets: Budget[] = budgetsData?.budgets || [];
 
   const { data: forecast } = useQuery({
-    queryKey: ['forecast'],
-    queryFn: () => api.reports.forecast(),
+    queryKey: ['forecast', reportTimeZone],
+    queryFn: () => api.reports.forecast(undefined, reportTimeZone),
     staleTime: 5 * 60 * 1000,
   });
 

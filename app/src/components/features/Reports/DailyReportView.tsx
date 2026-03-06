@@ -7,6 +7,7 @@ import { StyledCategoryIcon } from '../../../constants/icons';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency } from '../../../utils/format';
+import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 import { DailyReportHeader } from './daily/DailyReportHeader';
 import { DailySelectedRangeCard } from './daily/DailySelectedRangeCard';
 import { DailyTimelineChart } from './daily/DailyTimelineChart';
@@ -29,22 +30,23 @@ export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
   const { t, language } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
+  const { reportTimeZone } = useReportTimeZone();
 
-  // Derive primary currency from wallet balances (highest balance)
-  const { data: balancesData } = useQuery({
-    queryKey: ['wallet', 'balances'],
-    queryFn: () => api.wallet.getBalances(),
+  // Derive primary currency from the highest normalized balance value.
+  const { data: networthData } = useQuery({
+    queryKey: ['reports', 'networth'],
+    queryFn: () => api.reports.networth(),
     staleTime: 5 * 60 * 1000,
   });
 
   const primaryCurrency = useMemo(() => {
-    const balances = balancesData?.balances;
+    const balances = networthData?.balances;
     if (!balances || balances.length === 0) return 'USD';
-    const sorted = [...balances].sort((a, b) => b.balance - a.balance);
+    const sorted = [...balances].sort((a, b) => b.balance_in_base - a.balance_in_base);
     return sorted[0].currency;
-  }, [balancesData]);
+  }, [networthData]);
 
-  const report = useDailyReportData(language, primaryCurrency);
+  const report = useDailyReportData(language, reportTimeZone, primaryCurrency);
 
   const timelineLabel = t(report.timelineTranslationKey);
 
@@ -202,6 +204,7 @@ export function DailyReportView({ isTablet = false }: DailyReportViewProps) {
         selectedBucketRange={report.selectedBucketRange}
         selectedTransactions={report.selectedTransactions}
         reportCurrency={report.reportCurrency}
+        reportTimeZone={reportTimeZone}
       />
     </View>
   );

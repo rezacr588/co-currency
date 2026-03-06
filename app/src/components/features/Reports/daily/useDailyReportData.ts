@@ -142,7 +142,11 @@ async function fetchTransactionsForRange(fromTimestamp: string, toTimestamp: str
   };
 }
 
-export function useDailyReportData(language: string, reportCurrency = REPORT_CURRENCY): UseDailyReportDataResult {
+export function useDailyReportData(
+  language: string,
+  reportTimeZone: string,
+  reportCurrency = REPORT_CURRENCY
+): UseDailyReportDataResult {
   const [timelinePreset, setTimelinePresetState] = useState<TimelinePreset>('30D');
   const [windowIndex, setWindowIndex] = useState(0);
   const [selectedBucketIndex, setSelectedBucketIndexState] = useState(0);
@@ -150,30 +154,30 @@ export function useDailyReportData(language: string, reportCurrency = REPORT_CUR
   const timelineConfig = TIMELINE_CONFIG[timelinePreset];
 
   const { start: windowStart, end: windowEnd } = useMemo(
-    () => getWindowRange(timelineConfig.windowDays, windowIndex),
-    [timelineConfig.windowDays, windowIndex]
+    () => getWindowRange(timelineConfig.windowDays, windowIndex, reportTimeZone),
+    [reportTimeZone, timelineConfig.windowDays, windowIndex]
   );
 
-  const fromTimestamp = toRFC3339RangeStart(windowStart);
-  const toTimestamp = toRFC3339RangeEnd(windowEnd);
+  const fromTimestamp = toRFC3339RangeStart(windowStart, reportTimeZone);
+  const toTimestamp = toRFC3339RangeEnd(windowEnd, reportTimeZone);
 
   const { data: reportData, isPending, isError } = useQuery({
-    queryKey: ['transactions', 'daily-history', timelinePreset, fromTimestamp, toTimestamp, reportCurrency],
+    queryKey: ['transactions', 'daily-history', timelinePreset, fromTimestamp, toTimestamp, reportCurrency, reportTimeZone],
     queryFn: () => fetchTransactionsForRange(fromTimestamp, toTimestamp, reportCurrency),
     staleTime: 2 * 60 * 1000,
   });
 
   const rangeFormatter = useMemo(
-    () => createDateFormatter(language, { month: 'short', day: 'numeric' }),
-    [language]
+    () => createDateFormatter(language, { month: 'short', day: 'numeric' }, reportTimeZone),
+    [language, reportTimeZone]
   );
   const rangeWithYearFormatter = useMemo(
-    () => createDateFormatter(language, { month: 'short', day: 'numeric', year: 'numeric' }),
-    [language]
+    () => createDateFormatter(language, { month: 'short', day: 'numeric', year: 'numeric' }, reportTimeZone),
+    [language, reportTimeZone]
   );
   const monthFormatter = useMemo(
-    () => createDateFormatter(language, { month: 'short' }),
-    [language]
+    () => createDateFormatter(language, { month: 'short' }, reportTimeZone),
+    [language, reportTimeZone]
   );
 
   const aggregation = useMemo(
@@ -183,9 +187,10 @@ export function useDailyReportData(language: string, reportCurrency = REPORT_CUR
         timelineConfig.windowDays,
         reportData?.transactions || [],
         reportData?.conversionRates || { [reportCurrency]: 1 },
-        reportCurrency
+        reportCurrency,
+        reportTimeZone
       ),
-    [reportData?.conversionRates, reportData?.transactions, timelineConfig.windowDays, windowStart]
+    [reportData?.conversionRates, reportData?.transactions, reportCurrency, reportTimeZone, timelineConfig.windowDays, windowStart]
   );
 
   const chartBuckets = useMemo(
@@ -194,9 +199,10 @@ export function useDailyReportData(language: string, reportCurrency = REPORT_CUR
         aggregation.daySummaries,
         timelineConfig.bucketGranularity,
         rangeFormatter,
-        monthFormatter
+        monthFormatter,
+        reportTimeZone
       ),
-    [aggregation.daySummaries, timelineConfig.bucketGranularity, rangeFormatter, monthFormatter]
+    [aggregation.daySummaries, monthFormatter, rangeFormatter, reportTimeZone, timelineConfig.bucketGranularity]
   );
 
   useEffect(() => {
@@ -220,15 +226,15 @@ export function useDailyReportData(language: string, reportCurrency = REPORT_CUR
 
   // Previous window for comparison
   const { start: prevWindowStart, end: prevWindowEnd } = useMemo(
-    () => getWindowRange(timelineConfig.windowDays, windowIndex + 1),
-    [timelineConfig.windowDays, windowIndex]
+    () => getWindowRange(timelineConfig.windowDays, windowIndex + 1, reportTimeZone),
+    [reportTimeZone, timelineConfig.windowDays, windowIndex]
   );
 
-  const prevFromTimestamp = toRFC3339RangeStart(prevWindowStart);
-  const prevToTimestamp = toRFC3339RangeEnd(prevWindowEnd);
+  const prevFromTimestamp = toRFC3339RangeStart(prevWindowStart, reportTimeZone);
+  const prevToTimestamp = toRFC3339RangeEnd(prevWindowEnd, reportTimeZone);
 
   const { data: prevReportData } = useQuery({
-    queryKey: ['transactions', 'daily-history', timelinePreset, prevFromTimestamp, prevToTimestamp, reportCurrency],
+    queryKey: ['transactions', 'daily-history', timelinePreset, prevFromTimestamp, prevToTimestamp, reportCurrency, reportTimeZone],
     queryFn: () => fetchTransactionsForRange(prevFromTimestamp, prevToTimestamp, reportCurrency),
     staleTime: 5 * 60 * 1000,
   });
@@ -240,9 +246,10 @@ export function useDailyReportData(language: string, reportCurrency = REPORT_CUR
         timelineConfig.windowDays,
         prevReportData?.transactions || [],
         prevReportData?.conversionRates || { [reportCurrency]: 1 },
-        reportCurrency
+        reportCurrency,
+        reportTimeZone
       ),
-    [prevReportData?.conversionRates, prevReportData?.transactions, timelineConfig.windowDays, prevWindowStart, reportCurrency]
+    [prevReportData?.conversionRates, prevReportData?.transactions, reportCurrency, reportTimeZone, timelineConfig.windowDays, prevWindowStart]
   );
 
   const prevTotals = useMemo(() => sumTotals(prevAggregation.daySummaries), [prevAggregation.daySummaries]);

@@ -13,43 +13,47 @@ import { fetchAPI } from './base';
 import { buildQuery } from './utils';
 
 export const reports = {
-  monthly: (year?: number, month?: number, currency?: string) =>
+  monthly: (year?: number, month?: number, currency?: string, timeZone?: string) =>
     fetchAPI<MonthlyReport>(
       `/reports/monthly${buildQuery({
         year: year || undefined,
         month: month || undefined,
         currency,
+        timezone: timeZone,
       })}`
     ),
-  yearly: (year?: number, currency?: string) =>
+  yearly: (year?: number, currency?: string, timeZone?: string) =>
     fetchAPI<YearlyReport>(
       `/reports/yearly${buildQuery({
         year: year || undefined,
         currency,
+        timezone: timeZone,
       })}`
     ),
-  dateRange: (fromDate: string, toDate: string, currency?: string) =>
+  dateRange: (fromDate: string, toDate: string, currency?: string, timeZone?: string) =>
     fetchAPI<DateRangeReport>(
-      `/reports/date-range${buildQuery({ from_date: fromDate, to_date: toDate, currency })}`
+      `/reports/date-range${buildQuery({ from_date: fromDate, to_date: toDate, currency, timezone: timeZone })}`
     ),
-  category: (fromDate?: string, toDate?: string, currency?: string) =>
+  category: (fromDate?: string, toDate?: string, currency?: string, timeZone?: string) =>
     fetchAPI<CategoryReport>(
       `/reports/category${buildQuery({
         from_date: fromDate,
         to_date: toDate,
         currency,
+        timezone: timeZone,
       })}`
     ),
-  trends: (months?: number, currency?: string) =>
+  trends: (months?: number, currency?: string, timeZone?: string) =>
     fetchAPI<TrendsReport>(
       `/reports/trends${buildQuery({
         months: months || undefined,
         currency,
+        timezone: timeZone,
       })}`
     ),
   networth: (currency?: string) =>
     fetchAPI<NetWorthReport>(`/reports/networth${buildQuery({ currency })}`),
-  forecast: (currency?: string) =>
+  forecast: (currency?: string, timeZone?: string) =>
     fetchAPI<{
       currency: string;
       current_balance: number;
@@ -58,10 +62,10 @@ export const reports = {
       net_daily_flow: number;
       days_until_zero: number;
       estimated_zero_date?: string;
-    }>(`/reports/forecast${buildQuery({ currency })}`),
-  insights: (currency?: string) =>
-    fetchAPI<InsightResponse>(`/reports/insights${buildQuery({ currency })}`),
-  healthScore: (currency?: string) =>
+    }>(`/reports/forecast${buildQuery({ currency, timezone: timeZone })}`),
+  insights: (currency?: string, timeZone?: string) =>
+    fetchAPI<InsightResponse>(`/reports/insights${buildQuery({ currency, timezone: timeZone })}`),
+  healthScore: (currency?: string, timeZone?: string) =>
     fetchAPI<{
       score: number;
       trend: 'improving' | 'stable' | 'declining';
@@ -73,8 +77,8 @@ export const reports = {
         bill_timing: number;
       };
       tips: string[];
-    }>(`/reports/health-score${buildQuery({ currency })}`),
-  weeklyRecap: (currency?: string, date?: string) =>
+    }>(`/reports/health-score${buildQuery({ currency, timezone: timeZone })}`),
+  weeklyRecap: (currency?: string, date?: string, timeZone?: string) =>
     fetchAPI<{
       week_start: string;
       week_end: string;
@@ -87,11 +91,11 @@ export const reports = {
       action_items: string[];
       currency: string;
       generated_at: string;
-    }>(`/reports/weekly-recap${buildQuery({ currency, date })}`),
-  cashflow: (days?: number, currency?: string) =>
+    }>(`/reports/weekly-recap${buildQuery({ currency, date, timezone: timeZone })}`),
+  cashflow: (days?: number, currency?: string, timeZone?: string) =>
     fetchAPI<CashFlowReport>(
-      `/reports/cashflow${buildQuery({ days: days || undefined, currency })}`
+      `/reports/cashflow${buildQuery({ days: days || undefined, currency, timezone: timeZone })}`
     ),
-  anomalies: (currency?: string) =>
-    fetchAPI<AnomalyReport>(`/reports/anomalies${buildQuery({ currency })}`),
+  anomalies: (currency?: string, timeZone?: string) =>
+    fetchAPI<AnomalyReport>(`/reports/anomalies${buildQuery({ currency, timezone: timeZone })}`),
 };

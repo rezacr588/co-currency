@@ -1,4 +1,4 @@
-import { formatDateKey, safeMax } from '../../../../utils/dateRange';
+import { formatDateKey, getTimeZoneDateParts, safeMax } from '../../../../utils/dateRange';
 import { addDays, isDateInRange, startOfDay } from './time';
 import type {
   BucketGranularity,
@@ -31,7 +31,8 @@ export function buildDailyAggregation(
   windowDays: number,
   transactions: Transaction[],
   conversionRates: Record<string, number>,
-  reportCurrency: string
+  reportCurrency: string,
+  timeZone: string
 ): DailyAggregationResult {
   const grouped = new Map<
     string,
@@ -42,7 +43,7 @@ export function buildDailyAggregation(
   const excludedCurrencySet = new Set<string>();
 
   transactions.forEach((tx) => {
-    const dateKey = formatDateKey(new Date(tx.created_at));
+    const dateKey = formatDateKey(new Date(tx.created_at), timeZone);
     const group = grouped.get(dateKey) || {
       income: 0,
       expenses: 0,
@@ -73,11 +74,11 @@ export function buildDailyAggregation(
     grouped.set(dateKey, group);
   });
 
-  const todayKey = formatDateKey(startOfDay(new Date()));
+  const todayKey = formatDateKey(startOfDay(new Date(), timeZone), timeZone);
 
   const daySummaries: DaySummary[] = Array.from({ length: windowDays }, (_, index) => {
     const date = addDays(windowStart, index);
-    const dateKey = formatDateKey(date);
+    const dateKey = formatDateKey(date, timeZone);
     const dayData = grouped.get(dateKey);
     const income = dayData?.income || 0;
     const expenses = dayData?.expenses || 0;
@@ -106,9 +107,10 @@ export function buildChartBuckets(
   daySummaries: DaySummary[],
   granularity: BucketGranularity,
   rangeFormatter: Intl.DateTimeFormat,
-  monthFormatter: Intl.DateTimeFormat
+  monthFormatter: Intl.DateTimeFormat,
+  timeZone: string
 ): ChartBucket[] {
-  const today = startOfDay(new Date());
+  const today = startOfDay(new Date(), timeZone);
 
   if (granularity === 'day') {
     return daySummaries.map((day) => ({
@@ -166,13 +168,15 @@ export function buildChartBuckets(
 
   while (cursor < daySummaries.length) {
     const firstDay = daySummaries[cursor];
-    const month = firstDay.date.getMonth();
-    const year = firstDay.date.getFullYear();
+    const firstDayParts = getTimeZoneDateParts(firstDay.date, timeZone);
+    const month = firstDayParts.month;
+    const year = firstDayParts.year;
 
     let endCursor = cursor;
     while (endCursor + 1 < daySummaries.length) {
       const nextDay = daySummaries[endCursor + 1];
-      if (nextDay.date.getMonth() !== month || nextDay.date.getFullYear() !== year) {
+      const nextDayParts = getTimeZoneDateParts(nextDay.date, timeZone);
+      if (nextDayParts.month !== month || nextDayParts.year !== year) {
         break;
       }
       endCursor += 1;
@@ -188,7 +192,7 @@ export function buildChartBuckets(
     const transactions = slice.flatMap((day) => day.transactions);
 
     buckets.push({
-      key: `${year}-${month + 1}`,
+      key: `${year}-${month}`,
       label: monthFormatter.format(startDate),
       startDate,
       endDate,
