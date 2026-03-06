@@ -2,7 +2,7 @@ import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 
-export type ReportPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
+export type ReportPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'all_time';
 
 interface ReportPeriodTabsProps {
   selected: ReportPeriod;
@@ -19,6 +19,7 @@ export function ReportPeriodTabs({ selected, onSelect }: ReportPeriodTabsProps) 
     { key: 'weekly', label: t('weeklyReport') },
     { key: 'monthly', label: t('monthlyReport') },
     { key: 'yearly', label: t('yearlyReport') },
+    { key: 'all_time', label: t('allTime') },
   ];
 
   return (

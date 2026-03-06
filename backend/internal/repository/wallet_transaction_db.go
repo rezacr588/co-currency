@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rs/zerolog/log"
 )
@@ -149,6 +150,35 @@ func (r *WalletRepository) GetTransactionDates(ctx context.Context, userID uuid.
 		dates = append(dates, d)
 	}
 	return dates, nil
+}
+
+// GetTransactionBounds returns the first and last transaction timestamps for a user.
+func (r *WalletRepository) GetTransactionBounds(ctx context.Context, userID uuid.UUID) (*time.Time, *time.Time, error) {
+	var first pgtype.Timestamptz
+	var last pgtype.Timestamptz
+
+	err := r.pool.QueryRow(ctx, `
+		SELECT MIN(created_at), MAX(created_at)
+		FROM transactions
+		WHERE user_id = $1
+	`, userID).Scan(&first, &last)
+	if err != nil {
+		return nil, nil, fmt.Errorf("querying transaction bounds: %w", err)
+	}
+
+	var firstTime *time.Time
+	if first.Valid {
+		t := first.Time
+		firstTime = &t
+	}
+
+	var lastTime *time.Time
+	if last.Valid {
+		t := last.Time
+		lastTime = &t
+	}
+
+	return firstTime, lastTime, nil
 }
 
 // GetTransactionsFiltered retrieves transactions for a user with filters

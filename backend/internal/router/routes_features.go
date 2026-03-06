@@ -154,6 +154,7 @@ func registerReportRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.
 			r.Use(authMiddleware.Middleware)
 			r.Get("/monthly", h.Reports.GetMonthlyReport)
 			r.Get("/yearly", h.Reports.GetYearlyReport)
+			r.Get("/coverage", h.Reports.GetReportCoverage)
 			r.Get("/category", h.Reports.GetCategoryReport)
 			r.Get("/trends", h.Reports.GetTrendsReport)
 			r.Get("/networth", h.Reports.GetNetWorthReport)

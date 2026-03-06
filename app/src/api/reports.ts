@@ -3,6 +3,7 @@ import type {
   YearlyReport,
   CategoryReport,
   DateRangeReport,
+  ReportCoverage,
   TrendsReport,
   NetWorthReport,
   InsightResponse,
@@ -34,6 +35,8 @@ export const reports = {
     fetchAPI<DateRangeReport>(
       `/reports/date-range${buildQuery({ from_date: fromDate, to_date: toDate, currency, timezone: timeZone })}`
     ),
+  coverage: (timeZone?: string) =>
+    fetchAPI<ReportCoverage>(`/reports/coverage${buildQuery({ timezone: timeZone })}`),
   category: (fromDate?: string, toDate?: string, currency?: string, timeZone?: string) =>
     fetchAPI<CategoryReport>(
       `/reports/category${buildQuery({

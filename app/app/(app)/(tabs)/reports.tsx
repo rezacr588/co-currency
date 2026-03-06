@@ -21,6 +21,7 @@ import {
   type ReportPeriod,
   DailyReportView,
   WeeklyReportView,
+  AllTimeReportView,
   MonthlyReportView,
   YearlyReportView,
 } from '../../../src/components/features/Reports';
@@ -215,7 +216,6 @@ function DateRangeSelector({
     { key: 'last_3_months', labelKey: 'threeMonths' },
     { key: 'last_6_months', labelKey: 'sixMonths' },
     { key: 'this_year', labelKey: 'thisYear' },
-    { key: 'all_time', labelKey: 'allTime' },
   ];
 
   return (
@@ -581,6 +581,14 @@ export default function ReportsScreen() {
 
         {period === 'yearly' && (
           <YearlyReportView isTablet={isTablet} />
+        )}
+
+        {period === 'all_time' && (
+          <AllTimeReportView
+            isTablet={isTablet}
+            categoryCardWidth={categoryCardWidth}
+            categoryCols={categoryCols}
+          />
         )}
       </ScrollView>
     </SafeAreaView>

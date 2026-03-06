@@ -172,6 +172,7 @@ interface MonthlyReportViewProps {
   month: number;
   fromDate?: string;
   toDate?: string;
+  summaryTitle?: string;
   isTablet?: boolean;
   categoryCardWidth: number;
   categoryCols: number;
@@ -182,6 +183,7 @@ export function MonthlyReportView({
   month,
   fromDate,
   toDate,
+  summaryTitle,
   isTablet = false,
   categoryCardWidth,
   categoryCols,
@@ -297,7 +299,9 @@ export function MonthlyReportView({
             <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginRight: 12 }}>
               <Calendar size={20} color={colors.placeholder} />
             </View>
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('monthlySummary')}</Text>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
+              {summaryTitle || t('monthlySummary')}
+            </Text>
           </View>
 
           <ComparisonBarChart

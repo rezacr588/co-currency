@@ -163,6 +163,13 @@ type DateRangeReport struct {
 	Categories []CategoryBreakdown `json:"categories"`
 }
 
+// ReportCoverage describes the user transaction history available for reports.
+type ReportCoverage struct {
+	HasTransactions      bool    `json:"has_transactions"`
+	FirstTransactionDate *string `json:"first_transaction_date,omitempty"`
+	LastTransactionDate  *string `json:"last_transaction_date,omitempty"`
+}
+
 // CashFlowProjection represents a single day's projected cash flow
 type CashFlowProjection struct {
 	Date    string          `json:"date"`

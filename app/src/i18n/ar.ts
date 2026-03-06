@@ -453,6 +453,7 @@ export const ar = {
   reportsAndStats: 'التقارير والإحصائيات',
   reportsDescription: 'عرض التقارير المالية والتحليلات',
   monthlySummary: 'الملخص الشهري',
+  allTimeSummary: 'ملخص كل الوقت',
   netSavings: 'صافي التوفير',
   savingsRate: 'معدل التوفير',
   failedToLoadReport: 'فشل تحميل التقرير',

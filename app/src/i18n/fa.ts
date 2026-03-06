@@ -453,6 +453,7 @@ export const fa = {
   reportsAndStats: 'گزارش‌ها و آمار',
   reportsDescription: 'مشاهده گزارش‌های مالی و تحلیل‌ها',
   monthlySummary: 'خلاصه ماهانه',
+  allTimeSummary: 'خلاصه تمام دوره',
   netSavings: 'پس‌انداز خالص',
   savingsRate: 'نرخ پس‌انداز',
   failedToLoadReport: 'بارگذاری گزارش ناموفق بود',

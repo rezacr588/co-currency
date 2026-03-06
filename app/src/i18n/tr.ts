@@ -453,6 +453,7 @@ export const tr = {
   reportsAndStats: 'Raporlar ve İstatistikler',
   reportsDescription: 'Finansal raporlarınızı ve analizlerinizi görüntüleyin',
   monthlySummary: 'Aylık Özet',
+  allTimeSummary: 'Tüm Zamanlar Özeti',
   netSavings: 'Net Tasarruf',
   savingsRate: 'Tasarruf Oranı',
   failedToLoadReport: 'Rapor yüklenemedi',

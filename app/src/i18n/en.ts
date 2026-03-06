@@ -455,6 +455,7 @@ export const en = {
   reportsAndStats: 'Reports & Statistics',
   reportsDescription: 'View your financial reports and analytics',
   monthlySummary: 'Monthly Summary',
+  allTimeSummary: 'All-Time Summary',
   netSavings: 'Net Savings',
   savingsRate: 'Savings Rate',
   failedToLoadReport: 'Failed to load report',

@@ -149,6 +149,29 @@ func (s *ReportsService) GetDateRangeReport(ctx context.Context, userID uuid.UUI
 	}, nil
 }
 
+// GetReportCoverage returns the available transaction history bounds for reports.
+func (s *ReportsService) GetReportCoverage(ctx context.Context, userID uuid.UUID) (*ReportCoverage, error) {
+	firstTx, lastTx, err := s.walletRepo.GetTransactionBounds(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("getting transaction bounds: %w", err)
+	}
+
+	coverage := &ReportCoverage{}
+	if firstTx == nil || lastTx == nil {
+		return coverage, nil
+	}
+
+	loc := ReportLocation(ctx)
+	firstDate := firstTx.In(loc).Format("2006-01-02")
+	lastDate := lastTx.In(loc).Format("2006-01-02")
+
+	coverage.HasTransactions = true
+	coverage.FirstTransactionDate = &firstDate
+	coverage.LastTransactionDate = &lastDate
+
+	return coverage, nil
+}
+
 // GetYearlyReport generates a yearly financial summary
 func (s *ReportsService) GetYearlyReport(ctx context.Context, userID uuid.UUID, year int, currency string) (*YearlyReport, error) {
 	var totalIncome, totalExpenses float64

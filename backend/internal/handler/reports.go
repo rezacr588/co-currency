@@ -124,6 +124,22 @@ func (h *ReportsHandler) GetDateRangeReport(w http.ResponseWriter, r *http.Reque
 	httputil.Success(w, report)
 }
 
+// GetReportCoverage handles GET /api/v1/reports/coverage
+func (h *ReportsHandler) GetReportCoverage(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	coverage, err := h.reportsService.GetReportCoverage(reportContext(r), userID)
+	if err != nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to load report coverage")
+		return
+	}
+
+	httputil.Success(w, coverage)
+}
+
 // GetCategoryReport handles GET /api/v1/reports/category
 func (h *ReportsHandler) GetCategoryReport(w http.ResponseWriter, r *http.Request) {
 	userID, ok := requireUserID(w, r)

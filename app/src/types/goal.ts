@@ -181,6 +181,12 @@ export interface DateRangeReport {
   categories: CategoryBreakdown[];
 }
 
+export interface ReportCoverage {
+  has_transactions: boolean;
+  first_transaction_date?: string;
+  last_transaction_date?: string;
+}
+
 export interface TrendData {
   period: string;
   income: number;
