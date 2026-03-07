@@ -1,8 +1,10 @@
-import { View, Text, ViewProps } from 'react-native';
-import { forwardRef } from 'react';
+import { forwardRef, type ReactNode } from 'react';
+import { View, Text, type ViewProps } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from 'styled-components/native';
 
-type CardVariant = 'default' | 'glass' | 'gradient';
+type CardVariant = 'default' | 'glass' | 'gradient' | 'elevated';
 
 interface CardProps extends ViewProps {
   variant?: CardVariant;
@@ -11,18 +13,83 @@ interface CardProps extends ViewProps {
 export const Card = forwardRef<View, CardProps>(
   ({ variant = 'default', children, style, ...props }, ref) => {
     const theme = useTheme();
-    const colors = theme.colors;
 
-    const variantStyles: Record<CardVariant, any> = {
-      default: { backgroundColor: colors.card },
-      glass: { backgroundColor: colors.card + 'cc' },
-      gradient: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.accent + '33' },
+    const baseStyle = {
+      borderRadius: theme.radii.xl,
+      padding: theme.spacing.lg,
+      borderWidth: 1,
+      borderColor: theme.colors.borderSubtle,
     };
+
+    if (variant === 'glass') {
+      return (
+        <View
+          ref={ref}
+          style={[
+            {
+              ...baseStyle,
+              overflow: 'hidden',
+              backgroundColor: theme.glass.backgroundColor,
+              borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+            },
+            theme.shadows.sm,
+            style,
+          ]}
+          {...props}
+        >
+          <BlurView
+            intensity={theme.glass.intensity}
+            tint={theme.glass.tint}
+            style={{ margin: -theme.spacing.lg, padding: theme.spacing.lg }}
+          >
+            {children}
+          </BlurView>
+        </View>
+      );
+    }
+
+    if (variant === 'gradient') {
+      return (
+        <View
+          ref={ref}
+          style={[
+            {
+              ...baseStyle,
+              overflow: 'hidden',
+              borderColor: theme.colors.accent + '33',
+            },
+            theme.shadows.md,
+            style,
+          ]}
+          {...props}
+        >
+          <LinearGradient
+            colors={theme.gradients.card as [string, string, ...string[]]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ margin: -theme.spacing.lg, padding: theme.spacing.lg }}
+          >
+            {children}
+          </LinearGradient>
+        </View>
+      );
+    }
+
+    const variantStyle =
+      variant === 'elevated'
+        ? {
+            backgroundColor: theme.colors.cardElevated,
+            ...theme.shadows.md,
+          }
+        : {
+            backgroundColor: theme.colors.card,
+            ...theme.shadows.sm,
+          };
 
     return (
       <View
         ref={ref}
-        style={[{ borderRadius: 12, padding: 16, ...variantStyles[variant] }, style]}
+        style={[baseStyle, variantStyle, style]}
         {...props}
       >
         {children}
@@ -33,12 +100,17 @@ export const Card = forwardRef<View, CardProps>(
 
 Card.displayName = 'Card';
 
-interface CardHeaderProps extends ViewProps {}
+type CardHeaderProps = ViewProps;
 
 export const CardHeader = forwardRef<View, CardHeaderProps>(
   ({ children, style, ...props }, ref) => {
+    const theme = useTheme();
     return (
-      <View ref={ref} style={[{ marginBottom: 16 }, style]} {...props}>
+      <View
+        ref={ref}
+        style={[{ marginBottom: theme.spacing.lg }, style]}
+        {...props}
+      >
         {children}
       </View>
     );
@@ -48,21 +120,32 @@ export const CardHeader = forwardRef<View, CardHeaderProps>(
 CardHeader.displayName = 'CardHeader';
 
 interface CardTitleProps {
-  children: React.ReactNode;
+  children: ReactNode;
   style?: any;
 }
 
 export function CardTitle({ children, style }: CardTitleProps) {
   const theme = useTheme();
-  const colors = theme.colors;
+
   return (
-    <Text style={[{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground }, style]}>
+    <Text
+      style={[
+        {
+          fontSize: theme.typography.h3.fontSize,
+          fontFamily: theme.typography.h3.fontFamily,
+          lineHeight: theme.typography.h3.lineHeight,
+          letterSpacing: theme.typography.h3.letterSpacing,
+          color: theme.colors.foreground,
+        },
+        style,
+      ]}
+    >
       {children}
     </Text>
   );
 }
 
-interface CardContentProps extends ViewProps {}
+type CardContentProps = ViewProps;
 
 export const CardContent = forwardRef<View, CardContentProps>(
   ({ children, style, ...props }, ref) => {
@@ -76,14 +159,25 @@ export const CardContent = forwardRef<View, CardContentProps>(
 
 CardContent.displayName = 'CardContent';
 
-interface CardFooterProps extends ViewProps {}
+type CardFooterProps = ViewProps;
 
 export const CardFooter = forwardRef<View, CardFooterProps>(
   ({ children, style, ...props }, ref) => {
     const theme = useTheme();
-    const colors = theme.colors;
     return (
-      <View ref={ref} style={[{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border }, style]} {...props}>
+      <View
+        ref={ref}
+        style={[
+          {
+            marginTop: theme.spacing.lg,
+            paddingTop: theme.spacing.lg,
+            borderTopWidth: 1,
+            borderTopColor: theme.colors.border,
+          },
+          style,
+        ]}
+        {...props}
+      >
         {children}
       </View>
     );

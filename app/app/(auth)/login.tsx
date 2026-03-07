@@ -1,49 +1,38 @@
-import { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  KeyboardAvoidingView,
-  ScrollView,
-  Platform,
-  Linking,
-  useWindowDimensions,
-} from 'react-native';
-import { Link, useRouter, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useEffect, useRef, useState } from 'react';
+import { Linking, Platform, Pressable, Text, View } from 'react-native';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
-import styled, { useTheme } from 'styled-components/native';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
+import { useTheme } from 'styled-components/native';
+import { api } from '../../src/api';
 import { useAuth } from '../../src/context/AuthContext';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { api } from '../../src/api';
 import { LinkedInIcon, GoogleIcon } from '../../src/constants/icons';
-import { Button } from '../../src/components/ui/Button';
-import { FormError } from '../../src/components/ui/FormError';
-import { H2, Caption, Body } from '../../src/components/ui/styled';
 import { resolvePostAuthRoute } from '../../src/navigation/mode';
+import { AuthScaffold, Button, FormError, Input } from '../../src/components/ui';
 
-const ScreenContainer = styled(SafeAreaView)`
-  flex: 1;
-  background-color: ${({ theme }) => theme.colors.background};
-`;
+function AuthDivider() {
+  const theme = useTheme();
 
-const InputRow = styled.View`
-  background-color: ${({ theme }) => theme.colors.muted};
-  border-radius: ${({ theme }) => theme.radii.md}px;
-  flex-direction: row;
-  align-items: center;
-  padding-horizontal: ${({ theme }) => theme.spacing.lg}px;
-  border-width: 1px;
-  border-color: ${({ theme }) => theme.colors.border};
-`;
-
-const Divider = styled.View`
-  height: 1px;
-  flex: 1;
-  background-color: ${({ theme }) => theme.colors.border};
-`;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: theme.spacing.sm }}>
+      <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.border }} />
+      <Text
+        style={{
+          marginHorizontal: theme.spacing.md,
+          color: theme.colors.mutedForeground,
+          fontSize: 12,
+          lineHeight: 16,
+          textTransform: 'uppercase',
+          letterSpacing: 1,
+        }}
+      >
+        or
+      </Text>
+      <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.border }} />
+    </View>
+  );
+}
 
 export default function LoginScreen() {
   const { t } = useLanguage();
@@ -51,67 +40,93 @@ export default function LoginScreen() {
   const { login, handleOAuthCallback } = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams<{ error?: string }>();
-  const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const [error, setError] = useState('');
-
-  const isDesktop = width >= 1024;
-  const isTablet = width >= 768;
-  const formMaxWidth = isTablet ? 400 : '100%';
-
-  useEffect(() => {
-    if (params.error) setError(params.error);
-  }, [params.error]);
-
   const isMountedRef = useRef(true);
 
   useEffect(() => {
+    if (params.error) {
+      setError(params.error);
+    }
+  }, [params.error]);
+
+  useEffect(() => {
     isMountedRef.current = true;
+
     const handleDeepLink = async (event: { url: string }) => {
-      const url = event.url;
-      if (url.includes('/auth/callback')) {
-        if (!isMountedRef.current) return;
-        setIsOAuthLoading(true);
-        try {
-          const urlParams = new URL(url).searchParams;
-          const token = urlParams.get('token');
-          const refreshToken = urlParams.get('refresh_token');
-          const errorParam = urlParams.get('error');
-          if (errorParam) {
-            if (isMountedRef.current) setError(errorParam);
-          } else if (token && refreshToken) {
-            await handleOAuthCallback(token, refreshToken);
-            if (isMountedRef.current) {
-              const target = await resolvePostAuthRoute();
-              router.replace(target as any);
-            }
+      if (!event.url.includes('/auth/callback')) {
+        return;
+      }
+
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      setIsOAuthLoading(true);
+
+      try {
+        const urlParams = new URL(event.url).searchParams;
+        const token = urlParams.get('token');
+        const refreshToken = urlParams.get('refresh_token');
+        const errorParam = urlParams.get('error');
+
+        if (errorParam) {
+          if (isMountedRef.current) {
+            setError(errorParam);
           }
-        } catch (err) {
-          if (isMountedRef.current) setError(err instanceof Error ? err.message : 'OAuth failed');
-        } finally {
-          if (isMountedRef.current) setIsOAuthLoading(false);
+          return;
+        }
+
+        if (token && refreshToken) {
+          await handleOAuthCallback(token, refreshToken);
+          if (isMountedRef.current) {
+            const target = await resolvePostAuthRoute();
+            router.replace(target as any);
+          }
+        }
+      } catch (err) {
+        if (isMountedRef.current) {
+          setError(err instanceof Error ? err.message : 'OAuth failed');
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setIsOAuthLoading(false);
         }
       }
     };
+
     const subscription = Linking.addEventListener('url', handleDeepLink);
-    Linking.getInitialURL().then((url) => {
-      if (url && isMountedRef.current) handleDeepLink({ url });
-    }).catch((err) => {
-      if (isMountedRef.current) console.warn('Failed to get initial URL:', err);
-    });
-    return () => { isMountedRef.current = false; subscription.remove(); };
+    Linking.getInitialURL()
+      .then((url) => {
+        if (url && isMountedRef.current) {
+          void handleDeepLink({ url });
+        }
+      })
+      .catch((err) => {
+        if (isMountedRef.current) {
+          console.warn('Failed to get initial URL:', err);
+        }
+      });
+
+    return () => {
+      isMountedRef.current = false;
+      subscription.remove();
+    };
   }, [handleOAuthCallback, router]);
 
   const handleLogin = async () => {
-    if (!email || !password) { setError(t('fillAllFields')); return; }
+    if (!email || !password) {
+      setError(t('fillAllFields'));
+      return;
+    }
+
     setIsLoading(true);
     setError('');
+
     try {
       await login({ email, password });
       const target = await resolvePostAuthRoute();
@@ -123,34 +138,29 @@ export default function LoginScreen() {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleOAuthLogin = async (provider: 'google' | 'linkedin') => {
     setIsOAuthLoading(true);
     setError('');
-    try {
-      const authUrl = api.auth.getGoogleAuthUrl();
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.location.assign(authUrl);
-      } else {
-        await WebBrowser.openBrowserAsync(authUrl);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('failedToOpenGoogleLogin') || 'Failed to open Google login');
-      setIsOAuthLoading(false);
-    }
-  };
 
-  const handleLinkedInLogin = async () => {
-    setIsOAuthLoading(true);
-    setError('');
     try {
-      const authUrl = api.auth.getLinkedInAuthUrl();
+      const authUrl =
+        provider === 'google'
+          ? api.auth.getGoogleAuthUrl()
+          : api.auth.getLinkedInAuthUrl();
+
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         window.location.assign(authUrl);
       } else {
         await WebBrowser.openBrowserAsync(authUrl);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('failedToOpenLinkedInLogin') || 'Failed to open LinkedIn login');
+      setError(
+        err instanceof Error
+          ? err.message
+          : provider === 'google'
+            ? (t('failedToOpenGoogleLogin') || 'Failed to open Google login')
+            : (t('failedToOpenLinkedInLogin') || 'Failed to open LinkedIn login')
+      );
       setIsOAuthLoading(false);
     }
   };
@@ -158,118 +168,98 @@ export default function LoginScreen() {
   const isSubmitting = isLoading || isOAuthLoading;
 
   return (
-    <ScreenContainer edges={isDesktop ? [] : ['top']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView
-          style={{ flex: 1 }}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{
-            flexGrow: 1, justifyContent: 'center', alignItems: 'center',
-            padding: isDesktop ? 32 : 24,
-            paddingBottom: (isDesktop ? 32 : 24) + insets.bottom,
-          }}
+    <AuthScaffold
+      title={t('welcomeBack')}
+      subtitle={t('loginSubtitle')}
+      footer={(
+        <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
+          <Text style={{ color: theme.colors.mutedForeground, fontSize: 14, lineHeight: 20 }}>{t('noAccount')} </Text>
+          <Link href="/register" asChild>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('register')}>
+              <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily, fontSize: 14, lineHeight: 20 }}>
+                {t('register')}
+              </Text>
+            </Pressable>
+          </Link>
+        </View>
+      )}
+    >
+      <FormError message={error} />
+
+      <View style={{ gap: theme.spacing.lg }}>
+        <Button
+          variant="outline"
+          onPress={() => void handleOAuthLogin('google')}
+          disabled={isSubmitting}
+          isLoading={isOAuthLoading}
+          leftIcon={<GoogleIcon size={18} />}
         >
-          <View style={{ width: '100%', maxWidth: formMaxWidth }}>
-            <View style={{ alignItems: 'center', marginBottom: theme.spacing.xxxl }}>
-              <H2 style={{ marginBottom: theme.spacing.sm }}>{t('welcomeBack')}</H2>
-              <Caption style={{ textAlign: 'center' }}>{t('loginSubtitle')}</Caption>
-            </View>
+          {t('continueWithGoogle') || 'Continue with Google'}
+        </Button>
 
-            <FormError message={error} />
+        <Button
+          variant="outline"
+          onPress={() => void handleOAuthLogin('linkedin')}
+          disabled={isSubmitting}
+          leftIcon={<LinkedInIcon size={18} color={theme.colors.secondaryForeground} />}
+        >
+          {t('continueWithLinkedIn') || 'Continue with LinkedIn'}
+        </Button>
 
-            <View style={{ gap: theme.spacing.lg }}>
-              <Button variant="primary" onPress={handleGoogleLogin} disabled={isSubmitting} isLoading={isOAuthLoading} leftIcon={<GoogleIcon size={18} />}>
-                {t('continueWithGoogle') || 'Continue with Google'}
-              </Button>
+        <AuthDivider />
 
-              <Button variant="outline" onPress={handleLinkedInLogin} disabled={isSubmitting} leftIcon={<LinkedInIcon size={18} color={theme.colors.secondaryForeground} />}>
-                {t('continueWithLinkedIn') || 'Continue with LinkedIn'}
-              </Button>
+        <Input
+          label={t('email')}
+          placeholder={t('email')}
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoComplete="email"
+          textContentType="emailAddress"
+          autoCapitalize="none"
+          autoCorrect={false}
+          editable={!isSubmitting}
+          returnKeyType="next"
+          selectionColor={theme.colors.primary}
+          cursorColor={theme.colors.primary}
+          leftIcon={<Mail size={18} color={theme.colors.mutedForeground} />}
+          style={{ fontSize: 15, outlineStyle: 'none' } as any}
+        />
 
-              {/* Divider */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: theme.spacing.md }}>
-                <Divider />
-                <Caption style={{ marginHorizontal: theme.spacing.lg, textTransform: 'uppercase', letterSpacing: 1 }}>{t('or') || 'or'}</Caption>
-                <Divider />
-              </View>
+        <Input
+          label={t('password')}
+          placeholder={t('password')}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          autoComplete="password"
+          textContentType="password"
+          autoCapitalize="none"
+          editable={!isSubmitting}
+          returnKeyType="done"
+          selectionColor={theme.colors.primary}
+          cursorColor={theme.colors.primary}
+          leftIcon={<Lock size={18} color={theme.colors.mutedForeground} />}
+          rightIcon={(
+            <Pressable onPress={() => setShowPassword((prev) => !prev)} hitSlop={6}>
+              {showPassword ? <EyeOff size={18} color={theme.colors.mutedForeground} /> : <Eye size={18} color={theme.colors.mutedForeground} />}
+            </Pressable>
+          )}
+          style={{ fontSize: 15, outlineStyle: 'none' } as any}
+        />
 
-              {/* Email Input */}
-              <Caption>{t('email')}</Caption>
-              <InputRow>
-                <Mail size={18} color={theme.colors.mutedForeground} />
-                <TextInput
-                  placeholder={t('email')}
-                  placeholderTextColor={theme.colors.placeholder}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoComplete="email"
-                  textContentType="emailAddress"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isSubmitting}
-                  returnKeyType="next"
-                  selectionColor={theme.colors.accent}
-                  cursorColor={theme.colors.accent}
-                  style={{
-                    flex: 1, padding: 14, color: theme.colors.foreground,
-                    fontSize: 15, outlineStyle: 'none',
-                  } as any}
-                />
-              </InputRow>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Link href="/forgot-password" asChild>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('forgotPassword')}>
+              <Text style={{ color: theme.colors.mutedForeground, fontSize: 14, lineHeight: 20 }}>{t('forgotPassword')}</Text>
+            </Pressable>
+          </Link>
+        </View>
 
-              {/* Password Input */}
-              <Caption>{t('password')}</Caption>
-              <InputRow>
-                <Lock size={18} color={theme.colors.mutedForeground} />
-                <TextInput
-                  placeholder={t('password')}
-                  placeholderTextColor={theme.colors.placeholder}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoComplete="password"
-                  textContentType="password"
-                  autoCapitalize="none"
-                  editable={!isSubmitting}
-                  returnKeyType="done"
-                  selectionColor={theme.colors.accent}
-                  cursorColor={theme.colors.accent}
-                  style={{
-                    flex: 1, padding: 14, color: theme.colors.foreground,
-                    fontSize: 15, outlineStyle: 'none',
-                  } as any}
-                />
-                <Pressable onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
-                  {showPassword ? <EyeOff size={18} color={theme.colors.mutedForeground} /> : <Eye size={18} color={theme.colors.mutedForeground} />}
-                </Pressable>
-              </InputRow>
-
-              {/* Forgot Password */}
-              <Link href="/forgot-password" asChild>
-                <Pressable>
-                  <Caption style={{ textAlign: 'right' }}>{t('forgotPassword')}</Caption>
-                </Pressable>
-              </Link>
-
-              {/* Login Button */}
-              <Button variant="accent" isLoading={isLoading} onPress={handleLogin} disabled={isSubmitting} style={{ marginTop: theme.spacing.sm }}>
-                {t('login')}
-              </Button>
-            </View>
-
-            {/* Register Link */}
-            <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: theme.spacing.xxxl }}>
-              <Caption>{t('noAccount')} </Caption>
-              <Link href="/register" asChild>
-                <Pressable>
-                  <Caption $color={theme.colors.foreground} style={{ fontFamily: theme.typography.bodyMedium.fontFamily }}>{t('register')}</Caption>
-                </Pressable>
-              </Link>
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </ScreenContainer>
+        <Button isLoading={isLoading} onPress={handleLogin} disabled={isSubmitting}>
+          {t('login')}
+        </Button>
+      </View>
+    </AuthScaffold>
   );
 }

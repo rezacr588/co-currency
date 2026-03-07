@@ -1,6 +1,22 @@
 import { Platform } from 'react-native';
 import { type ColorPalette } from '../constants/colors';
 
+export interface ResponsiveToken {
+  mobile: number;
+  tablet: number;
+  desktop: number;
+}
+
+export function resolveResponsiveToken(token: ResponsiveToken, width: number) {
+  if (width >= 1024) {
+    return token.desktop;
+  }
+  if (width >= 768) {
+    return token.tablet;
+  }
+  return token.mobile;
+}
+
 // ─── Spacing Scale ───────────────────────────────────────────
 export const spacing = {
   xs: 4,
@@ -14,10 +30,10 @@ export const spacing = {
 
 // ─── Border Radii ────────────────────────────────────────────
 export const radii = {
-  sm: 6,
-  md: 10,
-  lg: 14,
-  xl: 18,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 16,
   xxl: 24,
   full: 9999,
 } as const;
@@ -97,22 +113,22 @@ export function buildTypography(isRTL: boolean) {
 
   return {
     h1: {
-      fontSize: 28,
+      fontSize: 24,
       fontFamily: fontFamilyBold!,
-      lineHeight: 34,
-      letterSpacing: -0.5,
+      lineHeight: 32,
+      letterSpacing: -0.4,
     },
     h2: {
-      fontSize: 22,
-      fontFamily: fontFamilySemiBold!,
-      lineHeight: 28,
-      letterSpacing: -0.3,
-    },
-    h3: {
       fontSize: 18,
       fontFamily: fontFamilySemiBold!,
       lineHeight: 24,
       letterSpacing: -0.2,
+    },
+    h3: {
+      fontSize: 16,
+      fontFamily: fontFamilySemiBold!,
+      lineHeight: 22,
+      letterSpacing: -0.1,
     },
     body: {
       fontSize: 15,
@@ -146,12 +162,12 @@ const buildGradients = (colors: ColorPalette, isDark: boolean) => ({
   card: isDark
     ? [colors.card, colors.cardElevated]
     : [colors.cardElevated, colors.card],
-  accent: [colors.accent, colors.accentHover],
+  accent: [colors.primary, colors.primaryHover],
   premium: isDark
-    ? ['#0f0f12', '#141418', '#0f0f12']
-    : ['#f8fafc', '#ffffff', '#f8fafc'],
+    ? ['#1b2436', '#2b354b', '#1b2436']
+    : ['#fff6dd', '#f8ecd0', '#fff6dd'],
   success: ['#16a34a', '#22c55e'],
-  danger: ['#dc2626', '#ef4444'],
+  danger: ['#dc2626', '#f87171'],
 });
 
 // ─── Animation Timings ───────────────────────────────────────
@@ -165,8 +181,28 @@ export const animation = {
 const buildGlass = (isDark: boolean) => ({
   intensity: 20,
   tint: (isDark ? 'dark' : 'light') as 'dark' | 'light',
-  backgroundColor: isDark ? 'rgba(20, 20, 22, 0.6)' : 'rgba(255, 255, 255, 0.6)',
+  backgroundColor: isDark ? 'rgba(18, 26, 42, 0.72)' : 'rgba(255, 255, 255, 0.72)',
 });
+
+const layout = {
+  pageGutter: {
+    mobile: 16,
+    tablet: 24,
+    desktop: 32,
+  },
+  sectionGap: {
+    mobile: 24,
+    tablet: 24,
+    desktop: 32,
+  },
+  maxContentWidth: 1120,
+  maxReadingWidth: 720,
+  navRailWidth: {
+    expanded: 240,
+    collapsed: 72,
+  },
+  headerHeight: 64,
+} as const;
 
 // ─── AppTheme ────────────────────────────────────────────────
 export interface AppTheme {
@@ -180,6 +216,7 @@ export interface AppTheme {
   gradients: ReturnType<typeof buildGradients>;
   animation: typeof animation;
   glass: ReturnType<typeof buildGlass>;
+  layout: typeof layout;
 }
 
 export function buildTheme(colors: ColorPalette, isDark: boolean, isRTL: boolean = false): AppTheme {
@@ -194,5 +231,6 @@ export function buildTheme(colors: ColorPalette, isDark: boolean, isRTL: boolean
     gradients: buildGradients(colors, isDark),
     animation,
     glass: buildGlass(isDark),
+    layout,
   };
 }

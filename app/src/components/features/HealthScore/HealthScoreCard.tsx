@@ -1,4 +1,4 @@
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Heart, TrendingUp, TrendingDown, Minus, RefreshCw, Info } from 'lucide-react-native';
 import { api } from '../../../api';
@@ -6,6 +6,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { haptics } from '../../../utils/haptics';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
+import { Card } from '../../ui';
 
 interface HealthScoreData {
   score: number;
@@ -106,6 +107,8 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
   const theme = useTheme();
   const colors = theme.colors;
   const { reportTimeZone } = useReportTimeZone();
+  const { width } = useWindowDimensions();
+  const shouldStackScore = width < 420;
 
   const {
     data: healthScore,
@@ -156,10 +159,10 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
 
   if (compact) {
     return (
-      <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12 }}>
+      <Card>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={{ width: 40, height: 40, borderRadius: 9999, backgroundColor: colors.success + '33', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+            <View style={{ width: 40, height: 40, borderRadius: 9999, backgroundColor: colors.success + '33', alignItems: 'center', justifyContent: 'center', marginEnd: 12 }}>
               <Heart size={20} color={colors.success} />
             </View>
             <View>
@@ -170,7 +173,7 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
                 <ActivityIndicator size="small" color={colors.mutedForeground} />
               ) : healthScore ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground, marginRight: 8 }}>
+                  <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground, marginEnd: 8 }}>
                     {healthScore.score}
                   </Text>
                   {getTrendIcon(healthScore.trend)}
@@ -183,16 +186,16 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
             </View>
           </View>
         </View>
-      </View>
+      </Card>
     );
   }
 
   return (
-    <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 20, borderRadius: 12 }}>
+    <Card style={{ padding: 20 }}>
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 40, height: 40, borderRadius: 9999, backgroundColor: colors.success + '33', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+          <View style={{ width: 40, height: 40, borderRadius: 9999, backgroundColor: colors.success + '33', alignItems: 'center', justifyContent: 'center', marginEnd: 12 }}>
             <Heart size={20} color={colors.success} />
           </View>
           <View>
@@ -227,15 +230,22 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
       ) : healthScore ? (
         <>
           {/* Score Display */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+          <View
+            style={{
+              flexDirection: shouldStackScore ? 'column' : 'row',
+              alignItems: shouldStackScore ? 'flex-start' : 'center',
+              justifyContent: 'space-between',
+              marginBottom: 24,
+            }}
+          >
             <ScoreGauge score={healthScore.score} />
-            <View style={{ flex: 1, marginLeft: 24 }}>
+            <View style={{ flex: shouldStackScore ? undefined : 1, marginStart: shouldStackScore ? 0 : 24, marginTop: shouldStackScore ? 16 : 0, width: shouldStackScore ? '100%' : undefined }}>
               <Text style={{ fontSize: 18, fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 4 }}>
                 {getScoreLabel(healthScore.score)}
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 {getTrendIcon(healthScore.trend)}
-                <Text style={{ fontSize: 14, color: colors.mutedForeground, marginLeft: 4 }}>
+                <Text style={{ fontSize: 14, color: colors.mutedForeground, marginStart: 4 }}>
                   {getTrendLabel(healthScore.trend)}
                 </Text>
               </View>
@@ -279,13 +289,13 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
             <View>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 <Info size={14} color={colors.mutedForeground} />
-                <Text style={{ fontSize: 12, color: colors.mutedForeground, marginLeft: 4, fontFamily: 'Inter_500Medium' }}>
+                <Text style={{ fontSize: 12, color: colors.mutedForeground, marginStart: 4, fontFamily: 'Inter_500Medium' }}>
                   {t('tipsToImprove') || 'Tips to improve'}
                 </Text>
               </View>
               {healthScore.tips.slice(0, 2).map((tip, idx) => (
                 <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 }}>
-                  <Text style={{ color: colors.accent, marginRight: 8 }}>•</Text>
+                  <Text style={{ color: colors.accent, marginEnd: 8 }}>•</Text>
                   <Text style={{ color: colors.foreground, fontSize: 14, flex: 1 }}>{tip}</Text>
                 </View>
               ))}
@@ -300,6 +310,6 @@ export function HealthScoreCard({ compact = false }: HealthScoreCardProps) {
           </Text>
         </View>
       )}
-    </View>
+    </Card>
   );
 }

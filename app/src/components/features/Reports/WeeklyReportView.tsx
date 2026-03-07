@@ -9,6 +9,7 @@ import { buildDateKey, getTimeZoneDateParts, shiftCalendarDate } from '../../../
 import { formatCompactCurrency, formatNumber } from '../../../utils/format';
 import { CATEGORY_COLORS, StyledCategoryIcon } from '../../../constants/icons';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
+import { Card } from '../../ui';
 import { ReportHeadlineCard } from './ReportHeadlineCard';
 import { formatReportDateRange, type ReportHistoryTarget } from './reportUX';
 
@@ -48,23 +49,23 @@ export function WeeklyReportView({ isTablet = false, onOpenHistory }: WeeklyRepo
 
   if (isError) {
     return (
-      <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, alignItems: 'center' }}>
+      <Card style={{ padding: 24, alignItems: 'center' }}>
         <AlertCircle size={48} color={colors.danger} />
         <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginTop: 16, fontSize: 18 }}>{t('failedToLoadReport')}</Text>
         <Text style={{ color: colors.mutedForeground, marginTop: 8, textAlign: 'center' }}>{t('checkConnection')}</Text>
-      </View>
+      </Card>
     );
   }
 
   if (!weeklyRecap) {
     return (
-      <View style={{ backgroundColor: colors.card, padding: 32, borderRadius: 12, alignItems: 'center' }}>
+      <Card style={{ padding: 32, alignItems: 'center' }}>
         <Calendar size={48} color={colors.mutedForeground} />
         <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginTop: 16, fontSize: 18 }}>{t('noDataAvailable')}</Text>
         <Text style={{ color: colors.mutedForeground, marginTop: 8, textAlign: 'center' }}>
           {t('addTransaction')}
         </Text>
-      </View>
+      </Card>
     );
   }
 
@@ -98,7 +99,7 @@ export function WeeklyReportView({ isTablet = false, onOpenHistory }: WeeklyRepo
       />
 
       {/* Week Navigation */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, backgroundColor: colors.card, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12 }}>
+      <Card style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, paddingHorizontal: 16, paddingVertical: 12 }}>
         <Pressable
           onPress={() => setWeekOffset(weekOffset + 1)}
           style={{ padding: 8, borderRadius: 8, backgroundColor: colors.secondary }}
@@ -124,13 +125,13 @@ export function WeeklyReportView({ isTablet = false, onOpenHistory }: WeeklyRepo
         >
           <ChevronRight size={20} color="#a1a1aa" />
         </Pressable>
-      </View>
+      </Card>
 
       {/* Weekly Summary Card */}
-      <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+      <Card style={{ padding: 24, marginBottom: 24 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
+            <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginEnd: 12 }}>
               <Calendar size={20} color={colors.accent} />
             </View>
             <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{summaryTitle}</Text>
@@ -158,7 +159,7 @@ export function WeeklyReportView({ isTablet = false, onOpenHistory }: WeeklyRepo
               style={{
                 fontSize: 14,
                 fontFamily: 'Inter_600SemiBold',
-                marginLeft: 4,
+                marginStart: 4,
                 color: isPositiveCompare ? colors.success : comparePercent > 0 ? colors.danger : colors.mutedForeground,
               }}
             >
@@ -175,7 +176,7 @@ export function WeeklyReportView({ isTablet = false, onOpenHistory }: WeeklyRepo
           <View style={{ flex: 1, backgroundColor: colors.success + '1a', borderWidth: 1, borderColor: colors.success + '4d', padding: 16, borderRadius: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
               <TrendingUp size={16} color={colors.success} />
-              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginLeft: 8 }}>{t('totalIncome')}</Text>
+              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginStart: 8 }}>{t('totalIncome')}</Text>
             </View>
             <Text style={{ color: colors.success, fontSize: 24, fontFamily: 'Inter_700Bold' }}>
               {formatCompactCurrency(weeklyRecap.total_income, weeklyRecap.currency)}
@@ -186,7 +187,7 @@ export function WeeklyReportView({ isTablet = false, onOpenHistory }: WeeklyRepo
           <View style={{ flex: 1, backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', padding: 16, borderRadius: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
               <TrendingDown size={16} color={colors.danger} />
-              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginLeft: 8 }}>{t('totalExpenses')}</Text>
+              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginStart: 8 }}>{t('totalExpenses')}</Text>
             </View>
             <Text style={{ color: colors.danger, fontSize: 24, fontFamily: 'Inter_700Bold' }}>
               {formatCompactCurrency(weeklyRecap.total_spent, weeklyRecap.currency)}
@@ -228,13 +229,13 @@ export function WeeklyReportView({ isTablet = false, onOpenHistory }: WeeklyRepo
             </Text>
           </Pressable>
         ) : null}
-      </View>
+      </Card>
 
       {/* Top Categories */}
       {weeklyRecap.top_categories && weeklyRecap.top_categories.length > 0 && (
-        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+        <Card style={{ padding: 24, marginBottom: 24 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginRight: 12 }}>
+            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginEnd: 12 }}>
               <Calendar size={20} color={colors.mutedForeground} />
             </View>
             <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('topCategories')}</Text>
@@ -266,7 +267,7 @@ export function WeeklyReportView({ isTablet = false, onOpenHistory }: WeeklyRepo
                         borderRadius={6}
                         padding={6}
                       />
-                      <Text style={{ color: colors.foreground, fontSize: 14, textTransform: 'capitalize', marginLeft: 8 }}>{cat.category}</Text>
+                      <Text style={{ color: colors.foreground, fontSize: 14, textTransform: 'capitalize', marginStart: 8 }}>{cat.category}</Text>
                     </View>
                     <Text style={{ color: colors.mutedForeground, fontSize: 14, fontFamily: 'Inter_500Medium' }}>
                       {formatCompactCurrency(cat.amount, weeklyRecap.currency)}
@@ -286,14 +287,14 @@ export function WeeklyReportView({ isTablet = false, onOpenHistory }: WeeklyRepo
               );
             })}
           </View>
-        </View>
+        </Card>
       )}
 
       {/* Weekly Insights */}
       {weeklyRecap.insights && weeklyRecap.insights.length > 0 && (
-        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+        <Card style={{ padding: 24, marginBottom: 24 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
+            <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginEnd: 12 }}>
               <Lightbulb size={20} color={colors.accent} />
             </View>
             <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('weeklyInsights')}</Text>
@@ -305,21 +306,21 @@ export function WeeklyReportView({ isTablet = false, onOpenHistory }: WeeklyRepo
                 key={index}
                 style={{ backgroundColor: colors.secondary + '4d', padding: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'flex-start' }}
               >
-                <View style={{ width: 24, height: 24, borderRadius: 9999, backgroundColor: colors.accent + '33', alignItems: 'center', justifyContent: 'center', marginRight: 12, marginTop: 2 }}>
+                <View style={{ width: 24, height: 24, borderRadius: 9999, backgroundColor: colors.accent + '33', alignItems: 'center', justifyContent: 'center', marginEnd: 12, marginTop: 2 }}>
                   <Text style={{ color: colors.accent, fontSize: 12, fontFamily: 'Inter_700Bold' }}>{index + 1}</Text>
                 </View>
                 <Text style={{ color: colors.foreground, fontSize: 14, flex: 1 }}>{insight}</Text>
               </View>
             ))}
           </View>
-        </View>
+        </Card>
       )}
 
       {/* Action Items */}
       {weeklyRecap.action_items && weeklyRecap.action_items.length > 0 && (
-        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12 }}>
+        <Card style={{ padding: 24 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <View style={{ backgroundColor: colors.success + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
+            <View style={{ backgroundColor: colors.success + '33', padding: 8, borderRadius: 8, marginEnd: 12 }}>
               <CheckCircle size={20} color={colors.success} />
             </View>
             <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('actionItems')}</Text>
@@ -331,12 +332,12 @@ export function WeeklyReportView({ isTablet = false, onOpenHistory }: WeeklyRepo
                 key={index}
                 style={{ backgroundColor: colors.success + '0d', borderWidth: 1, borderColor: colors.success + '33', padding: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'flex-start' }}
               >
-                <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: colors.success, marginRight: 12, marginTop: 2 }} />
+                <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: colors.success, marginEnd: 12, marginTop: 2 }} />
                 <Text style={{ color: colors.foreground, fontSize: 14, flex: 1 }}>{item}</Text>
               </View>
             ))}
           </View>
-        </View>
+        </Card>
       )}
     </View>
   );

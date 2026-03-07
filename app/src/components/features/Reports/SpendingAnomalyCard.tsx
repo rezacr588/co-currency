@@ -8,7 +8,7 @@ import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency } from '../../../utils/format';
 import { StyledCategoryIcon } from '../../../constants/icons';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
-import type { AnomalyReport } from '../../../types/goal';
+import { Card } from '../../ui';
 
 interface SpendingAnomalyCardProps {
   compact?: boolean;
@@ -37,7 +37,7 @@ export function SpendingAnomalyCard({ compact = false }: SpendingAnomalyCardProp
     return (
       <View style={{ backgroundColor: colors.warning + '1a', borderWidth: 1, borderColor: colors.warning + '4d', padding: 16, borderRadius: 12, marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
         <AlertTriangle size={20} color={colors.warning} />
-        <View style={{ marginLeft: 12, flex: 1 }}>
+        <View style={{ marginStart: 12, flex: 1 }}>
           <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium', fontSize: 14 }}>
             {anomalies.length}{' '}
             {t('unusualTransactions') || 'unusual transactions this week'}
@@ -51,10 +51,10 @@ export function SpendingAnomalyCard({ compact = false }: SpendingAnomalyCardProp
   }
 
   return (
-    <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+    <Card style={{ padding: 24, marginBottom: 24 }}>
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-        <View style={{ backgroundColor: colors.warning + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
+        <View style={{ backgroundColor: colors.warning + '33', padding: 8, borderRadius: 8, marginEnd: 12 }}>
           <AlertTriangle size={20} color={colors.warning} />
         </View>
         <View style={{ flex: 1 }}>
@@ -82,7 +82,7 @@ export function SpendingAnomalyCard({ compact = false }: SpendingAnomalyCardProp
                 borderRadius={6}
                 padding={6}
               />
-              <View style={{ flex: 1, marginLeft: 8 }}>
+              <View style={{ flex: 1, marginStart: 8 }}>
                 <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_500Medium' }} numberOfLines={1}>
                   {anomaly.description}
                 </Text>
@@ -118,13 +118,13 @@ export function SpendingAnomalyCard({ compact = false }: SpendingAnomalyCardProp
           ) : (
             <ChevronDown size={16} color={colors.mutedForeground} />
           )}
-          <Text style={{ color: colors.mutedForeground, fontSize: 14, marginLeft: 4 }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 14, marginStart: 4 }}>
             {expanded
               ? (t('showLess') || 'Show less')
               : `${t('showMore') || 'Show more'} (${anomalies.length - 3})`}
           </Text>
         </Pressable>
       )}
-    </View>
+    </Card>
   );
 }

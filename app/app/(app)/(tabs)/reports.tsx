@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, RefreshControl, useWindowDimensions, Modal } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, Pressable, RefreshControl, ScrollView, useWindowDimensions, Modal } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { Wallet, Calendar, ChevronLeft, ChevronRight } from 'lucide-react-native';
@@ -11,6 +11,8 @@ import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency, formatNumber } from '../../../src/utils/format';
 import { CATEGORY_COLORS } from '../../../src/constants/icons';
 import { useReportTimeZone } from '../../../src/hooks/useReportTimeZone';
+import { AppSwitcherTrigger } from '../../../src/components/navigation/AppSwitcherTrigger';
+import { PageHeader, PageScaffold } from '../../../src/components/ui';
 import {
   type DatePreset,
   getDateRangeFromPreset,
@@ -167,14 +169,14 @@ function MonthYearPicker({
                     borderRadius: 12,
                     alignItems: 'center',
                     backgroundColor: isSelected
-                      ? colors.accent
+                      ? colors.primary
                       : isCurrentMonth
-                        ? colors.accent + '33'
+                        ? colors.primary + '18'
                         : isFuture
                           ? colors.secondary + '4D'
                           : colors.secondary,
                     borderWidth: isCurrentMonth && !isSelected ? 1 : 0,
-                    borderColor: isCurrentMonth ? colors.accent : 'transparent',
+                    borderColor: isCurrentMonth ? colors.primary : 'transparent',
                     opacity: isFuture ? 0.4 : 1,
                   }}
                   accessibilityRole="button"
@@ -184,7 +186,7 @@ function MonthYearPicker({
                   <Text
                     style={{
                       fontFamily: 'Inter_500Medium',
-                      color: isSelected ? colors.background : isFuture ? colors.mutedForeground : colors.foreground,
+                      color: isSelected ? colors.primaryForeground : isFuture ? colors.mutedForeground : colors.foreground,
                     }}
                   >
                     {monthLabel}
@@ -259,7 +261,7 @@ function DateRangeSelector({
           accessibilityRole="button"
           accessibilityLabel={selectDateRangeLabel}
         >
-          <Calendar size={18} color={colors.accent} />
+          <Calendar size={18} color={colors.primary} />
           <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>{dateLabel}</Text>
           <ChevronRight size={16} color={colors.mutedForeground} style={{ marginLeft: 4 }} />
         </Pressable>
@@ -279,7 +281,7 @@ function DateRangeSelector({
               paddingHorizontal: 16,
               paddingVertical: 8,
               borderRadius: 9999,
-              backgroundColor: selectedPreset === preset.key ? colors.accent : colors.secondary,
+              backgroundColor: selectedPreset === preset.key ? colors.primary : colors.secondary,
               borderWidth: selectedPreset === preset.key ? 0 : 1,
               borderColor: colors.border,
             }}
@@ -291,7 +293,7 @@ function DateRangeSelector({
               style={{
                 fontSize: 14,
                 fontFamily: 'Inter_500Medium',
-                color: selectedPreset === preset.key ? colors.background : colors.foreground,
+                color: selectedPreset === preset.key ? colors.primaryForeground : colors.foreground,
               }}
             >
               {t(preset.labelKey)}
@@ -421,9 +423,10 @@ export default function ReportsScreen() {
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
   // Calculate category card widths
-  const containerPadding = isDesktop ? 32 : 24;
+  const containerPadding = isDesktop ? 32 : isTablet ? 24 : 16;
   const cardGap = 12;
-  const availableWidth = width - containerPadding * 2;
+  const contentWidth = Math.min(width, 1280);
+  const availableWidth = contentWidth - containerPadding * 2;
   const categoryCols = isDesktop ? 3 : isTablet ? 2 : 1;
   const categoryCardWidth = categoryCols === 1 ? availableWidth : (availableWidth - cardGap * (categoryCols - 1)) / categoryCols;
 
@@ -555,33 +558,33 @@ export default function ReportsScreen() {
   const stickyHeaderIndex = networth && !networthError ? 2 : 1;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
-      <ScrollView
-        style={{ flex: 1 }}
-        stickyHeaderIndices={[stickyHeaderIndex]}
-        contentContainerStyle={{
-          padding: isDesktop ? 32 : 24,
-          maxWidth: 1400,
-          width: '100%',
-          alignSelf: 'center',
-          paddingBottom: bottomPadding,
-        }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 16 }}>{t('reportsAndStats')}</Text>
+    <PageScaffold
+      scroll
+      maxWidth={1280}
+      contentContainerStyle={{
+        paddingBottom: bottomPadding,
+      }}
+      scrollProps={{
+        stickyHeaderIndices: [stickyHeaderIndex],
+        refreshControl: <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />,
+      }}
+    >
+        <PageHeader
+          title={t('reportsAndStats')}
+          subtitle={t('reportsDescription') || 'Review net worth, report periods, and category breakdowns with a consistent layout.'}
+          actions={!isDesktop ? <AppSwitcherTrigger variant="header_inline" /> : undefined}
+        />
 
         {/* Net Worth Card (always visible) */}
         {networth && !networthError && (
           <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 12, marginBottom: 24 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-              <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
-                <Wallet size={20} color={colors.accent} />
+              <View style={{ backgroundColor: colors.primary + '18', padding: 8, borderRadius: 8, marginRight: 12 }}>
+                <Wallet size={20} color={colors.primary} />
               </View>
               <Text style={{ color: colors.mutedForeground }}>{t('netWorth')}</Text>
             </View>
-            <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.accent, marginBottom: 16 }}>
+            <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 16 }}>
               {formatCompactCurrency(networth.total_balance, networth.currency)}
             </Text>
 
@@ -591,7 +594,7 @@ export default function ReportsScreen() {
                 <RingChart
                   segments={networth.balances.slice(0, 5).map((b) => ({
                     value: b.balance_in_base,
-                    color: CATEGORY_COLORS[b.currency.toLowerCase()] || colors.accent,
+                    color: CATEGORY_COLORS[b.currency.toLowerCase()] || colors.primary,
                     label: b.currency,
                   }))}
                   centerLabel={t('total')}
@@ -667,7 +670,6 @@ export default function ReportsScreen() {
             onOpenHistory={handleOpenHistory}
           />
         )}
-      </ScrollView>
-    </SafeAreaView>
+    </PageScaffold>
   );
 }

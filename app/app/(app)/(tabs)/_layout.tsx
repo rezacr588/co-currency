@@ -1,96 +1,142 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Tabs, usePathname, useRouter } from 'expo-router';
-import { View, Text, Pressable, useWindowDimensions, ScrollView } from 'react-native';
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  LayoutDashboard,
-  Wallet,
-  MessageCircle,
   BarChart3,
-  Plus,
-  User,
-  Trophy,
   History,
-  Menu,
-  X,
-  LogOut,
-  ChevronRight,
   KanbanSquare,
-  Sun,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  MessageCircle,
   Moon,
+  Plus,
+  Sun,
+  Trophy,
+  User,
+  Wallet,
 } from 'lucide-react-native';
-import { useTheme as useThemeContext } from '../../../src/context/ThemeContext';
 import { useTheme as useStyledTheme } from 'styled-components/native';
+import { useTheme as useThemeContext } from '../../../src/context/ThemeContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
 import { useAuth } from '../../../src/context/AuthContext';
 import { ErrorBoundary } from '../../../src/components/ui/ErrorBoundary';
 import { AppSwitcherTrigger } from '../../../src/components/navigation/AppSwitcherTrigger';
-
-const SIDEBAR_WIDTH = 280;
-const SIDEBAR_COLLAPSED_WIDTH = 80;
 
 interface NavItemProps {
   icon: React.ReactNode;
   label: string;
   href: string;
   isActive: boolean;
+  isCollapsed: boolean;
   onPress: () => void;
-  isCollapsed?: boolean;
 }
 
-function NavItem({ icon, label, isActive, onPress, isCollapsed }: NavItemProps) {
-  const styledTheme = useStyledTheme();
-  const colors = styledTheme.colors;
+function NavItem({ icon, label, isActive, isCollapsed, onPress }: NavItemProps) {
+  const theme = useStyledTheme();
 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [{ cursor: 'pointer', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, marginBottom: 2, backgroundColor: isActive ? colors.secondary : 'transparent' }, pressed && { opacity: 0.7 }]}
-      accessibilityLabel={label}
+      style={({ pressed }) => [
+        {
+          minHeight: 44,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: isCollapsed ? 'center' : 'flex-start',
+          paddingHorizontal: isCollapsed ? 0 : 12,
+          borderRadius: theme.radii.md,
+          backgroundColor: isActive ? theme.colors.secondary : 'transparent',
+          borderWidth: isActive ? 1 : 0,
+          borderColor: isActive ? theme.colors.border : 'transparent',
+        },
+        pressed && { opacity: 0.72 },
+      ]}
       accessibilityRole="button"
+      accessibilityLabel={label}
       accessibilityState={{ selected: isActive }}
     >
-      <View style={{ opacity: isActive ? 1 : 0.6 }}>{icon}</View>
-      {!isCollapsed && (
+      <View style={{ opacity: isActive ? 1 : 0.8 }}>{icon}</View>
+      {!isCollapsed ? (
         <Text
-          style={{ marginLeft: 12, fontSize: 14, color: isActive ? colors.foreground : colors.mutedForeground, fontFamily: isActive ? 'Inter_500Medium' : undefined }}
+          style={{
+            marginStart: 12,
+            color: isActive ? theme.colors.foreground : theme.colors.mutedForeground,
+            fontSize: 14,
+            fontFamily: isActive ? theme.typography.bodyMedium.fontFamily : theme.typography.body.fontFamily,
+          }}
+          numberOfLines={1}
         >
           {label}
         </Text>
-      )}
+      ) : null}
     </Pressable>
   );
 }
 
-function DesktopSidebar({
+function SidebarSection({
+  title,
+  children,
+  isCollapsed,
+}: {
+  title: string;
+  children: React.ReactNode;
+  isCollapsed: boolean;
+}) {
+  const theme = useStyledTheme();
+
+  return (
+    <View style={{ marginBottom: theme.spacing.xl }}>
+      {!isCollapsed ? (
+        <Text
+          style={{
+            marginBottom: theme.spacing.sm,
+            paddingHorizontal: 12,
+            fontSize: 11,
+            textTransform: 'uppercase',
+            letterSpacing: 0.5,
+            color: theme.colors.mutedForeground,
+            fontFamily: theme.typography.label.fontFamily,
+          }}
+        >
+          {title}
+        </Text>
+      ) : null}
+      <View style={{ gap: 4 }}>{children}</View>
+    </View>
+  );
+}
+
+function AppSidebar({
   isCollapsed,
   onToggle,
 }: {
   isCollapsed: boolean;
   onToggle: () => void;
 }) {
+  const theme = useStyledTheme();
   const { t } = useLanguage();
   const { user, logout } = useAuth();
-  const styledTheme = useStyledTheme();
-  const colors = styledTheme.colors;
   const router = useRouter();
   const pathname = usePathname();
+  const railWidth = isCollapsed ? theme.layout.navRailWidth.collapsed : theme.layout.navRailWidth.expanded;
 
-  const mainNavItems = [
-    { icon: <LayoutDashboard size={20} color={colors.secondaryForeground} />, label: t('dashboard'), href: '/(app)/(tabs)' },
-    { icon: <Wallet size={20} color={colors.secondaryForeground} />, label: t('wallet'), href: '/(app)/(tabs)/wallet' },
-    { icon: <Plus size={20} color={colors.secondaryForeground} />, label: t('addTransaction') || 'Add', href: '/(app)/(tabs)/add' },
-    { icon: <MessageCircle size={20} color={colors.secondaryForeground} />, label: t('aiAdvisor') || 'Chatbot', href: '/(app)/(tabs)/chat' },
-    { icon: <BarChart3 size={20} color={colors.secondaryForeground} />, label: t('reports'), href: '/(app)/(tabs)/reports' },
+  const mainItems = [
+    { href: '/(app)/(tabs)', label: t('dashboard'), icon: <LayoutDashboard size={18} color={theme.colors.secondaryForeground} /> },
+    { href: '/(app)/(tabs)/wallet', label: t('wallet'), icon: <Wallet size={18} color={theme.colors.secondaryForeground} /> },
+    { href: '/(app)/(tabs)/add', label: t('addTransaction') || 'Add', icon: <Plus size={18} color={theme.colors.secondaryForeground} /> },
+    { href: '/(app)/(tabs)/chat', label: t('aiAdvisor') || 'Chat', icon: <MessageCircle size={18} color={theme.colors.secondaryForeground} /> },
+    { href: '/(app)/(tabs)/reports', label: t('reports'), icon: <BarChart3 size={18} color={theme.colors.secondaryForeground} /> },
   ];
 
-  const toolsNavItems = [
-    { icon: <Trophy size={20} color={colors.secondaryForeground} />, label: t('badges') || 'Badges', href: '/(app)/badges' },
-    { icon: <History size={20} color={colors.secondaryForeground} />, label: t('historicalRates') || 'Historical', href: '/(app)/historical' },
-    { icon: <KanbanSquare size={20} color={colors.secondaryForeground} />, label: 'Planner', href: '/todo' },
+  const utilityItems = [
+    { href: '/(app)/badges', label: t('badges') || 'Badges', icon: <Trophy size={18} color={theme.colors.secondaryForeground} /> },
+    { href: '/(app)/historical', label: t('historicalRates') || 'Historical', icon: <History size={18} color={theme.colors.secondaryForeground} /> },
+    { href: '/todo', label: 'Planner', icon: <KanbanSquare size={18} color={theme.colors.secondaryForeground} /> },
   ];
 
-  const isActiveRoute = (href: string) => {
+  const isRouteActive = (href: string) => {
     if (href === '/(app)/(tabs)') {
       return pathname === '/' || pathname === '/(app)/(tabs)' || pathname === '/index';
     }
@@ -99,255 +145,311 @@ function DesktopSidebar({
 
   return (
     <View
-      style={{ backgroundColor: colors.background, borderRightWidth: 1, borderRightColor: colors.border, height: '100%', width: isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH }}
+      style={{
+        width: railWidth,
+        backgroundColor: theme.colors.background,
+        borderRightWidth: 1,
+        borderRightColor: theme.colors.border,
+      }}
     >
-      {/* Logo/Header */}
-      <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        {!isCollapsed && (
-          <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>CoFinance</Text>
-        )}
-        <Pressable onPress={onToggle} hitSlop={8} style={({ pressed }) => [{ cursor: 'pointer', padding: 8, borderRadius: 6 }, pressed && { opacity: 0.7 }]} accessibilityLabel={isCollapsed ? (t('expandSidebar') || 'Expand sidebar') : (t('collapseSidebar') || 'Collapse sidebar')} accessibilityRole="button">
-          {isCollapsed ? (
-            <Menu size={18} color={colors.mutedForeground} />
-          ) : (
-            <X size={18} color={colors.mutedForeground} />
-          )}
+      <View
+        style={{
+          minHeight: theme.layout.headerHeight,
+          paddingHorizontal: 16,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: isCollapsed ? 'center' : 'space-between',
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.border,
+        }}
+      >
+        {!isCollapsed ? (
+          <Text
+            style={{
+              fontSize: 18,
+              lineHeight: 24,
+              fontFamily: theme.typography.h2.fontFamily,
+              color: theme.colors.foreground,
+            }}
+          >
+            CoFinance
+          </Text>
+        ) : null}
+        <Pressable
+          onPress={onToggle}
+          hitSlop={8}
+          style={({ pressed }) => [
+            {
+              width: 36,
+              height: 36,
+              borderRadius: theme.radii.md,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: theme.colors.card,
+              alignItems: 'center',
+              justifyContent: 'center',
+            },
+            pressed && { opacity: 0.72 },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={isCollapsed ? (t('expandSidebar') || 'Expand sidebar') : (t('collapseSidebar') || 'Collapse sidebar')}
+        >
+          <Menu size={16} color={theme.colors.foreground} />
         </Pressable>
       </View>
 
-      {/* Navigation */}
-      <ScrollView style={{ flex: 1, padding: 12 }}>
-        {/* Main Navigation */}
-        <View style={{ marginBottom: 24 }}>
-          {!isCollapsed && (
-            <Text style={{ fontSize: 12, color: colors.mutedForeground, textTransform: 'uppercase', letterSpacing: 1, paddingHorizontal: 12, marginBottom: 8 }}>
-              {t('main') || 'Main'}
-            </Text>
-          )}
-          {mainNavItems.map((item) => (
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 16 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <SidebarSection title={t('main') || 'Main'} isCollapsed={isCollapsed}>
+          {mainItems.map((item) => (
             <NavItem
               key={item.href}
               icon={item.icon}
               label={item.label}
               href={item.href}
-              isActive={isActiveRoute(item.href)}
-              onPress={() => router.push(item.href as any)}
+              isActive={isRouteActive(item.href)}
               isCollapsed={isCollapsed}
+              onPress={() => router.push(item.href as any)}
             />
           ))}
-        </View>
+        </SidebarSection>
 
-        {/* Tools */}
-        <View>
-          {!isCollapsed && (
-            <Text style={{ fontSize: 12, color: colors.mutedForeground, textTransform: 'uppercase', letterSpacing: 1, paddingHorizontal: 12, marginBottom: 8 }}>
-              {t('tools') || 'Tools'}
-            </Text>
-          )}
-          {toolsNavItems.map((item) => (
+        <SidebarSection title={t('tools') || 'Tools'} isCollapsed={isCollapsed}>
+          {utilityItems.map((item) => (
             <NavItem
               key={item.href}
               icon={item.icon}
               label={item.label}
               href={item.href}
-              isActive={isActiveRoute(item.href)}
-              onPress={() => router.push(item.href as any)}
+              isActive={isRouteActive(item.href)}
               isCollapsed={isCollapsed}
+              onPress={() => router.push(item.href as any)}
             />
           ))}
-        </View>
+        </SidebarSection>
       </ScrollView>
 
-      {/* User Section */}
-      <View style={{ padding: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
+      <View
+        style={{
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.border,
+          padding: 12,
+        }}
+      >
         <Pressable
           onPress={() => router.push('/(app)/profile')}
-          style={({ pressed }) => [{ cursor: 'pointer', flexDirection: 'row', alignItems: 'center', padding: 10, borderRadius: 8 }, pressed && { opacity: 0.7 }]}
-          accessibilityLabel={t('profile') || 'Profile'}
+          style={({ pressed }) => [
+            {
+              minHeight: 48,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: isCollapsed ? 'center' : 'flex-start',
+              paddingHorizontal: isCollapsed ? 0 : 10,
+              borderRadius: theme.radii.md,
+            },
+            pressed && { opacity: 0.72 },
+          ]}
           accessibilityRole="button"
+          accessibilityLabel={t('profile') || 'Profile'}
         >
-          <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 9999 }}>
-            <User size={18} color={colors.secondaryForeground} />
+          <View
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: theme.radii.md,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: theme.colors.secondary,
+            }}
+          >
+            <User size={16} color={theme.colors.secondaryForeground} />
           </View>
-          {!isCollapsed && (
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={{ fontFamily: 'Inter_500Medium', color: colors.foreground, fontSize: 14 }} numberOfLines={1}>
+          {!isCollapsed ? (
+            <View style={{ flex: 1, marginStart: 12 }}>
+              <Text
+                style={{
+                  color: theme.colors.foreground,
+                  fontSize: 14,
+                  fontFamily: theme.typography.bodyMedium.fontFamily,
+                }}
+                numberOfLines={1}
+              >
                 {user?.name}
               </Text>
-              <Text style={{ fontSize: 12, color: colors.mutedForeground }} numberOfLines={1}>
+              <Text style={{ color: theme.colors.mutedForeground, fontSize: 12 }} numberOfLines={1}>
                 {user?.email}
               </Text>
             </View>
-          )}
-          {!isCollapsed && <ChevronRight size={14} color={colors.mutedForeground} />}
+          ) : null}
         </Pressable>
 
         <Pressable
           onPress={logout}
-          style={({ pressed }) => [{ cursor: 'pointer', flexDirection: 'row', alignItems: 'center', padding: 10, borderRadius: 8, marginTop: 4 }, pressed && { opacity: 0.7 }]}
-          accessibilityLabel={t('logout') || 'Logout'}
+          style={({ pressed }) => [
+            {
+              minHeight: 44,
+              marginTop: 4,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: isCollapsed ? 'center' : 'flex-start',
+              paddingHorizontal: isCollapsed ? 0 : 10,
+              borderRadius: theme.radii.md,
+            },
+            pressed && { opacity: 0.72 },
+          ]}
           accessibilityRole="button"
+          accessibilityLabel={t('logout') || 'Logout'}
         >
-          <LogOut size={18} color={colors.mutedForeground} />
-          {!isCollapsed && (
-            <Text style={{ marginLeft: 12, color: colors.mutedForeground, fontSize: 14 }}>{t('logout')}</Text>
-          )}
+          <LogOut size={16} color={theme.colors.mutedForeground} />
+          {!isCollapsed ? (
+            <Text
+              style={{
+                marginStart: 12,
+                color: theme.colors.mutedForeground,
+                fontSize: 14,
+              }}
+            >
+              {t('logout')}
+            </Text>
+          ) : null}
         </Pressable>
       </View>
     </View>
   );
 }
 
-function DesktopNavbar() {
-  const { t } = useLanguage();
-  const { user } = useAuth();
-  const { isDark } = useThemeContext();
-  const styledTheme = useStyledTheme();
-  const colors = styledTheme.colors;
+function UtilityBar() {
+  const theme = useStyledTheme();
+  const { isDark, toggleTheme } = useThemeContext();
 
   return (
-    <View style={{ backgroundColor: colors.background, borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 24, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-      <View>
-        <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('welcomeBack')}</Text>
-        <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>{user?.name}</Text>
-      </View>
-
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            backgroundColor: colors.secondary,
+    <View
+      style={{
+        minHeight: theme.layout.headerHeight,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.border,
+        backgroundColor: theme.colors.background,
+        paddingHorizontal: 24,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        gap: 12,
+      }}
+    >
+      <Pressable
+        onPress={toggleTheme}
+        style={({ pressed }) => [
+          {
+            width: 40,
+            height: 40,
+            borderRadius: theme.radii.md,
             borderWidth: 1,
-            borderColor: colors.border,
-            paddingVertical: 6,
-            paddingHorizontal: 10,
-            borderRadius: 12,
-          }}
-        >
-          {isDark ? <Moon size={14} color={colors.accent} /> : <Sun size={14} color={colors.accent} />}
-          <Text style={{ fontFamily: 'Inter_500Medium', color: colors.foreground, fontSize: 13 }}>{user?.name?.split(' ')[0]}</Text>
-        </View>
-        <AppSwitcherTrigger variant="header_inline" />
-      </View>
+            borderColor: theme.colors.border,
+            backgroundColor: theme.colors.card,
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
+          pressed && { opacity: 0.72 },
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      >
+        {isDark ? (
+          <Sun size={18} color={theme.colors.foreground} />
+        ) : (
+          <Moon size={18} color={theme.colors.foreground} />
+        )}
+      </Pressable>
+      <AppSwitcherTrigger variant="header_inline" />
     </View>
   );
 }
 
+function TabScreens() {
+  return (
+    <>
+      <Tabs.Screen name="index" />
+      <Tabs.Screen
+        name="wallet"
+        options={{
+          popToTopOnBlur: true,
+        }}
+      />
+      <Tabs.Screen name="add" />
+      <Tabs.Screen name="chat" />
+      <Tabs.Screen name="reports" />
+      <Tabs.Screen name="goals" options={{ href: null }} />
+    </>
+  );
+}
+
 function TabsLayoutInner() {
-  const styledTheme = useStyledTheme();
-  const colors = styledTheme.colors;
+  const theme = useStyledTheme();
   const { t } = useLanguage();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-
   const isDesktop = width >= 1024;
   const isTablet = width >= 768 && width < 1024;
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  // Sidebar collapsed by default on tablet, expanded on desktop
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(!isDesktop);
+  useEffect(() => {
+    if (isDesktop) {
+      setIsSidebarCollapsed(false);
+      return;
+    }
 
-  // Desktop layout with sidebar
-  if (isDesktop) {
+    if (isTablet) {
+      setIsSidebarCollapsed(true);
+    }
+  }, [isDesktop, isTablet]);
+
+  if (isDesktop || isTablet) {
     return (
-      <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
-        <DesktopSidebar
-          isCollapsed={isSidebarCollapsed}
-          onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        />
-        <View style={{ flex: 1 }}>
-          <DesktopNavbar />
-          <Tabs
-            screenOptions={{
-              headerShown: false,
-              tabBarStyle: { display: 'none' },
-            }}
-          >
-            <Tabs.Screen name="index" />
-            <Tabs.Screen
-              name="wallet"
-              options={{
-                popToTopOnBlur: true,
-              }}
-            />
-            <Tabs.Screen name="add" />
-            <Tabs.Screen name="chat" />
-            <Tabs.Screen name="reports" />
-            <Tabs.Screen name="goals" options={{ href: null }} />
-          </Tabs>
-        </View>
-      </View>
-    );
-  }
-
-  // Tablet layout - sidebar but collapsed by default
-  if (isTablet) {
-    return (
-      <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
-        <DesktopSidebar
+      <View style={{ flex: 1, flexDirection: 'row', backgroundColor: theme.colors.background }}>
+        <AppSidebar
           isCollapsed={isSidebarCollapsed}
           onToggle={() => setIsSidebarCollapsed((prev) => !prev)}
         />
         <View style={{ flex: 1 }}>
-          <View
-            style={{
-              paddingHorizontal: 14,
-              paddingTop: Math.max(insets.top, 10),
-              paddingBottom: 10,
-              borderBottomWidth: 1,
-              borderBottomColor: colors.border,
-              backgroundColor: colors.background,
-              alignItems: 'flex-end',
-            }}
-          >
-            <AppSwitcherTrigger variant="header_inline" />
-          </View>
+          <UtilityBar />
           <Tabs
             screenOptions={{
               headerShown: false,
               tabBarStyle: { display: 'none' },
+              sceneStyle: { backgroundColor: theme.colors.background },
             }}
           >
-            <Tabs.Screen name="index" />
-            <Tabs.Screen
-              name="wallet"
-              options={{
-                popToTopOnBlur: true,
-              }}
-            />
-            <Tabs.Screen name="add" />
-            <Tabs.Screen name="chat" />
-            <Tabs.Screen name="reports" />
-            <Tabs.Screen name="goals" options={{ href: null }} />
+            <TabScreens />
           </Tabs>
         </View>
       </View>
     );
   }
 
-  // Mobile layout - bottom tabs
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: colors.tabBarActive,
-          tabBarInactiveTintColor: colors.tabBarInactive,
-          tabBarShowLabel: true,
+          sceneStyle: { backgroundColor: theme.colors.background },
+          tabBarActiveTintColor: theme.colors.tabBarActive,
+          tabBarInactiveTintColor: theme.colors.tabBarInactive,
           tabBarLabelStyle: {
-            fontSize: 10,
-            fontFamily: 'Inter_500Medium',
-            marginTop: -2,
+            fontSize: 11,
+            fontFamily: theme.typography.bodyMedium.fontFamily,
+            marginTop: 2,
           },
           tabBarStyle: {
-            backgroundColor: colors.tabBarBackground,
-            borderTopWidth: 1,
-            borderTopColor: colors.tabBarBorder,
-            elevation: 0,
-            height: 70 + insets.bottom,
-            paddingBottom: insets.bottom,
+            height: 64 + insets.bottom,
             paddingTop: 8,
+            paddingBottom: Math.max(insets.bottom, 8),
+            borderTopWidth: 1,
+            borderTopColor: theme.colors.tabBarBorder,
+            backgroundColor: theme.colors.tabBarBackground,
+            elevation: 0,
           },
         }}
       >
@@ -369,20 +471,8 @@ function TabsLayoutInner() {
         <Tabs.Screen
           name="add"
           options={{
-            title: '',
-            tabBarShowLabel: false,
-            tabBarIcon: ({ focused }) => (
-              <View
-                style={{
-                  backgroundColor: colors.foreground,
-                  borderRadius: 50,
-                  padding: 14,
-                  marginTop: -24,
-                }}
-              >
-                <Plus size={22} color={colors.background} />
-              </View>
-            ),
+            title: t('addTransaction') || 'Add',
+            tabBarIcon: ({ color, size }) => <Plus size={size} color={color} />,
           }}
         />
         <Tabs.Screen
@@ -401,17 +491,6 @@ function TabsLayoutInner() {
         />
         <Tabs.Screen name="goals" options={{ href: null }} />
       </Tabs>
-
-      <View
-        pointerEvents="box-none"
-        style={{
-          position: 'absolute',
-          right: 14,
-          bottom: insets.bottom + 68,
-        }}
-      >
-        <AppSwitcherTrigger variant="floating_tab" />
-      </View>
     </View>
   );
 }

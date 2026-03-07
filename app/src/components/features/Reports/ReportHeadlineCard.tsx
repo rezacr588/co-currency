@@ -2,6 +2,7 @@ import { View, Text } from 'react-native';
 import { Sparkles } from 'lucide-react-native';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
+import { Card } from '../../ui';
 
 interface ReportHeadlineCardProps {
   summary: string;
@@ -14,12 +15,10 @@ export function ReportHeadlineCard({ summary, caption }: ReportHeadlineCardProps
   const colors = theme.colors;
 
   return (
-    <View
+    <Card
       style={{
         backgroundColor: colors.accent + '12',
-        borderWidth: 1,
         borderColor: colors.accent + '33',
-        borderRadius: 16,
         padding: 18,
         marginBottom: 20,
       }}
@@ -33,7 +32,7 @@ export function ReportHeadlineCard({ summary, caption }: ReportHeadlineCardProps
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: colors.accent + '26',
-            marginRight: 10,
+            marginEnd: 10,
           }}
         >
           <Sparkles size={18} color={colors.accent} />
@@ -52,6 +51,6 @@ export function ReportHeadlineCard({ summary, caption }: ReportHeadlineCardProps
           {caption}
         </Text>
       ) : null}
-    </View>
+    </Card>
   );
 }

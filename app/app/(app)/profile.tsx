@@ -2,7 +2,6 @@ import { useState, useCallback } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   Pressable,
   ActivityIndicator,
   useWindowDimensions,
@@ -11,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
 import {
   User,
@@ -20,7 +19,6 @@ import {
   Sun,
   LogOut,
   ChevronRight,
-  ChevronLeft,
   Bell,
   Wallet,
   CreditCard,
@@ -46,6 +44,8 @@ import { useTheme as useStyledTheme } from 'styled-components/native';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useSettings } from '../../src/context/SettingsContext';
 import { api } from '../../src/api';
+import { AppSwitcherTrigger } from '../../src/components/navigation/AppSwitcherTrigger';
+import { PageHeader, PageScaffold } from '../../src/components/ui';
 import { Toggle } from '../../src/components/ui/Toggle';
 import { getDeviceTimeZone, type ReportTimeZonePreference } from '../../src/utils/reportTimeZone';
 
@@ -68,7 +68,6 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
 
   const isDesktop = width >= 1024;
-  const desktopMaxWidth = 1280;
   const strongBorder = colors.borderStrong || colors.border;
   const sectionGap = isDesktop ? 20 : 16;
 
@@ -268,40 +267,20 @@ export default function ProfileScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
-      <ScrollView
-        style={{ flex: 1 }}
+    <>
+      <PageScaffold
+        scroll
+        maxWidth={1120}
         contentContainerStyle={{
-          paddingHorizontal: isDesktop ? 28 : 16,
-          paddingTop: isDesktop ? 24 : 16,
           paddingBottom: isDesktop ? 40 : Math.max(insets.bottom, 16) + 24,
-          maxWidth: isDesktop ? desktopMaxWidth : undefined,
-          alignSelf: isDesktop ? 'center' : undefined,
-          width: '100%',
         }}
       >
-        {/* Header */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: isDesktop ? 20 : 20 }}>
-          {!isDesktop && (
-            <Pressable
-              onPress={() => router.back()}
-              hitSlop={8}
-              style={{ cursor: 'pointer', padding: 8, marginRight: 4 }}
-            >
-              <ChevronLeft size={24} color={colors.foreground} />
-            </Pressable>
-          )}
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: isDesktop ? 30 : 22, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
-              {t('profile')}
-            </Text>
-            {isDesktop && (
-              <Text style={{ color: colors.mutedForeground, marginTop: 4 }}>
-                {t('profileSubtitle') || 'Manage your account details and security'}
-              </Text>
-            )}
-          </View>
-        </View>
+        <PageHeader
+          title={t('profile')}
+          subtitle={t('profileSubtitle') || 'Manage your account details and security'}
+          backHref={!isDesktop ? ('/(app)/(tabs)' as any) : undefined}
+          actions={!isDesktop ? <AppSwitcherTrigger variant="header_inline" /> : undefined}
+        />
 
         {isDesktop ? (
           <View
@@ -323,14 +302,14 @@ export default function ProfileScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View
                   style={{
-                    backgroundColor: colors.accent + '22',
+                    backgroundColor: colors.primary + '18',
                     borderWidth: 1,
-                    borderColor: colors.accent + '55',
+                    borderColor: colors.primary + '33',
                     padding: 14,
                     borderRadius: 9999,
                   }}
                 >
-                  <User size={34} color={colors.accent} />
+                  <User size={34} color={colors.primary} />
                 </View>
                 <View style={{ marginLeft: 14 }}>
                   <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{user?.name}</Text>
@@ -344,7 +323,7 @@ export default function ProfileScreen() {
               <Pressable
                 onPress={openEditModal}
                 style={({ pressed }) => [{
-                  backgroundColor: colors.accent,
+                  backgroundColor: colors.primary,
                   borderRadius: 10,
                   paddingHorizontal: 14,
                   paddingVertical: 10,
@@ -353,8 +332,8 @@ export default function ProfileScreen() {
                   opacity: pressed ? 0.82 : 1,
                 }]}
               >
-                <Pencil size={15} color={colors.accentForeground} />
-                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>
+                <Pencil size={15} color={colors.primaryForeground} />
+                <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>
                   {t('editProfile')}
                 </Text>
               </Pressable>
@@ -706,7 +685,7 @@ export default function ProfileScreen() {
         <View style={{ alignItems: 'center', marginTop: 24 }}>
           <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>CoFinance v1.0.0</Text>
         </View>
-      </ScrollView>
+      </PageScaffold>
 
       {/* Edit Profile Modal */}
       <Modal
@@ -858,6 +837,6 @@ export default function ProfileScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-    </SafeAreaView>
+    </>
   );
 }

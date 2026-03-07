@@ -73,132 +73,132 @@ export interface ColorPalette {
 
 export const darkColors: ColorPalette = {
   // Backgrounds
-  background: '#09090b',
-  backgroundSecondary: '#0f0f10',
-  card: '#141416',
-  cardHover: '#1a1a1d',
-  cardElevated: '#1e1e21',
+  background: '#0b1220',
+  backgroundSecondary: '#111827',
+  card: '#121a2a',
+  cardHover: '#182235',
+  cardElevated: '#1c2740',
 
   // Text
-  foreground: '#fafafa',
-  mutedForeground: '#71717a',
-  subtleForeground: '#52525b',
+  foreground: '#f8fafc',
+  mutedForeground: '#94a3b8',
+  subtleForeground: '#64748b',
 
   // Primary
-  primary: '#fafafa',
-  primaryHover: '#e4e4e7',
-  primaryForeground: '#09090b',
+  primary: '#3b82f6',
+  primaryHover: '#2563eb',
+  primaryForeground: '#ffffff',
 
   // Secondary
-  secondary: '#27272a',
-  secondaryHover: '#3f3f46',
-  secondaryForeground: '#a1a1aa',
+  secondary: '#172033',
+  secondaryHover: '#1f2a40',
+  secondaryForeground: '#cbd5e1',
 
   // Accent (gold)
-  accent: '#d4af37',
-  accentHover: '#e5c158',
-  accentMuted: '#a68b2c',
-  accentForeground: '#09090b',
+  accent: '#c8a94b',
+  accentHover: '#d7bb6a',
+  accentMuted: '#8f7530',
+  accentForeground: '#0b1220',
 
   // Muted
-  muted: '#18181b',
+  muted: '#0f172a',
 
   // Semantic
   success: '#22c55e',
-  successMuted: 'rgba(34, 197, 94, 0.15)',
-  danger: '#ef4444',
-  dangerMuted: 'rgba(239, 68, 68, 0.15)',
+  successMuted: 'rgba(34, 197, 94, 0.14)',
+  danger: '#f87171',
+  dangerMuted: 'rgba(248, 113, 113, 0.14)',
   warning: '#f59e0b',
-  warningMuted: 'rgba(245, 158, 11, 0.15)',
-  info: '#3b82f6',
-  infoMuted: 'rgba(59, 130, 246, 0.15)',
+  warningMuted: 'rgba(245, 158, 11, 0.14)',
+  info: '#38bdf8',
+  infoMuted: 'rgba(56, 189, 248, 0.14)',
 
   // Border
-  border: '#27272a',
-  borderSubtle: '#1f1f22',
-  borderStrong: '#3f3f46',
+  border: '#263247',
+  borderSubtle: '#1d2739',
+  borderStrong: '#334155',
 
   // Input
-  input: '#18181b',
-  placeholder: '#71717a',
-  ring: '#52525b',
+  input: '#111827',
+  placeholder: '#64748b',
+  ring: '#3b82f6',
 
   // Tab bar
-  tabBarBackground: '#09090b',
-  tabBarActive: '#fafafa',
-  tabBarInactive: '#71717a',
-  tabBarBorder: '#27272a',
+  tabBarBackground: '#0b1220',
+  tabBarActive: '#e2e8f0',
+  tabBarInactive: '#64748b',
+  tabBarBorder: '#1f2937',
 
   // Chat
-  chatBubbleUser: '#27272a',
-  chatBubbleBot: '#141416',
+  chatBubbleUser: '#172033',
+  chatBubbleBot: '#121a2a',
 
   // Overlay
-  overlay: 'rgba(0, 0, 0, 0.5)',
+  overlay: 'rgba(2, 6, 23, 0.64)',
 };
 
 export const lightColors: ColorPalette = {
   // Backgrounds
-  background: '#ffffff',
-  backgroundSecondary: '#f8fafc',
-  card: '#f1f5f9',
-  cardHover: '#e2e8f0',
+  background: '#f5f7fb',
+  backgroundSecondary: '#eef2f7',
+  card: '#ffffff',
+  cardHover: '#f8fafc',
   cardElevated: '#ffffff',
 
   // Text
   foreground: '#0f172a',
-  mutedForeground: '#64748b',
+  mutedForeground: '#475569',
   subtleForeground: '#94a3b8',
 
   // Primary
-  primary: '#0f172a',
-  primaryHover: '#1e293b',
+  primary: '#2563eb',
+  primaryHover: '#1d4ed8',
   primaryForeground: '#ffffff',
 
   // Secondary
-  secondary: '#e2e8f0',
-  secondaryHover: '#cbd5e1',
-  secondaryForeground: '#475569',
+  secondary: '#eff3f8',
+  secondaryHover: '#e2e8f0',
+  secondaryForeground: '#334155',
 
   // Accent (gold)
-  accent: '#b8960c',
-  accentHover: '#d4af37',
-  accentMuted: '#92780a',
-  accentForeground: '#ffffff',
+  accent: '#b68a2d',
+  accentHover: '#c79a37',
+  accentMuted: '#8d6a1f',
+  accentForeground: '#0f172a',
 
   // Muted
-  muted: '#f1f5f9',
+  muted: '#f8fafc',
 
   // Semantic
   success: '#16a34a',
-  successMuted: 'rgba(22, 163, 74, 0.12)',
+  successMuted: 'rgba(22, 163, 74, 0.1)',
   danger: '#dc2626',
-  dangerMuted: 'rgba(220, 38, 38, 0.12)',
+  dangerMuted: 'rgba(220, 38, 38, 0.1)',
   warning: '#d97706',
-  warningMuted: 'rgba(217, 119, 6, 0.12)',
+  warningMuted: 'rgba(217, 119, 6, 0.1)',
   info: '#2563eb',
-  infoMuted: 'rgba(37, 99, 235, 0.12)',
+  infoMuted: 'rgba(37, 99, 235, 0.1)',
 
   // Border
-  border: '#e2e8f0',
-  borderSubtle: '#f1f5f9',
-  borderStrong: '#cbd5e1',
+  border: '#d9e2ef',
+  borderSubtle: '#e7edf5',
+  borderStrong: '#c3cfdf',
 
   // Input
-  input: '#f1f5f9',
+  input: '#ffffff',
   placeholder: '#94a3b8',
-  ring: '#cbd5e1',
+  ring: '#93c5fd',
 
   // Tab bar
   tabBarBackground: '#ffffff',
-  tabBarActive: '#0f172a',
-  tabBarInactive: '#94a3b8',
-  tabBarBorder: '#e2e8f0',
+  tabBarActive: '#1d4ed8',
+  tabBarInactive: '#64748b',
+  tabBarBorder: '#d9e2ef',
 
   // Chat
-  chatBubbleUser: '#e2e8f0',
-  chatBubbleBot: '#f1f5f9',
+  chatBubbleUser: '#eff3f8',
+  chatBubbleBot: '#ffffff',
 
   // Overlay
-  overlay: 'rgba(0, 0, 0, 0.3)',
+  overlay: 'rgba(15, 23, 42, 0.24)',
 };

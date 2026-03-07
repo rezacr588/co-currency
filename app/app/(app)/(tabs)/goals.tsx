@@ -15,7 +15,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRefreshableQuery } from '../../../src/hooks/useRefreshableQuery';
-import { Plus, Target, CheckCircle, X, DollarSign, Calendar, Pencil, Trash2 } from 'lucide-react-native';
+import { Plus, Target, CheckCircle, X, Pencil, Trash2 } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
 import { api } from '../../../src/api';
 import { useLanguage } from '../../../src/context/LanguageContext';
@@ -23,7 +23,9 @@ import { formatCompactCurrency, formatDate } from '../../../src/utils/format';
 import { trackPositiveAction, maybeRequestReview } from '../../../src/utils/review';
 import { haptics } from '../../../src/utils/haptics';
 import { GoalIcon } from '../../../src/constants/icons';
+import { AppSwitcherTrigger } from '../../../src/components/navigation/AppSwitcherTrigger';
 import { CurrencyPicker } from '../../../src/components/ui/CurrencyPicker';
+import { PageHeader, PageScaffold } from '../../../src/components/ui';
 import { SkeletonGoalCard, SkeletonList } from '../../../src/components/ui/Skeleton';
 import { SwipeableRow, type SwipeAction } from '../../../src/components/ui';
 import { useToast } from '../../../src/components/ui/Toast';
@@ -112,9 +114,10 @@ export default function GoalsScreen() {
   const columns = getGridColumns();
 
   // Calculate card widths for grid layout
-  const containerPadding = isDesktop ? 32 : 16;
+  const containerPadding = isDesktop ? 32 : isTablet ? 24 : 16;
   const gap = 16;
-  const availableWidth = width - containerPadding * 2;
+  const contentWidth = Math.min(width, 1120);
+  const availableWidth = contentWidth - containerPadding * 2;
   const getCardWidth = () => {
     if (columns === 1) return availableWidth;
     return (availableWidth - gap * (columns - 1)) / columns;
@@ -122,25 +125,29 @@ export default function GoalsScreen() {
   const cardWidth = getCardWidth();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
-      <ScrollView
-        style={{ flex: 1 }}
+    <>
+      <PageScaffold
+        scroll
+        maxWidth={1120}
         contentContainerStyle={{
-          padding: isDesktop ? 32 : 16,
-          maxWidth: 1400,
-          width: '100%',
-          alignSelf: 'center',
           paddingBottom: bottomPadding,
         }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        keyboardDismissMode="on-drag"
+        scrollProps={{
+          refreshControl: <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />,
+          keyboardDismissMode: 'on-drag',
+        }}
       >
+        <PageHeader
+          title={t('financialGoals')}
+          subtitle={t('goalsDescription') || 'Create targets, contribute toward them, and keep progress visible across devices.'}
+          actions={!isDesktop ? <AppSwitcherTrigger variant="header_inline" /> : undefined}
+        />
+
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-          <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('financialGoals')}</Text>
           <Pressable
             onPress={() => setShowForm(true)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={({ pressed }) => [{ backgroundColor: colors.foreground, padding: 10, borderRadius: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [{ backgroundColor: colors.primary, padding: 10, borderRadius: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
             accessibilityLabel={t('createGoal') || 'Create Goal'}
             accessibilityRole="button"
           >
@@ -169,9 +176,9 @@ export default function GoalsScreen() {
             </Text>
             <Pressable
               onPress={() => setShowForm(true)}
-              style={{ backgroundColor: colors.accent, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8, marginTop: 16, cursor: 'pointer' }}
+              style={{ backgroundColor: colors.primary, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8, marginTop: 16, cursor: 'pointer' }}
             >
-              <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>{t('createGoal')}</Text>
+              <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>{t('createGoal')}</Text>
             </Pressable>
           </View>
         ) : (
@@ -223,7 +230,7 @@ export default function GoalsScreen() {
             )}
           </>
         )}
-      </ScrollView>
+      </PageScaffold>
 
       <GoalFormModal visible={showForm} onClose={() => setShowForm(false)} />
 
@@ -237,7 +244,7 @@ export default function GoalsScreen() {
           }}
         />
       )}
-    </SafeAreaView>
+    </>
   );
 }
 

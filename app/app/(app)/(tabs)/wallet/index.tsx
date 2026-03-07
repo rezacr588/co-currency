@@ -1,6 +1,6 @@
-import { View, Text, ScrollView, Pressable, RefreshControl, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, RefreshControl, useWindowDimensions } from 'react-native';
 import { Link } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { useRefreshControl } from '../../../../src/hooks/useRefreshableQuery';
 import { Plus, ArrowLeftRight, History, MessageCircle, Target, PiggyBank, BarChart3, Wallet, KanbanSquare } from 'lucide-react-native';
@@ -9,6 +9,8 @@ import { useLanguage } from '../../../../src/context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { formatCurrency, formatCompactCurrency, getCurrencyDisplay, formatDate, formatTransactionAmount, getTransactionCurrency } from '../../../../src/utils/format';
 import { StyledCategoryIcon } from '../../../../src/constants/icons';
+import { AppSwitcherTrigger } from '../../../../src/components/navigation/AppSwitcherTrigger';
+import { PageHeader, PageScaffold } from '../../../../src/components/ui';
 import { Skeleton, SkeletonList, SkeletonTransaction, SkeletonBalance } from '../../../../src/components/ui/Skeleton';
 
 export default function WalletScreen() {
@@ -22,8 +24,9 @@ export default function WalletScreen() {
   const isTablet = width >= 768;
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
-  const containerPadding = isDesktop ? 32 : 16;
-  const availableWidth = width - containerPadding * 2;
+  const containerPadding = isDesktop ? 32 : isTablet ? 24 : 16;
+  const contentWidth = Math.min(width, 1280);
+  const availableWidth = contentWidth - containerPadding * 2;
 
   // Balance cards: 3 cols on desktop, 2 cols on tablet/mobile
   const balanceCols = isDesktop ? 3 : 2;
@@ -70,20 +73,22 @@ export default function WalletScreen() {
   const featureCols = isDesktop ? 6 : 3;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          padding: isDesktop ? 32 : 16,
-          maxWidth: 1400,
-          width: '100%',
-          alignSelf: 'center',
-          paddingBottom: bottomPadding,
-        }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
+    <PageScaffold
+      scroll
+      maxWidth={1280}
+      contentContainerStyle={{
+        paddingBottom: bottomPadding,
+      }}
+      scrollProps={{
+        refreshControl: <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />,
+      }}
+    >
+        <PageHeader
+          title={t('wallet')}
+          subtitle={t('walletDescription') || 'Track balances, transactions, and key actions from one place.'}
+          actions={!isDesktop ? <AppSwitcherTrigger variant="header_inline" /> : undefined}
+        />
+
         {/* 1. Hero Balance Card */}
         <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 16, marginBottom: 24, overflow: 'hidden' }}>
           {isLoadingSummary ? (
@@ -160,7 +165,7 @@ export default function WalletScreen() {
                     <View
                       style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', width: 48, height: 48, borderRadius: 24 }}
                     >
-                      <Icon size={20} color={colors.accent} />
+                      <Icon size={20} color={colors.primary} />
                     </View>
                     <Text
                       style={{ color: colors.foreground, marginTop: 8, textAlign: 'center', fontSize: 10 }}
@@ -208,7 +213,7 @@ export default function WalletScreen() {
                           top: 0,
                           bottom: 0,
                           width: 3,
-                          backgroundColor: colors.accent + '80',
+                          backgroundColor: colors.primary + '80',
                           borderTopLeftRadius: 12,
                           borderBottomLeftRadius: 12,
                         }}
@@ -235,7 +240,7 @@ export default function WalletScreen() {
               {showViewAllBalances && (
                 <Link href={'/(app)/(tabs)/wallet/history' as any} asChild>
                   <Pressable style={({ pressed }) => [{ marginTop: 12, alignItems: 'center', cursor: 'pointer' }, pressed && { opacity: 0.7 }]}>
-                    <Text style={{ color: colors.accent, fontSize: 14, fontFamily: 'Inter_500Medium' }}>
+                    <Text style={{ color: colors.primary, fontSize: 14, fontFamily: 'Inter_500Medium' }}>
                       {t('viewAll') || 'View All'} ({balances.length})
                     </Text>
                   </Pressable>
@@ -249,14 +254,14 @@ export default function WalletScreen() {
         <View>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <History size={18} color={colors.accent} />
+              <History size={18} color={colors.primary} />
               <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginLeft: 8 }}>
                 {t('recentTransactions')}
               </Text>
             </View>
             <Link href={'/(app)/(tabs)/wallet/history' as any} asChild>
               <Pressable style={({ pressed }) => [{ flexDirection: 'row', alignItems: 'center', cursor: 'pointer' }, pressed && { opacity: 0.7 }]} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={{ color: colors.accent, fontSize: 14 }}>{t('viewAll')}</Text>
+                <Text style={{ color: colors.primary, fontSize: 14 }}>{t('viewAll')}</Text>
               </Pressable>
             </Link>
           </View>
@@ -310,7 +315,6 @@ export default function WalletScreen() {
             </View>
           )}
         </View>
-      </ScrollView>
-    </SafeAreaView>
+    </PageScaffold>
   );
 }

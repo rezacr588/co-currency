@@ -19,9 +19,9 @@ interface ButtonProps extends PressableProps {
 }
 
 const sizeConfig: Record<ButtonSize, { px: number; py: number; fontSize: number }> = {
-  sm: { px: 12, py: 8, fontSize: 14 },
-  md: { px: 16, py: 12, fontSize: 16 },
-  lg: { px: 24, py: 16, fontSize: 18 },
+  sm: { px: 12, py: 10, fontSize: 14 },
+  md: { px: 16, py: 12, fontSize: 15 },
+  lg: { px: 20, py: 14, fontSize: 16 },
 };
 
 export const Button = forwardRef<View, ButtonProps>(
@@ -101,13 +101,15 @@ export const Button = forwardRef<View, ButtonProps>(
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            borderRadius: 12,
+            minHeight: size === 'sm' ? 40 : size === 'lg' ? 52 : 48,
+            borderRadius: theme.radii.md,
             backgroundColor: variantBgColors[variant],
             paddingHorizontal: sizeVal.px,
             paddingVertical: sizeVal.py,
             opacity: isDisabled ? 0.4 : 1,
             borderWidth: variant === 'outline' ? 1 : 0,
             borderColor: variant === 'outline' ? colors.border : undefined,
+            ...(variant === 'primary' ? theme.shadows.sm : {}),
           },
           ...(Array.isArray(style) ? (style as any[]) : typeof style === 'object' && style ? [style] : []),
         ]}

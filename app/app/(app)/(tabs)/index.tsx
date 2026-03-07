@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { View, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { Link } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, Wallet, ArrowRight, User, DollarSign, PiggyBank, CreditCard, Bot, PieChart, Sparkles, BarChart3, Target, Lightbulb } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Wallet, ArrowRight, DollarSign, PiggyBank, CreditCard, Bot, PieChart, BarChart3, Target } from 'lucide-react-native';
 import styled, { useTheme } from 'styled-components/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { api } from '../../../src/api';
@@ -12,6 +12,8 @@ import { useLanguage } from '../../../src/context/LanguageContext';
 import { useReportTimeZone } from '../../../src/hooks/useReportTimeZone';
 import { formatCompactCurrency, formatDate, formatTransactionAmount } from '../../../src/utils/format';
 import { StyledCategoryIcon } from '../../../src/constants/icons';
+import { AppSwitcherTrigger } from '../../../src/components/navigation/AppSwitcherTrigger';
+import { PageHeader, PageScaffold } from '../../../src/components/ui';
 import { Skeleton } from '../../../src/components/ui/Skeleton';
 import { CurrencyConverter } from '../../../src/components/features/CurrencyConverter';
 import { WeeklyRecapCard } from '../../../src/components/features/WeeklyRecap';
@@ -21,15 +23,10 @@ import { QuickNotesCard } from '../../../src/components/features/Notes';
 import { FinancialNewsCard } from '../../../src/components/features/News';
 import { HealthScoreCard } from '../../../src/components/features/HealthScore';
 import { CollapsibleSection } from '../../../src/components/ui/CollapsibleSection';
-import { H1, H2, H3, Body, BodyMedium, Caption, Label } from '../../../src/components/ui/styled';
+import { H2, H3, BodyMedium, Caption } from '../../../src/components/ui/styled';
 import type { Goal, Budget } from '../../../src/types/goal';
 
 // ─── Styled Components ───────────────────────────────────────
-const ScreenContainer = styled(SafeAreaView)`
-  flex: 1;
-  background-color: ${({ theme }) => theme.colors.background};
-`;
-
 const StatCard = styled.View`
   background-color: ${({ theme }) => theme.colors.card};
   border-radius: ${({ theme }) => theme.radii.xl}px;
@@ -121,7 +118,8 @@ const InsightDot = styled.View<{ $tone: string }>`
   height: 8px;
   border-radius: 4px;
   margin-top: 6px;
-  margin-right: ${({ theme }) => theme.spacing.md}px;
+  margin-right: ${({ theme }) => (theme.isRTL ? 0 : theme.spacing.md)}px;
+  margin-left: ${({ theme }) => (theme.isRTL ? theme.spacing.md : 0)}px;
   background-color: ${({ $tone, theme }) =>
     $tone === 'warning' ? theme.colors.warning
       : $tone === 'success' ? theme.colors.success
@@ -253,17 +251,19 @@ export default function DashboardScreen() {
   }
 
   return (
-    <ScreenContainer edges={isDesktop ? [] : ['top']}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          padding: isDesktop ? 32 : theme.spacing.lg,
-          maxWidth: isDesktop ? 1400 : undefined,
-          alignSelf: isDesktop ? 'center' : undefined,
-          width: '100%',
-          paddingBottom: bottomPadding,
-        }}
-      >
+    <PageScaffold
+      scroll
+      maxWidth={1280}
+      contentContainerStyle={{
+        paddingBottom: bottomPadding,
+      }}
+    >
+        <PageHeader
+          title={t('dashboard')}
+          subtitle={user?.name ? `${t('welcomeBack')} ${user.name}` : (t('welcomeBack') || 'Welcome back')}
+          actions={!isDesktop ? <AppSwitcherTrigger variant="header_inline" /> : undefined}
+        />
+
         {/* Error State */}
         {(isSummaryError || isMonthlyError || isGoalsError || isBudgetsError) && (
           <ErrorBanner>
@@ -296,32 +296,6 @@ export default function DashboardScreen() {
               <BodyMedium $color={theme.colors.danger}>{t('retry') || 'Retry'}</BodyMedium>
             </Pressable>
           </ErrorBanner>
-        )}
-
-        {/* Mobile Header */}
-        {!isDesktop && (
-          <View style={{ marginBottom: theme.spacing.xxl }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.lg }}>
-              <H3 $color={theme.colors.primary}>CoFinance</H3>
-              <Link href="/(app)/profile" asChild>
-                <Pressable
-                  hitSlop={8}
-                  style={({ pressed }) => [{
-                    minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: theme.colors.secondary,
-                    borderWidth: 1, borderColor: theme.colors.border,
-                    borderRadius: theme.radii.full, padding: theme.spacing.md,
-                  }, pressed && { opacity: 0.7 }]}
-                  accessibilityLabel={t('profile') || 'Profile'}
-                  accessibilityRole="button"
-                >
-                  <User size={20} color={theme.colors.secondaryForeground} />
-                </Pressable>
-              </Link>
-            </View>
-            <Caption>{t('welcomeBack')}</Caption>
-            <H2>{user?.name}</H2>
-          </View>
         )}
 
         {/* Spending Anomaly Alert */}
@@ -427,10 +401,10 @@ export default function DashboardScreen() {
         {/* AI Financial Advisor Card */}
         {aiStatus?.configured && (
           <AICardGradient
-            colors={[theme.colors.accent, theme.colors.accentHover] as [string, string]}
+            colors={[theme.colors.primary, theme.colors.primaryHover] as [string, string]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={theme.shadows.glow(theme.colors.accent)}
+            style={theme.shadows.glow(theme.colors.primary)}
           >
             <Link href="/(app)/(tabs)/wallet/chat" asChild>
               <Pressable style={({ pressed }) => [pressed && { opacity: 0.85 }]} accessibilityLabel={t('aiAdvisor') || 'AI Financial Advisor'} accessibilityRole="button">
@@ -700,13 +674,13 @@ export default function DashboardScreen() {
                     <Caption style={{ marginTop: theme.spacing.sm }}>{t('noTransactionsYet') || 'No transactions yet'}</Caption>
                     <Link href="/(app)/(tabs)/add" asChild>
                       <Pressable style={{
-                        backgroundColor: theme.colors.accent,
+                        backgroundColor: theme.colors.primary,
                         paddingHorizontal: theme.spacing.lg,
                         paddingVertical: theme.spacing.sm,
                         borderRadius: theme.radii.md,
                         marginTop: theme.spacing.md,
                       }}>
-                        <BodyMedium $color={theme.colors.accentForeground}>{t('addTransaction')}</BodyMedium>
+                        <BodyMedium $color={theme.colors.primaryForeground}>{t('addTransaction')}</BodyMedium>
                       </Pressable>
                     </Link>
                   </EmptyCard>
@@ -715,7 +689,6 @@ export default function DashboardScreen() {
             )}
           </View>
         </View>
-      </ScrollView>
-    </ScreenContainer>
+    </PageScaffold>
   );
 }

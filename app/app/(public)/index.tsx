@@ -1,195 +1,87 @@
-import { View, Text, Pressable, ScrollView, useWindowDimensions } from 'react-native';
-import { Link, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeftRight, Wallet, Target, BarChart3, Menu, Moon, Sun, User } from 'lucide-react-native';
+import { Pressable, Text, View, useWindowDimensions, type DimensionValue } from 'react-native';
+import { Link } from 'expo-router';
+import { ArrowLeftRight, BarChart3, Target, Wallet } from 'lucide-react-native';
+import { useTheme } from 'styled-components/native';
 import { useLanguage } from '../../src/context/LanguageContext';
-import { useTheme } from '../../src/context/ThemeContext';
-import { useTheme as useStyledTheme } from 'styled-components/native';
+import { MarketingScaffold, SectionBlock, SurfaceCard } from '../../src/components/ui';
 
-export default function HomeScreen() {
-  const { t } = useLanguage();
-  const { isDark, toggleTheme } = useTheme();
-  const styledTheme = useStyledTheme();
-  const colors = styledTheme.colors;
-  const { width } = useWindowDimensions();
-  const router = useRouter();
-
-  const isDesktop = width >= 1024;
-  const isTablet = width >= 768;
+function CTAButton({
+  href,
+  label,
+  primary = false,
+}: {
+  href: string;
+  label: string;
+  primary?: boolean;
+}) {
+  const theme = useTheme();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
-      {/* Desktop/Tablet Navbar */}
-      {isTablet && (
-        <View style={{ backgroundColor: colors.background, borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 24, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={{ fontSize: 20, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>CoFinance</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Link href="/converter" asChild>
-              <Pressable style={{ cursor: 'pointer', paddingHorizontal: 16, paddingVertical: 8 }}>
-                <Text style={{ color: colors.mutedForeground, fontSize: 14, fontFamily: 'Inter_500Medium' }}>{t('converterTitle')}</Text>
-              </Pressable>
-            </Link>
-            <Pressable onPress={toggleTheme} style={{ cursor: 'pointer', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: colors.border }}>
-              {isDark ? (
-                <Sun size={18} color={colors.secondaryForeground} />
-              ) : (
-                <Moon size={18} color={colors.mutedForeground} />
-              )}
-            </Pressable>
-            <Link href="/login" asChild>
-              <Pressable style={{ cursor: 'pointer', borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 }}>
-                <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_500Medium' }}>{t('login')}</Text>
-              </Pressable>
-            </Link>
-            <Link href="/register" asChild>
-              <Pressable style={{ cursor: 'pointer', backgroundColor: colors.foreground, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 }}>
-                <Text style={{ color: colors.background, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>{t('register')}</Text>
-              </Pressable>
-            </Link>
-          </View>
-        </View>
-      )}
+    <Link href={href as any} asChild>
+      <Pressable
+        style={({ pressed }) => [
+          {
+            minHeight: 48,
+            borderRadius: theme.radii.md,
+            borderWidth: primary ? 0 : 1,
+            borderColor: primary ? 'transparent' : theme.colors.border,
+            backgroundColor: primary ? theme.colors.primary : theme.colors.card,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 20,
+          },
+          primary ? theme.shadows.sm : null,
+          pressed && { opacity: 0.72 },
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+      >
+        <Text
+          style={{
+            color: primary ? theme.colors.primaryForeground : theme.colors.foreground,
+            fontFamily: theme.typography.bodyMedium.fontFamily,
+            fontSize: 15,
+          }}
+        >
+          {label}
+        </Text>
+      </Pressable>
+    </Link>
+  );
+}
 
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          padding: isDesktop ? 48 : 24,
-          maxWidth: isDesktop ? 1200 : undefined,
-          alignSelf: isDesktop ? 'center' : undefined,
-          width: '100%',
+function HeroStat({
+  value,
+  label,
+}: {
+  value: string;
+  label: string;
+}) {
+  const theme = useTheme();
+
+  return (
+    <View style={{ minWidth: 120 }}>
+      <Text
+        style={{
+          fontSize: 24,
+          lineHeight: 32,
+          fontFamily: theme.typography.h1.fontFamily,
+          color: theme.colors.foreground,
         }}
       >
-        {/* Mobile Header */}
-        {!isTablet && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-            <Text style={{ fontSize: 20, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>CoFinance</Text>
-            <Pressable onPress={toggleTheme} style={{ cursor: 'pointer', padding: 8, borderWidth: 1, borderColor: colors.border, borderRadius: 6 }}>
-              {isDark ? (
-                <Sun size={18} color={colors.secondaryForeground} />
-              ) : (
-                <Moon size={18} color={colors.mutedForeground} />
-              )}
-            </Pressable>
-          </View>
-        )}
-
-        {/* Hero Section */}
-        <View
-          style={{
-            alignItems: 'center',
-            paddingVertical: isDesktop ? 80 : 48,
-          }}
-        >
-          <Text
-            style={{ fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 16, textAlign: 'center', fontSize: isDesktop ? 48 : 32, letterSpacing: -1 }}
-          >
-            CoFinance
-          </Text>
-          <Text
-            style={{
-              color: colors.mutedForeground, textAlign: 'center', marginBottom: 32,
-              fontSize: isDesktop ? 18 : 15,
-              maxWidth: isDesktop ? 500 : undefined,
-              lineHeight: isDesktop ? 28 : 24,
-            }}
-          >
-            {t('heroSubtitle')}
-          </Text>
-
-          {/* Mobile CTA Buttons */}
-          {!isTablet && (
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <Link href="/login" asChild>
-                <Pressable style={{ cursor: 'pointer', borderWidth: 1, borderColor: colors.border, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8 }}>
-                  <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium', fontSize: 14 }}>{t('login')}</Text>
-                </Pressable>
-              </Link>
-              <Link href="/register" asChild>
-                <Pressable style={{ cursor: 'pointer', backgroundColor: colors.foreground, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8 }}>
-                  <Text style={{ color: colors.background, fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>{t('register')}</Text>
-                </Pressable>
-              </Link>
-            </View>
-          )}
-
-          {/* Desktop Hero CTA */}
-          {isDesktop && (
-            <View style={{ flexDirection: 'row', gap: 16, marginTop: 16 }}>
-              <Link href="/register" asChild>
-                <Pressable style={{ cursor: 'pointer', backgroundColor: colors.foreground, paddingHorizontal: 32, paddingVertical: 16, borderRadius: 8 }}>
-                  <Text style={{ color: colors.background, fontFamily: 'Inter_600SemiBold' }}>{t('getStarted') || 'Get Started'}</Text>
-                </Pressable>
-              </Link>
-              <Link href="/converter" asChild>
-                <Pressable style={{ cursor: 'pointer', borderWidth: 1, borderColor: colors.border, paddingHorizontal: 32, paddingVertical: 16, borderRadius: 8 }}>
-                  <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>{t('tryConverter')}</Text>
-                </Pressable>
-              </Link>
-            </View>
-          )}
-        </View>
-
-        {/* Features Grid */}
-        <View style={{ marginTop: isDesktop ? 48 : 24 }}>
-          <Text
-            style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginBottom: 24, textAlign: 'center', fontSize: isDesktop ? 24 : 20 }}
-          >
-            {t('features')}
-          </Text>
-
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: isDesktop ? 16 : 12,
-              justifyContent: 'center',
-            }}
-          >
-            <FeatureCard
-              icon={<ArrowLeftRight size={isDesktop ? 28 : 24} color={colors.secondaryForeground} />}
-              title={t('converterTitle')}
-              description={t('converterDescription')}
-              isDesktop={isDesktop}
-            />
-            <FeatureCard
-              icon={<Wallet size={isDesktop ? 28 : 24} color={colors.secondaryForeground} />}
-              title={t('wallet')}
-              description={t('walletDescription')}
-              isDesktop={isDesktop}
-            />
-            <FeatureCard
-              icon={<Target size={isDesktop ? 28 : 24} color={colors.secondaryForeground} />}
-              title={t('financialGoals')}
-              description={t('goalsDescription')}
-              isDesktop={isDesktop}
-            />
-            <FeatureCard
-              icon={<BarChart3 size={isDesktop ? 28 : 24} color={colors.secondaryForeground} />}
-              title={t('reportsAndStats')}
-              description={t('reportsDescription')}
-              isDesktop={isDesktop}
-            />
-          </View>
-        </View>
-
-        {/* CTA Section */}
-        <View
-          style={{
-            alignItems: 'center',
-            paddingVertical: isDesktop ? 64 : 48,
-            marginTop: isDesktop ? 48 : 24,
-          }}
-        >
-          <Link href="/converter" asChild>
-            <Pressable style={{ cursor: 'pointer', backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}>
-              <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold' }}>
-                {t('tryConverter')}
-              </Text>
-            </Pressable>
-          </Link>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        {value}
+      </Text>
+      <Text
+        style={{
+          marginTop: 4,
+          fontSize: theme.typography.caption.fontSize,
+          lineHeight: theme.typography.caption.lineHeight,
+          color: theme.colors.mutedForeground,
+        }}
+      >
+        {label}
+      </Text>
+    </View>
   );
 }
 
@@ -197,35 +89,291 @@ function FeatureCard({
   icon,
   title,
   description,
-  isDesktop,
+  width,
 }: {
   icon: React.ReactNode;
   title: string;
   description: string;
-  isDesktop: boolean;
+  width?: DimensionValue;
 }) {
-  const styledTheme = useStyledTheme();
-  const colors = styledTheme.colors;
+  const theme = useTheme();
 
   return (
-    <View
-      style={{
-        backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 8,
-        padding: isDesktop ? 24 : 20,
-        width: isDesktop ? 240 : '100%',
-        minWidth: isDesktop ? 240 : undefined,
-        flex: undefined,
-      }}
-    >
-      <View style={{ marginBottom: 12, backgroundColor: colors.secondary, padding: 10, borderRadius: 6, alignSelf: 'flex-start' }}>{icon}</View>
+    <SurfaceCard style={{ width, flexGrow: 1 }}>
+      <View
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: theme.radii.md,
+          backgroundColor: theme.colors.secondary,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: theme.spacing.md,
+        }}
+      >
+        {icon}
+      </View>
       <Text
-        style={{ fontFamily: 'Inter_500Medium', color: colors.foreground, marginBottom: 6, fontSize: isDesktop ? 16 : 15 }}
+        style={{
+          fontSize: 18,
+          lineHeight: 24,
+          fontFamily: theme.typography.h2.fontFamily,
+          color: theme.colors.foreground,
+        }}
       >
         {title}
       </Text>
-      <Text style={{ color: colors.mutedForeground, fontSize: isDesktop ? 13 : 13, lineHeight: 20 }}>
+      <Text
+        style={{
+          marginTop: theme.spacing.sm,
+          fontSize: theme.typography.body.fontSize,
+          lineHeight: theme.typography.body.lineHeight,
+          color: theme.colors.mutedForeground,
+        }}
+      >
         {description}
       </Text>
-    </View>
+    </SurfaceCard>
+  );
+}
+
+export default function HomeScreen() {
+  const { t } = useLanguage();
+  const theme = useTheme();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
+  const isTablet = width >= 768;
+  const featureWidth = isDesktop ? '23%' : isTablet ? '48%' : '100%';
+  const heroTitleSize = isDesktop ? 48 : 32;
+  const heroLineHeight = isDesktop ? 56 : 40;
+
+  return (
+    <MarketingScaffold>
+      <View
+        style={{
+          flexDirection: isDesktop ? 'row' : 'column',
+          gap: theme.spacing.xxxl,
+          alignItems: 'stretch',
+          marginBottom: theme.spacing.xxxl,
+        }}
+      >
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          <Text
+            style={{
+              fontSize: heroTitleSize,
+              lineHeight: heroLineHeight,
+              fontFamily: theme.typography.h1.fontFamily,
+              color: theme.colors.foreground,
+              letterSpacing: -1,
+            }}
+          >
+            CoFinance
+          </Text>
+          <Text
+            style={{
+              marginTop: theme.spacing.lg,
+              maxWidth: 580,
+              fontSize: 15,
+              lineHeight: 22,
+              color: theme.colors.mutedForeground,
+            }}
+          >
+            {t('heroSubtitle')}
+          </Text>
+
+          <View
+            style={{
+              flexDirection: isTablet ? 'row' : 'column',
+              gap: theme.spacing.md,
+              marginTop: theme.spacing.xxl,
+              alignItems: isTablet ? 'center' : 'stretch',
+            }}
+          >
+            <CTAButton href="/register" label={t('register')} primary />
+            <CTAButton href="/converter" label={t('tryConverter')} />
+          </View>
+
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: theme.spacing.xl,
+              marginTop: theme.spacing.xxxl,
+            }}
+          >
+            <HeroStat value="160+" label={t('converterTitle')} />
+            <HeroStat value="24/7" label={t('reportsAndStats')} />
+            <HeroStat value="4" label={t('multiLanguage') || 'Languages'} />
+          </View>
+        </View>
+
+        <SurfaceCard variant="elevated" style={{ flex: isDesktop ? 0.9 : undefined, padding: 20 }}>
+          <Text
+            style={{
+              fontSize: 18,
+              lineHeight: 24,
+              fontFamily: theme.typography.h2.fontFamily,
+              color: theme.colors.foreground,
+              marginBottom: theme.spacing.lg,
+            }}
+          >
+            {t('reportsAndStats')}
+          </Text>
+
+          <View style={{ gap: theme.spacing.md }}>
+            {[
+              {
+                label: t('wallet'),
+                value: '$42,380',
+                note: t('walletDescription') || 'Track balances across currencies',
+              },
+              {
+                label: t('financialGoals'),
+                value: '78%',
+                note: t('goalsDescription') || 'Stay on pace with savings targets',
+              },
+              {
+                label: t('reports'),
+                value: '12',
+                note: t('reportsDescription') || 'Review cash flow and spending trends',
+              },
+            ].map((item) => (
+              <View
+                key={item.label}
+                style={{
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  borderRadius: theme.radii.md,
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  padding: theme.spacing.lg,
+                }}
+              >
+                <Text style={{ color: theme.colors.mutedForeground, fontSize: 12, lineHeight: 16 }}>{item.label}</Text>
+                <Text
+                  style={{
+                    marginTop: 8,
+                    fontSize: 24,
+                    lineHeight: 32,
+                    fontFamily: theme.typography.h1.fontFamily,
+                    color: theme.colors.foreground,
+                  }}
+                >
+                  {item.value}
+                </Text>
+                <Text
+                  style={{
+                    marginTop: 6,
+                    fontSize: 14,
+                    lineHeight: 20,
+                    color: theme.colors.mutedForeground,
+                  }}
+                >
+                  {item.note}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </SurfaceCard>
+      </View>
+
+      <SectionBlock
+        title={t('features')}
+        subtitle={t('aboutUsDescription') || 'A standard personal finance workflow across mobile and web.'}
+      >
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.md }}>
+          <FeatureCard
+            icon={<ArrowLeftRight size={22} color={theme.colors.primary} />}
+            title={t('converterTitle')}
+            description={t('converterDescription')}
+            width={featureWidth}
+          />
+          <FeatureCard
+            icon={<Wallet size={22} color={theme.colors.primary} />}
+            title={t('wallet')}
+            description={t('walletDescription')}
+            width={featureWidth}
+          />
+          <FeatureCard
+            icon={<Target size={22} color={theme.colors.primary} />}
+            title={t('financialGoals')}
+            description={t('goalsDescription')}
+            width={featureWidth}
+          />
+          <FeatureCard
+            icon={<BarChart3 size={22} color={theme.colors.primary} />}
+            title={t('reportsAndStats')}
+            description={t('reportsDescription')}
+            width={featureWidth}
+          />
+        </View>
+      </SectionBlock>
+
+      <SectionBlock
+        title={t('appFeatures') || 'App Features'}
+        subtitle={t('missionDescription') || 'Manage balances, conversion, planning, and reporting from one account.'}
+      >
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.md }}>
+          <SurfaceCard style={{ width: isDesktop ? '32%' : '100%' }}>
+            <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.h2.fontFamily, fontSize: 18, lineHeight: 24 }}>
+              {t('wallet')}
+            </Text>
+            <Text style={{ marginTop: theme.spacing.sm, color: theme.colors.mutedForeground, fontSize: 15, lineHeight: 22 }}>
+              {t('walletDescription') || 'See balances, recent transactions, and quick actions in one standard dashboard.'}
+            </Text>
+          </SurfaceCard>
+          <SurfaceCard style={{ width: isDesktop ? '32%' : '100%' }}>
+            <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.h2.fontFamily, fontSize: 18, lineHeight: 24 }}>
+              {t('reports')}
+            </Text>
+            <Text style={{ marginTop: theme.spacing.sm, color: theme.colors.mutedForeground, fontSize: 15, lineHeight: 22 }}>
+              {t('reportsDescription') || 'Compare periods, monitor net worth, and drill into categories without leaving the main flow.'}
+            </Text>
+          </SurfaceCard>
+          <SurfaceCard style={{ width: isDesktop ? '32%' : '100%' }}>
+            <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.h2.fontFamily, fontSize: 18, lineHeight: 24 }}>
+              {t('financialGoals')}
+            </Text>
+            <Text style={{ marginTop: theme.spacing.sm, color: theme.colors.mutedForeground, fontSize: 15, lineHeight: 22 }}>
+              {t('goalsDescription') || 'Create goals, contribute toward them, and keep progress visible across devices.'}
+            </Text>
+          </SurfaceCard>
+        </View>
+      </SectionBlock>
+
+      <SurfaceCard
+        style={{
+          marginBottom: theme.spacing.xxxl,
+          backgroundColor: theme.colors.primary,
+          borderColor: theme.colors.primary,
+        }}
+      >
+        <View style={{ flexDirection: isTablet ? 'row' : 'column', alignItems: isTablet ? 'center' : 'flex-start', justifyContent: 'space-between', gap: theme.spacing.lg }}>
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontSize: 24,
+                lineHeight: 32,
+                fontFamily: theme.typography.h1.fontFamily,
+                color: theme.colors.primaryForeground,
+              }}
+            >
+              {t('getStarted') || 'Get Started'}
+            </Text>
+            <Text
+              style={{
+                marginTop: theme.spacing.sm,
+                color: theme.colors.primaryForeground,
+                opacity: 0.85,
+                fontSize: 15,
+                lineHeight: 22,
+              }}
+            >
+              {t('registerSubtitle') || 'Create an account and keep your core finance workflow consistent on mobile and web.'}
+            </Text>
+          </View>
+          <CTAButton href="/register" label={t('register')} />
+        </View>
+      </SurfaceCard>
+    </MarketingScaffold>
   );
 }
