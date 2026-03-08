@@ -18,6 +18,8 @@ import { Skeleton } from '../../../src/components/ui/Skeleton';
 import { CurrencyConverter } from '../../../src/components/features/CurrencyConverter';
 import { WeeklyRecapCard } from '../../../src/components/features/WeeklyRecap';
 import { SpendingAnomalyCard } from '../../../src/components/features/Reports/SpendingAnomalyCard';
+import { CalendarHeatMap, useHeatMapData } from '../../../src/components/features/CalendarHeatMap';
+import { useToast } from '../../../src/components/ui/Toast';
 import { SmartAdviceCard } from '../../../src/components/features/SmartAdvice';
 import { QuickNotesCard } from '../../../src/components/features/Notes';
 import { FinancialNewsCard } from '../../../src/components/features/News';
@@ -148,6 +150,7 @@ export default function DashboardScreen() {
   const theme = useTheme();
   const { reportTimeZone } = useReportTimeZone();
   const insets = useSafeAreaInsets();
+  const { showToast } = useToast();
   const { width, isDesktop, isTablet } = useScreenLayout();
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
   const pageGutter = resolveResponsiveToken(theme.layout.pageGutter, width);
@@ -189,6 +192,8 @@ export default function DashboardScreen() {
     queryFn: () => api.reports.forecast(undefined, reportTimeZone),
     staleTime: 5 * 60 * 1000,
   });
+
+  const heatMap = useHeatMapData(reportTimeZone);
 
   const { data: aiStatus } = useQuery({
     queryKey: ['ai-status'],
@@ -306,6 +311,22 @@ export default function DashboardScreen() {
 
         {/* Spending Anomaly Alert */}
         <SpendingAnomalyCard compact />
+
+        {/* Spending Calendar Heat Map */}
+        <SectionSpacing>
+          <CollapsibleSection title={t('spendingCalendar') || 'Spending Calendar'} storageKey="dashboard_heatmap">
+            {heatMap.isPending ? <Skeleton width="100%" height={200} /> : (
+              <CalendarHeatMap
+                data={heatMap.data}
+                weeks={12}
+                currency={heatMap.currency}
+                onDayPress={(date, amount) => {
+                  if (amount > 0) showToast(`${date}: ${formatCompactCurrency(amount, heatMap.currency)} ${t('spentOnDate') || 'spent'}`, 'info');
+                }}
+              />
+            )}
+          </CollapsibleSection>
+        </SectionSpacing>
 
         {/* Stats Grid */}
         <View
