@@ -13,8 +13,8 @@ import {
   Alert,
   StyleSheet,
   Modal,
+  Clipboard,
 } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -1857,7 +1857,7 @@ export default function AIChatScreen() {
           };
 
           const handleCopyMessage = () => {
-            Clipboard.setStringAsync(msg.content);
+            Clipboard.setString(msg.content);
             haptics.light();
             showToast(t('copied') || 'Copied!', 'success');
           };
