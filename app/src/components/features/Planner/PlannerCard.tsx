@@ -15,17 +15,10 @@ import { SwipeableRow } from '../../ui/SwipeableRow';
 import { useLanguage } from '../../../context/LanguageContext';
 import { haptics } from '../../../utils/haptics';
 import { readStorage, writeStorage } from '../../../utils/storage';
+import { COLUMN_ORDER, PRIORITY_COLORS, getStatusLabel } from '../../../utils/plannerConstants';
 import type { PlannerPendingMarker, PlannerStatus, TodoItem } from '../../../types/planner';
 
-const COLUMN_ORDER: PlannerStatus[] = ['todo', 'in_progress', 'done', 'archived'];
-
 type DragDirection = 'left' | 'right' | null;
-
-const PRIORITY_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  low: { bg: 'rgba(34,197,94,0.15)', text: '#22c55e', label: 'Low' },
-  medium: { bg: 'rgba(250,204,21,0.15)', text: '#facc15', label: 'Med' },
-  high: { bg: 'rgba(239,68,68,0.15)', text: '#ef4444', label: 'High' },
-};
 
 function dragHintStorageKey(userId: string): string {
   return `@planner_drag_hint_seen:${userId}`;
@@ -166,14 +159,8 @@ export function PlannerCard({
       runOnJS(onDragDirectionChange)(null);
     });
 
-  const statusLabel = useCallback((status: PlannerStatus) => {
-    const map: Record<PlannerStatus, string> = {
-      todo: t('plannerToDo') || 'To Do',
-      in_progress: t('plannerInProgress') || 'In Progress',
-      done: t('plannerDone') || 'Done',
-      archived: t('plannerArchived') || 'Archived',
-    };
-    return map[status];
+  const statusLabel = useCallback((s: PlannerStatus) => {
+    return getStatusLabel(s, t as (key: string) => string | undefined);
   }, [t]);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -312,10 +299,10 @@ export function PlannerCard({
         ) : null}
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8, alignItems: 'center' }}>
-          {priorityInfo && (
+          {priorityInfo && item.priority && (
             <View style={{ backgroundColor: priorityInfo.bg, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
               <Text style={{ color: priorityInfo.text, fontSize: 10, fontFamily: 'Inter_600SemiBold' }}>
-                {priorityInfo.label}
+                {t(`priority${item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}` as any) || item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}
               </Text>
             </View>
           )}

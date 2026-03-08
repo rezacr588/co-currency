@@ -14,6 +14,7 @@ import {
   StyleSheet,
   Modal,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -35,6 +36,8 @@ import {
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
 import { useTheme } from 'styled-components/native';
+import { useToast } from '../../../../src/components/ui/Toast';
+import { haptics } from '../../../../src/utils/haptics';
 import { AttachmentButton, AttachmentPreview, useAttachmentPicker } from '../../../../src/components/features/Chat';
 import { VoiceRecorder } from '../../../../src/components/features/Chat';
 import { EmptyState } from '../../../../src/components/ui';
@@ -217,6 +220,7 @@ export default function AIChatScreen() {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
+  const { showToast } = useToast();
   const queryClient = useQueryClient();
   const { conversationId } = useLocalSearchParams<{ conversationId?: string }>();
   const { width } = useWindowDimensions();
@@ -237,6 +241,7 @@ export default function AIChatScreen() {
   const [thinkingMode, setThinkingMode] = useState<'auto' | 'fast' | 'thinking'>('auto');
   const [isTyping, setIsTyping] = useState(false);
   const [streamingDraft, setStreamingDraft] = useState('');
+  const [streamInterrupted, setStreamInterrupted] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
@@ -264,6 +269,7 @@ export default function AIChatScreen() {
   const pendingMutationRef = useRef(false);
   const lastSentMessageRef = useRef<string>('');
   const liveTraceRef = useRef<ChatStreamTraceEvent[]>([]);
+  const streamingDraftRef = useRef('');
   const streamReplayTokenRef = useRef(0);
   const cancelReplayStream = useCallback(() => {
     streamReplayTokenRef.current += 1;
@@ -272,6 +278,8 @@ export default function AIChatScreen() {
     cancelReplayStream();
     setIsTyping(false);
     setStreamingDraft('');
+    streamingDraftRef.current = '';
+    setStreamInterrupted(false);
   }, [cancelReplayStream]);
   const clearConversationTransientState = useCallback(() => {
     setPendingAction(null);
@@ -501,7 +509,6 @@ export default function AIChatScreen() {
           thinking_mode: thinkingMode,
           file: attachment,
         });
-        clearAttachment();
         return result;
       }
 
@@ -518,6 +525,7 @@ export default function AIChatScreen() {
           onDelta: (event) => {
             deltaEvents += 1;
             setIsTyping(false);
+            streamingDraftRef.current += event.content;
             setStreamingDraft((prev) => prev + event.content);
           },
           onTrace: (event: ChatStreamTraceEvent) => {
@@ -551,10 +559,13 @@ export default function AIChatScreen() {
         if (deltaEvents <= 1 && result?.message?.content) {
           await replayMessageAsStream(result.message.content);
         }
-        clearAttachment();
         return result;
       } catch (streamErr) {
-        setStreamingDraft('');
+        if (streamingDraftRef.current) {
+          setStreamInterrupted(true);
+        } else {
+          setStreamingDraft('');
+        }
         throw streamErr;
       }
     },
@@ -732,6 +743,7 @@ export default function AIChatScreen() {
       // Invalidate to get fresh data from server
       queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
       clearStreamingState();
+      haptics.success();
       pendingMutationRef.current = false;
       lastSentMessageRef.current = ''; // Clear saved message on success
     },
@@ -777,7 +789,11 @@ export default function AIChatScreen() {
         setMessage(lastSentMessageRef.current);
       }
       setSendError(getFriendlyErrorMessage(error));
-      clearStreamingState();
+      haptics.error();
+      if (!streamInterrupted) {
+        clearStreamingState();
+      }
+      setIsTyping(false);
       pendingMutationRef.current = false;
     },
     onSettled: () => {
@@ -795,6 +811,7 @@ export default function AIChatScreen() {
       if (activeConversationId) {
         setActiveConversationId(null);
       }
+      showToast(t('conversationDeleted') || 'Conversation deleted', 'info');
     },
   });
 
@@ -947,18 +964,22 @@ export default function AIChatScreen() {
   const handleSend = (overrideMessage?: string) => {
     const msgToSend = overrideMessage || message;
     const trimmed = msgToSend.trim();
-    if ((!trimmed && !attachment) || sendMessageMutation.isPending || pendingMutationRef.current) return;
+    const effectiveMessage = trimmed || (attachment ? (t('analyzeAttachment') || 'Analyze this file') : '');
+    if (!effectiveMessage || sendMessageMutation.isPending || pendingMutationRef.current) return;
     if (msgToSend.length > MAX_MESSAGE_LENGTH) return;
     if (!aiConfigured) {
       setSendError('AI is not configured on the server.');
       return;
     }
-    lastSentMessageRef.current = trimmed; // Save message for retry on error
-    sendMessageMutation.mutate(trimmed);
+    haptics.light();
+    lastSentMessageRef.current = effectiveMessage; // Save message for retry on error
+    sendMessageMutation.mutate(effectiveMessage);
+    clearAttachment();
     if (!overrideMessage) setMessage('');
     setLastFailedMessage(null);
-    if (trimmed) {
-      void maybeStartAction(trimmed);
+    setStreamInterrupted(false);
+    if (effectiveMessage) {
+      void maybeStartAction(effectiveMessage);
     }
     isNearBottomRef.current = true;
     setTimeout(scrollToBottom, 50);
@@ -1287,7 +1308,7 @@ export default function AIChatScreen() {
 
   const renderMessages = () => {
     const listEmptyContent = () => {
-      if (loadingMessages && activeConversationId) {
+      if (loadingMessages && activeConversationId && messages.length === 0) {
         return (
           <View style={{ alignItems: 'center', paddingVertical: 32 }}>
             <ActivityIndicator size="large" color={colors.accent} />
@@ -1306,25 +1327,56 @@ export default function AIChatScreen() {
       return renderWelcome();
     };
 
-    const footerContent = isTyping || pendingAction || streamingDraft ? (
+    const footerContent = isTyping || pendingAction || streamingDraft || streamInterrupted ? (
       <View style={{ gap: 16 }}>
         {streamingDraft.length > 0 && (
           <View style={{ flexDirection: 'row', justifyContent: 'flex-start', width: '100%', alignItems: 'flex-start' }}>
-            <View
-              style={{
-                backgroundColor: colors.card,
-                borderWidth: 1,
-                borderColor: colors.border,
-                paddingHorizontal: 13,
-                paddingVertical: 9,
-                borderRadius: 18,
-                borderBottomLeftRadius: 6,
-                maxWidth: Math.min(messageMaxWidth + 28, 560),
-              }}
-            >
-              <Markdown style={markdownStyles}>
-                {streamingDraft}
-              </Markdown>
+            <View>
+              <View
+                style={{
+                  backgroundColor: colors.card,
+                  borderWidth: 1,
+                  borderColor: streamInterrupted ? colors.danger + '44' : colors.border,
+                  paddingHorizontal: 13,
+                  paddingVertical: 9,
+                  borderRadius: 18,
+                  borderBottomLeftRadius: 6,
+                  maxWidth: Math.min(messageMaxWidth + 28, 560),
+                }}
+              >
+                <Markdown style={markdownStyles}>
+                  {streamingDraft}
+                </Markdown>
+              </View>
+              {streamInterrupted && (
+                <Pressable
+                  onPress={() => {
+                    setStreamInterrupted(false);
+                    setStreamingDraft('');
+                    streamingDraftRef.current = '';
+                    if (lastSentMessageRef.current) {
+                      handleSend(lastSentMessageRef.current);
+                    }
+                  }}
+                  style={({ pressed }) => [{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    marginTop: 6,
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 8,
+                    backgroundColor: colors.danger + '15',
+                    borderWidth: 1,
+                    borderColor: colors.danger + '33',
+                    alignSelf: 'flex-start',
+                  }, pressed && { opacity: 0.7 }]}
+                >
+                  <AlertTriangle size={12} color={colors.danger} />
+                  <Text style={{ color: colors.danger, fontSize: 11, marginLeft: 5, fontFamily: 'Inter_500Medium' }}>
+                    {t('responseInterrupted') || 'Response interrupted'} · {t('tapToRetry') || 'Tap to retry'}
+                  </Text>
+                </Pressable>
+              )}
             </View>
           </View>
         )}
@@ -1788,17 +1840,41 @@ export default function AIChatScreen() {
           const baseRadius = 18;
           const chainRadius = 12;
           const tailRadius = 6;
+          const isTempId = msg.id.startsWith('temp-');
+          const a11yPrefix = isUser
+            ? (t('yourMessage') || 'Your message')
+            : (t('aiResponse') || 'AI response');
+          const a11yContent = msg.content.length > 200 ? msg.content.slice(0, 200) + '...' : msg.content;
+
+          const formatMessageTime = (dateStr: string) => {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const isToday = date.toDateString() === now.toDateString();
+            if (isToday) {
+              return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            return date.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          };
+
+          const handleCopyMessage = () => {
+            Clipboard.setStringAsync(msg.content);
+            haptics.light();
+            showToast(t('copied') || 'Copied!', 'success');
+          };
 
           return (
             <View
+              accessible={true}
+              accessibilityLabel={`${a11yPrefix}: ${a11yContent}`}
               style={{
-                flexDirection: 'row',
-                justifyContent: isUser ? 'flex-end' : 'flex-start',
+                flexDirection: 'column',
+                alignItems: isUser ? 'flex-end' : 'flex-start',
                 width: '100%',
                 marginTop: index === 0 ? 0 : groupedWithPrev ? 4 : 12,
               }}
             >
-              <View
+              <Pressable
+                onLongPress={!isUser ? handleCopyMessage : undefined}
                 style={{
                   paddingHorizontal: 13,
                   paddingVertical: 9,
@@ -1957,7 +2033,18 @@ export default function AIChatScreen() {
                     );
                   })()
                 )}
-              </View>
+              </Pressable>
+              {!groupedWithNext && !isTempId && (
+                <Text style={{
+                  fontSize: 10,
+                  color: colors.mutedForeground,
+                  marginTop: 2,
+                  alignSelf: isUser ? 'flex-end' : 'flex-start',
+                  marginHorizontal: 4,
+                }}>
+                  {formatMessageTime(msg.created_at)}
+                </Text>
+              )}
             </View>
           );
         }}
@@ -2180,6 +2267,7 @@ export default function AIChatScreen() {
                   <VoiceRecorder
                     onRecordingComplete={handleVoiceComplete}
                     onCancel={cancelVoice}
+                    onError={(msg) => showToast(msg, 'error')}
                   />
                 )}
 

@@ -9,9 +9,10 @@ import { haptics } from '../../../utils/haptics';
 interface VoiceRecorderProps {
   onRecordingComplete: (uri: string, mimeType: string, name: string) => void;
   onCancel: () => void;
+  onError?: (message: string) => void;
 }
 
-export function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRecorderProps) {
+export function VoiceRecorder({ onRecordingComplete, onCancel, onError }: VoiceRecorderProps) {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
@@ -69,6 +70,8 @@ export function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRecorderPr
       }, 1000);
     } catch (error) {
       console.error('Failed to start recording:', error);
+      haptics.error();
+      onError?.(t('voiceRecordingFailed') || 'Failed to start voice recording');
       onCancel();
     }
   };
@@ -91,6 +94,8 @@ export function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRecorderPr
       }
     } catch (error) {
       console.error('Failed to stop recording:', error);
+      haptics.error();
+      onError?.(t('voiceStopFailed') || 'Failed to save recording');
       onCancel();
     }
   };
@@ -130,7 +135,13 @@ export function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRecorderPr
       </Text>
 
       {/* Cancel */}
-      <Pressable onPress={handleCancel} hitSlop={8} style={{ cursor: 'pointer', padding: 8 }}>
+      <Pressable
+        onPress={handleCancel}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={t('cancelRecording') || 'Cancel recording'}
+        style={{ cursor: 'pointer', padding: 10 }}
+      >
         <X size={20} color={colors.mutedForeground} />
       </Pressable>
 
@@ -138,7 +149,9 @@ export function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRecorderPr
       <Pressable
         onPress={handleStop}
         hitSlop={8}
-        style={{ cursor: 'pointer', backgroundColor: colors.danger, padding: 10, borderRadius: 9999 }}
+        accessibilityRole="button"
+        accessibilityLabel={t('stopRecording') || 'Stop recording'}
+        style={{ cursor: 'pointer', backgroundColor: colors.danger, padding: 12, borderRadius: 9999 }}
       >
         <Square size={16} color="#fff" fill="#fff" />
       </Pressable>

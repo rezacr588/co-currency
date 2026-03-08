@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from 'styled-components/native';
 import { useLanguage } from '../../../context/LanguageContext';
 import { haptics } from '../../../utils/haptics';
+import { getLocalizedMonthNames, getLocalizedMonthShortNames } from '../../../utils/plannerConstants';
 
 interface DatePickerModalProps {
   visible: boolean;
@@ -12,11 +13,6 @@ interface DatePickerModalProps {
   initialDate?: string;
   title?: string;
 }
-
-const MONTH_NAMES_EN = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
 
 function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
@@ -45,7 +41,7 @@ export function DatePickerModal({ visible, onClose, onSelect, initialDate, title
   const currentYear = new Date().getFullYear();
   const years = useMemo(() => {
     const list: number[] = [];
-    for (let y = currentYear; y <= currentYear + 5; y++) list.push(y);
+    for (let y = currentYear - 2; y <= currentYear + 10; y++) list.push(y);
     return list;
   }, [currentYear]);
 
@@ -57,6 +53,9 @@ export function DatePickerModal({ visible, onClose, onSelect, initialDate, title
     for (let d = 1; d <= maxDay; d++) list.push(d);
     return list;
   }, [maxDay]);
+
+  const monthNames = useMemo(() => getLocalizedMonthNames(t as (key: string) => string | undefined), [t]);
+  const monthShortNames = useMemo(() => getLocalizedMonthShortNames(t as (key: string) => string | undefined), [t]);
 
   const handleYearChange = useCallback((y: number) => {
     setYear(y);
@@ -95,6 +94,8 @@ export function DatePickerModal({ visible, onClose, onSelect, initialDate, title
     backgroundColor: selected ? colors.accent + '22' : colors.card,
     marginRight: 8,
     marginBottom: 8,
+    minHeight: 40,
+    justifyContent: 'center' as const,
   });
 
   const chipTextStyle = (selected: boolean) => ({
@@ -152,13 +153,13 @@ export function DatePickerModal({ visible, onClose, onSelect, initialDate, title
               {`${year}-${String(month).padStart(2, '0')}-${String(clampedDay).padStart(2, '0')}`}
             </Text>
             <Text style={{ color: colors.accent, fontSize: 12, fontFamily: 'Inter_500Medium', marginTop: 2, opacity: 0.8 }}>
-              {MONTH_NAMES_EN[month - 1]} {clampedDay}, {year}
+              {monthNames[month - 1]} {clampedDay}, {year}
             </Text>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 8, fontFamily: 'Inter_600SemiBold' }}>
-              Year
+              {t('plannerYear') || 'Year'}
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
               <View style={{ flexDirection: 'row' }}>
@@ -173,20 +174,20 @@ export function DatePickerModal({ visible, onClose, onSelect, initialDate, title
             </ScrollView>
 
             <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 8, fontFamily: 'Inter_600SemiBold' }}>
-              Month
+              {t('plannerMonth') || 'Month'}
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 16 }}>
-              {MONTH_NAMES_EN.map((name, idx) => (
+              {monthShortNames.map((name, idx) => (
                 <Pressable key={idx} onPress={() => handleMonthChange(idx + 1)}>
                   <View style={chipStyle(month === idx + 1)}>
-                    <Text style={chipTextStyle(month === idx + 1)}>{name.slice(0, 3)}</Text>
+                    <Text style={chipTextStyle(month === idx + 1)}>{name}</Text>
                   </View>
                 </Pressable>
               ))}
             </View>
 
             <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 8, fontFamily: 'Inter_600SemiBold' }}>
-              Day
+              {t('plannerDay') || 'Day'}
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 }}>
               {days.map((d) => (

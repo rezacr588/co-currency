@@ -8,6 +8,8 @@ import { useTheme } from 'styled-components/native';
 import { haptics } from '../../../utils/haptics';
 import type { ChatAttachment } from '../../../api/chat';
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
 interface AttachmentPickerProps {
   onAttach: (attachment: ChatAttachment) => void;
   onStartVoice: () => void;
@@ -118,6 +120,10 @@ export function useAttachmentPicker() {
 
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
+      if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+        Alert.alert(t('fileTooLarge') || 'File too large', t('fileTooLargeDetail') || 'Please choose a file smaller than 10MB');
+        return;
+      }
       setAttachment({
         uri: asset.uri,
         mimeType: asset.mimeType || 'image/jpeg',
@@ -138,6 +144,10 @@ export function useAttachmentPicker() {
 
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
+      if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+        Alert.alert(t('fileTooLarge') || 'File too large', t('fileTooLargeDetail') || 'Please choose a file smaller than 10MB');
+        return;
+      }
       setAttachment({
         uri: asset.uri,
         mimeType: asset.mimeType || 'image/jpeg',
@@ -154,6 +164,10 @@ export function useAttachmentPicker() {
 
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
+      if (asset.size && asset.size > MAX_FILE_SIZE) {
+        Alert.alert(t('fileTooLarge') || 'File too large', t('fileTooLargeDetail') || 'Please choose a file smaller than 10MB');
+        return;
+      }
       setAttachment({
         uri: asset.uri,
         mimeType: asset.mimeType || 'application/pdf',

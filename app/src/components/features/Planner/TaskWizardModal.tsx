@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronRight, Plus, Tag, Trash2 } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
@@ -11,6 +11,7 @@ import { haptics } from '../../../utils/haptics';
 import { readJSON, removeStorage, writeJSON } from '../../../utils/storage';
 import { isValidPlannerDueDate } from '../../../utils/plannerDate';
 import type { Goal } from '../../../types/goal';
+import { COLUMN_ORDER, PRIORITY_COLORS, getStatusLabel } from '../../../utils/plannerConstants';
 import type {
   CreateTaskRequest,
   PlannerBoardResponse,
@@ -20,22 +21,8 @@ import type {
   TaskWizardStep,
 } from '../../../types/planner';
 
-const COLUMN_ORDER: PlannerStatus[] = ['todo', 'in_progress', 'done', 'archived'];
 const TASK_WIZARD_DRAFT_VERSION = 1;
 const WIZARD_STEPS: TaskWizardStep[] = ['basics', 'schedule', 'organization', 'finance_review'];
-
-const COLUMN_LABELS: Record<PlannerStatus, string> = {
-  todo: 'To Do',
-  in_progress: 'In Progress',
-  done: 'Done',
-  archived: 'Archived',
-};
-
-const PRIORITY_BADGE: Record<string, { bg: string; text: string }> = {
-  low: { bg: 'rgba(34,197,94,0.15)', text: '#22c55e' },
-  medium: { bg: 'rgba(250,204,21,0.15)', text: '#facc15' },
-  high: { bg: 'rgba(239,68,68,0.15)', text: '#ef4444' },
-};
 
 function draftStorageKey(userID: string): string {
   return `@task_wizard_draft:${userID}`;
@@ -95,6 +82,7 @@ export function TaskWizardModal({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showSourceCurrencyPicker, setShowSourceCurrencyPicker] = useState(false);
   const [showWalletCurrencyPicker, setShowWalletCurrencyPicker] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const resetWizard = useCallback(() => {
     setStep('basics');
@@ -161,7 +149,7 @@ export function TaskWizardModal({
             },
           },
           {
-            text: 'Resume',
+            text: t('plannerResume') || 'Resume',
             onPress: () => applyDraft(stored),
           },
         ],
@@ -212,12 +200,12 @@ export function TaskWizardModal({
   }, [dueDate, t]);
 
   const validateStep = useCallback((s: TaskWizardStep): string | null => {
-    if (s === 'basics' && !title.trim()) return t('plannerTaskTitle') ? 'Please add a task title.' : 'Please add a task title.';
+    if (s === 'basics' && !title.trim()) return t('plannerTitleRequiredMessage') || 'Please add a task title.';
     if (s === 'schedule' && dueDateValidationError) return dueDateValidationError;
     if (s === 'finance_review' && autoLedgerEnabled) {
       const amount = Number(ledgerAmount);
-      if (!Number.isFinite(amount) || amount <= 0) return 'Ledger amount must be greater than zero.';
-      if (!ledgerCurrency.trim()) return 'Ledger currency is required when auto-ledger is on.';
+      if (!Number.isFinite(amount) || amount <= 0) return t('plannerLedgerAmountError') || 'Ledger amount must be greater than zero.';
+      if (!ledgerCurrency.trim()) return t('plannerLedgerCurrencyError') || 'Ledger currency is required when auto-ledger is on.';
     }
     return null;
   }, [autoLedgerEnabled, dueDateValidationError, ledgerAmount, ledgerCurrency, title, t]);
@@ -238,20 +226,21 @@ export function TaskWizardModal({
   }, [step, validateStep, t]);
 
   const handleSubmit = useCallback(async () => {
+    if (isSubmitting) return;
     const scheduleError = validateStep('schedule');
     if (scheduleError) {
       setStep('schedule');
-      Alert.alert('Could not create task', scheduleError);
+      Alert.alert(t('plannerCreateError') || 'Could not create task', scheduleError);
       return;
     }
     const financeError = validateStep('finance_review');
     if (financeError) {
-      Alert.alert('Could not create task', financeError);
+      Alert.alert(t('plannerCreateError') || 'Could not create task', financeError);
       return;
     }
     const cleanTitle = title.trim();
     if (!cleanTitle) {
-      Alert.alert('Task title required', 'Please add a title before saving.');
+      Alert.alert(t('plannerTitleRequiredSubmit') || 'Task title required', t('plannerTitleRequiredSubmitMessage') || 'Please add a title before saving.');
       return;
     }
 
@@ -275,6 +264,7 @@ export function TaskWizardModal({
       ledger_description: autoLedgerEnabled ? ledgerDescription.trim() || undefined : undefined,
     };
 
+    setIsSubmitting(true);
     try {
       await onSubmit(payload, selectedTagIDs);
       void haptics.success();
@@ -283,9 +273,11 @@ export function TaskWizardModal({
       onClose();
     } catch (err) {
       void haptics.error();
-      Alert.alert('Could not queue task', err instanceof Error ? err.message : 'Unknown error');
+      Alert.alert(t('plannerQueueError') || 'Could not queue task', err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [
+  }, [isSubmitting,
     validateStep, title, effectiveBoard, selectedStatus, description,
     selectedPriority, dueDate, selectedGoalID, reminderMode, subtasks,
     autoLedgerEnabled, ledgerType, ledgerAmount, ledgerCurrency,
@@ -294,10 +286,23 @@ export function TaskWizardModal({
   ]);
 
   const handleDiscard = useCallback(() => {
-    resetWizard();
-    if (userId) void removeStorage(draftStorageKey(userId));
-    onClose();
-  }, [resetWizard, userId, onClose]);
+    Alert.alert(
+      t('plannerDiscardConfirmTitle') || 'Discard draft?',
+      t('plannerDiscardConfirmMessage') || 'All your progress on this task will be lost.',
+      [
+        { text: t('plannerClose') || 'Cancel', style: 'cancel' },
+        {
+          text: t('plannerDiscard') || 'Discard',
+          style: 'destructive',
+          onPress: () => {
+            resetWizard();
+            if (userId) void removeStorage(draftStorageKey(userId));
+            onClose();
+          },
+        },
+      ],
+    );
+  }, [resetWizard, userId, onClose, t]);
 
   const addSubtask = useCallback(() => {
     const text = subtaskDraft.trim();
@@ -333,15 +338,7 @@ export function TaskWizardModal({
     ? Math.max(Math.floor((Math.max(Math.min(width, 480) - 32, 0) - stepGap) / 2), 120)
     : undefined;
 
-  const statusLabel = (s: PlannerStatus) => {
-    const i18nMap: Record<PlannerStatus, string> = {
-      todo: t('plannerToDo') || 'To Do',
-      in_progress: t('plannerInProgress') || 'In Progress',
-      done: t('plannerDone') || 'Done',
-      archived: t('plannerArchived') || 'Archived',
-    };
-    return i18nMap[s];
-  };
+  const statusLabel = (s: PlannerStatus) => getStatusLabel(s, t as (key: string) => string | undefined);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -444,6 +441,7 @@ export function TaskWizardModal({
                     onChangeText={setTitle}
                     placeholder={t('plannerTaskTitle') || 'What needs to be done?'}
                     placeholderTextColor={colors.placeholder}
+                    maxLength={200}
                     style={{
                       borderWidth: 1, borderColor: title.trim() ? colors.accent + '44' : colors.border,
                       backgroundColor: colors.card,
@@ -530,6 +528,11 @@ export function TaskWizardModal({
                       </Text>
                     </View>
                   </Pressable>
+                  {dueDateValidationError && (
+                    <Text style={{ color: colors.danger, fontSize: 11, marginTop: 4, fontFamily: 'Inter_500Medium' }}>
+                      {dueDateValidationError}
+                    </Text>
+                  )}
                 </View>
 
                 <View>
@@ -538,7 +541,7 @@ export function TaskWizardModal({
                   </Text>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     {(['low', 'medium', 'high'] as const).map((p) => {
-                      const badge = PRIORITY_BADGE[p];
+                      const badge = PRIORITY_COLORS[p];
                       return (
                         <Pressable
                           key={p}
@@ -550,7 +553,7 @@ export function TaskWizardModal({
                             flex: 1, alignItems: 'center', borderRadius: 10, borderWidth: 1,
                             borderColor: selectedPriority === p ? badge.text + '55' : colors.border,
                             backgroundColor: selectedPriority === p ? badge.bg : colors.card,
-                            paddingVertical: 10,
+                            paddingVertical: 12, minHeight: 44, justifyContent: 'center',
                           }, pressed && { opacity: 0.72 }]}
                         >
                           <Text style={{
@@ -843,38 +846,38 @@ export function TaskWizardModal({
                   </Text>
                   <View style={{ gap: 6 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>Title:</Text>
+                      <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('plannerReviewTitle') || 'Title:'}</Text>
                       <Text style={{ color: colors.foreground, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>
                         {title || (t('plannerUntitled') || 'Untitled')}
                       </Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>Status:</Text>
+                      <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('plannerReviewStatus') || 'Status:'}</Text>
                       <Text style={{ color: colors.foreground, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>
                         {statusLabel(selectedStatus)}
                       </Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>Priority:</Text>
+                      <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('plannerReviewPriority') || 'Priority:'}</Text>
                       {(() => {
-                        const badge = PRIORITY_BADGE[selectedPriority];
+                        const badge = PRIORITY_COLORS[selectedPriority];
                         return (
                           <View style={{ backgroundColor: badge.bg, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 1 }}>
                             <Text style={{ color: badge.text, fontSize: 11, fontFamily: 'Inter_600SemiBold' }}>
-                              {selectedPriority.charAt(0).toUpperCase() + selectedPriority.slice(1)}
+                              {t(`priority${selectedPriority.charAt(0).toUpperCase() + selectedPriority.slice(1)}` as any) || selectedPriority.charAt(0).toUpperCase() + selectedPriority.slice(1)}
                             </Text>
                           </View>
                         );
                       })()}
                     </View>
                     <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
-                      Reminder: {reminderMode === 'aggressive' ? (t('plannerReminderAggressive') || 'Aggressive') : (t('plannerReminderOff') || 'Off')}
+                      {t('plannerReviewReminder') || 'Reminder:'} {reminderMode === 'aggressive' ? (t('plannerReminderAggressive') || 'Aggressive') : (t('plannerReminderOff') || 'Off')}
                     </Text>
                     <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
-                      Tags: {selectedTagIDs.length}
+                      {t('plannerReviewTags') || 'Tags:'} {selectedTagIDs.length}
                     </Text>
                     <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
-                      Subtasks: {subtasks.length}
+                      {t('plannerReviewSubtasks') || 'Subtasks:'} {subtasks.length}
                     </Text>
                   </View>
 
@@ -889,7 +892,7 @@ export function TaskWizardModal({
                         }, pressed && { opacity: 0.72 }]}
                       >
                         <Text style={{ color: colors.foreground, fontSize: 11 }}>
-                          Edit {stepLabels[s]}
+                          {(t('plannerEditStep') || 'Edit {{step}}').replace('{{step}}', stepLabels[s])}
                         </Text>
                       </Pressable>
                     ))}
@@ -906,10 +909,12 @@ export function TaskWizardModal({
             <Pressable
               onPress={handleDiscard}
               hitSlop={4}
+              accessibilityLabel={t('plannerDiscardDraft') || 'Discard draft'}
+              accessibilityRole="button"
               style={({ pressed }) => [{
                 borderRadius: 12, borderWidth: 1, borderColor: colors.danger + '44',
                 backgroundColor: colors.danger + '10', alignItems: 'center', justifyContent: 'center',
-                paddingVertical: 14, paddingHorizontal: 16,
+                paddingVertical: 14, paddingHorizontal: 16, minWidth: 48, minHeight: 48,
               }, pressed && { opacity: 0.72 }]}
             >
               <Trash2 size={16} color={colors.danger} />
@@ -948,18 +953,23 @@ export function TaskWizardModal({
             ) : (
               <Pressable
                 onPress={handleSubmit}
+                disabled={isSubmitting}
                 style={({ pressed }) => [{
                   flex: 1.5, borderRadius: 12, backgroundColor: colors.accent,
                   alignItems: 'center', justifyContent: 'center', paddingVertical: 14,
                   shadowColor: colors.accent, shadowOpacity: 0.34, shadowRadius: 14,
                   shadowOffset: { width: 0, height: 0 },
                   elevation: 4,
-                  opacity: pressed ? 0.78 : 1,
+                  opacity: isSubmitting ? 0.6 : pressed ? 0.78 : 1,
                 }]}
               >
-                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_700Bold', fontSize: 14 }}>
-                  {t('plannerCreateTask') || 'Create Task'}
-                </Text>
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color={colors.accentForeground} />
+                ) : (
+                  <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_700Bold', fontSize: 14 }}>
+                    {t('plannerCreateTask') || 'Create Task'}
+                  </Text>
+                )}
               </Pressable>
             )}
           </View>

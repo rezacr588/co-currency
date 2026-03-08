@@ -5,6 +5,7 @@ import {
   AppState,
   Modal,
   Pressable,
+  RefreshControl,
   ScrollView,
   Text,
   TextInput,
@@ -61,6 +62,7 @@ import {
   isPlannerOnline,
   syncPlannerOutbox,
 } from '../../src/offline/plannerSyncEngine';
+import { COLUMN_ORDER, getStatusLabel } from '../../src/utils/plannerConstants';
 import type { Goal } from '../../src/types/goal';
 import type {
   CreateTaskRequest,
@@ -71,8 +73,6 @@ import type {
   TodoItem,
   UpdateTaskRequest,
 } from '../../src/types/planner';
-
-const COLUMN_ORDER: PlannerStatus[] = ['todo', 'in_progress', 'done', 'archived'];
 
 type DragDirection = 'left' | 'right' | null;
 
@@ -147,6 +147,7 @@ export default function PlannerScreen() {
   const [activeColumn, setActiveColumn] = useState<PlannerStatus>('todo');
   const [isDraggingCard, setIsDraggingCard] = useState(false);
   const [dragDirection, setDragDirection] = useState<DragDirection>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // --- Search & filter ---
   const [searchText, setSearchText] = useState('');
@@ -155,6 +156,7 @@ export default function PlannerScreen() {
 
   // --- Undo ---
   const [undoTaskID, setUndoTaskID] = useState<string | null>(null);
+  const [undoOriginalStatus, setUndoOriginalStatus] = useState<PlannerStatus>('todo');
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pagerRef = useRef<ScrollView>(null);
@@ -336,13 +338,7 @@ export default function PlannerScreen() {
   }, [effectiveBoard]);
 
   const columnLabel = useCallback((s: PlannerStatus) => {
-    const map: Record<PlannerStatus, string> = {
-      todo: t('plannerToDo') || 'To Do',
-      in_progress: t('plannerInProgress') || 'In Progress',
-      done: t('plannerDone') || 'Done',
-      archived: t('plannerArchived') || 'Archived',
-    };
-    return map[s];
+    return getStatusLabel(s, t as (key: string) => string | undefined);
   }, [t]);
 
   // --- Actions ---
@@ -361,7 +357,7 @@ export default function PlannerScreen() {
       if (desc) params.description = desc;
       router.push({ pathname: '/(app)/(tabs)/add', params } as any);
     } catch (error) {
-      Alert.alert('Could not open transaction flow', error instanceof Error ? error.message : 'Unknown error');
+      Alert.alert(t('plannerTransactionError') || 'Could not open transaction flow', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setLaunchingTaskID(null);
     }
@@ -378,12 +374,18 @@ export default function PlannerScreen() {
       }
       void syncOutboxNow();
     } catch (error) {
-      Alert.alert('Could not queue item move', error instanceof Error ? error.message : 'Unknown error');
+      Alert.alert(t('plannerMoveError') || 'Could not queue item move', error instanceof Error ? error.message : 'Unknown error');
     }
   }, [effectiveBoard, isOnline, syncOutboxNow, userID]);
 
   const handleCompleteTask = useCallback(async (taskID: string) => {
     if (!userID) return;
+    // Find the task's current status for undo
+    let originalStatus: PlannerStatus = 'todo';
+    for (const col of effectiveBoard.columns) {
+      const found = col.items.find((i) => i.id === taskID);
+      if (found) { originalStatus = col.status; break; }
+    }
     setCompletingTaskID(taskID);
     void haptics.success();
     try {
@@ -393,21 +395,23 @@ export default function PlannerScreen() {
 
       // Show undo bar
       setUndoTaskID(taskID);
+      setUndoOriginalStatus(originalStatus);
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
       undoTimerRef.current = setTimeout(() => setUndoTaskID(null), 5000);
     } catch (error) {
-      Alert.alert('Could not queue task completion', error instanceof Error ? error.message : 'Unknown error');
+      Alert.alert(t('plannerCompleteError') || 'Could not queue task completion', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setTimeout(() => setCompletingTaskID(null), 600);
     }
-  }, [syncOutboxNow, userID, showToast, t]);
+  }, [effectiveBoard, syncOutboxNow, userID, showToast, t]);
 
   const handleUndoComplete = useCallback(async () => {
     if (!undoTaskID || !userID) return;
     setUndoTaskID(null);
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     try {
-      await enqueuePlannerOp({ user_id: userID, op_type: 'item_move', entity_type: 'task', entity_id: undoTaskID, payload: { status: 'todo', sort_order: 1 } });
+      void haptics.light();
+      await enqueuePlannerOp({ user_id: userID, op_type: 'item_move', entity_type: 'task', entity_id: undoTaskID, payload: { status: undoOriginalStatus, sort_order: 1 } });
       void syncOutboxNow();
       showToast(t('plannerUndo') || 'Task restored', 'info');
     } catch { /* silent */ }
@@ -420,7 +424,7 @@ export default function PlannerScreen() {
       void syncOutboxNow();
       showToast(t('plannerTaskDeleted') || 'Task deleted', 'info');
     } catch (error) {
-      Alert.alert('Could not queue task delete', error instanceof Error ? error.message : 'Unknown error');
+      Alert.alert(t('plannerDeleteError') || 'Could not queue task delete', error instanceof Error ? error.message : 'Unknown error');
     }
   }, [syncOutboxNow, userID, showToast, t]);
 
@@ -428,7 +432,7 @@ export default function PlannerScreen() {
     Alert.alert(
       t('plannerDeleteTitle') || 'Delete task?',
       t('plannerDeleteMessage') || 'This task will be removed from your planner.',
-      [{ text: t('plannerClose') || 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: () => void queueDeleteTask(taskID) }],
+      [{ text: t('plannerClose') || 'Cancel', style: 'cancel' }, { text: t('plannerDelete') || 'Delete', style: 'destructive', onPress: () => void queueDeleteTask(taskID) }],
     );
   }, [queueDeleteTask, t]);
 
@@ -463,11 +467,34 @@ export default function PlannerScreen() {
     await syncOutboxNow();
   }, [syncOutboxNow, userID]);
 
-  const discardFailed = useCallback(async () => {
+  const discardFailed = useCallback(() => {
     if (!userID) return;
-    await discardFailedPlannerOps(userID);
-    await boardQuery.refetch();
-  }, [boardQuery, userID]);
+    Alert.alert(
+      t('plannerDiscardFailedTitle') || 'Discard failed changes?',
+      t('plannerDiscardFailedMessage') || 'This will permanently remove all failed operations. You cannot undo this.',
+      [
+        { text: t('plannerClose') || 'Cancel', style: 'cancel' },
+        {
+          text: t('plannerDiscard') || 'Discard',
+          style: 'destructive',
+          onPress: async () => {
+            await discardFailedPlannerOps(userID);
+            await boardQuery.refetch();
+          },
+        },
+      ],
+    );
+  }, [boardQuery, userID, t]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await syncOutboxNow();
+      await boardQuery.refetch();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [syncOutboxNow, boardQuery]);
 
   const jumpToColumn = useCallback((status: PlannerStatus) => {
     const index = COLUMN_ORDER.indexOf(status);
@@ -521,8 +548,15 @@ export default function PlannerScreen() {
           <View style={{ borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed', borderRadius: 14, paddingVertical: 24, alignItems: 'center', backgroundColor: colors.muted }}>
             <Sparkles size={16} color={colors.mutedForeground} />
             <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 8 }}>
-              {t('plannerDropHere') || 'Drop items here'}
+              {(debouncedSearch || priorityFilter)
+                ? (t('plannerNoResults') || 'No matching tasks')
+                : (t('plannerDropHere') || 'Drop items here')}
             </Text>
+            {(debouncedSearch || priorityFilter) && (
+              <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 4, opacity: 0.7 }}>
+                {t('plannerNoResultsDescription') || 'Try adjusting your search or filters.'}
+              </Text>
+            )}
           </View>
         ) : (
           items.map((item) => (
@@ -608,10 +642,14 @@ export default function PlannerScreen() {
           {showSyncBar && (
             <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
               {!isOnline && (
-                <View style={{
-                  flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6,
-                  borderRadius: 999, borderWidth: 1, borderColor: colors.danger + '66', backgroundColor: colors.danger + '1A',
-                }}>
+                <View
+                  accessibilityRole="alert"
+                  accessibilityLabel={t('plannerOffline') || 'Offline'}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6,
+                    borderRadius: 999, borderWidth: 1, borderColor: colors.danger + '66', backgroundColor: colors.danger + '1A',
+                  }}
+                >
                   <WifiOff size={12} color={colors.danger} />
                   <Text style={{ color: colors.danger, fontSize: 11, marginLeft: 5, fontFamily: 'Inter_600SemiBold' }}>
                     {t('plannerOffline') || 'Offline'}
@@ -620,10 +658,13 @@ export default function PlannerScreen() {
               )}
 
               {isSyncing && isOnline && (
-                <View style={{
-                  flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6,
-                  borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card,
-                }}>
+                <View
+                  accessibilityLabel={t('plannerSyncing') || 'Syncing...'}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6,
+                    borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card,
+                  }}
+                >
                   <ActivityIndicator size="small" color={colors.accent} style={{ marginRight: 5 }} />
                   <Text style={{ color: colors.mutedForeground, fontSize: 11, fontFamily: 'Inter_500Medium' }}>
                     {t('plannerSyncing') || 'Syncing...'}
@@ -644,12 +685,18 @@ export default function PlannerScreen() {
                   <View style={{ flexDirection: 'row', gap: 8, marginLeft: 'auto' }}>
                     <Pressable
                       onPress={retryFailed}
+                      disabled={isSyncing}
                       style={({ pressed }) => [{
                         flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border,
                         backgroundColor: colors.card, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6,
-                      }, pressed && { opacity: 0.72 }]}
+                        opacity: isSyncing ? 0.5 : pressed ? 0.72 : 1,
+                      }]}
                     >
-                      <RotateCw size={12} color={colors.foreground} />
+                      {isSyncing ? (
+                        <ActivityIndicator size={12} color={colors.foreground} />
+                      ) : (
+                        <RotateCw size={12} color={colors.foreground} />
+                      )}
                       <Text style={{ color: colors.foreground, fontSize: 11, marginLeft: 5, fontFamily: 'Inter_600SemiBold' }}>
                         {t('plannerRetry') || 'Retry'}
                       </Text>
@@ -677,6 +724,7 @@ export default function PlannerScreen() {
               <Animated.View
                 key={metric.label}
                 entering={FadeInDown.duration(350)}
+                accessibilityLabel={`${metric.label}: ${metric.value}`}
                 style={[
                   {
                     backgroundColor: colors.card,
@@ -708,6 +756,8 @@ export default function PlannerScreen() {
                 onChangeText={setSearchText}
                 placeholder={t('plannerSearch') || 'Search tasks...'}
                 placeholderTextColor={colors.placeholder}
+                accessibilityLabel={t('plannerSearchTasks') || 'Search tasks'}
+                returnKeyType="search"
                 style={{ flex: 1, color: colors.foreground, fontSize: 13, paddingVertical: 2 }}
               />
             </View>
@@ -717,7 +767,8 @@ export default function PlannerScreen() {
             <Pressable
               onPress={() => setPriorityFilter(null)}
               style={({ pressed }) => [{
-                paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, borderWidth: 1,
+                paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, minHeight: 36,
+                justifyContent: 'center' as const,
                 borderColor: !priorityFilter ? colors.accent : colors.border,
                 backgroundColor: !priorityFilter ? colors.accent + '22' : colors.card,
               }, pressed && { opacity: 0.72 }]}
@@ -731,7 +782,8 @@ export default function PlannerScreen() {
                 key={p}
                 onPress={() => setPriorityFilter(priorityFilter === p ? null : p)}
                 style={({ pressed }) => [{
-                  paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, borderWidth: 1,
+                  paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, minHeight: 36,
+                  justifyContent: 'center' as const,
                   borderColor: priorityFilter === p ? colors.accent : colors.border,
                   backgroundColor: priorityFilter === p ? colors.accent + '22' : colors.card,
                 }, pressed && { opacity: 0.72 }]}
@@ -753,7 +805,7 @@ export default function PlannerScreen() {
                   onPress={() => jumpToColumn(status)}
                   style={({ pressed }) => [{
                     flexDirection: 'row', alignItems: 'center', borderRadius: 999,
-                    paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1,
+                    paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, minHeight: 36,
                     borderColor: active ? COLUMN_META[status].border : colors.border,
                     backgroundColor: active ? COLUMN_META[status].glow : colors.card,
                     shadowColor: active ? COLUMN_META[status].glow : 'transparent',
@@ -804,7 +856,18 @@ export default function PlannerScreen() {
             >
               {COLUMN_ORDER.map((status, index) => (
                 <View key={status} style={{ width: phonePageWidth, paddingRight: 10 }}>
-                  <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 14 }}>
+                  <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 14 }}
+                    refreshControl={
+                      <RefreshControl
+                        refreshing={isRefreshing}
+                        onRefresh={handleRefresh}
+                        tintColor={colors.accent}
+                        colors={[colors.accent]}
+                      />
+                    }
+                  >
                     {renderColumn(status, index, phonePageWidth - 6)}
                   </ScrollView>
                 </View>
@@ -821,7 +884,18 @@ export default function PlannerScreen() {
             >
               {COLUMN_ORDER.map((status, index) => (
                 <View key={status} style={{ width: tabletColumnWidth }}>
-                  <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 14 }}>
+                  <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 14 }}
+                    refreshControl={
+                      <RefreshControl
+                        refreshing={isRefreshing}
+                        onRefresh={handleRefresh}
+                        tintColor={colors.accent}
+                        colors={[colors.accent]}
+                      />
+                    }
+                  >
                     {renderColumn(status, index, tabletColumnWidth)}
                   </ScrollView>
                 </View>
@@ -842,18 +916,22 @@ export default function PlannerScreen() {
 
         {/* Undo bar */}
         {undoTaskID && (
-          <View style={{
-            position: 'absolute', bottom: Math.max(insets.bottom + 8, 20), left: 16, right: 16,
-            backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border,
-            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-            paddingHorizontal: 14, paddingVertical: 10,
-            shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
-            elevation: 8,
-          }}>
+          <View
+            accessibilityRole="alert"
+            accessibilityLabel={`${t('plannerTaskCompleted') || 'Task completed'}. ${t('plannerUndo') || 'Undo'}`}
+            style={{
+              position: 'absolute', bottom: Math.max(insets.bottom + 8, 20), left: 16, right: 16,
+              backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border,
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+              paddingHorizontal: 14, paddingVertical: 10,
+              shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
+              elevation: 8,
+            }}
+          >
             <Text style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_500Medium' }}>
               {t('plannerTaskCompleted') || 'Task completed'}
             </Text>
-            <Pressable onPress={handleUndoComplete}>
+            <Pressable onPress={handleUndoComplete} hitSlop={8} style={{ minHeight: 36, justifyContent: 'center' }}>
               <Text style={{ color: colors.accent, fontSize: 13, fontFamily: 'Inter_700Bold' }}>
                 {t('plannerUndo') || 'Undo'}
               </Text>
@@ -894,7 +972,9 @@ export default function PlannerScreen() {
               </Text>
             </View>
             <Text style={{ color: colors.mutedForeground, lineHeight: 20 }}>
-              This financial goal still needs {fundingRequired?.remaining.toFixed(2)} {fundingRequired?.currency} before it can be moved to done.
+              {(t('plannerGoalFundingMessage') || 'This financial goal still needs {{amount}} {{currency}} before it can be moved to done.')
+                .replace('{{amount}}', fundingRequired?.remaining.toFixed(2) ?? '')
+                .replace('{{currency}}', fundingRequired?.currency ?? '')}
             </Text>
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
               <Pressable

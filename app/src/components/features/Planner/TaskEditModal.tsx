@@ -1,20 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Calendar, DollarSign, Trash2 } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
 import { DatePickerModal } from './DatePickerModal';
 import { useLanguage } from '../../../context/LanguageContext';
 import { haptics } from '../../../utils/haptics';
+import { COLUMN_ORDER, PRIORITY_COLORS, getStatusLabel } from '../../../utils/plannerConstants';
 import type { PlannerStatus, TodoItem, UpdateTaskRequest } from '../../../types/planner';
-
-const COLUMN_ORDER: PlannerStatus[] = ['todo', 'in_progress', 'done', 'archived'];
-
-const PRIORITY_COLORS: Record<string, { bg: string; text: string }> = {
-  low: { bg: 'rgba(34,197,94,0.15)', text: '#22c55e' },
-  medium: { bg: 'rgba(250,204,21,0.15)', text: '#facc15' },
-  high: { bg: 'rgba(239,68,68,0.15)', text: '#ef4444' },
-};
 
 interface TaskEditModalProps {
   visible: boolean;
@@ -38,6 +31,10 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
   const [status, setStatus] = useState<PlannerStatus>('todo');
   const [reminderMode, setReminderMode] = useState<'off' | 'aggressive'>('off');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Track initial values for unsaved changes detection
+  const initialValuesRef = useRef({ title: '', description: '', dueDate: '', priority: 'medium', status: 'todo' as PlannerStatus, reminderMode: 'off' });
 
   useEffect(() => {
     if (task && visible) {
@@ -47,14 +44,45 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
       setPriority((task.priority as 'low' | 'medium' | 'high') || 'medium');
       setStatus(task.status);
       setReminderMode('off');
+      setIsSaving(false);
+      initialValuesRef.current = {
+        title: task.title,
+        description: task.description || '',
+        dueDate: task.due_date || '',
+        priority: (task.priority as string) || 'medium',
+        status: task.status,
+        reminderMode: 'off',
+      };
     }
   }, [task, visible]);
 
+  const hasUnsavedChanges = useCallback(() => {
+    const init = initialValuesRef.current;
+    return title !== init.title || description !== init.description ||
+      dueDate !== init.dueDate || priority !== init.priority ||
+      status !== init.status || reminderMode !== init.reminderMode;
+  }, [title, description, dueDate, priority, status, reminderMode]);
+
+  const handleClose = useCallback(() => {
+    if (hasUnsavedChanges()) {
+      Alert.alert(
+        t('plannerUnsavedTitle') || 'Unsaved changes',
+        t('plannerUnsavedMessage') || 'You have unsaved changes. Discard them?',
+        [
+          { text: t('plannerClose') || 'Cancel', style: 'cancel' },
+          { text: t('plannerDiscard') || 'Discard', style: 'destructive', onPress: onClose },
+        ],
+      );
+    } else {
+      onClose();
+    }
+  }, [hasUnsavedChanges, onClose, t]);
+
   const handleSave = useCallback(async () => {
-    if (!task) return;
+    if (!task || isSaving) return;
     const cleanTitle = title.trim();
     if (!cleanTitle) {
-      Alert.alert('Title required', 'Please add a task title.');
+      Alert.alert(t('plannerTitleRequired') || 'Title required', t('plannerTitleRequiredMessage') || 'Please add a task title.');
       return;
     }
 
@@ -67,15 +95,18 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
       reminder_mode: reminderMode,
     };
 
+    setIsSaving(true);
     try {
       await onSave(task.id, updates);
       void haptics.success();
       onClose();
     } catch (err) {
       void haptics.error();
-      Alert.alert('Could not update task', err instanceof Error ? err.message : 'Unknown error');
+      Alert.alert(t('plannerUpdateError') || 'Could not update task', err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setIsSaving(false);
     }
-  }, [task, title, description, dueDate, priority, status, reminderMode, onSave, onClose]);
+  }, [task, isSaving, title, description, dueDate, priority, status, reminderMode, onSave, onClose]);
 
   const handleDelete = useCallback(() => {
     if (!task || !onDelete) return;
@@ -86,7 +117,7 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
       [
         { text: t('plannerClose') || 'Cancel', style: 'cancel' },
         {
-          text: t('delete') || 'Delete',
+          text: t('plannerDelete') || 'Delete',
           style: 'destructive',
           onPress: () => {
             void haptics.error();
@@ -98,20 +129,10 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
     );
   }, [task, onDelete, onClose, t]);
 
-  const statusLabel = (s: PlannerStatus) => {
-    const map: Record<PlannerStatus, string> = {
-      todo: t('plannerToDo') || 'To Do',
-      in_progress: t('plannerInProgress') || 'In Progress',
-      done: t('plannerDone') || 'Done',
-      archived: t('plannerArchived') || 'Archived',
-    };
-    return map[s];
-  };
-
   if (!task) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
         <View
@@ -137,7 +158,7 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
               {t('plannerEditTask') || 'Edit Task'}
             </Text>
             <Pressable
-              onPress={onClose}
+              onPress={handleClose}
               hitSlop={8}
               style={({ pressed }) => [{
                 paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
@@ -159,6 +180,7 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
                   onChangeText={setTitle}
                   placeholder={t('plannerTaskTitle') || 'Task title'}
                   placeholderTextColor={colors.placeholder}
+                  maxLength={200}
                   style={{
                     borderWidth: 1, borderColor: title.trim() ? colors.accent + '44' : colors.border,
                     backgroundColor: colors.card,
@@ -233,7 +255,8 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
                           flex: 1, alignItems: 'center', borderRadius: 10, borderWidth: 1,
                           borderColor: priority === p ? badge.text + '55' : colors.border,
                           backgroundColor: priority === p ? badge.bg : colors.card,
-                          paddingVertical: 10,
+                          paddingVertical: 12, minHeight: 44,
+                          justifyContent: 'center',
                         }, pressed && { opacity: 0.72 }]}
                       >
                         <Text style={{
@@ -250,7 +273,7 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
 
               <View>
                 <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6, fontFamily: 'Inter_600SemiBold' }}>
-                  Status
+                  {t('plannerStatus') || 'Status'}
                 </Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                   {COLUMN_ORDER.map((s) => (
@@ -261,13 +284,15 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
                         paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, borderWidth: 1,
                         borderColor: status === s ? colors.accent : colors.border,
                         backgroundColor: status === s ? colors.accent + '22' : colors.card,
+                        minHeight: 40,
+                        justifyContent: 'center',
                       }, pressed && { opacity: 0.72 }]}
                     >
                       <Text style={{
                         color: status === s ? colors.accent : colors.foreground,
                         fontSize: 13, fontFamily: status === s ? 'Inter_600SemiBold' : 'Inter_500Medium',
                       }}>
-                        {statusLabel(s)}
+                        {getStatusLabel(s, t as (key: string) => string | undefined)}
                       </Text>
                     </Pressable>
                   ))}
@@ -287,7 +312,8 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
                         flex: 1, alignItems: 'center', borderRadius: 10, borderWidth: 1,
                         borderColor: reminderMode === mode ? colors.accent : colors.border,
                         backgroundColor: reminderMode === mode ? colors.accent + '22' : colors.card,
-                        paddingVertical: 8,
+                        paddingVertical: 10, minHeight: 44,
+                        justifyContent: 'center',
                       }, pressed && { opacity: 0.72 }]}
                     >
                       <Text style={{
@@ -330,10 +356,12 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
               <Pressable
                 onPress={handleDelete}
                 hitSlop={4}
+                accessibilityLabel={t('plannerDelete') || 'Delete'}
+                accessibilityRole="button"
                 style={({ pressed }) => [{
                   borderRadius: 12, borderWidth: 1, borderColor: colors.danger + '44',
                   backgroundColor: colors.danger + '10', alignItems: 'center', justifyContent: 'center',
-                  paddingVertical: 14, paddingHorizontal: 16,
+                  paddingVertical: 14, paddingHorizontal: 16, minWidth: 48, minHeight: 48,
                 }, pressed && { opacity: 0.72 }]}
               >
                 <Trash2 size={16} color={colors.danger} />
@@ -341,7 +369,7 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
             ) : null}
 
             <Pressable
-              onPress={onClose}
+              onPress={handleClose}
               style={({ pressed }) => [{
                 flex: 1, borderRadius: 12, borderWidth: 1, borderColor: colors.border,
                 backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', paddingVertical: 14,
@@ -354,17 +382,23 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
 
             <Pressable
               onPress={handleSave}
+              disabled={isSaving}
               style={({ pressed }) => [{
                 flex: 1.5, borderRadius: 12, backgroundColor: colors.accent,
                 alignItems: 'center', justifyContent: 'center', paddingVertical: 14,
                 shadowColor: colors.accent, shadowOpacity: 0.34, shadowRadius: 14,
                 shadowOffset: { width: 0, height: 0 },
                 elevation: 4,
-              }, pressed && { opacity: 0.78 }]}
+                opacity: isSaving ? 0.6 : pressed ? 0.78 : 1,
+              }]}
             >
-              <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_700Bold', fontSize: 14 }}>
-                {t('plannerSaveChanges') || 'Save Changes'}
-              </Text>
+              {isSaving ? (
+                <ActivityIndicator size="small" color={colors.accentForeground} />
+              ) : (
+                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_700Bold', fontSize: 14 }}>
+                  {t('plannerSaveChanges') || 'Save Changes'}
+                </Text>
+              )}
             </Pressable>
           </View>
         </View>
