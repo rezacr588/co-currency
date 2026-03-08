@@ -210,11 +210,10 @@ func NewWalletRepository(db *Database) *WalletRepository {
 // GetBalances retrieves all balances for a user
 func (r *WalletRepository) GetBalances(ctx context.Context, userID uuid.UUID) ([]model.WalletBalance, error) {
 	query := `
-		SELECT MIN(id::text)::uuid, user_id, UPPER(TRIM(currency)) AS currency, SUM(balance), MAX(updated_at)
+		SELECT id, user_id, currency, balance, updated_at
 		FROM wallet_balances
 		WHERE user_id = $1
-		GROUP BY user_id, UPPER(TRIM(currency))
-		ORDER BY UPPER(TRIM(currency))
+		ORDER BY currency
 	`
 
 	rows, err := r.pool.Query(ctx, query, userID)
@@ -243,10 +242,9 @@ func (r *WalletRepository) GetBalances(ctx context.Context, userID uuid.UUID) ([
 func (r *WalletRepository) GetBalance(ctx context.Context, userID uuid.UUID, currency string) (*model.WalletBalance, error) {
 	currency = normalizeWalletCurrencyCode(currency)
 	query := `
-		SELECT MIN(id::text)::uuid, user_id, $2 AS currency, SUM(balance), MAX(updated_at)
+		SELECT id, user_id, currency, balance, updated_at
 		FROM wallet_balances
 		WHERE user_id = $1 AND UPPER(TRIM(currency)) = $2
-		GROUP BY user_id
 	`
 
 	b := &model.WalletBalance{}
@@ -280,10 +278,9 @@ func (r *WalletRepository) UpdateBalance(ctx context.Context, userID uuid.UUID, 
 	currency = normalizeWalletCurrencyCode(currency)
 	balance := &model.WalletBalance{}
 	err = tx.QueryRow(ctx, `
-		SELECT MIN(id::text)::uuid, user_id, $2 AS currency, SUM(balance), MAX(updated_at)
+		SELECT id, user_id, currency, balance, updated_at
 		FROM wallet_balances
 		WHERE user_id = $1 AND UPPER(TRIM(currency)) = $2
-		GROUP BY user_id
 	`, userID, currency).Scan(&balance.ID, &balance.UserID, &balance.Currency, &balance.Balance, &balance.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
