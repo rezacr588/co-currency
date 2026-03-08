@@ -14,6 +14,9 @@ import (
 
 // ExecuteConversion performs an atomic currency conversion
 func (r *WalletRepository) ExecuteConversion(ctx context.Context, userID uuid.UUID, fromCurrency, toCurrency string, fromAmount, toAmount, rate float64) (*model.Transaction, error) {
+	fromCurrency = normalizeWalletCurrencyCode(fromCurrency)
+	toCurrency = normalizeWalletCurrencyCode(toCurrency)
+
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("beginning transaction: %w", err)

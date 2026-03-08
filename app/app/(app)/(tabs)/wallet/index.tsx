@@ -1,4 +1,4 @@
-import { View, Text, Pressable, RefreshControl, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, RefreshControl } from 'react-native';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
@@ -12,16 +12,14 @@ import { StyledCategoryIcon } from '../../../../src/constants/icons';
 import { AppSwitcherTrigger } from '../../../../src/components/navigation/AppSwitcherTrigger';
 import { PageHeader, PageScaffold } from '../../../../src/components/ui';
 import { Skeleton, SkeletonList, SkeletonTransaction, SkeletonBalance } from '../../../../src/components/ui/Skeleton';
+import { useScreenLayout } from '../../../../src/hooks/useScreenLayout';
 
 export default function WalletScreen() {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
-  const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-
-  const isDesktop = width >= 1024;
-  const isTablet = width >= 768;
+  const { width, isCompactPhone, isDesktop, isTablet } = useScreenLayout();
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
   const containerPadding = isDesktop ? 32 : isTablet ? 24 : 16;
@@ -70,7 +68,9 @@ export default function WalletScreen() {
     { label: 'Planner', href: '/todo', icon: KanbanSquare },
   ];
 
-  const featureCols = isDesktop ? 6 : 3;
+  const featureCols = isDesktop ? 6 : isCompactPhone ? 2 : 3;
+  const featureGap = 16;
+  const featureItemWidth = (availableWidth - featureGap * (featureCols - 1)) / featureCols;
 
   return (
     <PageScaffold
@@ -149,16 +149,15 @@ export default function WalletScreen() {
             style={{
               flexDirection: 'row',
               flexWrap: 'wrap',
-              gap: 16,
+              gap: featureGap,
             }}
           >
             {quickActions.map((action) => {
               const Icon = action.icon;
-              const itemWidth = (availableWidth - 16 * (featureCols - 1)) / featureCols;
               return (
                 <Link key={action.href} href={action.href as any} asChild>
                   <Pressable
-                    style={({ pressed }) => [{ alignItems: 'center', width: itemWidth, minHeight: 44, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                    style={({ pressed }) => [{ alignItems: 'center', width: featureItemWidth, minHeight: 44, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
                     accessibilityLabel={action.label}
                     accessibilityRole="button"
                   >
@@ -168,8 +167,8 @@ export default function WalletScreen() {
                       <Icon size={20} color={colors.primary} />
                     </View>
                     <Text
-                      style={{ color: colors.foreground, marginTop: 8, textAlign: 'center', fontSize: 10 }}
-                      numberOfLines={1}
+                      style={{ color: colors.foreground, marginTop: 8, textAlign: 'center', fontSize: isCompactPhone ? 12 : 10, lineHeight: isCompactPhone ? 16 : 14, minHeight: isCompactPhone ? 32 : 28 }}
+                      numberOfLines={isDesktop ? 1 : 2}
                     >
                       {action.label}
                     </Text>

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { View, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { View, Pressable, ActivityIndicator } from 'react-native';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
@@ -25,6 +25,8 @@ import { HealthScoreCard } from '../../../src/components/features/HealthScore';
 import { CollapsibleSection } from '../../../src/components/ui/CollapsibleSection';
 import { H2, H3, BodyMedium, Caption } from '../../../src/components/ui/styled';
 import type { Goal, Budget } from '../../../src/types/goal';
+import { resolveResponsiveToken } from '../../../src/theme';
+import { useScreenLayout } from '../../../src/hooks/useScreenLayout';
 
 // ─── Styled Components ───────────────────────────────────────
 const StatCard = styled.View`
@@ -145,12 +147,16 @@ export default function DashboardScreen() {
   const { t } = useLanguage();
   const theme = useTheme();
   const { reportTimeZone } = useReportTimeZone();
-  const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-
-  const isDesktop = width >= 1024;
-  const isTablet = width >= 768;
+  const { width, isDesktop, isTablet } = useScreenLayout();
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
+  const pageGutter = resolveResponsiveToken(theme.layout.pageGutter, width);
+  const contentWidth = Math.min(width, 1280);
+  const availableWidth = contentWidth - pageGutter * 2;
+  const statsGap = theme.spacing.md;
+  const statsCols = isDesktop ? 4 : isTablet ? 2 : 1;
+  const statsCardWidth =
+    statsCols === 1 ? availableWidth : (availableWidth - statsGap * (statsCols - 1)) / statsCols;
 
   const { data: summary, isPending, isError: isSummaryError, refetch: refetchSummary } = useQuery({
     queryKey: ['wallet', 'summary'],
@@ -304,14 +310,14 @@ export default function DashboardScreen() {
         {/* Stats Grid */}
         <View
           style={{
-            flexDirection: isTablet ? 'row' : 'column',
+            flexDirection: statsCols > 1 ? 'row' : 'column',
             flexWrap: 'wrap',
-            gap: theme.spacing.md,
+            gap: statsGap,
             marginBottom: theme.spacing.xxl,
           }}
         >
           {/* Total Balance */}
-          <View style={{ flex: isDesktop ? 1 : isTablet ? undefined : 1, width: isTablet && !isDesktop ? '48%' : undefined, minWidth: isDesktop ? 200 : undefined }}>
+          <View style={{ width: statsCardWidth, minWidth: isDesktop ? 200 : undefined }}>
             <StatCard style={theme.shadows.sm}>
               <StatRow>
                 <Caption>{t('totalBalance')}</Caption>
@@ -329,7 +335,7 @@ export default function DashboardScreen() {
 
           {/* Income */}
           {monthlyReport && (
-            <View style={{ flex: isDesktop ? 1 : isTablet ? undefined : 1, width: isTablet && !isDesktop ? '48%' : undefined, minWidth: isDesktop ? 200 : undefined }}>
+            <View style={{ width: statsCardWidth, minWidth: isDesktop ? 200 : undefined }}>
               <StatCard style={theme.shadows.sm}>
                 <StatRow>
                   <Caption>{t('income')}</Caption>
@@ -347,7 +353,7 @@ export default function DashboardScreen() {
 
           {/* Expenses */}
           {monthlyReport && (
-            <View style={{ flex: isDesktop ? 1 : isTablet ? undefined : 1, width: isTablet && !isDesktop ? '48%' : undefined, minWidth: isDesktop ? 200 : undefined }}>
+            <View style={{ width: statsCardWidth, minWidth: isDesktop ? 200 : undefined }}>
               <StatCard style={theme.shadows.sm}>
                 <StatRow>
                   <Caption>{t('expenses')}</Caption>
@@ -364,7 +370,7 @@ export default function DashboardScreen() {
           )}
 
           {/* Goals Progress */}
-          <View style={{ flex: isDesktop ? 1 : isTablet ? undefined : 1, width: isTablet && !isDesktop ? '48%' : undefined, minWidth: isDesktop ? 200 : undefined }}>
+          <View style={{ width: statsCardWidth, minWidth: isDesktop ? 200 : undefined }}>
             <StatCard style={theme.shadows.sm}>
               <StatRow>
                 <Caption>{t('financialGoals')}</Caption>
@@ -379,7 +385,7 @@ export default function DashboardScreen() {
 
           {/* Budget Status */}
           {budgets.length > 0 && (
-            <View style={{ flex: isDesktop ? 1 : isTablet ? undefined : 1, width: isTablet && !isDesktop ? '48%' : undefined, minWidth: isDesktop ? 200 : undefined }}>
+            <View style={{ width: statsCardWidth, minWidth: isDesktop ? 200 : undefined }}>
               <StatCard style={theme.shadows.sm}>
                 <StatRow>
                   <Caption>{t('budgetStatus') || 'Budget'}</Caption>

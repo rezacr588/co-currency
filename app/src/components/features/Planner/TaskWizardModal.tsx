@@ -6,6 +6,7 @@ import { useTheme } from 'styled-components/native';
 import { DatePickerModal } from './DatePickerModal';
 import { CurrencyPicker } from '../../ui/CurrencyPicker';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useScreenLayout } from '../../../hooks/useScreenLayout';
 import { haptics } from '../../../utils/haptics';
 import { readJSON, removeStorage, writeJSON } from '../../../utils/storage';
 import { isValidPlannerDueDate } from '../../../utils/plannerDate';
@@ -71,6 +72,7 @@ export function TaskWizardModal({
   const colors = theme.colors;
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
+  const { width, isCompactPhone, isPhone } = useScreenLayout();
 
   const [step, setStep] = useState<TaskWizardStep>('basics');
   const [title, setTitle] = useState('');
@@ -320,6 +322,16 @@ export function TaskWizardModal({
     organization: t('plannerStepOrganization') || 'Organization',
     finance_review: t('plannerStepFinanceReview') || 'Finance & Review',
   };
+  const shortStepLabels: Record<TaskWizardStep, string> = {
+    basics: t('plannerStepBasicsShort') || 'Basics',
+    schedule: t('plannerStepScheduleShort') || 'Schedule',
+    organization: t('plannerStepOrganizationShort') || 'Org',
+    finance_review: t('plannerStepFinanceReviewShort') || 'Review',
+  };
+  const stepGap = isPhone ? 8 : 4;
+  const stepButtonWidth = isPhone
+    ? Math.max(Math.floor((Math.max(Math.min(width, 480) - 32, 0) - stepGap) / 2), 120)
+    : undefined;
 
   const statusLabel = (s: PlannerStatus) => {
     const i18nMap: Record<PlannerStatus, string> = {
@@ -370,7 +382,7 @@ export function TaskWizardModal({
           </View>
 
           {/* Step progress */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 4 }}>
+          <View style={{ flexDirection: 'row', flexWrap: isPhone ? 'wrap' : 'nowrap', alignItems: 'center', marginBottom: 16, gap: stepGap }}>
             {WIZARD_STEPS.map((s, idx) => {
               const active = step === s;
               const completed = WIZARD_STEPS.indexOf(step) > idx;
@@ -379,7 +391,7 @@ export function TaskWizardModal({
                 <Pressable
                   key={s}
                   onPress={() => setStep(s)}
-                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
+                  style={isPhone ? { width: stepButtonWidth } : { flex: 1, flexDirection: 'row', alignItems: 'center' }}
                 >
                   <View style={{
                     flex: 1, flexDirection: 'row', alignItems: 'center',
@@ -387,6 +399,7 @@ export function TaskWizardModal({
                     borderWidth: 1,
                     borderColor: active ? colors.accent + '55' : completed ? colors.success + '44' : colors.border,
                     borderRadius: 10, paddingHorizontal: 8, paddingVertical: 8, gap: 6,
+                    minHeight: isPhone ? 48 : undefined,
                   }}>
                     <View style={{
                       width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center',
@@ -400,17 +413,18 @@ export function TaskWizardModal({
                       </Text>
                     </View>
                     <Text
-                      numberOfLines={1}
+                      numberOfLines={isPhone ? 2 : 1}
                       style={{
-                        flex: 1, fontSize: 11,
+                        flex: 1, fontSize: isCompactPhone ? 10 : 11,
                         color: active ? colors.accent : completed ? colors.success : colors.mutedForeground,
                         fontFamily: active ? 'Inter_700Bold' : 'Inter_500Medium',
+                        lineHeight: isPhone ? 14 : undefined,
                       }}
                     >
-                      {stepLabels[s]}
+                      {isCompactPhone ? shortStepLabels[s] : stepLabels[s]}
                     </Text>
                   </View>
-                  {idx < WIZARD_STEPS.length - 1 && (
+                  {!isPhone && idx < WIZARD_STEPS.length - 1 && (
                     <ChevronRight size={12} color={colors.border} style={{ marginHorizontal: 1 }} />
                   )}
                 </Pressable>
@@ -617,38 +631,73 @@ export function TaskWizardModal({
                   <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 8 }}>
                     {t('plannerGoalLinkage') || 'Goal linkage (optional)'}
                   </Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                    <Pressable
-                      onPress={() => setSelectedGoalID(undefined)}
-                      style={({ pressed }) => [{
-                        paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1,
-                        borderColor: !selectedGoalID ? colors.accent : colors.border,
-                        backgroundColor: !selectedGoalID ? colors.accent + '24' : colors.card,
-                      }, pressed && { opacity: 0.76 }]}
-                    >
-                      <Text style={{ color: !selectedGoalID ? colors.accent : colors.foreground, fontSize: 12 }}>
-                        {t('plannerNoLinkedGoal') || 'No linked goal'}
-                      </Text>
-                    </Pressable>
-                    {goals.map((goal: Goal) => {
-                      const selected = selectedGoalID === goal.id;
-                      return (
-                        <Pressable
-                          key={goal.id}
-                          onPress={() => setSelectedGoalID(goal.id)}
-                          style={({ pressed }) => [{
-                            paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1,
-                            borderColor: selected ? colors.accent : colors.border,
-                            backgroundColor: selected ? colors.accent + '24' : colors.card,
-                          }, pressed && { opacity: 0.76 }]}
-                        >
-                          <Text style={{ color: selected ? colors.accent : colors.foreground, fontSize: 12 }}>
-                            {goal.name}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </ScrollView>
+                  {isPhone ? (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      <Pressable
+                        onPress={() => setSelectedGoalID(undefined)}
+                        style={({ pressed }) => [{
+                          paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1,
+                          borderColor: !selectedGoalID ? colors.accent : colors.border,
+                          backgroundColor: !selectedGoalID ? colors.accent + '24' : colors.card,
+                        }, pressed && { opacity: 0.76 }]}
+                      >
+                        <Text style={{ color: !selectedGoalID ? colors.accent : colors.foreground, fontSize: 12 }}>
+                          {t('plannerNoLinkedGoal') || 'No linked goal'}
+                        </Text>
+                      </Pressable>
+                      {goals.map((goal: Goal) => {
+                        const selected = selectedGoalID === goal.id;
+                        return (
+                          <Pressable
+                            key={goal.id}
+                            onPress={() => setSelectedGoalID(goal.id)}
+                            style={({ pressed }) => [{
+                              paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1,
+                              borderColor: selected ? colors.accent : colors.border,
+                              backgroundColor: selected ? colors.accent + '24' : colors.card,
+                            }, pressed && { opacity: 0.76 }]}
+                          >
+                            <Text style={{ color: selected ? colors.accent : colors.foreground, fontSize: 12 }}>
+                              {goal.name}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  ) : (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                      <Pressable
+                        onPress={() => setSelectedGoalID(undefined)}
+                        style={({ pressed }) => [{
+                          paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1,
+                          borderColor: !selectedGoalID ? colors.accent : colors.border,
+                          backgroundColor: !selectedGoalID ? colors.accent + '24' : colors.card,
+                        }, pressed && { opacity: 0.76 }]}
+                      >
+                        <Text style={{ color: !selectedGoalID ? colors.accent : colors.foreground, fontSize: 12 }}>
+                          {t('plannerNoLinkedGoal') || 'No linked goal'}
+                        </Text>
+                      </Pressable>
+                      {goals.map((goal: Goal) => {
+                        const selected = selectedGoalID === goal.id;
+                        return (
+                          <Pressable
+                            key={goal.id}
+                            onPress={() => setSelectedGoalID(goal.id)}
+                            style={({ pressed }) => [{
+                              paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1,
+                              borderColor: selected ? colors.accent : colors.border,
+                              backgroundColor: selected ? colors.accent + '24' : colors.card,
+                            }, pressed && { opacity: 0.76 }]}
+                          >
+                            <Text style={{ color: selected ? colors.accent : colors.foreground, fontSize: 12 }}>
+                              {goal.name}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
+                  )}
                 </View>
 
                 <View>

@@ -24,6 +24,8 @@ func NewRecurringRepository(db *Database) *RecurringRepository {
 
 // Create creates a new recurring transaction
 func (r *RecurringRepository) Create(ctx context.Context, recurring *model.RecurringTransaction) error {
+	recurring.Currency = normalizeWalletCurrencyCode(recurring.Currency)
+
 	query := `
 		INSERT INTO recurring_transactions (id, user_id, type, amount, currency, category, description, frequency, next_execution, is_active, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
@@ -96,6 +98,7 @@ func (r *RecurringRepository) GetByID(ctx context.Context, userID, recurringID u
 	if description != nil {
 		rt.Description = *description
 	}
+	rt.Currency = normalizeWalletCurrencyCode(rt.Currency)
 
 	return rt, nil
 }
@@ -143,6 +146,7 @@ func (r *RecurringRepository) GetByUser(ctx context.Context, userID uuid.UUID) (
 		if description != nil {
 			rt.Description = *description
 		}
+		rt.Currency = normalizeWalletCurrencyCode(rt.Currency)
 
 		transactions = append(transactions, rt)
 	}
@@ -197,6 +201,7 @@ func (r *RecurringRepository) GetDueTransactions(ctx context.Context) ([]model.R
 		if description != nil {
 			rt.Description = *description
 		}
+		rt.Currency = normalizeWalletCurrencyCode(rt.Currency)
 
 		transactions = append(transactions, rt)
 	}
@@ -206,10 +211,12 @@ func (r *RecurringRepository) GetDueTransactions(ctx context.Context) ([]model.R
 
 // Update updates a recurring transaction
 func (r *RecurringRepository) Update(ctx context.Context, recurring *model.RecurringTransaction) error {
+	recurring.Currency = normalizeWalletCurrencyCode(recurring.Currency)
+
 	query := `
 		UPDATE recurring_transactions
-		SET type = $1, amount = $2, category = $3, description = $4, frequency = $5, next_execution = $6, is_active = $7, updated_at = $8
-		WHERE id = $9 AND user_id = $10
+		SET type = $1, amount = $2, currency = $3, category = $4, description = $5, frequency = $6, next_execution = $7, is_active = $8, updated_at = $9
+		WHERE id = $10 AND user_id = $11
 	`
 
 	recurring.UpdatedAt = time.Now()
@@ -217,6 +224,7 @@ func (r *RecurringRepository) Update(ctx context.Context, recurring *model.Recur
 	result, err := r.pool.Exec(ctx, query,
 		recurring.Type,
 		recurring.Amount,
+		recurring.Currency,
 		recurring.Category,
 		recurring.Description,
 		recurring.Frequency,
@@ -263,6 +271,7 @@ func (r *RecurringRepository) ExecuteAndScheduleNext(ctx context.Context, recurr
 	defer tx.Rollback(ctx)
 
 	now := time.Now()
+	currency := normalizeWalletCurrencyCode(recurring.Currency)
 
 	// Calculate delta for balance update
 	delta := recurring.Amount
@@ -272,13 +281,8 @@ func (r *RecurringRepository) ExecuteAndScheduleNext(ctx context.Context, recurr
 
 	// Check balance for debits
 	if recurring.Type == "debit" {
-		var currentBalance float64
-		err = tx.QueryRow(ctx, `
-			SELECT COALESCE(balance, 0) FROM wallet_balances
-			WHERE user_id = $1 AND currency = $2
-			FOR UPDATE
-		`, recurring.UserID, recurring.Currency).Scan(&currentBalance)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		currentBalance, _, err := (&WalletRepository{pool: r.pool}).lockBalanceForUpdate(ctx, tx, recurring.UserID, currency)
+		if err != nil {
 			return nil, fmt.Errorf("checking balance: %w", err)
 		}
 		if currentBalance < recurring.Amount {
@@ -287,14 +291,8 @@ func (r *RecurringRepository) ExecuteAndScheduleNext(ctx context.Context, recurr
 	}
 
 	// Update wallet balance
-	_, err = tx.Exec(ctx, `
-		INSERT INTO wallet_balances (id, user_id, currency, balance, updated_at)
-		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (user_id, currency) DO UPDATE SET
-			balance = wallet_balances.balance + EXCLUDED.balance,
-			updated_at = EXCLUDED.updated_at
-	`, uuid.New(), recurring.UserID, recurring.Currency, delta, now)
-	if err != nil {
+	walletRepo := &WalletRepository{pool: r.pool}
+	if err := walletRepo.applyBalanceDelta(ctx, tx, recurring.UserID, currency, delta, now, recurring.Type != "debit"); err != nil {
 		return nil, fmt.Errorf("updating balance: %w", err)
 	}
 
@@ -304,7 +302,7 @@ func (r *RecurringRepository) ExecuteAndScheduleNext(ctx context.Context, recurr
 		UserID:      recurring.UserID,
 		Type:        recurring.Type,
 		Amount:      recurring.Amount,
-		Currency:    recurring.Currency,
+		Currency:    currency,
 		Category:    recurring.Category,
 		Source:      "recurring",
 		Description: recurring.Description,

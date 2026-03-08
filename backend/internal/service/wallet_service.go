@@ -26,6 +26,25 @@ func NewWalletService(walletRepo *repository.WalletRepository, exchangeService *
 	}
 }
 
+func normalizedTransactionCurrencies(req *model.TransactionRequest) (string, string) {
+	transactionCurrency := normalizeCurrencyCode(req.Currency)
+	walletCurrency := normalizeCurrencyCode(req.WalletCurrency)
+	if walletCurrency == "" {
+		walletCurrency = transactionCurrency
+	}
+	return transactionCurrency, walletCurrency
+}
+
+func normalizedConversionCurrencies(req *model.ConvertBalanceRequest) (string, string) {
+	return normalizeCurrencyCode(req.FromCurrency), normalizeCurrencyCode(req.ToCurrency)
+}
+
+func normalizeUpdateTransactionRequest(req *model.UpdateTransactionRequest) {
+	if req.Currency != "" {
+		req.Currency = normalizeCurrencyCode(req.Currency)
+	}
+}
+
 func (s *WalletService) SetTagRepository(tagRepo *repository.TagRepository) {
 	s.tagRepo = tagRepo
 }
@@ -47,6 +66,7 @@ func (s *WalletService) GetBalances(ctx context.Context, userID uuid.UUID) ([]mo
 
 // GetBalance retrieves a specific currency balance
 func (s *WalletService) GetBalance(ctx context.Context, userID uuid.UUID, currency string) (*model.WalletBalance, error) {
+	currency = normalizeCurrencyCode(currency)
 	balance, err := s.walletRepo.GetBalance(ctx, userID, currency)
 	if err != nil {
 		if errors.Is(err, repository.ErrBalanceNotFound) {
@@ -74,23 +94,19 @@ func (s *WalletService) AddTransaction(ctx context.Context, userID uuid.UUID, re
 		return nil, errors.New("amount must be positive")
 	}
 
-	if req.Currency == "" {
+	currency, walletCurrency := normalizedTransactionCurrencies(req)
+
+	if currency == "" {
 		return nil, errors.New("currency is required")
 	}
 
-	// Default wallet currency to transaction currency if not specified
-	walletCurrency := req.WalletCurrency
-	if walletCurrency == "" {
-		walletCurrency = req.Currency
-	}
-
 	// If wallet currency differs from transaction currency, perform cross-currency transaction
-	if walletCurrency != req.Currency {
-		return s.addCrossCurrencyTransaction(ctx, userID, req, walletCurrency)
+	if walletCurrency != currency {
+		return s.addCrossCurrencyTransaction(ctx, userID, req, currency, walletCurrency)
 	}
 
 	// Use atomic transaction method for same-currency transaction
-	tx, err := s.walletRepo.AddTransactionAtomic(ctx, userID, req.Type, req.Amount, req.Currency, "manual", req.Description, req.Category, req.Icon, nil)
+	tx, err := s.walletRepo.AddTransactionAtomic(ctx, userID, req.Type, req.Amount, currency, "manual", req.Description, req.Category, req.Icon, nil)
 	if err != nil {
 		if errors.Is(err, repository.ErrInsufficientBalance) {
 			return nil, repository.ErrInsufficientBalance
@@ -102,7 +118,7 @@ func (s *WalletService) AddTransaction(ctx context.Context, userID uuid.UUID, re
 }
 
 // addCrossCurrencyTransaction handles transactions where the transaction currency differs from wallet currency
-func (s *WalletService) addCrossCurrencyTransaction(ctx context.Context, userID uuid.UUID, req *model.TransactionRequest, walletCurrency string) (*model.Transaction, error) {
+func (s *WalletService) addCrossCurrencyTransaction(ctx context.Context, userID uuid.UUID, req *model.TransactionRequest, transactionCurrency, walletCurrency string) (*model.Transaction, error) {
 	// Get exchange rate from transaction currency to wallet currency
 	// For debit: we need to deduct walletAmount from walletCurrency balance
 	// For credit: we need to add walletAmount to walletCurrency balance
@@ -110,12 +126,12 @@ func (s *WalletService) addCrossCurrencyTransaction(ctx context.Context, userID 
 	if req.Type == "debit" {
 		// Paying in transaction currency, deducting from wallet currency
 		// Convert: transaction currency -> wallet currency (how much wallet currency needed)
-		fromCurrency = req.Currency
+		fromCurrency = transactionCurrency
 		toCurrency = walletCurrency
 	} else {
 		// Receiving in transaction currency, adding to wallet currency
 		// Convert: transaction currency -> wallet currency (how much wallet currency to add)
-		fromCurrency = req.Currency
+		fromCurrency = transactionCurrency
 		toCurrency = walletCurrency
 	}
 
@@ -129,7 +145,7 @@ func (s *WalletService) addCrossCurrencyTransaction(ctx context.Context, userID 
 
 	// Use atomic cross-currency transaction method
 	tx, err := s.walletRepo.AddCrossCurrencyTransactionAtomic(ctx, userID, req.Type,
-		req.Amount, req.Currency, // Transaction amount and currency (what user sees)
+		req.Amount, transactionCurrency, // Transaction amount and currency (what user sees)
 		walletAmount, walletCurrency, // Wallet amount and currency (what affects balance)
 		rate, "manual", req.Description, req.Category, req.Icon, nil)
 	if err != nil {
@@ -144,12 +160,14 @@ func (s *WalletService) addCrossCurrencyTransaction(ctx context.Context, userID 
 
 // ConvertBalance converts currency within the wallet
 func (s *WalletService) ConvertBalance(ctx context.Context, userID uuid.UUID, req *model.ConvertBalanceRequest) (*model.ConvertBalanceResponse, error) {
+	fromCurrency, toCurrency := normalizedConversionCurrencies(req)
+
 	// Validate request
-	if req.FromCurrency == "" || req.ToCurrency == "" {
+	if fromCurrency == "" || toCurrency == "" {
 		return nil, errors.New("from_currency and to_currency are required")
 	}
 
-	if req.FromCurrency == req.ToCurrency {
+	if fromCurrency == toCurrency {
 		return nil, errors.New("cannot convert to the same currency")
 	}
 
@@ -158,14 +176,14 @@ func (s *WalletService) ConvertBalance(ctx context.Context, userID uuid.UUID, re
 	}
 
 	// Get exchange rate using existing converter
-	conversion, err := s.exchangeService.Convert(ctx, req.FromCurrency, req.ToCurrency, req.Amount)
+	conversion, err := s.exchangeService.Convert(ctx, fromCurrency, toCurrency, req.Amount)
 	if err != nil {
 		return nil, fmt.Errorf("getting exchange rate: %w", err)
 	}
 
 	// Execute the conversion atomically
 	tx, err := s.walletRepo.ExecuteConversion(ctx, userID,
-		req.FromCurrency, req.ToCurrency,
+		fromCurrency, toCurrency,
 		req.Amount, conversion.Result, conversion.Rate)
 	if err != nil {
 		if errors.Is(err, repository.ErrInsufficientBalance) {
@@ -175,8 +193,8 @@ func (s *WalletService) ConvertBalance(ctx context.Context, userID uuid.UUID, re
 	}
 
 	return &model.ConvertBalanceResponse{
-		FromCurrency: req.FromCurrency,
-		ToCurrency:   req.ToCurrency,
+		FromCurrency: fromCurrency,
+		ToCurrency:   toCurrency,
 		FromAmount:   req.Amount,
 		ToAmount:     conversion.Result,
 		Rate:         conversion.Rate,
@@ -313,6 +331,7 @@ func (s *WalletService) UpdateTransaction(ctx context.Context, userID, txID uuid
 	if req.Type != "" && req.Type != "credit" && req.Type != "debit" {
 		return nil, errors.New("type must be 'credit' or 'debit'")
 	}
+	normalizeUpdateTransactionRequest(req)
 
 	tx, err := s.walletRepo.UpdateTransactionAtomic(ctx, userID, txID, req)
 	if err != nil {

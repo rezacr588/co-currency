@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Tabs, usePathname, useRouter } from 'expo-router';
-import { Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   BarChart3,
@@ -23,6 +23,7 @@ import { useLanguage } from '../../../src/context/LanguageContext';
 import { useAuth } from '../../../src/context/AuthContext';
 import { ErrorBoundary } from '../../../src/components/ui/ErrorBoundary';
 import { AppSwitcherTrigger } from '../../../src/components/navigation/AppSwitcherTrigger';
+import { useScreenLayout } from '../../../src/hooks/useScreenLayout';
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -389,11 +390,16 @@ function TabScreens() {
 function TabsLayoutInner() {
   const theme = useStyledTheme();
   const { t } = useLanguage();
-  const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const isDesktop = width >= 1024;
-  const isTablet = width >= 768 && width < 1024;
+  const { isCompactPhone, isDesktop, isTablet } = useScreenLayout();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const compactTabLabels = {
+    index: t('dashboardTabCompact') || t('home') || 'Home',
+    wallet: t('walletTabCompact') || t('wallet') || 'Wallet',
+    add: t('addTabCompact') || 'Add',
+    chat: t('aiAdvisorTabCompact') || 'AI',
+    reports: t('reportsTabCompact') || t('reports') || 'Reports',
+  };
 
   useEffect(() => {
     if (isDesktop) {
@@ -438,14 +444,14 @@ function TabsLayoutInner() {
           tabBarActiveTintColor: theme.colors.tabBarActive,
           tabBarInactiveTintColor: theme.colors.tabBarInactive,
           tabBarLabelStyle: {
-            fontSize: 11,
+            fontSize: isCompactPhone ? 10 : 11,
             fontFamily: theme.typography.bodyMedium.fontFamily,
-            marginTop: 2,
+            marginTop: isCompactPhone ? 1 : 2,
           },
           tabBarStyle: {
-            height: 64 + insets.bottom,
-            paddingTop: 8,
-            paddingBottom: Math.max(insets.bottom, 8),
+            height: (isCompactPhone ? 60 : 64) + insets.bottom,
+            paddingTop: isCompactPhone ? 6 : 8,
+            paddingBottom: Math.max(insets.bottom, isCompactPhone ? 6 : 8),
             borderTopWidth: 1,
             borderTopColor: theme.colors.tabBarBorder,
             backgroundColor: theme.colors.tabBarBackground,
@@ -456,14 +462,14 @@ function TabsLayoutInner() {
         <Tabs.Screen
           name="index"
           options={{
-            title: t('dashboard'),
+            title: compactTabLabels.index,
             tabBarIcon: ({ color, size }) => <LayoutDashboard size={size} color={color} />,
           }}
         />
         <Tabs.Screen
           name="wallet"
           options={{
-            title: t('wallet'),
+            title: compactTabLabels.wallet,
             popToTopOnBlur: true,
             tabBarIcon: ({ color, size }) => <Wallet size={size} color={color} />,
           }}
@@ -471,21 +477,21 @@ function TabsLayoutInner() {
         <Tabs.Screen
           name="add"
           options={{
-            title: t('addTransaction') || 'Add',
+            title: compactTabLabels.add,
             tabBarIcon: ({ color, size }) => <Plus size={size} color={color} />,
           }}
         />
         <Tabs.Screen
           name="chat"
           options={{
-            title: t('aiAdvisor') || 'Chat',
+            title: compactTabLabels.chat,
             tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={color} />,
           }}
         />
         <Tabs.Screen
           name="reports"
           options={{
-            title: t('reports'),
+            title: compactTabLabels.reports,
             tabBarIcon: ({ color, size }) => <BarChart3 size={size} color={color} />,
           }}
         />

@@ -9,6 +9,8 @@ import { formatCompactCurrency } from '../../../utils/format';
 import { haptics } from '../../../utils/haptics';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 import { formatReportDateRange } from '../Reports/reportUX';
+import { useScreenLayout } from '../../../hooks/useScreenLayout';
+import { resolveResponsiveToken } from '../../../theme';
 
 interface WeeklyRecapCardProps {
   compact?: boolean;
@@ -26,6 +28,14 @@ export function WeeklyRecapCard({
   const colors = theme.colors;
   const router = useRouter();
   const { reportTimeZone } = useReportTimeZone();
+  const { width, isCompactPhone } = useScreenLayout();
+  const contentWidth = Math.min(width, theme.layout.maxContentWidth);
+  const pageGutter = resolveResponsiveToken(theme.layout.pageGutter, width);
+  const recapStatsGap = 8;
+  const recapStatsCols = isCompactPhone ? 1 : 2;
+  const recapInnerWidth = Math.max(0, contentWidth - pageGutter * 2 - 40);
+  const recapStatWidth =
+    recapStatsCols === 1 ? recapInnerWidth : (recapInnerWidth - recapStatsGap * (recapStatsCols - 1)) / recapStatsCols;
 
   // Fetch weekly recap data (ISO 8601 Monday-Sunday)
   const {
@@ -119,32 +129,38 @@ export function WeeklyRecapCard({
 
       {/* Weekly Stats Row */}
       {weeklyRecap && (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-          <View style={{ width: '48%', backgroundColor: colors.muted + '80', padding: 12, borderRadius: 8 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: recapStatsGap, marginBottom: 16 }}>
+          <View style={{ width: recapStatWidth, backgroundColor: colors.muted + '80', padding: 12, borderRadius: 8 }}>
             <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 4 }}>
               {t('totalIncome')}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TrendingUp size={14} color={colors.success} />
-              <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginLeft: 4 }}>
+              <Text
+                style={{ flex: 1, fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginLeft: 4 }}
+                numberOfLines={2}
+              >
                 {formatCompactCurrency(weeklyRecap.total_income, weeklyRecap.currency)}
               </Text>
             </View>
           </View>
 
-          <View style={{ width: '48%', backgroundColor: colors.muted + '80', padding: 12, borderRadius: 8 }}>
+          <View style={{ width: recapStatWidth, backgroundColor: colors.muted + '80', padding: 12, borderRadius: 8 }}>
             <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 4 }}>
               {t('totalExpenses')}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TrendingDown size={14} color={colors.danger} />
-              <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginLeft: 4 }}>
+              <Text
+                style={{ flex: 1, fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginLeft: 4 }}
+                numberOfLines={2}
+              >
                 {formatCompactCurrency(weeklyRecap.total_spent, weeklyRecap.currency)}
               </Text>
             </View>
           </View>
 
-          <View style={{ width: '48%', backgroundColor: colors.muted + '80', padding: 12, borderRadius: 8 }}>
+          <View style={{ width: recapStatWidth, backgroundColor: colors.muted + '80', padding: 12, borderRadius: 8 }}>
             <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 4 }}>
               {t('expensesVsLastWeek') || 'Expenses vs last week'}
             </Text>
@@ -158,16 +174,18 @@ export function WeeklyRecapCard({
                 style={{
                   fontSize: 14,
                   fontFamily: 'Inter_600SemiBold',
+                  flex: 1,
                   marginLeft: 4,
                   color: weeklyRecap.compared_to_last <= 0 ? colors.success : colors.danger,
                 }}
+                numberOfLines={2}
               >
                 {`${weeklyRecap.compared_to_last < 0 ? '' : '+'}${Math.round(weeklyRecap.compared_to_last)}%`}
               </Text>
             </View>
           </View>
 
-          <View style={{ width: '48%', backgroundColor: colors.muted + '80', padding: 12, borderRadius: 8 }}>
+          <View style={{ width: recapStatWidth, backgroundColor: colors.muted + '80', padding: 12, borderRadius: 8 }}>
             <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 4 }}>
               {t('savingsRate') || 'Savings Rate'}
             </Text>

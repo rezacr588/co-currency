@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  useWindowDimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +29,8 @@ import { H2, Caption, BodyMedium } from '../../../src/components/ui/styled';
 import type { Category, TransactionRequest } from '../../../src/types/wallet';
 import type { AddTransactionStep } from '../../../src/navigation/mode';
 import { linkTaskToTransactionIfNeeded } from '../../../src/utils/taskLinking';
+import { getAddTransactionSourceWalletState } from '../../../src/utils/addTransactionSourceWallet';
+import { useScreenLayout } from '../../../src/hooks/useScreenLayout';
 
 const ScreenContainer = styled(SafeAreaView)`
   flex: 1;
@@ -67,7 +68,7 @@ const AmountContainer = styled.View`
   border-color: ${({ theme }) => theme.colors.border};
 `;
 
-const CurrencyChip = styled.Pressable<{ $active: boolean; $dim?: boolean }>`
+const CurrencyChip = styled.Pressable<{ $active: boolean }>`
   padding-horizontal: ${({ theme }) => theme.spacing.md}px;
   padding-vertical: ${({ theme }) => theme.spacing.sm}px;
   border-radius: ${({ theme }) => theme.radii.md}px;
@@ -77,7 +78,6 @@ const CurrencyChip = styled.Pressable<{ $active: boolean; $dim?: boolean }>`
   min-height: 44px;
   background-color: ${({ theme, $active }) => $active ? theme.colors.foreground : theme.colors.secondary};
   border-color: ${({ theme, $active }) => $active ? theme.colors.foreground : theme.colors.border};
-  opacity: ${({ $dim }) => $dim ? 0.6 : 1};
 `;
 
 const SearchContainer = styled.View`
@@ -112,6 +112,12 @@ const STEP_LABEL_KEYS: Record<AddTransactionStep, { key: string; fallback: strin
   category: { key: 'category', fallback: 'Category' },
   review: { key: 'stepReview', fallback: 'Review' },
 };
+const STEP_LABEL_SHORT_KEYS: Record<AddTransactionStep, { key: string; fallback: string }> = {
+  basics: { key: 'stepBasicsShort', fallback: 'Basics' },
+  currency: { key: 'stepCurrencyShort', fallback: 'Currency' },
+  category: { key: 'stepCategoryShort', fallback: 'Category' },
+  review: { key: 'stepReviewShort', fallback: 'Review' },
+};
 
 export default function AddTransactionScreen() {
   const { t } = useLanguage();
@@ -129,11 +135,8 @@ export default function AddTransactionScreen() {
     return_to?: string;
   }>();
   const queryClient = useQueryClient();
-  const { width } = useWindowDimensions();
+  const { width, isCompactPhone, isDesktop, isTablet } = useScreenLayout();
   const insets = useSafeAreaInsets();
-
-  const isDesktop = width >= 1024;
-  const isTablet = width >= 768;
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
   const containerPadding = isDesktop ? 32 : 16;
@@ -210,8 +213,10 @@ export default function AddTransactionScreen() {
 
   useEffect(() => {
     if (availableWalletCurrencies.length === 0) return;
-    if (!availableWalletCurrencies.includes(walletCurrency) || walletCurrency === currency) {
-      const fallback = availableWalletCurrencies.find((code) => code !== currency) || currency;
+    if (!availableWalletCurrencies.includes(walletCurrency)) {
+      const fallback = availableWalletCurrencies.includes('USD')
+        ? 'USD'
+        : availableWalletCurrencies[0] || currency;
       setWalletCurrency(fallback);
     }
   }, [availableWalletCurrencies, currency, walletCurrency]);
@@ -235,6 +240,53 @@ export default function AddTransactionScreen() {
     staleTime: 30 * 1000,
     retry: 1,
   });
+
+  const sourceWalletState = useMemo(() => getAddTransactionSourceWalletState({
+    type,
+    amount: hasValidAmount ? parsedAmount : 0,
+    currency,
+    enableSourceWallet: enableTargetConversion,
+    walletCurrency,
+    conversionResult: conversionPreview?.result,
+    balances: balancesData?.balances || [],
+  }), [
+    type,
+    hasValidAmount,
+    parsedAmount,
+    currency,
+    enableTargetConversion,
+    walletCurrency,
+    conversionPreview?.result,
+    balancesData?.balances,
+  ]);
+
+  const sourceWalletImpactLabel = useMemo(() => {
+    if (sourceWalletState.sourceWalletAmount === null) {
+      if (sourceWalletState.isCrossCurrency && isConversionPreviewError) {
+        return t('sourceWalletPreviewUnavailable') || 'Unable to calculate wallet impact right now.';
+      }
+      if (sourceWalletState.isCrossCurrency && isLoadingConversionPreview) {
+        return t('sourceWalletPreviewPending') || 'Calculating wallet impact...';
+      }
+      return t('sourceWalletPreviewPending') || 'Calculating wallet impact...';
+    }
+
+    const signedAmount = `${type === 'debit' ? '-' : '+'}${formatCompactCurrency(
+      sourceWalletState.sourceWalletAmount,
+      sourceWalletState.sourceWalletCurrency
+    )}`;
+    return signedAmount;
+  }, [
+    sourceWalletState.sourceWalletAmount,
+    sourceWalletState.sourceWalletCurrency,
+    sourceWalletState.isCrossCurrency,
+    isConversionPreviewError,
+    isLoadingConversionPreview,
+    t,
+    type,
+  ]);
+  const isReviewBlockedBySourceBalance = type === 'debit' && sourceWalletState.hasInsufficientSourceBalance;
+  const shouldWrapCoreChoiceChips = !isTablet && !isDesktop;
 
   const { data: aiStatus } = useQuery({
     queryKey: ['ai-status'],
@@ -366,6 +418,15 @@ export default function AddTransactionScreen() {
       setError(t('enterValidAmount'));
       return;
     }
+    if (type === 'debit' && sourceWalletState.hasInsufficientSourceBalance) {
+      setError(
+        `${t('sourceWalletInsufficientBalance') || 'Insufficient source wallet balance'}: ${formatCompactCurrency(
+          sourceWalletState.sourceWalletBalance,
+          sourceWalletState.sourceWalletCurrency
+        )}`
+      );
+      return;
+    }
     const payload: TransactionRequest = {
       type,
       amount: parsedAmount,
@@ -389,8 +450,8 @@ export default function AddTransactionScreen() {
     }
 
     if (stepToValidate === 'currency') {
-      if (enableTargetConversion && walletCurrency === currency) {
-        setError(t('selectWalletCurrency'));
+      if (enableTargetConversion && !walletCurrency.trim()) {
+        setError(t('selectSourceWallet') || 'Select Source Wallet');
         return false;
       }
     }
@@ -470,6 +531,115 @@ export default function AddTransactionScreen() {
     return translated === translationKey ? name : translated;
   };
 
+  const renderCurrencyChipList = (codes: string[], selectedCode: string, onSelect: (code: string) => void) => {
+    const content = (
+      <View style={{ flexDirection: 'row', flexWrap: shouldWrapCoreChoiceChips || isDesktop ? 'wrap' : 'nowrap', gap: theme.spacing.sm }}>
+        {codes.map((code) => {
+          const display = getCurrencyDisplay(code);
+          const isSelected = selectedCode === code;
+          return (
+            <CurrencyChip key={code} $active={isSelected} onPress={() => onSelect(code)}>
+              <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || '🌐'}</Text>
+              <BodyMedium
+                $color={isSelected ? theme.colors.background : theme.colors.foreground}
+                style={{ fontSize: 14 }}
+              >
+                {code}
+              </BodyMedium>
+            </CurrencyChip>
+          );
+        })}
+      </View>
+    );
+
+    if (shouldWrapCoreChoiceChips || isDesktop) {
+      return content;
+    }
+
+    return (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        {content}
+      </ScrollView>
+    );
+  };
+
+  const renderSourceWalletDetails = ({ showDescription = true }: { showDescription?: boolean } = {}) => (
+    <View
+      style={{
+        marginTop: theme.spacing.md,
+        backgroundColor: sourceWalletState.hasInsufficientSourceBalance
+          ? theme.colors.dangerMuted
+          : theme.colors.secondary + '66',
+        borderWidth: 1,
+        borderColor: sourceWalletState.hasInsufficientSourceBalance
+          ? theme.colors.danger + '55'
+          : theme.colors.border,
+        borderRadius: theme.radii.md,
+        padding: theme.spacing.md,
+      }}
+    >
+      <BodyMedium style={{ fontSize: 14, marginBottom: 4 }}>
+        {t('sourceWallet') || 'Source Wallet'}
+      </BodyMedium>
+      {showDescription && (
+        <Caption>{t('sourceWalletDescription') || 'Choose which wallet balance this transaction will affect. USD stays prefilled.'}</Caption>
+      )}
+
+      <View style={{ marginTop: theme.spacing.md, gap: theme.spacing.sm }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: theme.spacing.sm }}>
+          <Caption>{t('amountCurrency') || 'Amount Currency'}</Caption>
+          <BodyMedium style={{ fontSize: 14 }}>{sourceWalletState.amountCurrency}</BodyMedium>
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: theme.spacing.sm }}>
+          <Caption>{t('sourceWallet') || 'Source Wallet'}</Caption>
+          <BodyMedium style={{ fontSize: 14 }}>{sourceWalletState.sourceWalletCurrency}</BodyMedium>
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: theme.spacing.sm }}>
+          <Caption>{t('sourceWalletImpact') || 'Wallet Impact'}</Caption>
+          <BodyMedium
+            style={{
+              fontSize: 14,
+              color: sourceWalletState.hasInsufficientSourceBalance ? theme.colors.danger : theme.colors.foreground,
+            }}
+          >
+            {sourceWalletImpactLabel}
+          </BodyMedium>
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: theme.spacing.sm }}>
+          <Caption>{t('availableBalance') || 'Available balance'}</Caption>
+          <BodyMedium
+            style={{
+              fontSize: 14,
+              color: sourceWalletState.hasInsufficientSourceBalance ? theme.colors.danger : theme.colors.foreground,
+            }}
+          >
+            {formatCompactCurrency(sourceWalletState.sourceWalletBalance, sourceWalletState.sourceWalletCurrency)}
+          </BodyMedium>
+        </View>
+      </View>
+
+      {!sourceWalletState.isCrossCurrency && (
+        <Caption style={{ marginTop: theme.spacing.md }}>
+          {t('sourceWalletMatchesAmount') || 'The source wallet matches the entered amount currency.'}
+        </Caption>
+      )}
+
+      {sourceWalletState.isCrossCurrency && (
+        <Caption style={{ marginTop: theme.spacing.md }}>
+          {type === 'debit'
+            ? t('sourceWalletDebitNotice') || `This expense will debit your ${sourceWalletState.sourceWalletCurrency} wallet.`
+            : t('sourceWalletCreditNotice') || `This income will credit your ${sourceWalletState.sourceWalletCurrency} wallet.`}
+        </Caption>
+      )}
+
+      {type === 'debit' && sourceWalletState.hasInsufficientSourceBalance && (
+        <Caption $color={theme.colors.danger} style={{ marginTop: theme.spacing.md }}>
+          {t('sourceWalletInsufficientBalance') || 'Insufficient source wallet balance'}
+        </Caption>
+      )}
+    </View>
+  );
+
   return (
     <ScreenContainer edges={isDesktop ? [] : ['top']}>
       <KeyboardAvoidingView
@@ -518,10 +688,11 @@ export default function AddTransactionScreen() {
                         textAlign: 'center',
                         color: active ? theme.colors.accent : complete ? theme.colors.success : theme.colors.mutedForeground,
                         fontFamily: active ? 'Inter_600SemiBold' : 'Inter_500Medium',
-                        fontSize: 11,
+                        fontSize: isCompactPhone ? 10 : 11,
                       }}
+                      numberOfLines={1}
                     >
-                      {`${index + 1}. ${(t(STEP_LABEL_KEYS[item].key) || STEP_LABEL_KEYS[item].fallback)}`}
+                      {`${index + 1}. ${(t((isCompactPhone ? STEP_LABEL_SHORT_KEYS : STEP_LABEL_KEYS)[item].key) || (isCompactPhone ? STEP_LABEL_SHORT_KEYS : STEP_LABEL_KEYS)[item].fallback)}`}
                     </Caption>
                   </View>
                 );
@@ -585,24 +756,7 @@ export default function AddTransactionScreen() {
           {/* Source Currency */}
           <View style={{ marginBottom: theme.spacing.xl }}>
             <Caption style={{ marginBottom: theme.spacing.sm }}>{t('currency') || 'Currency'}</Caption>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-                {CURRENCIES.map((code) => {
-                  const display = getCurrencyDisplay(code);
-                  return (
-                    <CurrencyChip key={code} $active={currency === code} onPress={() => setCurrency(code)}>
-                      <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || '\uD83C\uDF10'}</Text>
-                      <BodyMedium
-                        $color={currency === code ? theme.colors.background : theme.colors.foreground}
-                        style={{ fontSize: 14 }}
-                      >
-                        {code}
-                      </BodyMedium>
-                    </CurrencyChip>
-                  );
-                })}
-              </View>
-            </ScrollView>
+            {renderCurrencyChipList(CURRENCIES, currency, setCurrency)}
           </View>
           </>
           )}
@@ -612,82 +766,27 @@ export default function AddTransactionScreen() {
             <>
               <View style={{ marginBottom: theme.spacing.xl }}>
                 <Caption style={{ marginBottom: theme.spacing.sm }}>{t('currency') || 'Currency'}</Caption>
-                {isDesktop ? (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
-                    {CURRENCIES.map((code) => {
-                      const display = getCurrencyDisplay(code);
-                      return (
-                        <CurrencyChip key={code} $active={currency === code} onPress={() => setCurrency(code)}>
-                          <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || '🌐'}</Text>
-                          <BodyMedium
-                            $color={currency === code ? theme.colors.background : theme.colors.foreground}
-                            style={{ fontSize: 14 }}
-                          >
-                            {code}
-                          </BodyMedium>
-                        </CurrencyChip>
-                      );
-                    })}
-                  </View>
-                ) : (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-                      {CURRENCIES.map((code) => {
-                        const display = getCurrencyDisplay(code);
-                        return (
-                          <CurrencyChip key={code} $active={currency === code} onPress={() => setCurrency(code)}>
-                            <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || '🌐'}</Text>
-                            <BodyMedium
-                              $color={currency === code ? theme.colors.background : theme.colors.foreground}
-                              style={{ fontSize: 14 }}
-                            >
-                              {code}
-                            </BodyMedium>
-                          </CurrencyChip>
-                        );
-                      })}
-                    </View>
-                  </ScrollView>
-                )}
+                {renderCurrencyChipList(CURRENCIES, currency, setCurrency)}
               </View>
 
-              {/* Optional wallet currency conversion */}
+              {/* Source wallet */}
               <SectionCard>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
                   <View style={{ flex: 1, paddingRight: theme.spacing.md }}>
-                    <BodyMedium style={{ fontSize: 14 }}>{t('convertCurrency')}</BodyMedium>
-                    <Caption style={{ marginTop: 4 }}>{`${t('walletCurrency')} (${t('optional')})`}</Caption>
+                    <BodyMedium style={{ fontSize: 14 }}>{t('sourceWallet') || 'Source Wallet'}</BodyMedium>
+                    <Caption style={{ marginTop: 4 }}>
+                      {t('sourceWalletDescription') || 'Choose which wallet balance this transaction will affect. USD stays prefilled.'}
+                    </Caption>
                   </View>
                   <Toggle value={enableTargetConversion} onValueChange={setEnableTargetConversion} />
                 </View>
 
                 {enableTargetConversion ? (
                   <>
-                    <Caption style={{ marginBottom: theme.spacing.sm }}>{t('selectWalletCurrency')}</Caption>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                      <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-                        {availableWalletCurrencies.map((code) => {
-                          const display = getCurrencyDisplay(code);
-                          const isSelected = walletCurrency === code;
-                          const isSame = code === currency;
-                          return (
-                            <CurrencyChip key={code} $active={isSelected} $dim={isSame} onPress={() => setWalletCurrency(code)}>
-                              <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || '🌐'}</Text>
-                              <BodyMedium
-                                $color={isSelected ? theme.colors.background : theme.colors.foreground}
-                                style={{ fontSize: 14 }}
-                              >
-                                {code}
-                              </BodyMedium>
-                            </CurrencyChip>
-                          );
-                        })}
-                      </View>
-                    </ScrollView>
+                    <Caption style={{ marginBottom: theme.spacing.sm }}>{t('selectSourceWallet') || 'Select Source Wallet'}</Caption>
+                    {renderCurrencyChipList(availableWalletCurrencies, walletCurrency, setWalletCurrency)}
 
-                    {walletCurrency === currency && (
-                      <Caption style={{ marginTop: theme.spacing.md }}>{t('selectWalletCurrency')}</Caption>
-                    )}
+                    {renderSourceWalletDetails()}
 
                     {shouldFetchConversionPreview && (
                       <View style={{
@@ -713,7 +812,9 @@ export default function AddTransactionScreen() {
                       </View>
                     )}
                   </>
-                ) : null}
+                ) : (
+                  renderSourceWalletDetails()
+                )}
               </SectionCard>
             </>
           )}
@@ -908,13 +1009,11 @@ export default function AddTransactionScreen() {
               </View>
 
               <View style={{ marginBottom: theme.spacing.md }}>
-                <BodyMedium style={{ marginBottom: 4 }}>{t('walletCurrency') || 'Wallet Currency'}</BodyMedium>
-                <Caption>
-                  {enableTargetConversion && walletCurrency !== currency
-                    ? `${walletCurrency} (${t('convertCurrency') || 'conversion enabled'})`
-                    : currency}
-                </Caption>
+                <BodyMedium style={{ marginBottom: 4 }}>{t('amountCurrency') || 'Amount Currency'}</BodyMedium>
+                <Caption>{sourceWalletState.amountCurrency}</Caption>
               </View>
+
+              {renderSourceWalletDetails({ showDescription: false })}
 
               <View style={{ marginBottom: theme.spacing.md }}>
                 <BodyMedium style={{ marginBottom: 4 }}>{t('category') || 'Category'}</BodyMedium>
@@ -964,6 +1063,7 @@ export default function AddTransactionScreen() {
                 variant="accent"
                 onPress={handleSubmit}
                 isLoading={mutation.isPending}
+                disabled={mutation.isPending || isReviewBlockedBySourceBalance}
                 leftIcon={<Check size={18} color={theme.colors.primaryForeground} />}
                 style={{ flex: 2 } as any}
               >

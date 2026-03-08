@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { View, Text, Pressable, RefreshControl, ScrollView, useWindowDimensions, Modal } from 'react-native';
+import { View, Text, Pressable, RefreshControl, ScrollView, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -13,6 +13,7 @@ import { CATEGORY_COLORS } from '../../../src/constants/icons';
 import { useReportTimeZone } from '../../../src/hooks/useReportTimeZone';
 import { AppSwitcherTrigger } from '../../../src/components/navigation/AppSwitcherTrigger';
 import { PageHeader, PageScaffold } from '../../../src/components/ui';
+import { useScreenLayout } from '../../../src/hooks/useScreenLayout';
 import {
   type DatePreset,
   getDateRangeFromPreset,
@@ -108,9 +109,17 @@ function MonthYearPicker({
   const theme = useTheme();
   const colors = theme.colors;
   const [viewYear, setViewYear] = useState(selectedYear);
+  const { width, isCompactPhone } = useScreenLayout();
+  const insets = useSafeAreaInsets();
   const reportToday = useMemo(() => getTimeZoneDateParts(new Date(), reportTimeZone), [reportTimeZone]);
   const currentYear = reportToday.year;
   const currentMonth = reportToday.month;
+  const modalScreenPadding = Math.max(16, Math.max(insets.left, insets.right) + 16);
+  const modalWidth = Math.min(width - modalScreenPadding * 2, 384);
+  const modalInnerWidth = modalWidth - 48;
+  const monthCols = isCompactPhone ? 2 : 3;
+  const monthGap = 8;
+  const monthTileWidth = (modalInnerWidth - monthGap * (monthCols - 1)) / monthCols;
 
   useEffect(() => {
     if (visible) {
@@ -121,11 +130,11 @@ function MonthYearPicker({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable
-        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' }}
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: modalScreenPadding }}
         onPress={onClose}
       >
         <Pressable
-          style={{ backgroundColor: colors.card, borderRadius: 16, padding: 24, marginHorizontal: 24, width: '100%', maxWidth: 384 }}
+          style={{ backgroundColor: colors.card, borderRadius: 16, padding: 24, width: modalWidth, maxWidth: 384 }}
           onPress={(e) => e.stopPropagation()}
         >
           {/* Year selector */}
@@ -164,7 +173,7 @@ function MonthYearPicker({
                   onPress={() => !isFuture && onSelect(viewYear, monthNum)}
                   disabled={isFuture}
                   style={{
-                    width: '31%',
+                    width: monthTileWidth,
                     paddingVertical: 12,
                     borderRadius: 12,
                     alignItems: 'center',
@@ -262,7 +271,12 @@ function DateRangeSelector({
           accessibilityLabel={selectDateRangeLabel}
         >
           <Calendar size={18} color={colors.primary} />
-          <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>{dateLabel}</Text>
+          <Text
+            style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginLeft: 8, flexShrink: 1 }}
+            numberOfLines={1}
+          >
+            {dateLabel}
+          </Text>
           <ChevronRight size={16} color={colors.mutedForeground} style={{ marginLeft: 4 }} />
         </Pressable>
       </View>
@@ -415,11 +429,8 @@ export default function ReportsScreen() {
   const queryClient = useQueryClient();
   const { reportTimeZone, reportTimeZoneLabel } = useReportTimeZone();
   const [refreshing, setRefreshing] = useState(false);
-  const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-
-  const isDesktop = width >= 1024;
-  const isTablet = width >= 768;
+  const { width, isDesktop, isTablet } = useScreenLayout();
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
   // Calculate category card widths

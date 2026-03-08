@@ -295,6 +295,7 @@ func (r *GoalRepository) ContributeFromWallet(ctx context.Context, userID, goalI
 	defer tx.Rollback(ctx)
 
 	now := time.Now()
+	currency = normalizeWalletCurrencyCode(currency)
 
 	// Get the goal to verify currency matches
 	var goalCurrency *string
@@ -309,31 +310,21 @@ func (r *GoalRepository) ContributeFromWallet(ctx context.Context, userID, goalI
 	if goalCurrency == nil || strings.TrimSpace(*goalCurrency) == "" {
 		return nil, nil, errors.New("goal has no contribution currency")
 	}
-	if *goalCurrency != currency {
-		return nil, nil, fmt.Errorf("currency mismatch: goal is in %s, contribution is in %s", *goalCurrency, currency)
+	normalizedGoalCurrency := normalizeWalletCurrencyCode(*goalCurrency)
+	if normalizedGoalCurrency != currency {
+		return nil, nil, fmt.Errorf("currency mismatch: goal is in %s, contribution is in %s", normalizedGoalCurrency, currency)
 	}
 
-	// Check wallet balance
-	var currentBalance float64
-	err = tx.QueryRow(ctx, `
-		SELECT COALESCE(balance, 0) FROM wallet_balances
-		WHERE user_id = $1 AND currency = $2
-		FOR UPDATE
-	`, userID, currency).Scan(&currentBalance)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	walletRepo := &WalletRepository{pool: r.pool}
+	currentBalance, _, err := walletRepo.lockBalanceForUpdate(ctx, tx, userID, currency)
+	if err != nil {
 		return nil, nil, fmt.Errorf("checking balance: %w", err)
 	}
 	if currentBalance < amount {
 		return nil, nil, ErrInsufficientBalance
 	}
 
-	// Deduct from wallet
-	_, err = tx.Exec(ctx, `
-		UPDATE wallet_balances
-		SET balance = balance - $1, updated_at = $2
-		WHERE user_id = $3 AND currency = $4
-	`, amount, now, userID, currency)
-	if err != nil {
+	if err := walletRepo.applyBalanceDelta(ctx, tx, userID, currency, -amount, now, false); err != nil {
 		return nil, nil, fmt.Errorf("debiting wallet: %w", err)
 	}
 

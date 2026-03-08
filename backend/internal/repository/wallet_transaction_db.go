@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -37,8 +38,44 @@ type AggregatedMonthlyTypeTotal struct {
 	Total    float64
 }
 
+func signedTransactionBalanceDelta(txType string, amount float64) float64 {
+	switch txType {
+	case model.TransactionTypeCredit:
+		return amount
+	case model.TransactionTypeDebit:
+		return -amount
+	default:
+		return 0
+	}
+}
+
+func buildTransactionUpdateBalanceDeltas(oldTx *model.Transaction, newType string, newAmount float64, newCurrency string) map[string]float64 {
+	deltas := map[string]float64{}
+
+	addDelta := func(currency string, delta float64) {
+		if delta == 0 {
+			return
+		}
+		deltas[currency] += delta
+		if deltas[currency] == 0 {
+			delete(deltas, currency)
+		}
+	}
+
+	addDelta(oldTx.Currency, -signedTransactionBalanceDelta(oldTx.Type, oldTx.Amount))
+	addDelta(newCurrency, signedTransactionBalanceDelta(newType, newAmount))
+
+	return deltas
+}
+
 // CreateTransaction records a new transaction
 func (r *WalletRepository) CreateTransaction(ctx context.Context, tx *model.Transaction) error {
+	tx.Currency = normalizeWalletCurrencyCode(tx.Currency)
+	if tx.ToCurrency != nil {
+		normalizedToCurrency := normalizeWalletCurrencyCode(*tx.ToCurrency)
+		tx.ToCurrency = &normalizedToCurrency
+	}
+
 	query := `
 		INSERT INTO transactions (id, user_id, type, amount, currency, to_amount, to_currency, rate, source, ai_extracted_data, description, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
@@ -121,7 +158,7 @@ func (r *WalletRepository) CountTransactions(ctx context.Context, userID uuid.UU
 // CountDistinctCurrencies returns the number of distinct currencies used in transactions
 func (r *WalletRepository) CountDistinctCurrencies(ctx context.Context, userID uuid.UUID) (int, error) {
 	var count int
-	err := r.pool.QueryRow(ctx, `SELECT COUNT(DISTINCT currency) FROM transactions WHERE user_id = $1`, userID).Scan(&count)
+	err := r.pool.QueryRow(ctx, `SELECT COUNT(DISTINCT UPPER(TRIM(currency))) FROM transactions WHERE user_id = $1`, userID).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("counting currencies: %w", err)
 	}
@@ -216,10 +253,11 @@ func (r *WalletRepository) GetTransactionsFiltered(ctx context.Context, userID u
 			args = append(args, filter.Type)
 		}
 		if filter.Currency != "" {
+			normalizedCurrency := normalizeWalletCurrencyCode(filter.Currency)
 			argCount++
-			query += fmt.Sprintf(" AND currency = $%d", argCount)
-			countQuery += fmt.Sprintf(" AND currency = $%d", argCount)
-			args = append(args, filter.Currency)
+			query += fmt.Sprintf(" AND UPPER(TRIM(currency)) = $%d", argCount)
+			countQuery += fmt.Sprintf(" AND UPPER(TRIM(currency)) = $%d", argCount)
+			args = append(args, normalizedCurrency)
 		}
 		if filter.Search != "" {
 			argCount++
@@ -289,12 +327,12 @@ func (r *WalletRepository) GetTransactionsFiltered(ctx context.Context, userID u
 // GetTypeTotalsByCurrency returns aggregated transaction totals by type and currency for a date range.
 func (r *WalletRepository) GetTypeTotalsByCurrency(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]AggregatedTypeTotal, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT type, currency, COALESCE(SUM(amount), 0)::float8 AS total
+		SELECT type, UPPER(TRIM(currency)) AS currency, COALESCE(SUM(amount), 0)::float8 AS total
 		FROM transactions
 		WHERE user_id = $1
 			AND created_at >= $2
 			AND created_at <= $3
-		GROUP BY type, currency
+		GROUP BY type, UPPER(TRIM(currency))
 	`, userID, from, to)
 	if err != nil {
 		return nil, fmt.Errorf("querying type totals: %w", err)
@@ -318,17 +356,17 @@ func (r *WalletRepository) GetTypeTotalsByCurrency(ctx context.Context, userID u
 // GetCategoryTotalsByCurrency returns aggregated debit totals by category and currency for a date range.
 func (r *WalletRepository) GetCategoryTotalsByCurrency(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]AggregatedCategoryTotal, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT
-			COALESCE(NULLIF(BTRIM(category), ''), 'other') AS category,
-			currency,
-			COALESCE(SUM(amount), 0)::float8 AS total,
-			COUNT(*)::int AS count
-		FROM transactions
-		WHERE user_id = $1
-			AND type = 'debit'
-			AND created_at >= $2
-			AND created_at <= $3
-		GROUP BY COALESCE(NULLIF(BTRIM(category), ''), 'other'), currency
+			SELECT
+				COALESCE(NULLIF(BTRIM(category), ''), 'other') AS category,
+				UPPER(TRIM(currency)) AS currency,
+				COALESCE(SUM(amount), 0)::float8 AS total,
+				COUNT(*)::int AS count
+			FROM transactions
+			WHERE user_id = $1
+				AND type = 'debit'
+				AND created_at >= $2
+				AND created_at <= $3
+			GROUP BY COALESCE(NULLIF(BTRIM(category), ''), 'other'), UPPER(TRIM(currency))
 	`, userID, from, to)
 	if err != nil {
 		return nil, fmt.Errorf("querying category totals: %w", err)
@@ -355,13 +393,13 @@ func (r *WalletRepository) GetMonthlyTypeTotalsByCurrency(ctx context.Context, u
 			SELECT
 				DATE_TRUNC('month', created_at AT TIME ZONE $4)::date AS period,
 				type,
-				currency,
+				UPPER(TRIM(currency)) AS currency,
 				COALESCE(SUM(amount), 0)::float8 AS total
 			FROM transactions
 			WHERE user_id = $1
 				AND created_at >= $2
 				AND created_at <= $3
-			GROUP BY DATE_TRUNC('month', created_at AT TIME ZONE $4)::date, type, currency
+			GROUP BY DATE_TRUNC('month', created_at AT TIME ZONE $4)::date, type, UPPER(TRIM(currency))
 			ORDER BY period ASC
 		`, userID, from, to, timeZone)
 	if err != nil {
@@ -419,6 +457,8 @@ func (r *WalletRepository) GetTransaction(ctx context.Context, userID, txID uuid
 
 // AddTransactionAtomic performs a balance update and transaction creation atomically
 func (r *WalletRepository) AddTransactionAtomic(ctx context.Context, userID uuid.UUID, txType string, amount float64, currency, source, description, category, icon string, aiData json.RawMessage) (*model.Transaction, error) {
+	currency = normalizeWalletCurrencyCode(currency)
+
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("beginning transaction: %w", err)
@@ -513,6 +553,8 @@ func (r *WalletRepository) AddCrossCurrencyTransactionAtomic(ctx context.Context
 	txAmount float64, txCurrency string,
 	walletAmount float64, walletCurrency string,
 	rate float64, source, description, category, icon string, aiData json.RawMessage) (*model.Transaction, error) {
+	txCurrency = normalizeWalletCurrencyCode(txCurrency)
+	walletCurrency = normalizeWalletCurrencyCode(walletCurrency)
 
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -618,6 +660,11 @@ func (r *WalletRepository) DeleteTransactionAtomic(ctx context.Context, userID, 
 			return ErrTransactionNotFound
 		}
 		return fmt.Errorf("getting transaction: %w", err)
+	}
+	currency = normalizeWalletCurrencyCode(currency)
+	if toCurrency != nil {
+		normalizedToCurrency := normalizeWalletCurrencyCode(*toCurrency)
+		toCurrency = &normalizedToCurrency
 	}
 
 	now := time.Now()
@@ -735,6 +782,11 @@ func (r *WalletRepository) UpdateTransactionAtomic(ctx context.Context, userID, 
 	if icon != nil {
 		oldTx.Icon = *icon
 	}
+	oldTx.Currency = normalizeWalletCurrencyCode(oldTx.Currency)
+	if toCurrency != nil {
+		normalizedToCurrency := normalizeWalletCurrencyCode(*toCurrency)
+		toCurrency = &normalizedToCurrency
+	}
 
 	// Don't allow editing conversion transactions
 	if oldTx.Type == "convert" {
@@ -766,7 +818,7 @@ func (r *WalletRepository) UpdateTransactionAtomic(ctx context.Context, userID, 
 	}
 	newCurrency := oldTx.Currency
 	if req.Currency != "" {
-		newCurrency = req.Currency
+		newCurrency = normalizeWalletCurrencyCode(req.Currency)
 	}
 	newCategory := oldTx.Category
 	if req.Category != "" {
@@ -791,52 +843,31 @@ func (r *WalletRepository) UpdateTransactionAtomic(ctx context.Context, userID, 
 	criticalFieldsChanged := newType != oldTx.Type || newAmount != oldTx.Amount || newCurrency != oldTx.Currency
 
 	if criticalFieldsChanged {
-		// First, reverse the old transaction's impact
-		if oldTx.Type == "credit" {
-			currentBalance, _, err := r.lockBalanceForUpdate(ctx, tx, userID, oldTx.Currency)
+		deltas := buildTransactionUpdateBalanceDeltas(&oldTx, newType, newAmount, newCurrency)
+		affectedCurrencies := make([]string, 0, len(deltas))
+		for currency := range deltas {
+			affectedCurrencies = append(affectedCurrencies, currency)
+		}
+		sort.Strings(affectedCurrencies)
+
+		for _, currency := range affectedCurrencies {
+			currentBalance, exists, err := r.lockBalanceForUpdate(ctx, tx, userID, currency)
 			if err != nil {
 				return nil, fmt.Errorf("checking balance: %w", err)
 			}
-			if currentBalance < oldTx.Amount {
+			delta := deltas[currency]
+			if delta < 0 && (!exists || currentBalance < -delta) {
 				return nil, ErrInsufficientBalance
-			}
-			err = r.applyBalanceDelta(ctx, tx, userID, oldTx.Currency, -oldTx.Amount, now, false)
-			if err != nil {
-				if errors.Is(err, ErrInsufficientBalance) {
-					return nil, ErrInsufficientBalance
-				}
-				return nil, fmt.Errorf("reversing old balance: %w", err)
-			}
-		} else if oldTx.Type == "debit" {
-			if err := r.applyBalanceDelta(ctx, tx, userID, oldTx.Currency, oldTx.Amount, now, true); err != nil {
-				if errors.Is(err, ErrInsufficientBalance) {
-					return nil, ErrInsufficientBalance
-				}
-				return nil, fmt.Errorf("reversing old balance: %w", err)
 			}
 		}
 
-		// Apply the new transaction's impact
-		if newType == "credit" {
-			if err := r.applyBalanceDelta(ctx, tx, userID, newCurrency, newAmount, now, true); err != nil {
+		for _, currency := range affectedCurrencies {
+			delta := deltas[currency]
+			if err := r.applyBalanceDelta(ctx, tx, userID, currency, delta, now, delta > 0); err != nil {
 				if errors.Is(err, ErrInsufficientBalance) {
 					return nil, ErrInsufficientBalance
 				}
-				return nil, fmt.Errorf("applying new balance: %w", err)
-			}
-		} else if newType == "debit" {
-			currentBalance, _, err := r.lockBalanceForUpdate(ctx, tx, userID, newCurrency)
-			if err != nil {
-				return nil, fmt.Errorf("checking balance: %w", err)
-			}
-			if currentBalance < newAmount {
-				return nil, ErrInsufficientBalance
-			}
-			if err := r.applyBalanceDelta(ctx, tx, userID, newCurrency, -newAmount, now, false); err != nil {
-				if errors.Is(err, ErrInsufficientBalance) {
-					return nil, ErrInsufficientBalance
-				}
-				return nil, fmt.Errorf("applying new balance: %w", err)
+				return nil, fmt.Errorf("applying balance adjustment: %w", err)
 			}
 		}
 	}

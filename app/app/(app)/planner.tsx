@@ -4,12 +4,10 @@ import {
   Alert,
   AppState,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,6 +37,7 @@ import { EmptyState } from '../../src/components/ui/EmptyState';
 import { PlannerCard } from '../../src/components/features/Planner/PlannerCard';
 import { TaskWizardModal } from '../../src/components/features/Planner/TaskWizardModal';
 import { TaskEditModal } from '../../src/components/features/Planner/TaskEditModal';
+import { useScreenLayout } from '../../src/hooks/useScreenLayout';
 import { haptics } from '../../src/utils/haptics';
 import { useDebounce } from '../../src/hooks/useDebounce';
 import {
@@ -117,15 +116,20 @@ export default function PlannerScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { width } = useWindowDimensions();
+  const { width, isCompactPhone, isPhone, isTablet, isDesktop } = useScreenLayout();
   const { user } = useAuth();
   const { t } = useLanguage();
   const userID = user?.id || '';
   const { showToast } = useToast();
 
-  const isDesktop = width >= 1024;
-  const isCompact = width < 1024;
-  const pageWidth = Math.max(width - 32, 280);
+  const boardGap = 12;
+  const boardHorizontalPadding = 32;
+  const desktopColumnWidth = 320;
+  const phonePageWidth = Math.max(width - boardHorizontalPadding, 280);
+  const tabletColumnWidth = Math.max(
+    Math.min(Math.floor((width - boardHorizontalPadding - boardGap) / 2), 420),
+    300,
+  );
 
   // --- Core state ---
   const [cachedBoard, setCachedBoard] = useState<PlannerBoardResponse | null>(null);
@@ -313,6 +317,14 @@ export default function PlannerScreen() {
     { label: t('plannerInProgress') || 'In Progress', value: effectiveBoard.summary.in_progress },
     { label: t('plannerDone') || 'Done', value: effectiveBoard.summary.done },
   ], [effectiveBoard, t]);
+  const summaryGap = 10;
+  const summaryColumnCount = isCompactPhone ? 1 : isPhone ? 2 : isTablet ? 2 : summaryCards.length;
+  const summaryCardWidth = !isDesktop
+    ? Math.max(
+        Math.floor((Math.max(width - boardHorizontalPadding, 0) - summaryGap * (summaryColumnCount - 1)) / summaryColumnCount),
+        0,
+      )
+    : undefined;
 
   const tags = tagsQuery.data?.tags || [];
   const goals = goalsQuery.data?.goals || [];
@@ -460,8 +472,14 @@ export default function PlannerScreen() {
   const jumpToColumn = useCallback((status: PlannerStatus) => {
     const index = COLUMN_ORDER.indexOf(status);
     setActiveColumn(status);
-    pagerRef.current?.scrollTo({ x: index * pageWidth, y: 0, animated: true });
-  }, [pageWidth]);
+    if (isPhone) {
+      pagerRef.current?.scrollTo({ x: index * phonePageWidth, y: 0, animated: true });
+      return;
+    }
+
+    const columnWidth = isTablet ? tabletColumnWidth : desktopColumnWidth;
+    pagerRef.current?.scrollTo({ x: index * (columnWidth + boardGap), y: 0, animated: true });
+  }, [boardGap, desktopColumnWidth, isPhone, isTablet, phonePageWidth, tabletColumnWidth]);
 
   // --- Filtering ---
   const filterItems = useCallback((items: TodoItem[]) => {
@@ -487,7 +505,7 @@ export default function PlannerScreen() {
         key={status}
         entering={FadeInDown.duration(420).delay(columnIndex * 56)}
         style={{
-          width: widthOverride ?? (isDesktop ? 320 : pageWidth),
+          width: widthOverride ?? (isDesktop ? desktopColumnWidth : phonePageWidth),
           borderRadius: 18, borderWidth: 1, borderColor: meta.border,
           backgroundColor: colors.card, padding: 12,
           shadowColor: meta.glow, shadowOpacity: 0.46, shadowRadius: 15, shadowOffset: { width: 0, height: 2 },
@@ -523,6 +541,7 @@ export default function PlannerScreen() {
               onDeleteTask={handleDeleteTask}
               isCompleting={completingTaskID === item.id}
               userId={userID}
+              interactionMode={isDesktop ? 'gesture' : 'explicit'}
             />
           ))
         )}
@@ -530,8 +549,9 @@ export default function PlannerScreen() {
     );
   }, [
     colors, effectiveBoard, filterItems, handleCompleteTask, handleDeleteTask,
-    handleMoveItem, isDesktop, launchingTaskID, openAddTransactionForTask,
-    pageWidth, pendingMarkers, completingTaskID, userID, columnLabel, t,
+    desktopColumnWidth, handleMoveItem, isDesktop, launchingTaskID, openAddTransactionForTask,
+    phonePageWidth,
+    pendingMarkers, completingTaskID, userID, columnLabel, t,
   ]);
 
   const isEmpty = effectiveBoard.summary.total === 0;
@@ -652,12 +672,22 @@ export default function PlannerScreen() {
           )}
 
           {/* Summary cards */}
-          <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: summaryGap }}>
             {summaryCards.map((metric) => (
               <Animated.View
                 key={metric.label}
                 entering={FadeInDown.duration(350)}
-                style={{ flex: 1, backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 10 }}
+                style={[
+                  {
+                    backgroundColor: colors.card,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    padding: 10,
+                    minHeight: 64,
+                  },
+                  isDesktop ? { flex: 1 } : { width: summaryCardWidth },
+                ]}
               >
                 <Text style={{ color: colors.mutedForeground, fontSize: 11 }}>{metric.label}</Text>
                 <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 18, marginTop: 2 }}>{metric.value}</Text>
@@ -758,62 +788,55 @@ export default function PlannerScreen() {
               onAction={() => setIsTaskWizardVisible(true)}
             />
           </View>
-        ) : isCompact ? (
+        ) : isPhone ? (
           <View style={{ flex: 1, marginTop: 12 }}>
             <ScrollView
               ref={pagerRef}
               horizontal
               pagingEnabled
               showsHorizontalScrollIndicator={false}
-              scrollEnabled={!isDraggingCard}
               onMomentumScrollEnd={(event) => {
-                const index = Math.round(event.nativeEvent.contentOffset.x / pageWidth);
+                const index = Math.round(event.nativeEvent.contentOffset.x / phonePageWidth);
                 const safeIndex = Math.max(0, Math.min(index, COLUMN_ORDER.length - 1));
                 setActiveColumn(COLUMN_ORDER[safeIndex]);
               }}
               contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: Math.max(insets.bottom + 20, 30) }}
             >
               {COLUMN_ORDER.map((status, index) => (
-                <View key={status} style={{ width: pageWidth, paddingRight: 10 }}>
-                  <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={!isDraggingCard} contentContainerStyle={{ paddingBottom: 14 }}>
-                    {renderColumn(status, index, pageWidth - 6)}
+                <View key={status} style={{ width: phonePageWidth, paddingRight: 10 }}>
+                  <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 14 }}>
+                    {renderColumn(status, index, phonePageWidth - 6)}
                   </ScrollView>
                 </View>
               ))}
             </ScrollView>
-
-            {isDraggingCard && (
-              <>
-                <View pointerEvents="none" style={{
-                  position: 'absolute', top: 14, bottom: 20, left: 8, width: 34, borderRadius: 16,
-                  borderWidth: 1, borderColor: dragDirection === 'left' ? colors.accent + '99' : colors.border,
-                  backgroundColor: dragDirection === 'left' ? colors.accent + '26' : colors.card + '8A',
-                  alignItems: 'center', justifyContent: 'center',
-                  shadowColor: colors.accent, shadowOpacity: dragDirection === 'left' ? 0.36 : 0, shadowRadius: 14, shadowOffset: { width: 0, height: 0 },
-                  elevation: dragDirection === 'left' ? 6 : 0,
-                }}>
-                  <ChevronLeft size={16} color={dragDirection === 'left' ? colors.accent : colors.mutedForeground} />
+          </View>
+        ) : isTablet ? (
+          <View style={{ flex: 1, marginTop: 12 }}>
+            <ScrollView
+              ref={pagerRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: Math.max(insets.bottom + 24, 36), gap: boardGap }}
+            >
+              {COLUMN_ORDER.map((status, index) => (
+                <View key={status} style={{ width: tabletColumnWidth }}>
+                  <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 14 }}>
+                    {renderColumn(status, index, tabletColumnWidth)}
+                  </ScrollView>
                 </View>
-                <View pointerEvents="none" style={{
-                  position: 'absolute', top: 14, bottom: 20, right: 8, width: 34, borderRadius: 16,
-                  borderWidth: 1, borderColor: dragDirection === 'right' ? colors.accent + '99' : colors.border,
-                  backgroundColor: dragDirection === 'right' ? colors.accent + '26' : colors.card + '8A',
-                  alignItems: 'center', justifyContent: 'center',
-                  shadowColor: colors.accent, shadowOpacity: dragDirection === 'right' ? 0.36 : 0, shadowRadius: 14, shadowOffset: { width: 0, height: 0 },
-                  elevation: dragDirection === 'right' ? 6 : 0,
-                }}>
-                  <ChevronRight size={16} color={dragDirection === 'right' ? colors.accent : colors.mutedForeground} />
-                </View>
-              </>
-            )}
+              ))}
+            </ScrollView>
           </View>
         ) : (
           <ScrollView
+            ref={pagerRef}
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: Math.max(insets.bottom + 24, 36), gap: 12 }}
+            scrollEnabled={!isDraggingCard}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: Math.max(insets.bottom + 24, 36), gap: boardGap }}
           >
-            {COLUMN_ORDER.map((status, index) => renderColumn(status, index))}
+            {COLUMN_ORDER.map((status, index) => renderColumn(status, index, desktopColumnWidth))}
           </ScrollView>
         )}
 
@@ -857,6 +880,7 @@ export default function PlannerScreen() {
         onClose={() => setEditingTask(null)}
         onSave={handleEditTask}
         onAddTransaction={openAddTransactionForTask}
+        onDelete={queueDeleteTask}
       />
 
       {/* Funding Required Modal */}

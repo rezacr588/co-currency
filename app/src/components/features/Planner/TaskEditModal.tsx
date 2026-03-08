@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Calendar, DollarSign } from 'lucide-react-native';
+import { Calendar, DollarSign, Trash2 } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
 import { DatePickerModal } from './DatePickerModal';
 import { useLanguage } from '../../../context/LanguageContext';
@@ -22,9 +22,10 @@ interface TaskEditModalProps {
   onClose: () => void;
   onSave: (taskId: string, updates: UpdateTaskRequest) => Promise<void>;
   onAddTransaction?: (taskId: string) => void;
+  onDelete?: (taskId: string) => Promise<void> | void;
 }
 
-export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction }: TaskEditModalProps) {
+export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction, onDelete }: TaskEditModalProps) {
   const theme = useTheme();
   const colors = theme.colors;
   const insets = useSafeAreaInsets();
@@ -75,6 +76,27 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
       Alert.alert('Could not update task', err instanceof Error ? err.message : 'Unknown error');
     }
   }, [task, title, description, dueDate, priority, status, reminderMode, onSave, onClose]);
+
+  const handleDelete = useCallback(() => {
+    if (!task || !onDelete) return;
+
+    Alert.alert(
+      t('plannerDeleteTitle') || 'Delete task?',
+      t('plannerDeleteMessage') || 'This task will be removed from your planner.',
+      [
+        { text: t('plannerClose') || 'Cancel', style: 'cancel' },
+        {
+          text: t('delete') || 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void haptics.error();
+            void onDelete(task.id);
+            onClose();
+          },
+        },
+      ],
+    );
+  }, [task, onDelete, onClose, t]);
 
   const statusLabel = (s: PlannerStatus) => {
     const map: Record<PlannerStatus, string> = {
@@ -304,6 +326,20 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
           <View style={{ height: 1, backgroundColor: colors.border, marginTop: 14, marginBottom: 12 }} />
 
           <View style={{ flexDirection: 'row', gap: 8 }}>
+            {onDelete ? (
+              <Pressable
+                onPress={handleDelete}
+                hitSlop={4}
+                style={({ pressed }) => [{
+                  borderRadius: 12, borderWidth: 1, borderColor: colors.danger + '44',
+                  backgroundColor: colors.danger + '10', alignItems: 'center', justifyContent: 'center',
+                  paddingVertical: 14, paddingHorizontal: 16,
+                }, pressed && { opacity: 0.72 }]}
+              >
+                <Trash2 size={16} color={colors.danger} />
+              </Pressable>
+            ) : null}
+
             <Pressable
               onPress={onClose}
               style={({ pressed }) => [{
