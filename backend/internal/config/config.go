@@ -136,6 +136,13 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("PAGINATION_MAX_API_LIMIT must be >= 1, got %d", cfg.PaginationMaxAPILimit)
 	}
 
+	// Validate JWT secret in production
+	if strings.EqualFold(cfg.Environment, "production") {
+		if cfg.JWTSecret == "" || cfg.JWTSecret == "change-me-in-production-to-a-secure-secret" {
+			return nil, fmt.Errorf("JWT_SECRET must be set to a secure value in production")
+		}
+	}
+
 	mode := strings.ToLower(strings.TrimSpace(cfg.AIThinkingModeDefault))
 	switch mode {
 	case "", "auto", "fast", "thinking":

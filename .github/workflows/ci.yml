@@ -77,7 +77,7 @@ jobs:
           delay=10
           for i in $(seq 1 "$attempts"); do
             echo "Deploy attempt ${i}/${attempts}..."
-            if koyeb service update terrible-moselle/co-currency \
+            if koyeb service update coai/co-currency \
               --docker ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}; then
               echo "Deploy succeeded on attempt ${i}."
               exit 0

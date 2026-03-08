@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -28,7 +29,26 @@ type AIChatHandler struct {
 }
 
 var aiChatWSUpgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin: func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true
+		}
+		allowed := []string{
+			"http://localhost:5173",
+			"http://localhost:8080",
+			"http://localhost:3000",
+		}
+		if frontendURL := os.Getenv("FRONTEND_URL"); frontendURL != "" {
+			allowed = append(allowed, frontendURL)
+		}
+		for _, o := range allowed {
+			if strings.EqualFold(o, origin) {
+				return true
+			}
+		}
+		return false
+	},
 }
 
 // NewAIChatHandler creates a new AIChatHandler

@@ -69,34 +69,10 @@ func (s *LoanService) DeleteLoan(ctx context.Context, id, userID string) error {
 }
 
 func (s *LoanService) MakePayment(ctx context.Context, loanID, userID string, req model.CreatePaymentRequest) (*model.LoanPayment, error) {
-	loan, err := s.repo.GetByID(ctx, loanID)
-	if err != nil {
-		return nil, err
-	}
-	if loan == nil {
-		return nil, fmt.Errorf("loan not found")
-	}
-	if loan.UserID != userID {
-		return nil, fmt.Errorf("unauthorized")
-	}
-	if loan.Status != model.LoanStatusActive {
-		return nil, fmt.Errorf("cannot make payment on inactive loan")
-	}
-
-	// Create payment record
-	payment, err := s.repo.CreatePayment(ctx, loanID, req, loan.Currency)
-	if err != nil {
-		return nil, err
-	}
-
-	// Update remaining amount for payment or forgiveness types
-	if req.PaymentType == model.PaymentTypePayment || req.PaymentType == model.PaymentTypeForgiveness {
-		if err := s.repo.UpdateRemainingAmount(ctx, loanID, req.Amount); err != nil {
-			return nil, err
-		}
-	}
-
-	return payment, nil
+	// Use atomic transaction to prevent concurrent payments from causing negative balances.
+	// All validation (ownership, status, amount) and mutations (create payment, update remaining)
+	// happen within a single DB transaction with SELECT FOR UPDATE row locking.
+	return s.repo.MakePaymentTx(ctx, loanID, userID, req)
 }
 
 func (s *LoanService) GetPayments(ctx context.Context, loanID, userID string) ([]model.LoanPayment, error) {

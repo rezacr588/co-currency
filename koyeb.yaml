@@ -48,4 +48,4 @@ service:
     - key: FRANKFURTER_URL
       value: "https://api.frankfurter.app"
     - key: EXPOSE_ERROR_DETAILS
-      value: "true"
+      value: "false"

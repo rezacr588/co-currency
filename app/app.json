@@ -80,7 +80,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiUrl": "https://terrible-moselle-airez-1828dc33.koyeb.app/api/v1",
+      "apiUrl": "https://coai.koyeb.app/api/v1",
       "router": {},
       "eas": {
         "projectId": "517f2a2a-cc2a-4009-8878-c66dc9d7942a"

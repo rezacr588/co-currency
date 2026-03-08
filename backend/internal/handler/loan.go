@@ -8,6 +8,7 @@ import (
 
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/service"
+	"github.com/rezacr588/currency-converter/pkg/httputil"
 )
 
 type LoanHandler struct {
@@ -19,39 +20,42 @@ func NewLoanHandler(service *service.LoanService) *LoanHandler {
 }
 
 func (h *LoanHandler) CreateLoan(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 
 	var req model.CreateLoanRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
 		return
 	}
 
 	// Validate required fields
 	if req.Type == "" {
-		http.Error(w, "type is required", http.StatusBadRequest)
+		httputil.BadRequestWithContext(r.Context(), w, "type is required", nil)
 		return
 	}
 	if req.Name == "" {
-		http.Error(w, "name is required", http.StatusBadRequest)
+		httputil.BadRequestWithContext(r.Context(), w, "name is required", nil)
 		return
 	}
 	if req.PrincipalAmount <= 0 {
-		http.Error(w, "principal_amount must be greater than 0", http.StatusBadRequest)
+		httputil.BadRequestWithContext(r.Context(), w, "principal_amount must be greater than 0", nil)
 		return
 	}
 	if req.Currency == "" {
-		http.Error(w, "currency is required", http.StatusBadRequest)
+		httputil.BadRequestWithContext(r.Context(), w, "currency is required", nil)
 		return
 	}
 	if req.Type != "borrowed" && req.Type != "lent" {
-		http.Error(w, "type must be 'borrowed' or 'lent'", http.StatusBadRequest)
+		httputil.BadRequestWithContext(r.Context(), w, "type must be 'borrowed' or 'lent'", nil)
 		return
 	}
 
-	loan, err := h.service.CreateLoan(r.Context(), userID, req)
+	loan, err := h.service.CreateLoan(r.Context(), userID.String(), req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to create loan")
 		return
 	}
 
@@ -61,20 +65,23 @@ func (h *LoanHandler) CreateLoan(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LoanHandler) GetLoan(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 	loanID := chi.URLParam(r, "id")
 
-	loan, err := h.service.GetLoan(r.Context(), loanID, userID)
+	loan, err := h.service.GetLoan(r.Context(), loanID, userID.String())
 	if err != nil {
 		if err.Error() == "unauthorized" {
-			http.Error(w, "Unauthorized", http.StatusForbidden)
+			httputil.UnauthorizedWithContext(r.Context(), w, "unauthorized")
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get loan")
 		return
 	}
 	if loan == nil {
-		http.Error(w, "Loan not found", http.StatusNotFound)
+		httputil.NotFoundWithContext(r.Context(), w, "loan not found")
 		return
 	}
 
@@ -83,13 +90,16 @@ func (h *LoanHandler) GetLoan(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LoanHandler) GetAllLoans(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 	status := r.URL.Query().Get("status")
 	loanType := r.URL.Query().Get("type")
 
-	loans, err := h.service.GetAllLoans(r.Context(), userID, status, loanType)
+	loans, err := h.service.GetAllLoans(r.Context(), userID.String(), status, loanType)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get loans")
 		return
 	}
 
@@ -98,26 +108,29 @@ func (h *LoanHandler) GetAllLoans(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LoanHandler) UpdateLoan(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 	loanID := chi.URLParam(r, "id")
 
 	var req model.UpdateLoanRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
 		return
 	}
 
-	loan, err := h.service.UpdateLoan(r.Context(), loanID, userID, req)
+	loan, err := h.service.UpdateLoan(r.Context(), loanID, userID.String(), req)
 	if err != nil {
 		if err.Error() == "unauthorized" {
-			http.Error(w, "Unauthorized", http.StatusForbidden)
+			httputil.UnauthorizedWithContext(r.Context(), w, "unauthorized")
 			return
 		}
 		if err.Error() == "loan not found" {
-			http.Error(w, "Loan not found", http.StatusNotFound)
+			httputil.NotFoundWithContext(r.Context(), w, "loan not found")
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to update loan")
 		return
 	}
 
@@ -126,20 +139,23 @@ func (h *LoanHandler) UpdateLoan(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LoanHandler) DeleteLoan(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 	loanID := chi.URLParam(r, "id")
 
-	err := h.service.DeleteLoan(r.Context(), loanID, userID)
+	err := h.service.DeleteLoan(r.Context(), loanID, userID.String())
 	if err != nil {
 		if err.Error() == "unauthorized" {
-			http.Error(w, "Unauthorized", http.StatusForbidden)
+			httputil.UnauthorizedWithContext(r.Context(), w, "unauthorized")
 			return
 		}
 		if err.Error() == "loan not found" {
-			http.Error(w, "Loan not found", http.StatusNotFound)
+			httputil.NotFoundWithContext(r.Context(), w, "loan not found")
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to delete loan")
 		return
 	}
 
@@ -147,36 +163,39 @@ func (h *LoanHandler) DeleteLoan(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LoanHandler) MakePayment(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 	loanID := chi.URLParam(r, "id")
 
 	var req model.CreatePaymentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
 		return
 	}
 
 	// Validate required fields
 	if req.Amount <= 0 {
-		http.Error(w, "amount must be greater than 0", http.StatusBadRequest)
+		httputil.BadRequestWithContext(r.Context(), w, "amount must be greater than 0", nil)
 		return
 	}
 	if req.PaymentType == "" {
-		http.Error(w, "payment_type is required", http.StatusBadRequest)
+		httputil.BadRequestWithContext(r.Context(), w, "payment_type is required", nil)
 		return
 	}
 
-	payment, err := h.service.MakePayment(r.Context(), loanID, userID, req)
+	payment, err := h.service.MakePayment(r.Context(), loanID, userID.String(), req)
 	if err != nil {
 		if err.Error() == "unauthorized" {
-			http.Error(w, "Unauthorized", http.StatusForbidden)
+			httputil.UnauthorizedWithContext(r.Context(), w, "unauthorized")
 			return
 		}
 		if err.Error() == "loan not found" {
-			http.Error(w, "Loan not found", http.StatusNotFound)
+			httputil.NotFoundWithContext(r.Context(), w, "loan not found")
 			return
 		}
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		httputil.BadRequestWithContext(r.Context(), w, err.Error(), nil)
 		return
 	}
 
@@ -186,20 +205,23 @@ func (h *LoanHandler) MakePayment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LoanHandler) GetPayments(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 	loanID := chi.URLParam(r, "id")
 
-	payments, err := h.service.GetPayments(r.Context(), loanID, userID)
+	payments, err := h.service.GetPayments(r.Context(), loanID, userID.String())
 	if err != nil {
 		if err.Error() == "unauthorized" {
-			http.Error(w, "Unauthorized", http.StatusForbidden)
+			httputil.UnauthorizedWithContext(r.Context(), w, "unauthorized")
 			return
 		}
 		if err.Error() == "loan not found" {
-			http.Error(w, "Loan not found", http.StatusNotFound)
+			httputil.NotFoundWithContext(r.Context(), w, "loan not found")
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get payments")
 		return
 	}
 
@@ -208,12 +230,15 @@ func (h *LoanHandler) GetPayments(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LoanHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 	currency := r.URL.Query().Get("currency")
 
-	summary, err := h.service.GetSummary(r.Context(), userID, currency)
+	summary, err := h.service.GetSummary(r.Context(), userID.String(), currency)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get loan summary")
 		return
 	}
 
@@ -222,11 +247,14 @@ func (h *LoanHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LoanHandler) GetUpcoming(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 
-	loans, err := h.service.GetUpcomingDue(r.Context(), userID, 30)
+	loans, err := h.service.GetUpcomingDue(r.Context(), userID.String(), 30)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get upcoming loans")
 		return
 	}
 

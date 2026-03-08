@@ -2,7 +2,7 @@
 	ops-doctor gh-summary gh-runs koyeb-list koyeb-redeploy koyeb-logs koyeb-status \
 	db-backup db-restore db-list
 
-KOYEB_APP ?= terrible-moselle
+KOYEB_APP ?= coai
 KOYEB_SERVICE ?= co-currency
 GH_REPO ?= rezacr588/co-currency
 

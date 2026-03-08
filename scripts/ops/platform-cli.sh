@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-KOYEB_APP="${KOYEB_APP:-terrible-moselle}"
+KOYEB_APP="${KOYEB_APP:-coai}"
 KOYEB_SERVICE="${KOYEB_SERVICE:-co-currency}"
 GH_REPO="${GH_REPO:-rezacr588/co-currency}"
 
@@ -26,7 +26,7 @@ Commands:
 
 Environment:
   GH_REPO         GitHub repo (default: rezacr588/co-currency)
-  KOYEB_APP       Koyeb app name (default: terrible-moselle)
+  KOYEB_APP       Koyeb app name (default: coai)
   KOYEB_SERVICE   Koyeb service name (default: co-currency)
   DATABASE_URL    PostgreSQL connection string (auto-reads from backend/.env)
   BACKUP_DIR      Backup directory (default: backups/)

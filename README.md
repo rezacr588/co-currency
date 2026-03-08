@@ -262,7 +262,7 @@ Configure env vars as needed:
 
 ```bash
 export GH_REPO=rezacr588/co-currency
-export KOYEB_APP=terrible-moselle
+export KOYEB_APP=coai
 export KOYEB_SERVICE=co-currency
 
 # Neon (non-interactive)

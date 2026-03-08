@@ -121,7 +121,7 @@ func (r *NotificationRepository) CreateDefaultPreferences(ctx context.Context, u
 	query := `
 		INSERT INTO notification_preferences (user_id, budget_alerts, loan_reminders, goal_updates, weekly_recap)
 		VALUES ($1, true, true, true, true)
-		ON CONFLICT (user_id) DO NOTHING
+		ON CONFLICT (user_id) DO UPDATE SET updated_at = notification_preferences.updated_at
 		RETURNING user_id, budget_alerts, loan_reminders, goal_updates, weekly_recap, created_at, updated_at`
 
 	var prefs model.NotificationPreferences
@@ -134,10 +134,6 @@ func (r *NotificationRepository) CreateDefaultPreferences(ctx context.Context, u
 		&prefs.CreatedAt,
 		&prefs.UpdatedAt,
 	)
-	if err == pgx.ErrNoRows {
-		// Row already exists, fetch it
-		return r.GetPreferences(ctx, userID)
-	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to create preferences: %w", err)
 	}

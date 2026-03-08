@@ -4,7 +4,7 @@ import type { AuthResponse } from '../types/wallet';
 import { readSecure, writeSecure, removeSecure } from '../utils/storage';
 
 // Production backend URL (always full URL for OAuth and native)
-const BACKEND_URL = 'https://terrible-moselle-airez-1828dc33.koyeb.app/api/v1';
+const BACKEND_URL = 'https://coai.koyeb.app/api/v1';
 
 // Platform-aware API base URL
 const getApiBase = (): string => {

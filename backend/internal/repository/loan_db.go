@@ -2,10 +2,12 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/zerolog/log"
 
 	"github.com/rezacr588/currency-converter/internal/model"
 )
@@ -363,4 +365,108 @@ func (r *LoanRepository) GetUpcomingDue(ctx context.Context, userID string, days
 	}
 
 	return loans, nil
+}
+
+// MakePaymentTx atomically creates a payment record and updates the loan's remaining amount
+// within a single database transaction, using SELECT FOR UPDATE to prevent concurrent
+// payment race conditions that could cause negative balances.
+func (r *LoanRepository) MakePaymentTx(ctx context.Context, loanID, userID string, req model.CreatePaymentRequest) (*model.LoanPayment, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if rbErr := tx.Rollback(ctx); rbErr != nil && !errors.Is(rbErr, pgx.ErrTxClosed) {
+			log.Error().Err(rbErr).Msg("Failed to rollback MakePaymentTx")
+		}
+	}()
+
+	// Lock the loan row to prevent concurrent modifications
+	lockQuery := `
+		SELECT id, user_id, type, name, description, principal_amount, remaining_amount, currency, interest_rate, counterparty, due_date, status, created_at, updated_at
+		FROM loans
+		WHERE id = $1
+		FOR UPDATE`
+
+	var loan model.Loan
+	err = tx.QueryRow(ctx, lockQuery, loanID).Scan(
+		&loan.ID,
+		&loan.UserID,
+		&loan.Type,
+		&loan.Name,
+		&loan.Description,
+		&loan.PrincipalAmount,
+		&loan.RemainingAmount,
+		&loan.Currency,
+		&loan.InterestRate,
+		&loan.Counterparty,
+		&loan.DueDate,
+		&loan.Status,
+		&loan.CreatedAt,
+		&loan.UpdatedAt,
+	)
+	if err == pgx.ErrNoRows {
+		return nil, fmt.Errorf("loan not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to lock loan: %w", err)
+	}
+
+	// Validate ownership
+	if loan.UserID != userID {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	// Validate loan status
+	if loan.Status != model.LoanStatusActive {
+		return nil, fmt.Errorf("cannot make payment on inactive loan")
+	}
+
+	// Validate payment amount won't cause negative remaining balance
+	if req.PaymentType == model.PaymentTypePayment || req.PaymentType == model.PaymentTypeForgiveness {
+		if req.Amount > loan.RemainingAmount {
+			return nil, fmt.Errorf("payment amount %.2f exceeds remaining balance %.2f", req.Amount, loan.RemainingAmount)
+		}
+	}
+
+	// Create payment record within the transaction
+	paymentQuery := `
+		INSERT INTO loan_payments (loan_id, amount, currency, payment_type, notes)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, loan_id, amount, currency, payment_type, notes, created_at`
+
+	var payment model.LoanPayment
+	err = tx.QueryRow(ctx, paymentQuery, loanID, req.Amount, loan.Currency, req.PaymentType, req.Notes).Scan(
+		&payment.ID,
+		&payment.LoanID,
+		&payment.Amount,
+		&payment.Currency,
+		&payment.PaymentType,
+		&payment.Notes,
+		&payment.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create payment: %w", err)
+	}
+
+	// Update remaining amount within the same transaction
+	if req.PaymentType == model.PaymentTypePayment || req.PaymentType == model.PaymentTypeForgiveness {
+		updateQuery := `
+			UPDATE loans
+			SET remaining_amount = remaining_amount - $1,
+				updated_at = NOW(),
+				status = CASE WHEN remaining_amount - $1 <= 0 THEN 'paid_off' ELSE status END
+			WHERE id = $2`
+
+		_, err = tx.Exec(ctx, updateQuery, req.Amount, loanID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update remaining amount: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit payment transaction: %w", err)
+	}
+
+	return &payment, nil
 }

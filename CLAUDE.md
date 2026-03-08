@@ -330,8 +330,8 @@ make run-local   # Test production build locally on :8080
 ```
 
 **Koyeb** (use `koyeb` MCP server):
-- App: `terrible-moselle`, Service: `co-currency`
-- URL: https://terrible-moselle-airez-1828dc33.koyeb.app
+- App: `coai`, Service: `co-currency`
+- URL: https://coai.koyeb.app
 - Instance: free tier, region: Frankfurt, scaling: min=0 (scale to zero when idle), max=1
 
 **EAS Build profiles (app/eas.json):**

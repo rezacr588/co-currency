@@ -6,6 +6,7 @@ import (
 
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/service"
+	"github.com/rezacr588/currency-converter/pkg/httputil"
 )
 
 type NotificationHandler struct {
@@ -18,31 +19,34 @@ func NewNotificationHandler(service *service.NotificationService) *NotificationH
 
 // RegisterToken handles POST /notifications/register
 func (h *NotificationHandler) RegisterToken(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 
 	var req model.RegisterTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
 		return
 	}
 
 	// Validate required fields
 	if req.Token == "" {
-		http.Error(w, "token is required", http.StatusBadRequest)
+		httputil.BadRequestWithContext(r.Context(), w, "token is required", nil)
 		return
 	}
 	if req.Platform == "" {
-		http.Error(w, "platform is required", http.StatusBadRequest)
+		httputil.BadRequestWithContext(r.Context(), w, "platform is required", nil)
 		return
 	}
 	if req.Platform != "ios" && req.Platform != "android" {
-		http.Error(w, "platform must be 'ios' or 'android'", http.StatusBadRequest)
+		httputil.BadRequestWithContext(r.Context(), w, "platform must be 'ios' or 'android'", nil)
 		return
 	}
 
-	token, err := h.service.RegisterToken(r.Context(), userID, req.Token, req.Platform)
+	token, err := h.service.RegisterToken(r.Context(), userID.String(), req.Token, req.Platform)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to register token")
 		return
 	}
 
@@ -55,24 +59,27 @@ func (h *NotificationHandler) RegisterToken(w http.ResponseWriter, r *http.Reque
 
 // UnregisterToken handles POST /notifications/unregister
 func (h *NotificationHandler) UnregisterToken(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 
 	var req struct {
 		Token string `json:"token"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
 		return
 	}
 
 	// Validate token
 	if req.Token == "" {
-		http.Error(w, "token is required", http.StatusBadRequest)
+		httputil.BadRequestWithContext(r.Context(), w, "token is required", nil)
 		return
 	}
 
-	if err := h.service.UnregisterToken(r.Context(), userID, req.Token); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := h.service.UnregisterToken(r.Context(), userID.String(), req.Token); err != nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to unregister token")
 		return
 	}
 
@@ -84,11 +91,14 @@ func (h *NotificationHandler) UnregisterToken(w http.ResponseWriter, r *http.Req
 
 // GetPreferences handles GET /notifications/preferences
 func (h *NotificationHandler) GetPreferences(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 
-	prefs, err := h.service.GetPreferences(r.Context(), userID)
+	prefs, err := h.service.GetPreferences(r.Context(), userID.String())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get preferences")
 		return
 	}
 
@@ -100,17 +110,20 @@ func (h *NotificationHandler) GetPreferences(w http.ResponseWriter, r *http.Requ
 
 // UpdatePreferences handles PUT /notifications/preferences
 func (h *NotificationHandler) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
-
-	var req model.UpdatePreferencesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	userID, ok := requireUserID(w, r)
+	if !ok {
 		return
 	}
 
-	prefs, err := h.service.UpdatePreferences(r.Context(), userID, req)
+	var req model.UpdatePreferencesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
+		return
+	}
+
+	prefs, err := h.service.UpdatePreferences(r.Context(), userID.String(), req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to update preferences")
 		return
 	}
 
@@ -124,7 +137,7 @@ func (h *NotificationHandler) UpdatePreferences(w http.ResponseWriter, r *http.R
 func (h *NotificationHandler) CheckBudgets(w http.ResponseWriter, r *http.Request) {
 	alertsSent, err := h.service.CheckBudgetAlerts(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to check budget alerts")
 		return
 	}
 
@@ -138,7 +151,7 @@ func (h *NotificationHandler) CheckBudgets(w http.ResponseWriter, r *http.Reques
 func (h *NotificationHandler) CheckLoans(w http.ResponseWriter, r *http.Request) {
 	remindersSent, err := h.service.CheckLoanReminders(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to check loan reminders")
 		return
 	}
 

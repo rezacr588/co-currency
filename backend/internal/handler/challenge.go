@@ -8,6 +8,7 @@ import (
 
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/service"
+	"github.com/rezacr588/currency-converter/pkg/httputil"
 )
 
 type ChallengeHandler struct {
@@ -22,7 +23,7 @@ func NewChallengeHandler(service *service.ChallengeService) *ChallengeHandler {
 func (h *ChallengeHandler) GetAllChallenges(w http.ResponseWriter, r *http.Request) {
 	challenges, err := h.service.GetAllChallenges(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get challenges")
 		return
 	}
 
@@ -34,7 +35,7 @@ func (h *ChallengeHandler) GetAllChallenges(w http.ResponseWriter, r *http.Reque
 func (h *ChallengeHandler) GetFeaturedChallenges(w http.ResponseWriter, r *http.Request) {
 	challenges, err := h.service.GetFeaturedChallenges(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get featured challenges")
 		return
 	}
 
@@ -44,11 +45,14 @@ func (h *ChallengeHandler) GetFeaturedChallenges(w http.ResponseWriter, r *http.
 
 // GetChallengesWithStatus returns all challenges with user's participation status
 func (h *ChallengeHandler) GetChallengesWithStatus(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 
-	challenges, err := h.service.GetChallengesWithUserStatus(r.Context(), userID)
+	challenges, err := h.service.GetChallengesWithUserStatus(r.Context(), userID.String())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get challenges with status")
 		return
 	}
 
@@ -58,21 +62,24 @@ func (h *ChallengeHandler) GetChallengesWithStatus(w http.ResponseWriter, r *htt
 
 // JoinChallenge allows a user to join a challenge
 func (h *ChallengeHandler) JoinChallenge(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
-
-	var req model.JoinChallengeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	userID, ok := requireUserID(w, r)
+	if !ok {
 		return
 	}
 
-	userChallenge, err := h.service.JoinChallenge(r.Context(), userID, req.ChallengeID)
+	var req model.JoinChallengeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
+		return
+	}
+
+	userChallenge, err := h.service.JoinChallenge(r.Context(), userID.String(), req.ChallengeID)
 	if err != nil {
 		if err.Error() == "already participating in this challenge" {
-			http.Error(w, err.Error(), http.StatusConflict)
+			httputil.BadRequestWithContext(r.Context(), w, err.Error(), nil)
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to join challenge")
 		return
 	}
 
@@ -83,11 +90,14 @@ func (h *ChallengeHandler) JoinChallenge(w http.ResponseWriter, r *http.Request)
 
 // GetActiveChallenges returns user's active challenges
 func (h *ChallengeHandler) GetActiveChallenges(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 
-	challenges, err := h.service.GetUserActiveChallenges(r.Context(), userID)
+	challenges, err := h.service.GetUserActiveChallenges(r.Context(), userID.String())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get active challenges")
 		return
 	}
 
@@ -97,11 +107,14 @@ func (h *ChallengeHandler) GetActiveChallenges(w http.ResponseWriter, r *http.Re
 
 // GetChallengeHistory returns user's challenge history
 func (h *ChallengeHandler) GetChallengeHistory(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 
-	challenges, err := h.service.GetUserChallengeHistory(r.Context(), userID)
+	challenges, err := h.service.GetUserChallengeHistory(r.Context(), userID.String())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get challenge history")
 		return
 	}
 
@@ -111,12 +124,15 @@ func (h *ChallengeHandler) GetChallengeHistory(w http.ResponseWriter, r *http.Re
 
 // AbandonChallenge allows a user to abandon an active challenge
 func (h *ChallengeHandler) AbandonChallenge(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 	challengeID := chi.URLParam(r, "id")
 
-	err := h.service.AbandonChallenge(r.Context(), userID, challengeID)
+	err := h.service.AbandonChallenge(r.Context(), userID.String(), challengeID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to abandon challenge")
 		return
 	}
 
@@ -125,11 +141,14 @@ func (h *ChallengeHandler) AbandonChallenge(w http.ResponseWriter, r *http.Reque
 
 // GetChallengeStats returns user's challenge statistics
 func (h *ChallengeHandler) GetChallengeStats(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 
-	stats, err := h.service.GetUserChallengeStats(r.Context(), userID)
+	stats, err := h.service.GetUserChallengeStats(r.Context(), userID.String())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get challenge stats")
 		return
 	}
 
@@ -139,11 +158,14 @@ func (h *ChallengeHandler) GetChallengeStats(w http.ResponseWriter, r *http.Requ
 
 // CheckProgress manually triggers progress check for user's challenges
 func (h *ChallengeHandler) CheckProgress(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 
-	err := h.service.CheckAndUpdateProgress(r.Context(), userID)
+	err := h.service.CheckAndUpdateProgress(r.Context(), userID.String())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to check progress")
 		return
 	}
 
