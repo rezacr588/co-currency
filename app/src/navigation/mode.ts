@@ -180,6 +180,12 @@ export async function resolvePostAuthRoute(): Promise<string> {
   return destination;
 }
 
+export async function prepareDashboardPostAuthRoute(): Promise<string> {
+  await setCurrentMode('finapp');
+  await rememberModeRoute('finapp', MODE_DEFAULT_ROUTE.finapp);
+  return MODE_ENTRY_ROUTE.finapp;
+}
+
 export async function switchAppMode(router: Router, targetMode: AppMode, currentPath?: string): Promise<void> {
   const destination = await getModeSwitchDestination(targetMode);
   await setCurrentMode(targetMode);

@@ -2,7 +2,7 @@
 
 WITH normalized_balances AS (
     SELECT
-        MIN(id) AS keep_id,
+        MIN(id::text)::uuid AS keep_id,
         user_id,
         UPPER(TRIM(currency)) AS normalized_currency,
         SUM(balance) AS total_balance,
@@ -22,7 +22,7 @@ WHERE wb.id = nb.keep_id
 
 WITH normalized_balances AS (
     SELECT
-        MIN(id) AS keep_id,
+        MIN(id::text)::uuid AS keep_id,
         user_id,
         UPPER(TRIM(currency)) AS normalized_currency
     FROM wallet_balances
@@ -36,7 +36,7 @@ WHERE wb.user_id = nb.user_id
 
 WITH normalized_balances AS (
     SELECT
-        MIN(id) AS keep_id,
+        MIN(id::text)::uuid AS keep_id,
         user_id,
         UPPER(TRIM(currency)) AS normalized_currency
     FROM wallet_balances

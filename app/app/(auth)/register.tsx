@@ -8,7 +8,7 @@ import { api } from '../../src/api';
 import { useAuth } from '../../src/context/AuthContext';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { LinkedInIcon, GoogleIcon } from '../../src/constants/icons';
-import { resolvePostAuthRoute } from '../../src/navigation/mode';
+import { prepareDashboardPostAuthRoute } from '../../src/navigation/mode';
 import { AuthScaffold, Button, FormError, Input } from '../../src/components/ui';
 
 function AuthDivider() {
@@ -86,7 +86,7 @@ export default function RegisterScreen() {
         if (token && refreshToken) {
           await handleOAuthCallback(token, refreshToken);
           if (isMountedRef.current) {
-            const target = await resolvePostAuthRoute();
+            const target = await prepareDashboardPostAuthRoute();
             router.replace(target as any);
           }
         }
@@ -139,7 +139,7 @@ export default function RegisterScreen() {
 
     try {
       await register({ name, email, password });
-      const target = await resolvePostAuthRoute();
+      const target = await prepareDashboardPostAuthRoute();
       router.replace(target as any);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('registrationFailed'));

@@ -21,6 +21,7 @@ export const auth = {
     fetchAPI<AuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(data),
+      preserveUnauthorized: true,
     }),
   getProfile: () => fetchAPI<User>('/auth/profile'),
   forgotPassword: (data: ForgotPasswordRequest) =>

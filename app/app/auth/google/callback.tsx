@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../../src/context/AuthContext';
 import { isValidJWT } from '../../../src/utils/validation';
 import { useTheme } from 'styled-components/native';
-import { resolvePostAuthRoute } from '../../../src/navigation/mode';
+import { prepareDashboardPostAuthRoute } from '../../../src/navigation/mode';
 
 export default function GoogleCallbackScreen() {
   const router = useRouter();
@@ -41,7 +41,7 @@ export default function GoogleCallbackScreen() {
       ) {
         try {
           await handleOAuthCallback(token, refresh_token);
-          const target = await resolvePostAuthRoute();
+          const target = await prepareDashboardPostAuthRoute();
           router.replace(target as any);
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Authentication failed';

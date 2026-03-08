@@ -13,7 +13,7 @@ import {
 } from '../api';
 import type { User, LoginRequest, RegisterRequest } from '../types/wallet';
 import { isValidJWT } from '../utils/validation';
-import { resolvePostAuthRoute, usePersistModeRoute } from '../navigation/mode';
+import { prepareDashboardPostAuthRoute, usePersistModeRoute } from '../navigation/mode';
 
 interface AuthContextType {
   user: User | null;
@@ -62,7 +62,7 @@ function useProtectedRoute(user: User | null, isLoading: boolean) {
     } else if (user && inAuthGroup) {
       // Redirect to dashboard if already logged in
       void (async () => {
-        const target = await resolvePostAuthRoute();
+        const target = await prepareDashboardPostAuthRoute();
         if (!active) return;
         router.replace(target as any);
       })();

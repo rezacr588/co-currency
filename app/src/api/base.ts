@@ -128,6 +128,7 @@ export async function clearAuthToken(): Promise<void> {
 
 interface FetchAPIOptions extends RequestInit {
   isFormData?: boolean;
+  preserveUnauthorized?: boolean;
 }
 
 interface RetryOptions {
@@ -202,6 +203,7 @@ async function fetchWithRetry<T>(
 ): Promise<T> {
   const { maxRetries = 1, baseDelay = 1000, maxDelay = 10000 } = retryOptions;
   const isFormData = options?.isFormData ?? false;
+  const preserveUnauthorized = options?.preserveUnauthorized ?? false;
 
   // Ensure tokens are loaded before first request
   await loadTokens();
@@ -238,6 +240,10 @@ async function fetchWithRetry<T>(
 
         // Handle 401 Unauthorized - try to refresh token
         if (response.status === 401) {
+          if (preserveUnauthorized) {
+            throw new Error(errorMessage);
+          }
+
           // If we haven't tried refreshing yet and have a refresh token
           if (attempt === 0 && getRefreshToken()) {
             const refreshed = await refreshAuthToken();
