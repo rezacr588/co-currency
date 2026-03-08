@@ -6,12 +6,6 @@ KOYEB_APP="${KOYEB_APP:-terrible-moselle}"
 KOYEB_SERVICE="${KOYEB_SERVICE:-co-currency}"
 GH_REPO="${GH_REPO:-rezacr588/co-currency}"
 
-NEON_PROJECT_ID="${NEON_PROJECT_ID:-}"
-NEON_BRANCH="${NEON_BRANCH:-main}"
-NEON_DATABASE="${NEON_DATABASE:-neondb}"
-NEON_ROLE="${NEON_ROLE:-neondb_owner}"
-NEON_API_KEY="${NEON_API_KEY:-}"
-
 cmd="${1:-help}"
 shift || true
 
@@ -20,25 +14,22 @@ usage() {
 Usage: scripts/ops/platform-cli.sh <command>
 
 Commands:
-  doctor          Check gh/koyeb/neonctl installation and auth readiness
+  doctor          Check gh/koyeb installation and auth readiness
   gh-summary      Show repo details + open pull requests
   gh-runs         Show recent GitHub Actions runs
   koyeb-status    Show Koyeb service status/details
   koyeb-logs      Tail Koyeb runtime logs
   koyeb-redeploy  Trigger Koyeb service redeploy and wait
-  neon-projects   List Neon projects (requires NEON_API_KEY)
-  neon-branches   List Neon branches (requires NEON_API_KEY + NEON_PROJECT_ID)
-  neon-cs         Print Neon connection string (requires NEON_API_KEY + NEON_PROJECT_ID)
+  db-backup       Create a database backup
+  db-restore      Restore from a backup file
+  db-list         List available backups
 
 Environment:
   GH_REPO         GitHub repo (default: rezacr588/co-currency)
   KOYEB_APP       Koyeb app name (default: terrible-moselle)
   KOYEB_SERVICE   Koyeb service name (default: co-currency)
-  NEON_API_KEY    Neon API key for non-interactive CLI usage
-  NEON_PROJECT_ID Neon project id for branch/cs commands
-  NEON_BRANCH     Neon branch name/id (default: main)
-  NEON_DATABASE   Neon database name (default: neondb)
-  NEON_ROLE       Neon role name (default: neondb_owner)
+  DATABASE_URL    PostgreSQL connection string (auto-reads from backend/.env)
+  BACKUP_DIR      Backup directory (default: backups/)
 EOF
 }
 
@@ -46,21 +37,6 @@ require_cmd() {
   local name="$1"
   if ! command -v "$name" >/dev/null 2>&1; then
     echo "error: required command not found: $name" >&2
-    exit 1
-  fi
-}
-
-require_neon_api_key() {
-  if [[ -z "$NEON_API_KEY" ]]; then
-    echo "error: NEON_API_KEY is required for non-interactive Neon commands." >&2
-    echo "hint: export NEON_API_KEY=... or run neonctl auth manually." >&2
-    exit 1
-  fi
-}
-
-require_neon_project_id() {
-  if [[ -z "$NEON_PROJECT_ID" ]]; then
-    echo "error: NEON_PROJECT_ID is required for this Neon command." >&2
     exit 1
   fi
 }
@@ -82,10 +58,15 @@ case "$cmd" in
     else
       printf "  %-8s %s\n" "koyeb" "missing"
     fi
-    if command -v neonctl >/dev/null 2>&1; then
-      printf "  %-8s %s\n" "neonctl" "$(neonctl --version | head -n 1)"
+    if command -v psql >/dev/null 2>&1; then
+      printf "  %-8s %s\n" "psql" "$(psql --version | head -n 1)"
     else
-      printf "  %-8s %s\n" "neonctl" "missing"
+      printf "  %-8s %s\n" "psql" "missing"
+    fi
+    if command -v pg_dump >/dev/null 2>&1; then
+      printf "  %-8s %s\n" "pg_dump" "$(pg_dump --version | head -n 1)"
+    else
+      printf "  %-8s %s\n" "pg_dump" "missing"
     fi
 
     echo
@@ -103,18 +84,6 @@ case "$cmd" in
         echo "  koyeb    authenticated"
       else
         echo "  koyeb    not authenticated or token scope issue"
-      fi
-    fi
-
-    if command -v neonctl >/dev/null 2>&1; then
-      if [[ -n "$NEON_API_KEY" ]]; then
-        if neonctl projects list --api-key "$NEON_API_KEY" -o table >/dev/null 2>&1; then
-          echo "  neonctl  authenticated (via NEON_API_KEY)"
-        else
-          echo "  neonctl  invalid NEON_API_KEY"
-        fi
-      else
-        echo "  neonctl  set NEON_API_KEY for non-interactive usage"
       fi
     fi
     ;;
@@ -146,28 +115,16 @@ case "$cmd" in
     koyeb services redeploy "$KOYEB_SERVICE" -a "$KOYEB_APP" --wait
     ;;
 
-  neon-projects)
-    require_cmd neonctl
-    require_neon_api_key
-    neonctl projects list --api-key "$NEON_API_KEY" -o table
+  db-backup)
+    "$(dirname "$0")/db-backup.sh" backup
     ;;
 
-  neon-branches)
-    require_cmd neonctl
-    require_neon_api_key
-    require_neon_project_id
-    neonctl branches list --api-key "$NEON_API_KEY" --project-id "$NEON_PROJECT_ID" -o table
+  db-restore)
+    "$(dirname "$0")/db-backup.sh" restore "$@"
     ;;
 
-  neon-cs)
-    require_cmd neonctl
-    require_neon_api_key
-    require_neon_project_id
-    neonctl connection-string "$NEON_BRANCH" \
-      --api-key "$NEON_API_KEY" \
-      --project-id "$NEON_PROJECT_ID" \
-      --database-name "$NEON_DATABASE" \
-      --role-name "$NEON_ROLE"
+  db-list)
+    "$(dirname "$0")/db-backup.sh" list
     ;;
 
   *)

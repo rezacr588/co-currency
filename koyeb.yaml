@@ -1,10 +1,10 @@
 # Koyeb deployment configuration
 # This file can be used with: koyeb app init --config koyeb.yaml
 
-name: cofinance
+name: co-currency
 
 service:
-  name: cofinance
+  name: co-currency
   type: web
 
   git:

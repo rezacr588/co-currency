@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CoFinance (`github.com/rezacr588/cofinance`) is a full-stack personal finance app: Go backend plus a single Expo/React Native client app that targets web, iOS, and Android. Features include multi-currency wallet, budgets, goals, recurring transactions, reports, AI chat advisor with vector memory, subscriptions, badges/XP gamification, and multi-language support (EN, FA, AR, TR with RTL).
+CoFinance (`github.com/rezacr588/cofinance`) is a full-stack personal finance app: Go backend plus a single Expo/React Native client app that targets web, iOS, and Android. Features include multi-currency wallet, budgets, goals, recurring transactions, reports, AI chat advisor with vector memory, subscriptions, badges/XP gamification, task/planner management with offline sync, and multi-language support (EN, FA, AR, TR with RTL).
 
 ## Development Commands
 
@@ -52,6 +52,9 @@ make build                        # Build Docker image
 make build-backend / build-web
 make run-local                    # Test production build locally
 make deploy / logs / status       # Koyeb deployment
+make ops-doctor                   # Tool & auth readiness check
+make gh-summary / gh-runs         # GitHub repo info & Actions runs
+make db-backup / db-restore / db-list  # Database backup management
 make clean                        # Remove build artifacts
 ```
 
@@ -61,21 +64,23 @@ make clean                        # Remove build artifacts
 
 **Structure:** Handler → Service → Repository layered architecture with Chi router.
 
-- `cmd/api/main.go`: Entry point (~598 lines), initializes DB and services
-- `internal/router/router.go`: All route definitions
-- `internal/handler/`: HTTP handlers (27 source files + 9 test files)
-- `internal/service/`: Business logic (20 source files + 12 test files)
-- `internal/repository/`: Data access with pgxpool (27 source files + 8 test files)
-- `internal/middleware/`: Middleware stack (7 source files + 6 test files: auth, logging, trace, rate limiting, CORS, recovery, security)
-- `internal/model/`: Domain models (18 source files + 3 test files)
+- `cmd/api/main.go` + `bootstrap.go`: Entry point and service initialization
+- `internal/router/`: Route definitions split across `router.go`, `routes_auth.go`, `routes_wallet.go`, `routes_public.go`, `routes_features.go`
+- `internal/handler/`: HTTP handlers (30 source files + 9 test files)
+- `internal/service/`: Business logic (39 source files + 12 test files)
+- `internal/repository/`: Data access with pgxpool (31 source files + 11 test files)
+- `internal/middleware/`: Middleware stack (8 source files + 7 test files: auth, logging, trace, rate limiting, CORS, recovery, security, metrics)
+- `internal/model/`: Domain models (24 source files + 3 test files)
 - `internal/migrations/`: Embedded SQL migrations (`//go:embed sql/main/`, `sql/irr/`)
 - `internal/config/`: Struct-based config with `caarlos0/env/v9` tags (1 source + 1 test)
 - `pkg/httputil/`: HTTP error/response utilities (2 source + 2 test files)
 - `pkg/ctxkeys/`: Type-safe context key constants
 
-**Middleware order:** Trace → Recovery → Logging → CORS → Security → (per-route) Rate Limiting → Auth
+**Middleware order:** Trace → Recovery → Logging → CORS → Security → Metrics → (per-route) Rate Limiting → Auth
 
 **Security middleware (`security.go`):** Adds X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy headers. HSTS (Strict-Transport-Security) is only set in non-development environments.
+
+**Metrics middleware (`metrics.go`):** Prometheus metrics collection for HTTP requests (enabled via `METRICS_ENABLED`).
 
 **Context helpers:**
 - `middleware.GetUserIDFromContext(ctx) (uuid.UUID, bool)`
@@ -87,7 +92,7 @@ make clean                        # Remove build artifacts
 - `patrickmn/go-cache` (in-memory cache), `rs/zerolog` (logging), `swaggo/swag` (Swagger)
 - `tmc/langchaingo` (LLM framework), `qdrant/go-client` (vector DB), `caarlos0/env/v9` (config)
 - `golang.org/x/sync/singleflight` (cache stampede prevention), `golang.org/x/time/rate` (rate limiting)
-- `google/uuid` (UUID generation)
+- `google/uuid` (UUID generation), `prometheus/client_golang` (metrics)
 
 **Key patterns:**
 - PostgreSQL with pgx/pgxpool (MaxConns: 10, MinConns: 2, MaxConnLifetime: 30min, HealthCheck: 30s)
@@ -110,7 +115,7 @@ make clean                        # Remove build artifacts
 - Custom migration runner with `//go:embed` SQL files (not external tool)
 - Two migration tables: `schema_migrations` (main), `schema_migrations_irr` (rates)
 - Auto-runs on startup with per-migration transactions
-- 11 migrations: init, oauth_states, oauth_providers, notes, notes_transaction, loans, push_notifications, challenges, xp_levels, daily_rewards, categories_constraints
+- 17 migrations: init, oauth_states, oauth_providers, notes, notes_transaction, loans, push_notifications, challenges, xp_levels, daily_rewards, categories_constraints, tasks_and_goal_flexibility, tasks_transaction_link, planner_ai_usage, performance_indexes, chat_tools_usage, normalize_wallet_currencies
 - Schema uses Decimal(20,8) for monetary amounts, `TIMESTAMP WITH TIME ZONE`, `gen_random_uuid()`, JSONB
 
 **Rate limiting:**
@@ -131,6 +136,9 @@ make clean                        # Remove build artifacts
 - Builds rich system prompt with: user info, financial context (balances, income/expenses, budgets, goals, loans, spending trends), conversation history (last 20 messages), semantic memory search results
 - `AIToolExecutor`: executes tool calls (wallet balance, category stats, subscription summary, loan info, budget status)
 - Handles temp conversation IDs (prefixed `temp-`), validates UUID, verifies user ownership
+- Thinking model support: three modes (auto, fast, thinking) configured via `AI_THINKING_MODE_DEFAULT`
+- Fast model option (`AI_FAST_MODEL`) for quick responses, thinking model (`AI_THINKING_MODEL`) for higher-quality reasoning
+- Tavily API integration (`TAVILY_API_KEY`) for web search in AI chat
 - Memory service orchestrates PostgreSQL (source of truth) + Qdrant (semantic search)
 - Short-term memory: async fire-and-forget with 30s timeout, 24h TTL
 - Long-term memory: stores in both DB and Qdrant with embedding
@@ -155,14 +163,22 @@ make clean                        # Remove build artifacts
 - Cached for 6 hours per user
 - Returns: title, detail, category (spending/saving/budgeting/investing/general), isAI flag
 
+**Task Management system:**
+- `TaskHandler` / `TaskService` / task_db: Full CRUD with subtasks, priorities, statuses, tags, reminders
+- Auto-ledger: automatically creates transactions from completed tasks
+- Transaction linking: tasks can be linked to wallet transactions
+- `TodoHandler` / `TodoService`: Aggregated task view across all categories
+- `PlannerHandler` / `PlannerService`: Kanban board with column movement, goal completion, multi-item types
+
 **Key models:**
 - User: ID, Email, PasswordHash, Name, FailedLoginAttempts, LockedUntil, OnboardingCompleted, LinkedInID, GoogleID, AvatarURL — `ToProfile()` strips sensitive fields
 - Transaction: types `credit`/`debit`/`convert`, sources `manual`/`ai_receipt`/`ai_invoice`, AIExtractedData (JSON)
+- Task: statuses, priorities, subtasks, reminders, auto-ledger, transaction linking, tags
 - FinancialContext: comprehensive snapshot (balances, monthly income/expenses, budgets, goals, recurring, trends, loans, categories, days until month end)
 
 ### App Client (`/app`)
 
-**Tech stack:** Expo ~54.0, React Native 0.81.5, React 19.1, Expo Router ~6.0, styled-components 6 (styled-components/native), TanStack Query 5, TypeScript ~5.9
+**Tech stack:** Expo ~54.0.32, React Native 0.81.5, React 19.1, Expo Router ~6.0.22, styled-components 6.3.10 (styled-components/native), TanStack Query 5.90.20, TypeScript ~5.9.2
 
 - **Path alias:** `@/*` → `./*` (app root)
 - **Expo Router**: File-based routing with typed routes (`experiments.typedRoutes: true`)
@@ -184,8 +200,10 @@ app/
     │   ├── goals.tsx     # Goals
     │   ├── reports.tsx   # Reports/analytics
     │   └── wallet/       # Nested stack (index, history, chat, convert)
-    ├── budgets, recurring, subscriptions, badges, notes, loans, challenges
+    ├── budgets, recurring, subscriptions, badges, notes, note/[id], loans, challenges
     ├── historical, profile, change-password, notification-settings
+    ├── planner.tsx       # Task/planner management
+    ├── todo.tsx, finapp.tsx  # Linked app routes
     └── onboarding.tsx    # fullScreenModal
 ```
 
@@ -205,33 +223,36 @@ app/
 - URL logic: relative `/api/v1` on koyeb.app web, full backend URL on native
 - Token storage: in-memory cache + Expo SecureStore (native) or AsyncStorage (web)
 - Retry: 1 retry, 1s base delay, 10s max, 30s request timeout, 15s for refresh
-- 21 API modules: auth, wallet, ai, chat, goals, budgets, recurring, subscriptions, reports, badges, notes, loans, xp, challenges, notifications, tags, exchange, news, utils
+- 23 API modules: auth, wallet, ai, chat, goals, budgets, recurring, subscriptions, reports, badges, notes, loans, xp, challenges, notifications, tags, tasks, planner, exchange, news, crud, utils
 
 **Key native features:**
 - Biometric auth: `expo-local-authentication` (Face ID, Touch ID, Fingerprint)
 - Push notifications: via `usePushNotifications` hook (uses notification API endpoints)
 - Haptic feedback: `expo-haptics` (light/medium/heavy impact, success/warning/error notification)
 - Offline queue: AsyncStorage-based, max 100 items, 3 retries, auto-sync on reconnect
+- Planner offline sync: dedicated cache (`plannerCache.ts`), outbox (`plannerOutbox.ts`), and sync engine (`plannerSyncEngine.ts`) in `src/offline/`
 - OTA updates: `expo-updates` with `useAppUpdates()` hook (production only)
 - App store reviews: `expo-store-review`
 
 **Custom hooks:**
-- Data: `useConvert`, `useRates`, `useCurrencies`, `useHistorical`
+- Data: `useConvert`, `useRates`, `useCurrencies`, `useHistorical`, `useRefreshableQuery`
 - App: `useAppUpdates`, `useAndroidNavigationBar`, `usePushNotifications`, `useOfflineSync`, `useDebounce`
+- Layout: `useScreenLayout` (responsive mobile/tablet/desktop), `useReportTimeZone`
 - State: `useAuth`, `useTheme`, `useColors`, `useLanguage`, `useSettings`
 
 **Theme system (`src/theme/index.ts`):**
-- Built with `buildTheme(colors, isDark)` returning `AppTheme` interface
+- Built with `buildTheme(colors, isDark, isRTL)` returning `AppTheme` interface
 - Design tokens: `spacing`, `radii`, `shadows`, `typography`, `gradients`, `animation`, `glass`
 - Dark mode (default): bg `#09090b`, card `#141416`, text `#fafafa`, accent gold `#d4af37`, success `#22c55e`, danger `#ef4444`
 - Light mode: inverted values, system detection via `useColorScheme()`
-- Font: Inter (400/500/600/700 via `@expo-google-fonts/inter`)
+- Font: Inter (400/500/600/700 via `@expo-google-fonts/inter`) + Vazirmatn for RTL languages
 - Type declarations in `src/theme/styled.d.ts`
 
 **Component library (`src/components/`):**
 - UI (22+ files): Badge, Button (6 variants), BiometricLock, BottomSheet (@gorhom), Card, CollapsibleSection, CurrencyBadge, CurrencyPicker, EmptyState, ErrorBoundary, FormError, Input, LoadingSpinner, OfflineBanner, ProgressBar, Select, Skeleton, SwipeableRow, AnimatedSplash, Toast (includes ToastProvider), Toggle, index
 - UI styled primitives (`src/components/ui/styled/`): StyledText (H1-H3, Body, Caption, Label), StyledCard (Card, CardHeader, CardTitle, CardContent, CardFooter), StyledButton, StyledInput, StyledToggle, StyledBadge, StyledProgressBar, StyledSkeleton (SkeletonCard, SkeletonTransaction)
-- Features: CurrencyConverter, DailyReward (DailyRewardModal), DailyTip (DailyTipCard), HealthScore (HealthScoreCard), Reports (Monthly/Yearly/Weekly/Daily views, CashFlowProjectionCard, SpendingAnomalyCard, ReportPeriodTabs, daily/ subdirectory), WeeklyRecap (WeeklyRecapCard), CalendarHeatMap, Notes (NoteCard, NoteFormModal), SmartAdvice (SmartAdviceCard), News (FinancialNewsCard), Chat (VoiceRecorder, AttachmentPicker)
+- Features: CurrencyConverter, DailyReward (DailyRewardModal), DailyTip (DailyTipCard), HealthScore (HealthScoreCard), Reports (Monthly/Yearly/Weekly/Daily/AllTime views, CashFlowProjectionCard, SpendingAnomalyCard, ReportPeriodTabs, ReportHeadlineCard, daily/ subdirectory), WeeklyRecap (WeeklyRecapCard), CalendarHeatMap, Notes (NoteCard, NoteFormModal, QuickNotesCard), SmartAdvice (SmartAdviceCard), News (FinancialNewsCard), Chat (VoiceRecorder, AttachmentPicker), Planner (PlannerCard, TaskWizardModal, TaskEditModal, DatePickerModal)
+- Navigation: AppSwitcherTrigger, AppSwitcherMenu
 - Charts: `react-native-gifted-charts`, Markdown: `react-native-markdown-display`
 - Animations: `react-native-reanimated` (useSharedValue, withTiming, withSpring, withSequence)
 
@@ -241,18 +262,18 @@ app/
 - Confirmations: `Alert.alert(title, message, [{text: 'Cancel'}, {text: 'Confirm', onPress, style: 'destructive'}])`
 - Safe areas: Always use `useSafeAreaInsets()` from `react-native-safe-area-context`
 - Sub-components must call `useLanguage()` themselves — hooks can't be passed from parent
-- Translations file (`src/i18n/translations.ts`) has 4 parallel sections (en, fa, ar, tr) — new keys must be added to ALL four
+- Translations split into separate files (`src/i18n/en.ts`, `fa.ts`, `ar.ts`, `tr.ts`) aggregated by `translations.ts` — new keys must be added to ALL four files
 
 **Test infrastructure:**
 - Framework: jest-expo with @testing-library/react-native and @testing-library/jest-native
 - Config: `jest.config.js` (jest-expo preset, `@/*` alias mapping, transformIgnorePatterns for 30+ packages)
 - Setup: `jest.setup.js` (mocks for 12+ Expo modules and React Native dependencies)
-- Existing tests: Button, ErrorBoundary, FormError components; color palette validation; haptics utilities
+- Existing tests: Button, Card, ErrorBoundary, FormError, layout components; color palette validation; haptics utilities; dateRange, screenLayout, plannerDate, taskLinking utils; Reports (CashFlowProjection, ReportPeriodTabs, ReportsScreen); API (auth unauthorized, chat stream); navigation mode; context (auth, theme)
 - Run: `cd app && npm test`
 
 ## API Routes
 
-All routes defined in `internal/router/router.go`. Groups:
+Routes defined in `internal/router/` across `router.go`, `routes_auth.go`, `routes_wallet.go`, `routes_public.go`, `routes_features.go`. Groups:
 
 - **Public:** `/health`, `/health/detailed`, `/swagger/*`, exchange rates (`/api/v1/currencies`, `/rates/{base}`, `/convert`, `/historical/{date}`), `/api/v1/news`
 - **Auth:** register, login, OAuth (Google, LinkedIn), password reset (login-rate-limited), refresh, logout, profile/onboarding (protected)
@@ -269,13 +290,23 @@ All routes defined in `internal/router/router.go`. Groups:
 - **Loans** (protected): CRUD, payments, summary, upcoming
 - **Notifications** (protected): register/unregister device, preferences, budget/loan alerts
 - **Challenges** (mixed): list/featured (public), browse/join/active/history/stats/check-progress/abandon (protected)
+- **Tasks** (protected): CRUD, statuses, priorities, tags, completion, transaction linking
+- **Todo** (protected): aggregated task view
+- **Planner** (protected): kanban board, move items, goal completion
 - **XP** (protected): stats, history, level, daily-reward, daily-reward/status, leaderboard
 
 ## CI/CD Pipeline
 
 **Web (`.github/workflows/ci.yml`):**
-- Push to main → Docker build → push to ghcr.io → deploy to Koyeb (tests not blocking)
+- Push to main → pre-deploy DB backup → Docker build → push to ghcr.io → deploy to Koyeb (tests not blocking)
 - PRs → Go tests (`go test ./...`) + app typecheck (`npm run typecheck`)
+- Koyeb deployment: 4-attempt retry with exponential backoff
+- Pre-deploy backups retained as artifacts for 7 days
+
+**Database Backup (`.github/workflows/db-backup.yml`):**
+- Scheduled daily at 03:00 UTC + manual trigger
+- Creates pg_dump backup, verifies it, uploads as artifact (30-day retention)
+- Local: `make db-backup` / `make db-list` / `scripts/ops/db-backup.sh restore <file>`
 
 **Mobile (`.github/workflows/mobile-build.yml`):**
 - Push to main (app/** paths) → lint + typecheck → OTA update to production branch
@@ -299,7 +330,7 @@ make run-local   # Test production build locally on :8080
 ```
 
 **Koyeb** (use `koyeb` MCP server):
-- App: `terrible-moselle`, Service: `cofinance`
+- App: `terrible-moselle`, Service: `co-currency`
 - URL: https://terrible-moselle-airez-1828dc33.koyeb.app
 - Instance: free tier, region: Frankfurt, scaling: min=0 (scale to zero when idle), max=1
 
@@ -312,7 +343,9 @@ make run-local   # Test production build locally on :8080
 
 See `backend/.env.example` for full list. Key variable groups:
 
-**Server:** `PORT` (8080), `ENVIRONMENT` (development/production), `CACHE_TTL` (5m), `RATE_LIMIT` (100), `EXPOSE_ERROR_DETAILS` (true in dev)
+**Server:** `PORT` (8080), `ENVIRONMENT` (development/production), `CACHE_TTL` (5m), `RATE_LIMIT` (100), `EXPOSE_ERROR_DETAILS` (true in dev), `METRICS_ENABLED` (Prometheus metrics)
+
+**HTTP Hardening:** `HTTP_READ_TIMEOUT` (15s), `HTTP_READ_HEADER_TIMEOUT` (10s), `HTTP_WRITE_TIMEOUT` (5m), `HTTP_IDLE_TIMEOUT` (120s), `HTTP_SHUTDOWN_TIMEOUT` (20s), `HTTP_MAX_HEADER_BYTES` (1MB)
 
 **Database:** `DATABASE_URL` (PostgreSQL, required for user features; without it, currency-only mode)
 
@@ -320,7 +353,7 @@ See `backend/.env.example` for full list. Key variable groups:
 
 **OAuth:** `GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI`, `LINKEDIN_CLIENT_ID/SECRET/REDIRECT_URI`
 
-**AI:** `AI_PROVIDER` (googleai/openai/cerebras/groq, default: googleai), `AI_API_KEY`, `AI_MODEL` (model name), `AI_VISION_MODEL` (vision model override), `AI_CLOUD_PROJECT` (Google Cloud project ID)
+**AI:** `AI_PROVIDER` (googleai/openai/cerebras/groq, default: googleai), `AI_API_KEY`, `AI_MODEL` (model name), `AI_FAST_MODEL` (fast response model), `AI_THINKING_MODEL` (higher-quality reasoning model), `AI_THINKING_MODE_DEFAULT` (auto|fast|thinking), `AI_VISION_MODEL` (vision model override), `AI_CLOUD_PROJECT` (Google Cloud project ID), `TAVILY_API_KEY` (web search in AI chat)
 
 **Vector memory:** `QDRANT_ENABLED`, `QDRANT_URL`, `QDRANT_API_KEY`
 
@@ -336,13 +369,13 @@ See `backend/.env.example` for full list. Key variable groups:
 
 ## Database
 
-Neon PostgreSQL — Project ID: `royal-cake-50541080`. Use `postgres` MCP server to query directly.
+Koyeb PostgreSQL v18 — hosted on Koyeb's managed Postgres (us-east-1).
 
 **Migration system:** Custom runner with `//go:embed` SQL files in `internal/migrations/sql/main/` and `sql/irr/`. Auto-runs on startup with per-migration transactions. Two tracking tables: `schema_migrations` (main), `schema_migrations_irr` (rates).
 
 **Schema conventions:** Decimal(20,8) for monetary amounts, `TIMESTAMP WITH TIME ZONE` for all temporal fields, `gen_random_uuid()` for UUIDs, `ON DELETE CASCADE` foreign keys, composite unique constraints (e.g., wallet_balances: user_id + currency).
 
-Tables (auto-created on startup): `users`, `wallet_balances`, `transactions`, `categories`, `refresh_tokens`, `goals`, `tags`, `transaction_tags`, `budgets`, `recurring_transactions`, `subscriptions`, `badges`, `user_badges`, `chat_conversations`, `chat_messages`, `user_memories`, `oauth_states`, `notes`, `loans`, `loan_payments`, `user_devices`, `notification_preferences`, `challenges`, `user_challenges`, `user_xp`.
+Tables (auto-created on startup): `users`, `wallet_balances`, `transactions`, `categories`, `refresh_tokens`, `goals`, `tags`, `transaction_tags`, `budgets`, `recurring_transactions`, `subscriptions`, `badges`, `user_badges`, `chat_conversations`, `chat_messages`, `user_memories`, `oauth_states`, `notes`, `loans`, `loan_payments`, `user_devices`, `notification_preferences`, `challenges`, `user_challenges`, `user_xp`, `tasks`, `task_subtasks`, `task_tags`.
 
 ## Project Documentation
 

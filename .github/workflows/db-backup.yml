@@ -1,0 +1,68 @@
+name: Database Backup
+
+on:
+  schedule:
+    # Run daily at 03:00 UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual backup'
+        required: false
+        default: 'Manual backup'
+
+jobs:
+  backup:
+    name: Backup PostgreSQL
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Create backup
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          BACKUP_FILE="backup_${TIMESTAMP}.sql.gz"
+
+          echo "Creating backup: ${BACKUP_FILE}"
+          pg_dump "${DATABASE_URL}" --no-owner --no-privileges --clean --if-exists | gzip > "${BACKUP_FILE}"
+
+          BACKUP_SIZE=$(du -h "${BACKUP_FILE}" | cut -f1)
+          echo "Backup size: ${BACKUP_SIZE}"
+          echo "BACKUP_FILE=${BACKUP_FILE}" >> $GITHUB_ENV
+          echo "BACKUP_SIZE=${BACKUP_SIZE}" >> $GITHUB_ENV
+
+      - name: Verify backup
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          # Quick verification: check the dump has key tables
+          gunzip -c "${BACKUP_FILE}" | grep -c "CREATE TABLE" | xargs -I{} echo "Tables in backup: {}"
+          gunzip -c "${BACKUP_FILE}" | grep -c "COPY" | xargs -I{} echo "COPY statements: {}"
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          echo "## Database Backup" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **File:** \`${BACKUP_FILE}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Size:** ${BACKUP_SIZE}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Retention:** 30 days" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "- **Reason:** ${{ github.event.inputs.reason }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Trigger:** Scheduled (daily 03:00 UTC)" >> $GITHUB_STEP_SUMMARY
+          fi

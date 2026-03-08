@@ -47,6 +47,28 @@ jobs:
         with:
           api_token: ${{ secrets.KOYEB_TOKEN }}
 
+      - name: Pre-deploy database backup
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -n "$DATABASE_URL" ]; then
+            sudo apt-get update -qq && sudo apt-get install -yqq postgresql-client > /dev/null
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            pg_dump "$DATABASE_URL" --no-owner --no-privileges --clean --if-exists | gzip > "pre-deploy-backup_${TIMESTAMP}.sql.gz"
+            echo "Pre-deploy backup created"
+          else
+            echo "DATABASE_URL not set, skipping backup"
+          fi
+
+      - name: Upload pre-deploy backup
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-deploy-backup-${{ github.sha }}
+          path: pre-deploy-backup_*.sql.gz
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Deploy to Koyeb
         timeout-minutes: 10
         run: |
@@ -81,7 +103,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.24'
           cache-dependency-path: backend/go.sum
 
       - uses: actions/setup-node@v4

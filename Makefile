@@ -1,6 +1,6 @@
 .PHONY: dev dev-backend dev-app dev-web build test lint deploy logs status run-local clean \
 	ops-doctor gh-summary gh-runs koyeb-list koyeb-redeploy koyeb-logs koyeb-status \
-	neon-projects neon-branches neon-cs
+	db-backup db-restore db-list
 
 KOYEB_APP ?= terrible-moselle
 KOYEB_SERVICE ?= co-currency
@@ -87,14 +87,15 @@ gh-summary:
 gh-runs:
 	GH_REPO=$(GH_REPO) scripts/ops/platform-cli.sh gh-runs
 
-neon-projects:
-	scripts/ops/platform-cli.sh neon-projects
+# Database backup/restore
+db-backup:
+	scripts/ops/db-backup.sh backup
 
-neon-branches:
-	scripts/ops/platform-cli.sh neon-branches
+db-restore:
+	@echo "Usage: scripts/ops/db-backup.sh restore <backup-file>"
 
-neon-cs:
-	scripts/ops/platform-cli.sh neon-cs
+db-list:
+	scripts/ops/db-backup.sh list
 
 # Local production test
 run-local:
