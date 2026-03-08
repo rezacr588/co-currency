@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "CoFinance",
-    "slug": "cofinance",
+    "name": "CoAI",
+    "slug": "coai",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "cofinance",
+    "scheme": "coai",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -64,15 +64,15 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Allow CoFinance to take photos of receipts and invoices",
-          "photosPermission": "Allow CoFinance to access your photos for receipt uploads"
+          "cameraPermission": "Allow CoAI to take photos of receipts and invoices",
+          "photosPermission": "Allow CoAI to access your photos for receipt uploads"
         }
       ],
       "expo-document-picker",
       [
         "expo-av",
         {
-          "microphonePermission": "Allow CoFinance to record voice messages for the AI advisor"
+          "microphonePermission": "Allow CoAI to record voice messages for the AI advisor"
         }
       ]
     ],

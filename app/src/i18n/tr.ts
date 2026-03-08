@@ -1,12 +1,12 @@
 export const tr = {
 
   // Header
-  appTitle: 'CoFinance',
+  appTitle: 'CoAI',
   appSubtitle: 'Frankfurter API ile anlık döviz kurları',
 
   // About Us
   aboutUs: 'Hakkımızda',
-  aboutUsDescription: 'CoFinance, dünya genelinde 160\'tan fazla para birimi için anlık döviz kurları sağlayan modern bir döviz çeviricidir.',
+  aboutUsDescription: 'CoAI, dünya genelinde 160\'tan fazla para birimi için anlık döviz kurları sağlayan modern bir döviz çeviricidir.',
   coFounder: 'Kurucu Ortak',
   viewLinkedIn: 'LinkedIn Profilini Görüntüle',
   ourMission: 'Misyonumuz',
@@ -301,7 +301,7 @@ export const tr = {
   remove: 'Kaldır',
 
   // Onboarding
-  welcomeTitle: 'CoFinance\'a Hoş Geldiniz',
+  welcomeTitle: 'CoAI\'a Hoş Geldiniz',
   welcomeDesc: 'Çoklu para birimi yönetimi için kişisel finans asistanınız',
   featureMultiCurrency: 'Çoklu Para Birimi Cüzdanı',
   featureAnalytics: 'Harcama Analitiği',
@@ -683,7 +683,7 @@ export const tr = {
 
   // Landing Page - Final CTA
   finalCtaTitle: 'Finanslarınızı Dönüştürmeye Hazır mısınız?',
-  finalCtaSubtitle: 'CoFinance ile paralarının kontrolünü ele alan binlerce kullanıcıya katılın.',
+  finalCtaSubtitle: 'CoAI ile paralarının kontrolünü ele alan binlerce kullanıcıya katılın.',
 
   // Subscriptions
   subscriptions: 'Subscriptions',
@@ -771,7 +771,7 @@ export const tr = {
   inProgressBadges: 'In Progress',
   lockedBadges: 'Locked',
   noBadgesYet: 'Henüz rozet yok',
-  startEarningBadges: 'Başarılar kazanmak için CoFinance kullanmaya başlayın!',
+  startEarningBadges: 'Başarılar kazanmak için CoAI kullanmaya başlayın!',
 
   // AI Chat
   newConversation: 'Yeni Sohbet',

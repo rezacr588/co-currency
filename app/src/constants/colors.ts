@@ -1,5 +1,5 @@
 /**
- * CoFinance Color System
+ * CoAI Color System
  *
  * Centralized color definitions for light and dark themes.
  * Use the `useColors()` hook from ThemeContext to get the correct colors.

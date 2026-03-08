@@ -36,7 +36,7 @@ func NewHTTPMetrics(registry *prometheus.Registry) *HTTPMetrics {
 	return &HTTPMetrics{
 		requestDuration: factory.NewHistogramVec(
 			prometheus.HistogramOpts{
-				Name:    "cofinance_http_request_duration_seconds",
+				Name:    "coai_http_request_duration_seconds",
 				Help:    "Duration of HTTP requests in seconds.",
 				Buckets: prometheus.DefBuckets,
 			},
@@ -44,14 +44,14 @@ func NewHTTPMetrics(registry *prometheus.Registry) *HTTPMetrics {
 		),
 		requestTotal: factory.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "cofinance_http_requests_total",
+				Name: "coai_http_requests_total",
 				Help: "Total number of HTTP requests.",
 			},
 			[]string{"method", "route", "status"},
 		),
 		inFlight: factory.NewGauge(
 			prometheus.GaugeOpts{
-				Name: "cofinance_http_in_flight_requests",
+				Name: "coai_http_in_flight_requests",
 				Help: "Current number of in-flight HTTP requests.",
 			},
 		),

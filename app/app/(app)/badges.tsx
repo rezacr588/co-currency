@@ -345,7 +345,7 @@ export default function BadgesScreen() {
                   {t('noBadgesYet') || 'No badges yet'}
                 </Text>
                 <Text style={{ color: colors.mutedForeground, textAlign: 'center' }}>
-                  {t('startEarningBadges') || 'Start using CoFinance to earn achievements!'}
+                  {t('startEarningBadges') || 'Start using CoAI to earn achievements!'}
                 </Text>
               </View>
             )}

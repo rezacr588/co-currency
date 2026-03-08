@@ -683,7 +683,7 @@ export default function ProfileScreen() {
 
         {/* App Info */}
         <View style={{ alignItems: 'center', marginTop: 24 }}>
-          <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>CoFinance v1.0.0</Text>
+          <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>CoAI v1.0.0</Text>
         </View>
       </PageScaffold>
 

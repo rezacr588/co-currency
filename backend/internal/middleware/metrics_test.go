@@ -69,7 +69,7 @@ func TestHTTPMetrics_HandlerExposesPrometheusOutput(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
-	if !strings.Contains(rr.Body.String(), "cofinance_http_requests_total") {
-		t.Fatalf("metrics payload missing cofinance_http_requests_total")
+	if !strings.Contains(rr.Body.String(), "coai_http_requests_total") {
+		t.Fatalf("metrics payload missing coai_http_requests_total")
 	}
 }

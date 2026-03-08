@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Bump version script for CoFinance app
+ * Bump version script for CoAI app
  *
  * Usage:
  *   node scripts/bump-version.js patch  # 1.0.0 -> 1.0.1

@@ -60,7 +60,7 @@ export function BiometricLock() {
 
         {/* Title */}
         <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', marginBottom: 8, color: colors.foreground }}>
-          CoFinance
+          CoAI
         </Text>
         <Text style={{ textAlign: 'center', marginBottom: 32, color: colors.mutedForeground }}>
           {t('appLocked') || 'App is locked for your security'}

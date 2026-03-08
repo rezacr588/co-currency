@@ -139,7 +139,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     try {
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Authenticate to access CoFinance',
+        promptMessage: 'Authenticate to access CoAI',
         fallbackLabel: 'Use Passcode',
         cancelLabel: 'Cancel',
         disableDeviceFallback: false,

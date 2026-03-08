@@ -581,9 +581,9 @@ export default function DashboardScreen() {
           </CollapsibleSection>
         </SectionSpacing>
 
-        {/* CoFinance Widget */}
+        {/* CoAI Widget */}
         <SectionSpacing>
-          <CollapsibleSection title={t('currencyConverter') || 'CoFinance'} storageKey="dashboard_converter">
+          <CollapsibleSection title={t('currencyConverter') || 'CoAI'} storageKey="dashboard_converter">
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: theme.spacing.md }}>
               <Link href="/(app)/(tabs)/wallet/convert" asChild>
                 <Pressable hitSlop={8} style={{ minHeight: 44, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }}>

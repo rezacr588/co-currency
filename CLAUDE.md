@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CoFinance (`github.com/rezacr588/cofinance`) is a full-stack personal finance app: Go backend plus a single Expo/React Native client app that targets web, iOS, and Android. Features include multi-currency wallet, budgets, goals, recurring transactions, reports, AI chat advisor with vector memory, subscriptions, badges/XP gamification, task/planner management with offline sync, and multi-language support (EN, FA, AR, TR with RTL).
+CoAI (`github.com/rezacr588/co-currency`) is a full-stack personal finance app: Go backend plus a single Expo/React Native client app that targets web, iOS, and Android. Features include multi-currency wallet, budgets, goals, recurring transactions, reports, AI chat advisor with vector memory, subscriptions, badges/XP gamification, task/planner management with offline sync, and multi-language support (EN, FA, AR, TR with RTL).
 
 ## Development Commands
 

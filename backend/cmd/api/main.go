@@ -26,9 +26,9 @@ import (
 	_ "github.com/rezacr588/currency-converter/docs"
 )
 
-// @title           CoFinance API
+// @title           CoAI API
 // @version         1.0
-// @description     CoFinance is a personal finance management API with currency conversion, wallet management, budgets, goals, subscriptions, and achievement badges.
+// @description     CoAI is a personal finance management API with currency conversion, wallet management, budgets, goals, subscriptions, and achievement badges.
 // @description
 // @description     ## Features
 // @description     - **Currency Conversion**: Real-time exchange rates with support for 30+ currencies including IRR
@@ -47,7 +47,7 @@ import (
 
 // @contact.name   API Support
 // @contact.url    https://github.com/rezacr588/currency-converter
-// @contact.email  support@cofinance.app
+// @contact.email  support@coai.app
 
 // @license.name  MIT
 // @license.url   https://opensource.org/licenses/MIT

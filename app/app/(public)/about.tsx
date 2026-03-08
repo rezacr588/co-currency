@@ -231,7 +231,7 @@ export default function AboutScreen() {
 
       <SurfaceCard style={{ marginBottom: theme.spacing.xxxl }}>
         <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.h2.fontFamily, fontSize: 18, lineHeight: 24 }}>
-          CoFinance
+          CoAI
         </Text>
         <Text style={{ marginTop: theme.spacing.sm, color: theme.colors.mutedForeground, fontSize: 15, lineHeight: 22 }}>
           {versionInfo.displayVersion}

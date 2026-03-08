@@ -13,7 +13,7 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'cofinance-language';
+const STORAGE_KEY = 'coai-language';
 
 // RTL languages
 const RTL_LANGUAGES: Language[] = ['fa', 'ar'];

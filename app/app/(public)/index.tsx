@@ -167,7 +167,7 @@ export default function HomeScreen() {
               letterSpacing: -1,
             }}
           >
-            CoFinance
+            CoAI
           </Text>
           <Text
             style={{

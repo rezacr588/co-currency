@@ -21,7 +21,7 @@ dev-web:
 
 # Build
 build:
-	docker build -t cofinance .
+	docker build -t coai .
 
 build-backend:
 	cd backend && go build -o bin/api ./cmd/api
@@ -99,8 +99,8 @@ db-list:
 
 # Local production test
 run-local:
-	docker build -t cofinance . && \
-	docker run -p 8080:8080 -e PORT=8080 -e ENVIRONMENT=production cofinance
+	docker build -t coai . && \
+	docker run -p 8080:8080 -e PORT=8080 -e ENVIRONMENT=production coai
 
 # Clean
 clean:

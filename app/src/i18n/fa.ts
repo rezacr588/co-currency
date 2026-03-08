@@ -1,12 +1,12 @@
 export const fa = {
 
   // Header
-  appTitle: 'کوفایننس',
+  appTitle: 'کوآی',
   appSubtitle: 'نرخ ارز لحظه‌ای با استفاده از Frankfurter API',
 
   // About Us
   aboutUs: 'درباره ما',
-  aboutUsDescription: 'کوفایننس یک مبدل ارز مدرن است که نرخ ارز لحظه‌ای را برای بیش از ۱۶۰ ارز در سراسر جهان ارائه می‌دهد.',
+  aboutUsDescription: 'کوآی یک مبدل ارز مدرن است که نرخ ارز لحظه‌ای را برای بیش از ۱۶۰ ارز در سراسر جهان ارائه می‌دهد.',
   coFounder: 'هم‌بنیان‌گذار',
   viewLinkedIn: 'مشاهده پروفایل لینکدین',
   ourMission: 'ماموریت ما',
@@ -301,7 +301,7 @@ export const fa = {
   remove: 'حذف',
 
   // Onboarding
-  welcomeTitle: 'به کوفایننس خوش آمدید',
+  welcomeTitle: 'به کوآی خوش آمدید',
   welcomeDesc: 'همراه مالی شخصی شما برای مدیریت ارزهای متعدد',
   featureMultiCurrency: 'کیف پول چند ارزی',
   featureAnalytics: 'تحلیل هزینه‌ها',
@@ -683,7 +683,7 @@ export const fa = {
 
   // Landing Page - Final CTA
   finalCtaTitle: 'آماده تحول در امور مالی خود هستید؟',
-  finalCtaSubtitle: 'به هزاران کاربری بپیوندید که کنترل پول خود را با کوفایننس در دست گرفته‌اند.',
+  finalCtaSubtitle: 'به هزاران کاربری بپیوندید که کنترل پول خود را با کوآی در دست گرفته‌اند.',
 
   // Subscriptions
   subscriptions: 'Subscriptions',
@@ -771,7 +771,7 @@ export const fa = {
   inProgressBadges: 'In Progress',
   lockedBadges: 'Locked',
   noBadgesYet: 'هنوز نشانی ندارید',
-  startEarningBadges: 'برای کسب دستاوردها از CoFinance استفاده کنید!',
+  startEarningBadges: 'برای کسب دستاوردها از CoAI استفاده کنید!',
 
   // AI Chat
   newConversation: 'گفتگوی جدید',

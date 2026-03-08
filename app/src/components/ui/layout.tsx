@@ -290,7 +290,7 @@ export function AuthScaffold({ title, subtitle, footer, children }: AuthScaffold
                     color: theme.colors.foreground,
                   }}
                 >
-                  CoFinance
+                  CoAI
                 </Text>
               </Pressable>
             </Link>
@@ -404,7 +404,7 @@ export function MarketingScaffold({ children }: MarketingScaffoldProps) {
                     color: theme.colors.foreground,
                   }}
                 >
-                  CoFinance
+                  CoAI
                 </Text>
               </Pressable>
             </Link>
@@ -541,7 +541,7 @@ export function MarketingScaffold({ children }: MarketingScaffoldProps) {
                 color: theme.colors.foreground,
               }}
             >
-              CoFinance
+              CoAI
             </Text>
             <Text
               style={{

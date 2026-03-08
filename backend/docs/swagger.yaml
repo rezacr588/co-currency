@@ -102,11 +102,11 @@ definitions:
 host: localhost:8080
 info:
   contact:
-    email: support@cofinance.app
+    email: support@coai.app
     name: API Support
     url: https://github.com/rezacr588/currency-converter
   description: |-
-    CoFinance is a personal finance management API with currency conversion, wallet management, budgets, goals, subscriptions, and achievement badges.
+    CoAI is a personal finance management API with currency conversion, wallet management, budgets, goals, subscriptions, and achievement badges.
 
     ## Features
     - **Currency Conversion**: Real-time exchange rates with support for 30+ currencies including IRR
@@ -124,7 +124,7 @@ info:
     name: MIT
     url: https://opensource.org/licenses/MIT
   termsOfService: http://swagger.io/terms/
-  title: CoFinance API
+  title: CoAI API
   version: "1.0"
 paths:
   /badges:

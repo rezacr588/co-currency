@@ -1,4 +1,4 @@
-# CoFinance
+# CoAI
 
 A full-stack personal finance platform with multi-currency wallet, budgets, goals, AI financial advisor, reports, gamification, and multi-language support. Available as a web app and native mobile app (iOS/Android).
 

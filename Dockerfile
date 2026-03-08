@@ -32,8 +32,8 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /api ./cm
 # ============ Stage 3: Final Image ============
 FROM alpine:3.19
 
-LABEL org.opencontainers.image.source="https://github.com/rezacr588/cofinance"
-LABEL org.opencontainers.image.description="CoFinance - Personal Finance App"
+LABEL org.opencontainers.image.source="https://github.com/rezacr588/co-currency"
+LABEL org.opencontainers.image.description="CoAI - Personal Finance App"
 
 # Add non-root user for security
 RUN addgroup -g 1001 -S appgroup && \

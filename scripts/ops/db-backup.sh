@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Database backup script for CoFinance
+# Database backup script for CoAI
 # Usage: scripts/ops/db-backup.sh [backup|restore|list]
 #
 # Environment:

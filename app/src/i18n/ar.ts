@@ -1,12 +1,12 @@
 export const ar = {
 
   // Header
-  appTitle: 'كوفايننس',
+  appTitle: 'كوآي',
   appSubtitle: 'أسعار الصرف الفورية من Frankfurter API',
 
   // About Us
   aboutUs: 'من نحن',
-  aboutUsDescription: 'كوفايننس هو محول عملات حديث يوفر أسعار صرف فورية لأكثر من 160 عملة حول العالم.',
+  aboutUsDescription: 'كوآي هو محول عملات حديث يوفر أسعار صرف فورية لأكثر من 160 عملة حول العالم.',
   coFounder: 'مؤسس مشارك',
   viewLinkedIn: 'عرض الملف الشخصي على لينكدإن',
   ourMission: 'مهمتنا',
@@ -301,7 +301,7 @@ export const ar = {
   remove: 'حذف',
 
   // Onboarding
-  welcomeTitle: 'مرحباً بك في كوفايننس',
+  welcomeTitle: 'مرحباً بك في كوآي',
   welcomeDesc: 'رفيقك المالي الشخصي لإدارة العملات المتعددة',
   featureMultiCurrency: 'محفظة متعددة العملات',
   featureAnalytics: 'تحليل الإنفاق',
@@ -683,7 +683,7 @@ export const ar = {
 
   // Landing Page - Final CTA
   finalCtaTitle: 'مستعد لتحويل أموالك؟',
-  finalCtaSubtitle: 'انضم إلى آلاف المستخدمين الذين تحكموا في أموالهم مع كوفايننس.',
+  finalCtaSubtitle: 'انضم إلى آلاف المستخدمين الذين تحكموا في أموالهم مع كوآي.',
 
   // Subscriptions
   subscriptions: 'Subscriptions',
@@ -771,7 +771,7 @@ export const ar = {
   inProgressBadges: 'In Progress',
   lockedBadges: 'Locked',
   noBadgesYet: 'لا توجد شارات بعد',
-  startEarningBadges: 'ابدأ باستخدام CoFinance لكسب الإنجازات!',
+  startEarningBadges: 'ابدأ باستخدام CoAI لكسب الإنجازات!',
 
   // AI Chat
   newConversation: 'محادثة جديدة',

@@ -132,7 +132,7 @@ func (s *NewsService) fetchFeed(ctx context.Context, source feedSource) ([]model
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "CoFinance/1.0 RSS Reader")
+	req.Header.Set("User-Agent", "CoAI/1.0 RSS Reader")
 
 	resp, err := s.client.Do(req)
 	if err != nil {

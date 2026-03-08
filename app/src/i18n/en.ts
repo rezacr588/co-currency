@@ -1,12 +1,12 @@
 export const en = {
 
   // Header
-  appTitle: 'CoFinance',
+  appTitle: 'CoAI',
   appSubtitle: 'Real-time exchange rates powered by Frankfurter API',
 
   // About Us
   aboutUs: 'About Us',
-  aboutUsDescription: 'CoFinance is a modern CoFinance providing real-time exchange rates for 160+ currencies worldwide.',
+  aboutUsDescription: 'CoAI is a modern personal finance app providing real-time exchange rates for 160+ currencies worldwide.',
   coFounder: 'Co-Founder',
   viewLinkedIn: 'View LinkedIn Profile',
   ourMission: 'Our Mission',
@@ -21,7 +21,7 @@ export const en = {
   featureGlobalDesc: '160+ currencies with multi-language support including English, Persian, Arabic, and Turkish.',
   teamMemberDesc: 'Full Stack Developer & ML Engineer with expertise in building scalable web applications and machine learning solutions.',
   appFeatures: 'App Features',
-  currencyConverter: 'CoFinance',
+  currencyConverter: 'CoAI',
   converterDesc: 'Convert 160+ currencies with real-time rates',
   multiCurrencyWallet: 'Multi-Currency Wallet',
   walletDesc: 'Track balances in multiple currencies',
@@ -303,7 +303,7 @@ export const en = {
   remove: 'Remove',
 
   // Onboarding
-  welcomeTitle: 'Welcome to CoFinance',
+  welcomeTitle: 'Welcome to CoAI',
   welcomeDesc: 'Your personal finance companion for managing multiple currencies',
   featureMultiCurrency: 'Multi-Currency Wallet',
   featureAnalytics: 'Spending Analytics',
@@ -685,7 +685,7 @@ export const en = {
 
   // Landing Page - Final CTA
   finalCtaTitle: 'Ready to Transform Your Finances?',
-  finalCtaSubtitle: 'Join thousands of users who have taken control of their money with CoFinance.',
+  finalCtaSubtitle: 'Join thousands of users who have taken control of their money with CoAI.',
 
   // Subscriptions
   subscriptions: 'Subscriptions',
@@ -773,7 +773,7 @@ export const en = {
   inProgressBadges: 'In Progress',
   lockedBadges: 'Locked',
   noBadgesYet: 'No badges yet',
-  startEarningBadges: 'Start using CoFinance to earn achievements!',
+  startEarningBadges: 'Start using CoAI to earn achievements!',
 
   // AI Chat
   newConversation: 'New Chat',

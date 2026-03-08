@@ -19,7 +19,7 @@ type TestAccount struct {
 
 // uniqueEmail generates a unique email for testing
 func uniqueEmail(prefix string) string {
-	return fmt.Sprintf("%s_%d@test.cofinance.app", prefix, time.Now().UnixNano())
+	return fmt.Sprintf("%s_%d@test.coai.app", prefix, time.Now().UnixNano())
 }
 
 // createTestAccount creates and registers a new test account

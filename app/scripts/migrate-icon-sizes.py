@@ -4,7 +4,7 @@ import re, os
 SIZE_MAP = {12:'xs',14:'sm',15:'sm',16:'sm',18:'md',20:'md',22:'default',24:'default',28:'lg',32:'lg',48:'xl'}
 
 SKIP_SIZES = {10, 40}
-APP_ROOT = '/Users/rezazeraat/dev/cofinance/app'
+APP_ROOT = '/Users/rezazeraat/dev/coai/app'
 
 LUCIDE_ICONS = {
     'ArrowDown',

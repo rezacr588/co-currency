@@ -171,4 +171,4 @@ jobs:
             echo "- Native file changes detected" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "View builds at: https://expo.dev/accounts/rez.zet.int/projects/cofinance/builds" >> $GITHUB_STEP_SUMMARY
+          echo "View builds at: https://expo.dev/accounts/rez.zet.int/projects/coai/builds" >> $GITHUB_STEP_SUMMARY

@@ -64,7 +64,7 @@ export function useAppUpdates() {
   const promptUpdate = useCallback(() => {
     Alert.alert(
       'Update Available',
-      'A new version of CoFinance is available. Would you like to update now?',
+      'A new version of CoAI is available. Would you like to update now?',
       [
         {
           text: 'Later',

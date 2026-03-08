@@ -173,7 +173,7 @@ function AppSidebar({
               color: theme.colors.foreground,
             }}
           >
-            CoFinance
+            CoAI
           </Text>
         ) : null}
         <Pressable

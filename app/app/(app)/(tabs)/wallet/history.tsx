@@ -317,7 +317,7 @@ export default function TransactionHistoryScreen() {
         // Mobile export - recommend using web app for secure download
         Alert.alert(
           t('export') || 'Export',
-          t('exportMobileNotice') || 'For secure CSV downloads, please use the web app at cofinance.app. Mobile exports are not currently supported.',
+          t('exportMobileNotice') || 'For secure CSV downloads, please use the web app at coai.koyeb.app. Mobile exports are not currently supported.',
           [{ text: 'OK', style: 'default' }]
         );
       }

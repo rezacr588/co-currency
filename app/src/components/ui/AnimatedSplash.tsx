@@ -92,7 +92,7 @@ export function AnimatedSplash({ onAnimationComplete }: AnimatedSplashProps) {
 
       {/* App Name */}
       <Animated.View style={[styles.textContainer, textAnimatedStyle]}>
-        <Text style={styles.appName}>CoFinance</Text>
+        <Text style={styles.appName}>CoAI</Text>
       </Animated.View>
 
       {/* Tagline */}

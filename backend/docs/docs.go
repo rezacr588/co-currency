@@ -13,7 +13,7 @@ const docTemplate = `{
         "contact": {
             "name": "API Support",
             "url": "https://github.com/rezacr588/currency-converter",
-            "email": "support@cofinance.app"
+            "email": "support@coai.app"
         },
         "license": {
             "name": "MIT",
@@ -908,8 +908,8 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost:8080",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
-	Title:            "CoFinance API",
-	Description:      "CoFinance is a personal finance management API with currency conversion, wallet management, budgets, goals, subscriptions, and achievement badges.\n\n## Features\n- **Currency Conversion**: Real-time exchange rates with support for 30+ currencies including IRR\n- **Wallet Management**: Multi-currency wallet with transaction tracking\n- **Budgets**: Set and track spending budgets by category\n- **Goals**: Create and track financial savings goals\n- **Subscriptions**: Track recurring subscriptions and bills\n- **Badges**: Earn achievement badges for financial milestones\n- **AI Features**: Smart transaction parsing and categorization\n\n## Authentication\nMost endpoints require JWT authentication. Include the token in the Authorization header:\n`Authorization: Bearer <your-token>`",
+	Title:            "CoAI API",
+	Description:      "CoAI is a personal finance management API with currency conversion, wallet management, budgets, goals, subscriptions, and achievement badges.\n\n## Features\n- **Currency Conversion**: Real-time exchange rates with support for 30+ currencies including IRR\n- **Wallet Management**: Multi-currency wallet with transaction tracking\n- **Budgets**: Set and track spending budgets by category\n- **Goals**: Create and track financial savings goals\n- **Subscriptions**: Track recurring subscriptions and bills\n- **Badges**: Earn achievement badges for financial milestones\n- **AI Features**: Smart transaction parsing and categorization\n\n## Authentication\nMost endpoints require JWT authentication. Include the token in the Authorization header:\n`Authorization: Bearer <your-token>`",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

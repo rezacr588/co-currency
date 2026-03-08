@@ -166,7 +166,7 @@ export default function OnboardingScreen() {
                   <Wallet size={48} color={colors.accent} />
                 </View>
                 <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 8, textAlign: 'center' }}>
-                  {t('welcomeToCoFinance') || 'Welcome to CoFinance!'}
+                  {t('welcomeToCoFinance') || 'Welcome to CoAI!'}
                 </Text>
                 <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginBottom: 32, fontSize: 14 }}>
                   {t('onboardingWelcomeDesc') ||

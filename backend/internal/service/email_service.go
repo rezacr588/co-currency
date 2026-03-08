@@ -25,7 +25,7 @@ func NewEmailService(apiKey string, frontendURL string) *EmailService {
 	return &EmailService{
 		client:      client,
 		frontendURL: frontendURL,
-		senderEmail: "support@cofinance.app", // Adjust if you have a verified domain via Resend
+		senderEmail: "support@coai.app", // Adjust if you have a verified domain via Resend
 	}
 }
 
@@ -42,12 +42,12 @@ func (s *EmailService) SendPasswordResetEmail(ctx context.Context, toEmail, toke
 	}
 
 	params := &resend.SendEmailRequest{
-		From:    fmt.Sprintf("Co-Finance Support <%s>", s.senderEmail),
+		From:    fmt.Sprintf("CoAI Support <%s>", s.senderEmail),
 		To:      []string{toEmail},
-		Subject: "Reset Your Password - Co-Finance",
+		Subject: "Reset Your Password - CoAI",
 		Html: fmt.Sprintf(`
 			<h1>Password Reset Request</h1>
-			<p>You requested a password reset for your Co-Finance account.</p>
+			<p>You requested a password reset for your CoAI account.</p>
 			<p>Click the link below to set a new password:</p>
 			<a href="%s" style="padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
 			<p>If you did not request this, please ignore this email.</p>
