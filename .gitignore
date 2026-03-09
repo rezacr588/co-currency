@@ -56,3 +56,6 @@ backups/
 # Temp
 *.tmp
 *.temp
+
+# OAuth credentials
+client_secret_*.json

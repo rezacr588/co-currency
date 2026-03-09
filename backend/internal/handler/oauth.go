@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/rezacr588/currency-converter/internal/model"
 )
+
+const mobileScheme = "coai://"
 
 // OAuthProvider abstracts an OAuth service (Google, LinkedIn, etc.).
 type OAuthProvider interface {
@@ -47,6 +50,17 @@ func (h *OAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If platform=mobile, encode it in the OAuth state so the callback
+	// can redirect back to the native app via custom URL scheme.
+	if r.URL.Query().Get("platform") == "mobile" {
+		if parsed, parseErr := url.Parse(authURL); parseErr == nil {
+			q := parsed.Query()
+			q.Set("state", q.Get("state")+":mobile")
+			parsed.RawQuery = q.Encode()
+			authURL = parsed.String()
+		}
+	}
+
 	http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
 }
 
@@ -61,23 +75,34 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	state := r.URL.Query().Get("state")
 	errorParam := r.URL.Query().Get("error")
 
+	// Detect mobile platform from state suffix
+	isMobile := strings.HasSuffix(state, ":mobile")
+	if isMobile {
+		state = strings.TrimSuffix(state, ":mobile")
+	}
+
 	if errorParam != "" {
-		h.redirectError(w, r, "authentication_failed")
+		h.redirectErrorForPlatform(w, r, "authentication_failed", isMobile)
 		return
 	}
 
 	if code == "" {
-		h.redirectError(w, r, "missing authorization code")
+		h.redirectErrorForPlatform(w, r, "missing authorization code", isMobile)
 		return
 	}
 
 	response, err := h.provider.HandleCallback(r.Context(), code, state)
 	if err != nil || response == nil {
-		h.redirectError(w, r, "authentication_failed")
+		h.redirectErrorForPlatform(w, r, "authentication_failed", isMobile)
 		return
 	}
 
-	redirectURL := fmt.Sprintf("%s%s#token=%s", h.frontendURL, h.callbackPath, url.QueryEscape(response.Token))
+	baseURL := h.frontendURL
+	if isMobile {
+		baseURL = mobileScheme
+	}
+
+	redirectURL := fmt.Sprintf("%s%s#token=%s", baseURL, h.callbackPath, url.QueryEscape(response.Token))
 	if response.RefreshToken != "" {
 		redirectURL += fmt.Sprintf("&refresh_token=%s", url.QueryEscape(response.RefreshToken))
 	}
@@ -86,6 +111,14 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *OAuthHandler) redirectError(w http.ResponseWriter, r *http.Request, msg string) {
-	redirectURL := fmt.Sprintf("%s/login?error=%s", h.frontendURL, url.QueryEscape(msg))
+	h.redirectErrorForPlatform(w, r, msg, false)
+}
+
+func (h *OAuthHandler) redirectErrorForPlatform(w http.ResponseWriter, r *http.Request, msg string, isMobile bool) {
+	baseURL := h.frontendURL
+	if isMobile {
+		baseURL = mobileScheme
+	}
+	redirectURL := fmt.Sprintf("%s/login?error=%s", baseURL, url.QueryEscape(msg))
 	http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 }

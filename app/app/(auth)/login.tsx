@@ -143,15 +143,44 @@ export default function LoginScreen() {
     setError('');
 
     try {
-      const authUrl =
+      const baseUrl =
         provider === 'google'
           ? api.auth.getGoogleAuthUrl()
           : api.auth.getLinkedInAuthUrl();
 
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.location.assign(authUrl);
+        window.location.assign(baseUrl);
       } else {
-        await WebBrowser.openBrowserAsync(authUrl);
+        // Native: use auth session so the browser closes on redirect back
+        const authUrl = `${baseUrl}?platform=mobile`;
+        const result = await WebBrowser.openAuthSessionAsync(authUrl, 'coai://');
+
+        if (result.type === 'success' && result.url) {
+          // Parse tokens from hash fragment (#token=...&refresh_token=...)
+          const hashIndex = result.url.indexOf('#');
+          if (hashIndex !== -1) {
+            const hashParams = new URLSearchParams(result.url.substring(hashIndex + 1));
+            const token = hashParams.get('token');
+            const refreshToken = hashParams.get('refresh_token');
+
+            if (token && refreshToken) {
+              await handleOAuthCallback(token, refreshToken);
+              const target = await prepareDashboardPostAuthRoute();
+              router.replace(target as any);
+              return;
+            }
+          }
+
+          // Check for error in query params (error redirect)
+          const errorParam = new URL(result.url).searchParams.get('error');
+          if (errorParam) {
+            setError(decodeURIComponent(errorParam));
+            return;
+          }
+
+          setError('Authentication failed');
+        }
+        // result.type === 'cancel' or 'dismiss' — user closed the browser
       }
     } catch (err) {
       setError(
@@ -161,6 +190,7 @@ export default function LoginScreen() {
             ? (t('failedToOpenGoogleLogin') || 'Failed to open Google login')
             : (t('failedToOpenLinkedInLogin') || 'Failed to open LinkedIn login')
       );
+    } finally {
       setIsOAuthLoading(false);
     }
   };
