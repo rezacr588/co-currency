@@ -3,7 +3,7 @@ import { View, Pressable, ActivityIndicator } from 'react-native';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, Wallet, ArrowRight, DollarSign, PiggyBank, CreditCard, Bot, PieChart, BarChart3, Target } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Wallet, ArrowRight, DollarSign, PiggyBank, CreditCard, Bot, PieChart, BarChart3, Target, Shield } from 'lucide-react-native';
 import styled, { useTheme } from 'styled-components/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { api } from '../../../src/api';
@@ -24,6 +24,7 @@ import { SmartAdviceCard } from '../../../src/components/features/SmartAdvice';
 import { QuickNotesCard } from '../../../src/components/features/Notes';
 import { FinancialNewsCard } from '../../../src/components/features/News';
 import { HealthScoreCard } from '../../../src/components/features/HealthScore';
+import { RealValueCard } from '../../../src/components/features/RealValue';
 import { CollapsibleSection } from '../../../src/components/ui/CollapsibleSection';
 import { H2, H3, BodyMedium, Caption } from '../../../src/components/ui/styled';
 import type { Goal, Budget } from '../../../src/types/goal';
@@ -491,9 +492,26 @@ export default function DashboardScreen() {
                   </ChipButton>
                 </Pressable>
               </Link>
+              <Link href={{ pathname: '/(app)/(tabs)/wallet/chat', params: { prompt: 'Analyze my purchasing power and suggest how to protect my wealth from inflation' } }} asChild>
+                <Pressable style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
+                  <ChipButton>
+                    <Shield size={12} color={theme.colors.accentForeground} />
+                    <Caption $color={theme.colors.accentForeground} style={{ marginLeft: 4 }}>
+                      {t('wealthProtection') || 'Wealth protection'}
+                    </Caption>
+                  </ChipButton>
+                </Pressable>
+              </Link>
             </View>
           </AICardGradient>
         )}
+
+        {/* Real Value - Purchasing Power */}
+        <SectionSpacing>
+          <CollapsibleSection title={t('realValue') || 'Real Value'} storageKey="dashboard_realvalue">
+            <RealValueCard compact />
+          </CollapsibleSection>
+        </SectionSpacing>
 
         {/* Financial Health Score */}
         <SectionSpacing>

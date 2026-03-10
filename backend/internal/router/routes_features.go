@@ -25,6 +25,7 @@ func registerFeatureRoutes(r chi.Router, h *Handlers, rateLimiter *middleware.Ra
 	registerNotificationRoutes(r, h, authMiddleware)
 	registerChallengeRoutes(r, h, authMiddleware)
 	registerXPRoutes(r, h, authMiddleware)
+	registerWealthRoutes(r, h, authMiddleware)
 }
 
 func registerAIRoutes(r chi.Router, h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middleware.Auth) {
@@ -282,6 +283,19 @@ func registerXPRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.Auth
 			r.Post("/daily-reward", h.XP.ClaimDailyReward)
 			r.Get("/daily-reward/status", h.XP.GetDailyRewardStatus)
 			r.Get("/leaderboard", h.XP.GetLeaderboard)
+		})
+	}
+}
+
+func registerWealthRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.Auth) {
+	if h.Wealth != nil {
+		r.Route("/wealth", func(r chi.Router) {
+			r.Use(authMiddleware.Middleware)
+			r.Get("/overview", h.Wealth.GetOverview)
+			r.Get("/history", h.Wealth.GetHistory)
+			r.Get("/what-if", h.Wealth.GetWhatIf)
+			r.Get("/alerts", h.Wealth.GetAlerts)
+			r.Post("/alerts/{id}/read", h.Wealth.MarkAlertRead)
 		})
 	}
 }

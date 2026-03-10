@@ -31,6 +31,7 @@ type AIToolExecutor struct {
 	noteRepo         *repository.NoteRepository
 	loanRepo         *repository.LoanRepository
 	budgetRepo       *repository.BudgetRepository
+	wealthService    *WealthService
 	tavilyAPIKey     string
 }
 
@@ -119,6 +120,10 @@ func (e *AIToolExecutor) Execute(ctx context.Context, userID uuid.UUID, currency
 		return e.executeSearchNotes(ctx, userID, tc.Params)
 	case "web_search":
 		return e.executeWebSearch(ctx, tc.Params)
+	case "get_wealth_overview":
+		return e.executeGetWealthOverview(ctx, userID, currency, tc.Params)
+	case "get_what_if_analysis":
+		return e.executeGetWhatIfAnalysis(ctx, userID, currency, tc.Params)
 	default:
 		return "", fmt.Errorf("unknown tool: %s", tc.Name)
 	}
@@ -482,6 +487,59 @@ func (e *AIToolExecutor) executeWebSearch(ctx context.Context, params map[string
 	return sb.String(), nil
 }
 
+func (e *AIToolExecutor) executeGetWealthOverview(ctx context.Context, userID uuid.UUID, defaultCurrency string, params map[string]interface{}) (string, error) {
+	if e.wealthService == nil {
+		return "Wealth analysis is not available.", nil
+	}
+
+	currency := getStringParam(params, "currency")
+	if currency == "" {
+		currency = defaultCurrency
+	}
+
+	overview, err := e.wealthService.GetOverview(ctx, userID, currency)
+	if err != nil {
+		return "", fmt.Errorf("getting wealth overview: %w", err)
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Wealth Overview (%s):\n", currency))
+	sb.WriteString(fmt.Sprintf("- Nominal Total: %.2f\n", overview.NominalTotal))
+	sb.WriteString(fmt.Sprintf("- Real Total (inflation-adjusted): %.2f\n", overview.RealTotal))
+	sb.WriteString(fmt.Sprintf("- Monthly Erosion: %.2f (%.2f%%)\n", overview.ErosionAmount, overview.ErosionRate))
+	sb.WriteString(fmt.Sprintf("- Wealth Shield Score: %d/100 (%s)\n", overview.ShieldScore, overview.ShieldLabel))
+	if len(overview.CurrencyBreakdown) > 0 {
+		sb.WriteString("\nPer-currency breakdown:\n")
+		for _, e := range overview.CurrencyBreakdown {
+			sb.WriteString(fmt.Sprintf("  - %s: nominal=%.2f, real=%.2f, inflation=%.1f%%, share=%.1f%%\n",
+				e.Currency, e.NominalBalance, e.RealBalance, e.AnnualInflation, e.SharePercentage))
+		}
+	}
+	return sb.String(), nil
+}
+
+func (e *AIToolExecutor) executeGetWhatIfAnalysis(ctx context.Context, userID uuid.UUID, defaultCurrency string, params map[string]interface{}) (string, error) {
+	if e.wealthService == nil {
+		return "What-if analysis is not available.", nil
+	}
+
+	fromCurrency := getStringParam(params, "from_currency")
+	toCurrency := getStringParam(params, "to_currency")
+	if fromCurrency == "" || toCurrency == "" {
+		return "Both from_currency and to_currency are required.", nil
+	}
+
+	amount := float64(getIntParam(params, "amount", 1000))
+	monthsAgo := getIntParam(params, "months_ago", 3)
+
+	result, err := e.wealthService.GetWhatIf(ctx, userID, fromCurrency, toCurrency, amount, monthsAgo)
+	if err != nil {
+		return "", fmt.Errorf("running what-if analysis: %w", err)
+	}
+
+	return result.Explanation, nil
+}
+
 // --- Param helpers ---
 
 func getStringParam(params map[string]interface{}, key string) string {
@@ -549,6 +607,12 @@ You have access to tools that let you query the user's financial data dynamicall
 
 9. **web_search** — Search the internet for current information (news, exchange rates, financial tips, etc.)
    Params: query (string, required)
+
+10. **get_wealth_overview** — Get real (inflation-adjusted) balances and Wealth Shield Score
+    Params: currency (string)
+
+11. **get_what_if_analysis** — Analyze what would have happened with a hypothetical currency conversion
+    Params: from_currency (string), to_currency (string), amount (number), months_ago (int)
 
 ### How to Call a Tool
 

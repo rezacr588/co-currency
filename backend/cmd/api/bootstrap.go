@@ -15,14 +15,16 @@ import (
 
 // databases holds database connections and related background workers.
 type databases struct {
-	mainDB     *repository.Database
-	irrDB      *repository.IRRDatabase
-	irrCrawler *repository.IRRCrawler
-	userRepo   *repository.UserRepository
-	walletRepo *repository.WalletRepository
-	loanRepo   *repository.LoanRepository
-	goalRepo   *repository.GoalRepository
-	budgetRepo *repository.BudgetRepository
+	mainDB           *repository.Database
+	irrDB            *repository.IRRDatabase
+	irrCrawler       *repository.IRRCrawler
+	inflationRepo    *repository.InflationRepository
+	inflationCrawler *repository.InflationCrawler
+	userRepo         *repository.UserRepository
+	walletRepo       *repository.WalletRepository
+	loanRepo         *repository.LoanRepository
+	goalRepo         *repository.GoalRepository
+	budgetRepo       *repository.BudgetRepository
 }
 
 // services holds all initialized services.
@@ -51,6 +53,7 @@ type services struct {
 	challenge    *service.ChallengeService
 	xp           *service.XPService
 	advice       *service.AdviceService
+	wealth       *service.WealthService
 	news         *service.NewsService
 
 	// Shutdown handles
@@ -104,6 +107,20 @@ func initDatabase(cfg *config.Config) *databases {
 		log.Info().
 			Dur("interval", cfg.IRRCrawlerInterval).
 			Msg("IRR rate crawler started")
+	}
+
+	// Initialize inflation repository and crawler
+	if db.mainDB != nil {
+		db.inflationRepo = repository.NewInflationRepository(db.mainDB)
+		log.Info().Msg("Inflation repository initialized")
+
+		if cfg.InflationCrawlerEnabled {
+			db.inflationCrawler = repository.NewInflationCrawler(db.inflationRepo, cfg.InflationCrawlerInterval)
+			db.inflationCrawler.Start()
+			log.Info().
+				Dur("interval", cfg.InflationCrawlerInterval).
+				Msg("Inflation crawler started")
+		}
 	}
 
 	return db
@@ -262,6 +279,12 @@ func initServices(cfg *config.Config, db *databases) *services {
 		svc.xp = service.NewXPService(xpRepo)
 		log.Info().Msg("XP service initialized")
 
+		// Initialize wealth service
+		if db.walletRepo != nil && db.inflationRepo != nil {
+			svc.wealth = service.NewWealthService(db.walletRepo, svc.exchange, db.inflationRepo)
+			log.Info().Msg("Wealth service initialized")
+		}
+
 		// Initialize AI Chat service
 		if svc.ai != nil {
 			chatRepo := repository.NewChatRepository(db.mainDB.Pool())
@@ -329,6 +352,9 @@ func initServices(cfg *config.Config, db *databases) *services {
 				cfg.AIFastModel, cfg.AIThinkingModel,
 				model.ChatThinkingMode(cfg.AIThinkingModeDefault),
 			)
+			if svc.wealth != nil {
+				svc.aiChat.SetWealthService(svc.wealth)
+			}
 			log.Info().Msg("AI Chat service initialized with full context")
 		}
 	}
@@ -426,6 +452,11 @@ func initHandlers(cfg *config.Config, svc *services) *router.Handlers {
 	if svc.xp != nil {
 		xpHandler = handler.NewXPHandler(svc.xp)
 	}
+	var wealthHandler *handler.WealthHandler
+	if svc.wealth != nil {
+		wealthHandler = handler.NewWealthHandler(svc.wealth)
+	}
+
 	var aiChatHandler *handler.AIChatHandler
 	if svc.aiChat != nil {
 		aiChatHandler = handler.NewAIChatHandler(svc.aiChat, svc.auth)
@@ -467,6 +498,7 @@ func initHandlers(cfg *config.Config, svc *services) *router.Handlers {
 		Notification:  notificationHandler,
 		Challenge:     challengeHandler,
 		XP:            xpHandler,
+		Wealth:        wealthHandler,
 		News:          newsHandler,
 	}
 }

@@ -212,6 +212,9 @@ func main() {
 
 	// Cleanup background resources
 	log.Info().Msg("Cleaning up background resources")
+	if db.inflationCrawler != nil {
+		db.inflationCrawler.Stop()
+	}
 	if db.irrCrawler != nil {
 		db.irrCrawler.Stop()
 	}

@@ -1,9 +1,10 @@
+import { useState } from 'react';
 import { View, Text, Pressable, RefreshControl } from 'react-native';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { useRefreshControl } from '../../../../src/hooks/useRefreshableQuery';
-import { Plus, ArrowLeftRight, History, MessageCircle, Target, PiggyBank, BarChart3, Wallet, KanbanSquare } from 'lucide-react-native';
+import { Plus, ArrowLeftRight, History, MessageCircle, Target, PiggyBank, BarChart3, Wallet, KanbanSquare, Shield } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
 import { useTheme } from 'styled-components/native';
@@ -49,6 +50,15 @@ export default function WalletScreen() {
   const { data: transactionsData, isPending: isLoadingTransactions, refetch: refetchTransactions } = useQuery({
     queryKey: ['wallet', 'transactions'],
     queryFn: () => api.wallet.getTransactions(10),
+  });
+
+  const [showRealValue, setShowRealValue] = useState(false);
+
+  const { data: wealthOverview } = useQuery({
+    queryKey: ['wealth', 'overview'],
+    queryFn: () => api.wealth.overview(),
+    staleTime: 5 * 60 * 1000,
+    enabled: showRealValue,
   });
 
   const { refreshing, onRefresh } = useRefreshControl(refetchSummary, refetchBalances, refetchTransactions);
@@ -181,7 +191,28 @@ export default function WalletScreen() {
 
         {/* 4. Currency Balances - 2-Column Compact Grid */}
         <View style={{ marginBottom: 24 }}>
-          <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginBottom: 16 }}>{t('balances')}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>{t('balances')}</Text>
+            <Pressable
+              onPress={() => setShowRealValue(!showRealValue)}
+              style={({ pressed }) => [{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: showRealValue ? colors.accent + '20' : colors.muted,
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 16,
+                cursor: 'pointer',
+              }, pressed && { opacity: 0.7 }]}
+              accessibilityLabel={showRealValue ? (t('switchToNominal') || 'Show nominal') : (t('switchToReal') || 'Show real value')}
+              accessibilityRole="button"
+            >
+              <Shield size={12} color={showRealValue ? colors.accent : colors.mutedForeground} />
+              <Text style={{ fontSize: 11, color: showRealValue ? colors.accent : colors.mutedForeground, fontFamily: 'Inter_500Medium', marginLeft: 4 }}>
+                {showRealValue ? (t('realBalance') || 'Real') : (t('nominalBalance') || 'Nominal')}
+              </Text>
+            </Pressable>
+          </View>
           {isLoadingBalances ? (
             <SkeletonList count={4} ItemComponent={SkeletonBalance} />
           ) : balances.length === 0 ? (
@@ -193,6 +224,13 @@ export default function WalletScreen() {
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: balanceGap }}>
                 {displayedBalances.map((balance) => {
                   const display = getCurrencyDisplay(balance.currency);
+                  const exposure = showRealValue && wealthOverview
+                    ? wealthOverview.currency_breakdown?.find((e: any) => e.currency === balance.currency)
+                    : null;
+                  const inflationRate = exposure?.annual_inflation || 0;
+                  const accentColor = showRealValue && exposure
+                    ? inflationRate > 10 ? colors.danger : inflationRate > 3 ? colors.warning : colors.success
+                    : colors.primary;
                   return (
                     <View
                       key={balance.currency}
@@ -212,7 +250,7 @@ export default function WalletScreen() {
                           top: 0,
                           bottom: 0,
                           width: 3,
-                          backgroundColor: colors.primary + '80',
+                          backgroundColor: accentColor + '80',
                           borderTopLeftRadius: 12,
                           borderBottomLeftRadius: 12,
                         }}
@@ -220,18 +258,51 @@ export default function WalletScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4, paddingLeft: 4 }}>
                         <Text style={{ fontSize: 24, marginRight: 8 }}>{display.flag || '🌐'}</Text>
                         <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 14 }}>{balance.currency}</Text>
+                        {showRealValue && exposure && (
+                          <View style={{ backgroundColor: accentColor + '20', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginLeft: 6 }}>
+                            <Text style={{ fontSize: 9, color: accentColor, fontFamily: 'Inter_500Medium' }}>
+                              {inflationRate.toFixed(1)}%
+                            </Text>
+                          </View>
+                        )}
                       </View>
-                      <Text
-                        style={{
-                          fontFamily: 'Inter_600SemiBold',
-                          color: balance.balance >= 0 ? colors.foreground : colors.danger,
-                          fontSize: 15,
-                          paddingLeft: 4,
-                        }}
-                        numberOfLines={1}
-                      >
-                        {formatCompactCurrency(balance.balance, balance.currency)}
-                      </Text>
+                      {showRealValue && exposure ? (
+                        <View style={{ paddingLeft: 4 }}>
+                          <Text
+                            style={{
+                              fontFamily: 'Inter_400Regular',
+                              color: colors.mutedForeground,
+                              fontSize: 12,
+                              textDecorationLine: 'line-through',
+                            }}
+                            numberOfLines={1}
+                          >
+                            {formatCompactCurrency(balance.balance, balance.currency)}
+                          </Text>
+                          <Text
+                            style={{
+                              fontFamily: 'Inter_700Bold',
+                              color: colors.foreground,
+                              fontSize: 15,
+                            }}
+                            numberOfLines={1}
+                          >
+                            {formatCompactCurrency(exposure.real_balance, balance.currency)}
+                          </Text>
+                        </View>
+                      ) : (
+                        <Text
+                          style={{
+                            fontFamily: 'Inter_600SemiBold',
+                            color: balance.balance >= 0 ? colors.foreground : colors.danger,
+                            fontSize: 15,
+                            paddingLeft: 4,
+                          }}
+                          numberOfLines={1}
+                        >
+                          {formatCompactCurrency(balance.balance, balance.currency)}
+                        </Text>
+                      )}
                     </View>
                   );
                 })}

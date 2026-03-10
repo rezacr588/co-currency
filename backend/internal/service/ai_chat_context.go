@@ -189,6 +189,29 @@ func (s *AIChatService) buildSystemPrompt(userName string, fctx *model.Financial
 		sb.WriteString("\n")
 	}
 
+	// Purchasing power data
+	if fctx.WealthShieldScore > 0 || len(fctx.InflationExposure) > 0 {
+		sb.WriteString("## PURCHASING POWER & INFLATION\n")
+		sb.WriteString(fmt.Sprintf("- Wealth Shield Score: %d/100 (%s)\n", fctx.WealthShieldScore, model.GetShieldLabel(fctx.WealthShieldScore)))
+		if fctx.RealTotalBalance > 0 {
+			sb.WriteString(fmt.Sprintf("- Real Total Balance: %.2f %s (vs nominal %.2f)\n", fctx.RealTotalBalance, fctx.PreferredCurrency, fctx.TotalBalance))
+		}
+		if fctx.PurchasingPowerChange != 0 {
+			sb.WriteString(fmt.Sprintf("- Monthly purchasing power change: %.2f%%\n", fctx.PurchasingPowerChange))
+		}
+		if fctx.CurrencyConcentrationRisk > 0 {
+			sb.WriteString(fmt.Sprintf("- Currency concentration risk: %.1f%% (HHI)\n", fctx.CurrencyConcentrationRisk))
+		}
+		if len(fctx.InflationExposure) > 0 {
+			sb.WriteString("\nPer-currency inflation exposure:\n")
+			for _, e := range fctx.InflationExposure {
+				sb.WriteString(fmt.Sprintf("- %s: %.1f%% annual inflation, real value: %.2f (erosion: %.2f)\n",
+					e.Currency, e.AnnualRate, e.RealBalance, e.ErosionAmount))
+			}
+		}
+		sb.WriteString("\n")
+	}
+
 	// Available categories
 	if len(fctx.Categories) > 0 {
 		sb.WriteString("## AVAILABLE CATEGORIES\n")
@@ -516,6 +539,39 @@ func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.U
 				}
 			}
 			fctx.NetDebtPosition = fctx.TotalDebt - fctx.TotalReceivable
+		}
+	}
+
+	// Get purchasing power data
+	if s.wealthService != nil {
+		wealthOverview, err := s.wealthService.GetOverview(ctx, userID, fctx.PreferredCurrency)
+		if err == nil && wealthOverview != nil {
+			fctx.WealthShieldScore = wealthOverview.ShieldScore
+			fctx.RealTotalBalance = wealthOverview.RealTotal
+			fctx.NominalVsRealGap = wealthOverview.ErosionRate
+
+			if wealthOverview.NominalTotal > 0 {
+				fctx.PurchasingPowerChange = -wealthOverview.ErosionRate
+			}
+
+			// Currency concentration risk (HHI)
+			hhi := 0.0
+			for _, e := range wealthOverview.CurrencyBreakdown {
+				share := e.SharePercentage / 100.0
+				hhi += share * share
+			}
+			fctx.CurrencyConcentrationRisk = hhi * 100
+
+			// Per-currency inflation exposure
+			for _, e := range wealthOverview.CurrencyBreakdown {
+				fctx.InflationExposure = append(fctx.InflationExposure, model.CurrencyInflation{
+					Currency:      e.Currency,
+					Balance:       e.NominalBalance,
+					AnnualRate:    e.AnnualInflation,
+					RealBalance:   e.RealBalance,
+					ErosionAmount: e.ErosionAmount,
+				})
+			}
 		}
 	}
 

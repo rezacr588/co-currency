@@ -32,6 +32,7 @@ type Handlers struct {
 	Notification  *handler.NotificationHandler
 	Challenge     *handler.ChallengeHandler
 	XP            *handler.XPHandler
+	Wealth        *handler.WealthHandler
 	News          *handler.NewsHandler
 }
 

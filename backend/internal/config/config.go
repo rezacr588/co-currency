@@ -37,6 +37,10 @@ type Config struct {
 	IRRCrawlerInterval time.Duration `env:"IRR_CRAWLER_INTERVAL" envDefault:"5m"`
 	IRRCrawlerEnabled  bool          `env:"IRR_CRAWLER_ENABLED" envDefault:"true"`
 
+	// Inflation crawler settings
+	InflationCrawlerEnabled  bool          `env:"INFLATION_CRAWLER_ENABLED" envDefault:"true"`
+	InflationCrawlerInterval time.Duration `env:"INFLATION_CRAWLER_INTERVAL" envDefault:"24h"`
+
 	// Pagination limits
 	PaginationDefaultLimit   int `env:"PAGINATION_DEFAULT_LIMIT" envDefault:"50"`
 	PaginationMaxAPILimit    int `env:"PAGINATION_MAX_API_LIMIT" envDefault:"500"`

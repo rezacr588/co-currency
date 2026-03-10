@@ -35,11 +35,20 @@ type AIChatService struct {
 	reportsService   *ReportsService
 	subscriptionRepo *repository.SubscriptionRepository
 	noteRepo         *repository.NoteRepository
+	wealthService    *WealthService
 	toolExecutor     *AIToolExecutor
 	contextCache     *gocache.Cache // In-memory cache for financial context per user
 	fastModel        string
 	thinkingModel    string
 	defaultMode      model.ChatThinkingMode
+}
+
+// SetWealthService sets the wealth service for purchasing power context
+func (s *AIChatService) SetWealthService(ws *WealthService) {
+	s.wealthService = ws
+	if s.toolExecutor != nil {
+		s.toolExecutor.wealthService = ws
+	}
 }
 
 var (

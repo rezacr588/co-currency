@@ -177,6 +177,14 @@ type FinancialContext struct {
 	// Context
 	TodayDate         string `json:"today_date"`
 	DaysUntilMonthEnd int    `json:"days_until_month_end"`
+
+	// Purchasing Power (populated when WealthService is available)
+	PurchasingPowerChange     float64             `json:"purchasing_power_change,omitempty"`
+	InflationExposure         []CurrencyInflation `json:"inflation_exposure,omitempty"`
+	CurrencyConcentrationRisk float64             `json:"currency_concentration_risk,omitempty"`
+	WealthShieldScore         int                 `json:"wealth_shield_score,omitempty"`
+	RealTotalBalance          float64             `json:"real_total_balance,omitempty"`
+	NominalVsRealGap          float64             `json:"nominal_vs_real_gap,omitempty"`
 }
 
 // CategoryInfo represents a category for AI context
