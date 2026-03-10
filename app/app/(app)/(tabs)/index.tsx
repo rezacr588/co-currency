@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { View, Pressable, ActivityIndicator } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { View, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
@@ -201,6 +201,18 @@ export default function DashboardScreen() {
     queryFn: () => api.ai.getStatus(),
   });
 
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([
+      refetchSummary(),
+      refetchMonthly(),
+      refetchGoals(),
+      refetchBudgets(),
+    ]);
+    setRefreshing(false);
+  }, [refetchSummary, refetchMonthly, refetchGoals, refetchBudgets]);
+
   const totalGoals = goals?.length || 0;
   const activeGoals = goals?.filter((g) => g.current_amount < g.target_amount).length || 0;
 
@@ -268,6 +280,9 @@ export default function DashboardScreen() {
       maxWidth={1280}
       contentContainerStyle={{
         paddingBottom: bottomPadding,
+      }}
+      scrollProps={{
+        refreshControl: <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />,
       }}
     >
         <PageHeader

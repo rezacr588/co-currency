@@ -15,17 +15,19 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRefreshableQuery } from '../../src/hooks/useRefreshableQuery';
-import { Plus, ArrowLeft, X, RefreshCw, Play, Pause, TrendingUp, TrendingDown } from 'lucide-react-native';
+import { Plus, ArrowLeft, X, RefreshCw, Play, Pause, TrendingUp, TrendingDown, Trash2, Pencil } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useTheme } from 'styled-components/native';
-import { formatDate, formatTransactionAmount } from '../../src/utils/format';
+import { formatDate, formatTransactionAmount, getCurrencyDisplay } from '../../src/utils/format';
 import { FrequencyIcon, StyledCategoryIcon, CATEGORY_COLORS, getCategoryBackground, CategoryIcon } from '../../src/constants/icons';
 import { useToast } from '../../src/components/ui/Toast';
 import { Button } from '../../src/components/ui/Button';
 import { FormError } from '../../src/components/ui/FormError';
 import { SkeletonCard, SkeletonList } from '../../src/components/ui/Skeleton';
-import type { CreateRecurringRequest } from '../../src/types/goal';
+import { COMMON_CURRENCIES } from '../../src/constants/currencies';
+import { haptics } from '../../src/utils/haptics';
+import type { CreateRecurringRequest, RecurringTransaction, UpdateRecurringRequest } from '../../src/types/goal';
 
 const CATEGORIES = ['income', 'bills', 'food', 'transportation', 'entertainment', 'other'];
 const FREQUENCIES = ['daily', 'weekly', 'monthly', 'yearly'] as const;
@@ -37,6 +39,7 @@ export default function RecurringScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<RecurringTransaction | null>(null);
   const { width } = useWindowDimensions();
 
   const isDesktop = width >= 1024;
@@ -120,7 +123,7 @@ export default function RecurringScreen() {
                       width: columns === 1 ? '100%' : `${(100 / columns) - (12 * (columns - 1) / columns)}%`,
                       minWidth: columns === 1 ? '100%' : 300,
                     }}>
-                      <RecurringCard transaction={tx} />
+                      <RecurringCard transaction={tx} onEdit={(tx) => { setEditingTransaction(tx); setShowForm(true); }} />
                     </View>
                   ))}
                 </View>
@@ -142,7 +145,7 @@ export default function RecurringScreen() {
                       width: columns === 1 ? '100%' : `${(100 / columns) - (12 * (columns - 1) / columns)}%`,
                       minWidth: columns === 1 ? '100%' : 300,
                     }}>
-                      <RecurringCard transaction={tx} />
+                      <RecurringCard transaction={tx} onEdit={(tx) => { setEditingTransaction(tx); setShowForm(true); }} />
                     </View>
                   ))}
                 </View>
@@ -152,17 +155,46 @@ export default function RecurringScreen() {
         )}
       </ScrollView>
 
-      <RecurringFormModal visible={showForm} onClose={() => setShowForm(false)} />
+      <RecurringFormModal visible={showForm} onClose={() => { setShowForm(false); setEditingTransaction(null); }} editTransaction={editingTransaction} />
     </SafeAreaView>
   );
 }
 
-function RecurringCard({ transaction }: { transaction: any }) {
+function RecurringCard({ transaction, onEdit }: { transaction: RecurringTransaction; onEdit: (tx: RecurringTransaction) => void }) {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.recurring.delete(transaction.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recurring'] });
+      haptics.success();
+      showToast(t('recurringDeleted') || 'Recurring transaction deleted', 'success');
+    },
+    onError: (err) => {
+      haptics.error();
+      showToast(err instanceof Error ? err.message : t('failedToDelete') || 'Failed to delete', 'error');
+    },
+  });
+
+  const handleDelete = () => {
+    Alert.alert(
+      t('deleteRecurring') || 'Delete Recurring',
+      t('deleteRecurringConfirm') || 'Are you sure you want to delete this recurring transaction? This action cannot be undone.',
+      [
+        { text: t('cancel') || 'Cancel', style: 'cancel' },
+        { text: t('delete') || 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate() },
+      ]
+    );
+  };
+
+  const handleEdit = () => {
+    haptics.light();
+    onEdit(transaction);
+  };
 
   const executeMutation = useMutation({
     mutationFn: () => api.recurring.execute(transaction.id),
@@ -260,6 +292,27 @@ function RecurringCard({ transaction }: { transaction: any }) {
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Pressable
+            onPress={handleEdit}
+            style={({ pressed }) => [{ cursor: 'pointer', padding: 8, borderRadius: 8, backgroundColor: colors.accent + '33', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]}
+            accessibilityLabel={t('edit') || 'Edit'}
+            accessibilityRole="button"
+          >
+            <Pencil size={16} color={colors.accent} />
+          </Pressable>
+          <Pressable
+            onPress={handleDelete}
+            disabled={deleteMutation.isPending}
+            style={({ pressed }) => [{ cursor: 'pointer', padding: 8, borderRadius: 8, backgroundColor: colors.danger + '33', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]}
+            accessibilityLabel={t('delete') || 'Delete'}
+            accessibilityRole="button"
+          >
+            {deleteMutation.isPending ? (
+              <ActivityIndicator size="small" color={colors.danger} />
+            ) : (
+              <Trash2 size={16} color={colors.danger} />
+            )}
+          </Pressable>
+          <Pressable
             onPress={handleExecute}
             disabled={executeMutation.isPending || !transaction.is_active}
             style={({ pressed }) => [{ cursor: 'pointer', backgroundColor: colors.accent, padding: 8, borderRadius: 8, opacity: !transaction.is_active ? 0.4 : 1, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]}
@@ -293,7 +346,7 @@ function RecurringCard({ transaction }: { transaction: any }) {
   );
 }
 
-function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+function RecurringFormModal({ visible, onClose, editTransaction }: { visible: boolean; onClose: () => void; editTransaction: RecurringTransaction | null }) {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
@@ -309,20 +362,25 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
   const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly');
   const [error, setError] = useState('');
 
-  const mutation = useMutation({
-    mutationFn: (data: CreateRecurringRequest) => api.recurring.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['recurring'] });
-      onClose();
-      resetForm();
-      showToast(t('recurringCreated') || 'Recurring transaction created', 'success');
-    },
-    onError: (err) => {
-      setError(err instanceof Error ? err.message : 'Failed to create recurring transaction');
-    },
-  });
+  const isEditing = !!editTransaction;
 
-  const resetForm = () => {
+  // Pre-populate form when editing
+  const prevEditId = useState<string | null>(null);
+  if (editTransaction && editTransaction.id !== prevEditId[0]) {
+    prevEditId[1](editTransaction.id);
+    setType(editTransaction.type);
+    setAmount(String(editTransaction.amount));
+    setCurrency(editTransaction.currency);
+    setCategory(editTransaction.category || 'bills');
+    setDescription(editTransaction.description || '');
+    setFrequency(editTransaction.frequency);
+    setError('');
+  } else if (!editTransaction && prevEditId[0] !== null) {
+    prevEditId[1](null);
+    resetFormValues();
+  }
+
+  function resetFormValues() {
     setType('debit');
     setAmount('');
     setCurrency('USD');
@@ -330,7 +388,35 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
     setDescription('');
     setFrequency('monthly');
     setError('');
-  };
+  }
+
+  const createMutation = useMutation({
+    mutationFn: (data: CreateRecurringRequest) => api.recurring.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recurring'] });
+      haptics.success();
+      onClose();
+      resetFormValues();
+      showToast(t('recurringCreated') || 'Recurring transaction created', 'success');
+    },
+    onError: (err) => {
+      setError(err instanceof Error ? err.message : t('failedToCreate') || 'Failed to create recurring transaction');
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: UpdateRecurringRequest) => api.recurring.update(editTransaction!.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recurring'] });
+      haptics.success();
+      onClose();
+      resetFormValues();
+      showToast(t('recurringUpdated') || 'Recurring transaction updated', 'success');
+    },
+    onError: (err) => {
+      setError(err instanceof Error ? err.message : t('failedToUpdate') || 'Failed to update recurring transaction');
+    },
+  });
 
   const handleSubmit = () => {
     const parsedAmount = parseFloat(amount);
@@ -340,25 +426,39 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
     }
     setError('');
 
-    const nextExecution = new Date();
-    nextExecution.setDate(nextExecution.getDate() + 1);
+    if (isEditing) {
+      updateMutation.mutate({
+        type,
+        amount: parsedAmount,
+        category,
+        description: description || undefined,
+        frequency,
+      });
+    } else {
+      const nextExecution = new Date();
+      nextExecution.setDate(nextExecution.getDate() + 1);
 
-    mutation.mutate({
-      type,
-      amount: parsedAmount,
-      currency,
-      category,
-      description: description || undefined,
-      frequency,
-      next_execution: nextExecution.toISOString(),
-    });
+      createMutation.mutate({
+        type,
+        amount: parsedAmount,
+        currency,
+        category,
+        description: description || undefined,
+        frequency,
+        next_execution: nextExecution.toISOString(),
+      });
+    }
   };
+
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('createRecurring')}</Text>
+          <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
+            {isEditing ? (t('editRecurring') || 'Edit Recurring') : t('createRecurring')}
+          </Text>
           <Pressable onPress={onClose} style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <X size={24} color={colors.placeholder} />
           </Pressable>
@@ -410,6 +510,45 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
               placeholder="0.00"
               placeholderTextColor={colors.placeholder}
             />
+          </View>
+
+          {/* Currency Picker */}
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>{t('currency') || 'Currency'}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {COMMON_CURRENCIES.map((code) => {
+                  const display = getCurrencyDisplay(code);
+                  return (
+                    <Pressable
+                      key={code}
+                      onPress={() => { setCurrency(code); haptics.selection(); }}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        borderWidth: 1,
+                        backgroundColor: currency === code ? colors.accent : colors.card,
+                        borderColor: currency === code ? colors.accent : colors.border,
+                      }}
+                    >
+                      <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || ''}</Text>
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          color: currency === code ? colors.accentForeground : colors.foreground,
+                          fontFamily: currency === code ? 'Inter_600SemiBold' : undefined,
+                        }}
+                      >
+                        {code}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ScrollView>
           </View>
 
           <View style={{ marginBottom: 24 }}>
@@ -484,8 +623,8 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
             />
           </View>
 
-          <Button variant="primary" size="lg" onPress={handleSubmit} isLoading={mutation.isPending}>
-            {t('createRecurring')}
+          <Button variant="primary" size="lg" onPress={handleSubmit} isLoading={isPending}>
+            {isEditing ? (t('saveChanges') || 'Save Changes') : t('createRecurring')}
           </Button>
         </ScrollView>
       </SafeAreaView>

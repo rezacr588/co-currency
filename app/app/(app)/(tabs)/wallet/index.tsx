@@ -177,7 +177,7 @@ export default function WalletScreen() {
                       <Icon size={20} color={colors.primary} />
                     </View>
                     <Text
-                      style={{ color: colors.foreground, marginTop: 8, textAlign: 'center', fontSize: isCompactPhone ? 12 : 10, lineHeight: isCompactPhone ? 16 : 14, minHeight: isCompactPhone ? 32 : 28 }}
+                      style={{ color: colors.foreground, marginTop: 8, textAlign: 'center', fontSize: 12, lineHeight: 16, minHeight: 32 }}
                       numberOfLines={isDesktop ? 1 : 2}
                     >
                       {action.label}

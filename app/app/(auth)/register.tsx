@@ -13,6 +13,7 @@ import { AuthScaffold, Button, FormError, Input } from '../../src/components/ui'
 import { SEOHead } from '../../src/components/seo';
 
 function AuthDivider() {
+  const { t } = useLanguage();
   const theme = useTheme();
 
   return (
@@ -28,7 +29,7 @@ function AuthDivider() {
           letterSpacing: 1,
         }}
       >
-        or
+        {t('or') || 'or'}
       </Text>
       <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.border }} />
     </View>

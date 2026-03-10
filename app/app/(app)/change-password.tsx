@@ -11,7 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
-import { ChevronLeft, Lock, Eye, EyeOff, Check } from 'lucide-react-native';
+import { ArrowLeft, Lock, Eye, EyeOff, Check } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useAuth } from '../../src/context/AuthContext';
@@ -74,7 +74,7 @@ export default function ChangePasswordScreen() {
 
     if (!newPassword) {
       newErrors.newPassword = t('newPasswordRequired');
-    } else if (newPassword.length < 6) {
+    } else if (newPassword.length < 8) {
       newErrors.newPassword = t('passwordTooShort');
     }
 
@@ -111,7 +111,7 @@ export default function ChangePasswordScreen() {
             onPress={() => router.back()}
             style={{ cursor: 'pointer', padding: 8, marginRight: 8 }}
           >
-            <ChevronLeft size={24} color={colors.placeholder} />
+            <ArrowLeft size={24} color={colors.foreground} />
           </Pressable>
           <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('changePassword')}</Text>
         </View>

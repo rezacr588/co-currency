@@ -4,29 +4,36 @@ import {
   Text,
   ScrollView,
   Pressable,
-  ActivityIndicator,
+
   RefreshControl,
   TextInput,
   Modal,
   useWindowDimensions,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRefreshableQuery } from '../../src/hooks/useRefreshableQuery';
-import { Plus, ArrowLeft, X, PieChart, AlertTriangle } from 'lucide-react-native';
+import { Plus, ArrowLeft, X, PieChart, AlertTriangle, Pencil, Trash2 } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useTheme } from 'styled-components/native';
-import { formatCompactCurrency, formatNumber } from '../../src/utils/format';
+import { formatCompactCurrency, formatNumber, getCurrencyDisplay } from '../../src/utils/format';
 import { StyledCategoryIcon, CATEGORY_COLORS, getCategoryBackground, CategoryIcon } from '../../src/constants/icons';
 import { useToast } from '../../src/components/ui/Toast';
 import { Button } from '../../src/components/ui/Button';
 import { FormError } from '../../src/components/ui/FormError';
 import { SkeletonCard, SkeletonList } from '../../src/components/ui/Skeleton';
-import type { CreateBudgetRequest } from '../../src/types/goal';
+import { haptics } from '../../src/utils/haptics';
+import { COMMON_CURRENCIES } from '../../src/constants/currencies';
+import type { Budget, CreateBudgetRequest, UpdateBudgetRequest } from '../../src/types/goal';
 
-const CATEGORIES = ['food', 'transportation', 'entertainment', 'shopping', 'bills', 'other'];
+const CATEGORIES = [
+  'food', 'transportation', 'entertainment', 'shopping', 'bills',
+  'health', 'fitness', 'education', 'utilities', 'home',
+  'travel', 'gifts', 'coffee', 'clothing', 'pets', 'other',
+];
 const PERIODS = ['monthly', 'yearly'] as const;
 
 export default function BudgetsScreen() {
@@ -35,7 +42,9 @@ export default function BudgetsScreen() {
   const colors = theme.colors;
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [showForm, setShowForm] = useState(false);
+  const [editBudget, setEditBudget] = useState<Budget | null>(null);
   const { width } = useWindowDimensions();
 
   const isDesktop = width >= 1024;
@@ -53,6 +62,48 @@ export default function BudgetsScreen() {
     queryFn: () => api.budgets.list(),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.budgets.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      haptics.success();
+      showToast(t('budgetDeleted') || 'Budget deleted', 'success');
+    },
+    onError: (err) => {
+      haptics.error();
+      showToast(t('failedToDeleteBudget') || 'Failed to delete budget', 'error');
+    },
+  });
+
+  const handleDelete = (budget: Budget) => {
+    Alert.alert(
+      t('confirmDelete') || 'Confirm Delete',
+      t('confirmDeleteBudget') || 'Are you sure you want to delete this budget?',
+      [
+        { text: t('cancel') || 'Cancel', style: 'cancel' },
+        {
+          text: t('delete') || 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            haptics.medium();
+            deleteMutation.mutate(budget.id);
+          },
+        },
+      ]
+    );
+  };
+
+  const handleEdit = (budget: Budget) => {
+    haptics.light();
+    setEditBudget(budget);
+    setShowForm(true);
+  };
+
+  const handleCloseForm = () => {
+    setShowForm(false);
+    setEditBudget(null);
+  };
+
   const budgets = data?.budgets || [];
 
   return (
@@ -65,7 +116,7 @@ export default function BudgetsScreen() {
           </Pressable>
           <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('budgets')}</Text>
         </View>
-        <Pressable onPress={() => setShowForm(true)} style={({ pressed }) => [{ cursor: 'pointer', backgroundColor: colors.primary, padding: 10, borderRadius: 9999 }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('createBudget') || 'Create Budget'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Pressable onPress={() => { haptics.light(); setShowForm(true); }} style={({ pressed }) => [{ cursor: 'pointer', backgroundColor: colors.primary, padding: 10, borderRadius: 9999 }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('createBudget') || 'Create Budget'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Plus size={22} color={colors.primaryForeground} />
         </Pressable>
       </View>
@@ -110,19 +161,27 @@ export default function BudgetsScreen() {
                 width: columns === 1 ? '100%' : `${(100 / columns) - (16 * (columns - 1) / columns)}%`,
                 minWidth: columns === 1 ? '100%' : 300,
               }}>
-                <BudgetCard budget={budget} />
+                <BudgetCard
+                  budget={budget}
+                  onEdit={() => handleEdit(budget)}
+                  onDelete={() => handleDelete(budget)}
+                />
               </View>
             ))}
           </View>
         )}
       </ScrollView>
 
-      <BudgetFormModal visible={showForm} onClose={() => setShowForm(false)} />
+      <BudgetFormModal
+        visible={showForm}
+        onClose={handleCloseForm}
+        editBudget={editBudget}
+      />
     </SafeAreaView>
   );
 }
 
-function BudgetCard({ budget }: { budget: any }) {
+function BudgetCard({ budget, onEdit, onDelete }: { budget: Budget; onEdit: () => void; onDelete: () => void }) {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
@@ -132,7 +191,7 @@ function BudgetCard({ budget }: { budget: any }) {
   return (
     <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
           {budget.is_over_budget || budget.is_near_limit ? (
             <View
               style={{
@@ -158,16 +217,42 @@ function BudgetCard({ budget }: { budget: any }) {
               />
             </View>
           )}
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, textTransform: 'capitalize' }} numberOfLines={1}>{budget.category}</Text>
             <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>{t(budget.period)}</Text>
           </View>
         </View>
-        {budget.is_over_budget && (
-          <View style={{ backgroundColor: colors.danger + '33', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}>
-            <Text style={{ color: colors.danger, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>{t('overBudget')}</Text>
-          </View>
-        )}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          {budget.is_over_budget && (
+            <View style={{ backgroundColor: colors.danger + '33', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, marginRight: 4 }}>
+              <Text style={{ color: colors.danger, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>{t('overBudget')}</Text>
+            </View>
+          )}
+          <Pressable
+            onPress={onEdit}
+            style={({ pressed }) => [
+              { padding: 8, borderRadius: 8, backgroundColor: colors.secondary, cursor: 'pointer' },
+              pressed && { opacity: 0.7 },
+            ]}
+            accessibilityLabel={t('editBudget') || 'Edit Budget'}
+            accessibilityRole="button"
+            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+          >
+            <Pencil size={16} color={colors.mutedForeground} />
+          </Pressable>
+          <Pressable
+            onPress={onDelete}
+            style={({ pressed }) => [
+              { padding: 8, borderRadius: 8, backgroundColor: colors.danger + '1A', cursor: 'pointer' },
+              pressed && { opacity: 0.7 },
+            ]}
+            accessibilityLabel={t('delete') || 'Delete'}
+            accessibilityRole="button"
+            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+          >
+            <Trash2 size={16} color={colors.danger} />
+          </Pressable>
+        </View>
       </View>
 
       {/* Progress Bar */}
@@ -217,7 +302,7 @@ function BudgetCard({ budget }: { budget: any }) {
   );
 }
 
-function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+function BudgetFormModal({ visible, onClose, editBudget }: { visible: boolean; onClose: () => void; editBudget?: Budget | null }) {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
@@ -230,20 +315,55 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
   const [currency, setCurrency] = useState('USD');
   const [period, setPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [error, setError] = useState('');
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const mutation = useMutation({
+  // Populate form when editing
+  if (visible && editBudget && !isInitialized) {
+    setCategory(editBudget.category);
+    setAmount(String(editBudget.amount));
+    setCurrency(editBudget.currency);
+    setPeriod(editBudget.period);
+    setError('');
+    setIsInitialized(true);
+  }
+
+  // Reset initialized flag when modal closes
+  if (!visible && isInitialized) {
+    setIsInitialized(false);
+  }
+
+  const isEditing = !!editBudget;
+
+  const createMutation = useMutation({
     mutationFn: (data: CreateBudgetRequest) => api.budgets.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
       api.badges.check().then(() => {
         queryClient.invalidateQueries({ queryKey: ['badges'] });
       }).catch(() => {});
+      haptics.success();
       onClose();
       resetForm();
       showToast(t('budgetCreated') || 'Budget created', 'success');
     },
     onError: (err) => {
-      setError(err instanceof Error ? err.message : 'Failed to create budget');
+      haptics.error();
+      setError(err instanceof Error ? err.message : t('budgetSaveFailed') || 'Failed to save budget');
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: { id: string; payload: UpdateBudgetRequest }) => api.budgets.update(data.id, data.payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      haptics.success();
+      onClose();
+      resetForm();
+      showToast(t('budgetUpdated') || 'Budget updated', 'success');
+    },
+    onError: (err) => {
+      haptics.error();
+      setError(err instanceof Error ? err.message : t('budgetSaveFailed') || 'Failed to save budget');
     },
   });
 
@@ -253,6 +373,7 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
     setCurrency('USD');
     setPeriod('monthly');
     setError('');
+    setIsInitialized(false);
   };
 
   const handleSubmit = () => {
@@ -262,15 +383,28 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
       return;
     }
     setError('');
-    mutation.mutate({ category, amount: parsedAmount, currency, period });
+    haptics.medium();
+
+    if (isEditing && editBudget) {
+      updateMutation.mutate({
+        id: editBudget.id,
+        payload: { amount: parsedAmount, period },
+      });
+    } else {
+      createMutation.mutate({ category, amount: parsedAmount, currency, period });
+    }
   };
+
+  const isMutating = createMutation.isPending || updateMutation.isPending;
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('createBudget')}</Text>
-          <Pressable onPress={onClose} style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
+            {isEditing ? (t('editBudget') || 'Edit Budget') : (t('createBudget') || 'Create Budget')}
+          </Text>
+          <Pressable onPress={() => { onClose(); resetForm(); }} style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <X size={24} color={colors.placeholder} />
           </Pressable>
         </View>
@@ -298,9 +432,15 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
                 return (
                   <Pressable
                     key={cat}
-                    onPress={() => setCategory(cat)}
+                    onPress={() => {
+                      if (!isEditing) {
+                        haptics.selection();
+                        setCategory(cat);
+                      }
+                    }}
+                    disabled={isEditing}
                     style={{
-                      cursor: 'pointer',
+                      cursor: isEditing ? undefined : 'pointer',
                       backgroundColor: bgColor,
                       borderWidth: isSelected ? 0 : 1,
                       borderColor: isSelected ? 'transparent' : getCategoryBackground(cat, 0.25),
@@ -310,6 +450,7 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 8,
+                      opacity: isEditing && !isSelected ? 0.4 : 1,
                     }}
                   >
                     <CategoryIcon
@@ -343,13 +484,63 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
             />
           </View>
 
+          {/* Currency Picker */}
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>{t('currency') || 'Currency'}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {COMMON_CURRENCIES.map((code) => {
+                  const display = getCurrencyDisplay(code);
+                  const isSelected = currency === code;
+                  return (
+                    <Pressable
+                      key={code}
+                      onPress={() => {
+                        if (!isEditing) {
+                          haptics.selection();
+                          setCurrency(code);
+                        }
+                      }}
+                      disabled={isEditing}
+                      style={({ pressed }) => [
+                        {
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingHorizontal: 16,
+                          paddingVertical: 10,
+                          borderRadius: 12,
+                          backgroundColor: isSelected ? colors.accent : colors.card,
+                          borderWidth: 1,
+                          borderColor: isSelected ? colors.accent : colors.border,
+                          cursor: isEditing ? undefined : 'pointer',
+                          opacity: isEditing && !isSelected ? 0.4 : 1,
+                        },
+                        pressed && !isEditing && { opacity: 0.7 },
+                      ]}
+                    >
+                      <Text style={{ fontSize: 16 }}>{display.flag || ''}</Text>
+                      <Text style={{
+                        color: isSelected ? colors.accentForeground : colors.foreground,
+                        fontFamily: isSelected ? 'Inter_600SemiBold' : 'Inter_500Medium',
+                        fontSize: 14,
+                      }}>
+                        {code}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+
           <View style={{ marginBottom: 24 }}>
             <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>{t('period')}</Text>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               {PERIODS.map((p) => (
                 <Pressable
                   key={p}
-                  onPress={() => setPeriod(p)}
+                  onPress={() => { haptics.selection(); setPeriod(p); }}
                   style={{ flex: 1, padding: 16, borderRadius: 12, alignItems: 'center', backgroundColor: period === p ? colors.accent : colors.card, cursor: 'pointer' }}
                 >
                   <Text style={{ color: period === p ? colors.accentForeground : colors.foreground, fontFamily: period === p ? 'Inter_600SemiBold' : undefined }}>
@@ -360,8 +551,8 @@ function BudgetFormModal({ visible, onClose }: { visible: boolean; onClose: () =
             </View>
           </View>
 
-          <Button variant="primary" size="lg" onPress={handleSubmit} isLoading={mutation.isPending}>
-            {t('createBudget')}
+          <Button variant="primary" size="lg" onPress={handleSubmit} isLoading={isMutating}>
+            {isEditing ? (t('editBudget') || 'Edit Budget') : (t('createBudget') || 'Create Budget')}
           </Button>
         </ScrollView>
       </SafeAreaView>

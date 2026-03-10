@@ -30,6 +30,7 @@ import {
   TrendingUp,
   TrendingDown,
   AlertCircle,
+  Trash2,
 } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
@@ -72,6 +73,7 @@ export default function LoansScreen() {
   const [formInterestRate, setFormInterestRate] = useState('');
   const [formCounterparty, setFormCounterparty] = useState('');
   const [formDescription, setFormDescription] = useState('');
+  const [formDueDate, setFormDueDate] = useState('');
 
   // Payment form state
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -144,6 +146,7 @@ export default function LoansScreen() {
     setFormInterestRate('');
     setFormCounterparty('');
     setFormDescription('');
+    setFormDueDate('');
   };
 
   const handleCreate = () => {
@@ -161,6 +164,7 @@ export default function LoansScreen() {
       interest_rate: formInterestRate ? parseFloat(formInterestRate) : undefined,
       counterparty: formCounterparty.trim() || undefined,
       description: formDescription.trim() || undefined,
+      due_date: formDueDate.trim() || undefined,
     });
   };
 
@@ -344,10 +348,8 @@ export default function LoansScreen() {
               const isOverdue = loan.due_date && new Date(loan.due_date) < new Date() && loan.status === 'active';
 
               return (
-                <Pressable
+                <View
                   key={loan.id}
-                  onPress={() => openPaymentModal(loan)}
-                  onLongPress={() => handleDelete(loan)}
                   style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12 }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -422,7 +424,25 @@ export default function LoansScreen() {
                       </View>
                     )}
                   </View>
-                </Pressable>
+
+                  {/* Action Buttons */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Pressable
+                        onPress={() => openPaymentModal(loan)}
+                        style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.accent, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}
+                      >
+                        <DollarSign size={14} color={colors.accentForeground} />
+                        <Text style={{ color: colors.accentForeground, fontSize: 12, fontFamily: 'Inter_500Medium', marginLeft: 4 }}>
+                          {t('pay') || 'Pay'}
+                        </Text>
+                      </Pressable>
+                    </View>
+                    <Pressable onPress={() => handleDelete(loan)} hitSlop={8} style={{ padding: 8 }}>
+                      <Trash2 size={16} color={colors.danger} />
+                    </Pressable>
+                  </View>
+                </View>
               );
             })}
           </View>
@@ -614,6 +634,24 @@ export default function LoansScreen() {
                     placeholder="0"
                     placeholderTextColor={colors.mutedForeground}
                   />
+                </View>
+
+                {/* Due Date */}
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>
+                    {t('dueDate') || 'Due Date'}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12 }}>
+                    <Calendar size={18} color={colors.mutedForeground} />
+                    <TextInput
+                      style={{ flex: 1, padding: 14, color: colors.foreground, outlineStyle: 'none' } as any}
+                      value={formDueDate}
+                      onChangeText={setFormDueDate}
+                      placeholder="YYYY-MM-DD"
+                      placeholderTextColor={colors.mutedForeground}
+                      keyboardType="numbers-and-punctuation"
+                    />
+                  </View>
                 </View>
 
                 {/* Description */}

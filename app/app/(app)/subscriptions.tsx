@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,8 @@ import {
   Play,
   Pause,
   XCircle,
+  Pencil,
+  Trash2,
 } from 'lucide-react-native';
 import { api } from '../../src/api';
 import { useLanguage } from '../../src/context/LanguageContext';
@@ -33,6 +35,9 @@ import { useToast } from '../../src/components/ui/Toast';
 import { Button } from '../../src/components/ui/Button';
 import { FormError } from '../../src/components/ui/FormError';
 import { SkeletonCard, SkeletonList } from '../../src/components/ui/Skeleton';
+import { COMMON_CURRENCIES } from '../../src/constants/currencies';
+import { getCurrencyDisplay } from '../../src/utils/format';
+import { haptics } from '../../src/utils/haptics';
 import type { CreateSubscriptionRequest, Subscription } from '../../src/types/goal';
 
 const BILLING_CYCLES = ['weekly', 'monthly', 'quarterly', 'yearly'] as const;
@@ -53,6 +58,7 @@ export default function SubscriptionsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
   const { width } = useWindowDimensions();
 
   const isDesktop = width >= 1024;
@@ -78,6 +84,17 @@ export default function SubscriptionsScreen() {
   const subscriptions = data?.subscriptions || [];
   const activeSubscriptions = subscriptions.filter((s) => s.status === 'active');
   const pausedSubscriptions = subscriptions.filter((s) => s.status === 'paused');
+  const cancelledSubscriptions = subscriptions.filter((s) => s.status === 'cancelled');
+
+  const handleEdit = (subscription: Subscription) => {
+    setEditingSubscription(subscription);
+    setShowForm(true);
+  };
+
+  const handleFormClose = () => {
+    setShowForm(false);
+    setEditingSubscription(null);
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
@@ -89,7 +106,7 @@ export default function SubscriptionsScreen() {
           </Pressable>
           <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('subscriptions')}</Text>
         </View>
-        <Pressable onPress={() => setShowForm(true)} style={({ pressed }) => [{ cursor: 'pointer', backgroundColor: colors.primary, padding: 10, borderRadius: 9999 }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('addSubscription') || 'Add Subscription'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Pressable onPress={() => { setEditingSubscription(null); setShowForm(true); }} style={({ pressed }) => [{ cursor: 'pointer', backgroundColor: colors.primary, padding: 10, borderRadius: 9999 }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('addSubscription') || 'Add Subscription'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Plus size={22} color={colors.primaryForeground} />
         </Pressable>
       </View>
@@ -165,7 +182,7 @@ export default function SubscriptionsScreen() {
                       width: columns === 1 ? '100%' : `${(100 / columns) - (12 * (columns - 1) / columns)}%`,
                       minWidth: columns === 1 ? '100%' : 300,
                     }}>
-                      <SubscriptionCard subscription={sub} />
+                      <SubscriptionCard subscription={sub} onEdit={handleEdit} />
                     </View>
                   ))}
                 </View>
@@ -173,7 +190,7 @@ export default function SubscriptionsScreen() {
             )}
 
             {pausedSubscriptions.length > 0 && (
-              <View>
+              <View style={{ marginBottom: 24 }}>
                 <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.mutedForeground, marginBottom: 16 }}>
                   {t('paused')} ({pausedSubscriptions.length})
                 </Text>
@@ -183,7 +200,25 @@ export default function SubscriptionsScreen() {
                       width: columns === 1 ? '100%' : `${(100 / columns) - (12 * (columns - 1) / columns)}%`,
                       minWidth: columns === 1 ? '100%' : 300,
                     }}>
-                      <SubscriptionCard subscription={sub} />
+                      <SubscriptionCard subscription={sub} onEdit={handleEdit} />
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {cancelledSubscriptions.length > 0 && (
+              <View>
+                <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.mutedForeground, marginBottom: 16 }}>
+                  {t('cancelled') || 'Cancelled'} ({cancelledSubscriptions.length})
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                  {cancelledSubscriptions.map((sub) => (
+                    <View key={sub.id} style={{
+                      width: columns === 1 ? '100%' : `${(100 / columns) - (12 * (columns - 1) / columns)}%`,
+                      minWidth: columns === 1 ? '100%' : 300,
+                    }}>
+                      <SubscriptionCard subscription={sub} onEdit={handleEdit} />
                     </View>
                   ))}
                 </View>
@@ -193,12 +228,12 @@ export default function SubscriptionsScreen() {
         )}
       </ScrollView>
 
-      <SubscriptionFormModal visible={showForm} onClose={() => setShowForm(false)} />
+      <SubscriptionFormModal visible={showForm} onClose={handleFormClose} editSubscription={editingSubscription} />
     </SafeAreaView>
   );
 }
 
-function SubscriptionCard({ subscription }: { subscription: Subscription }) {
+function SubscriptionCard({ subscription, onEdit }: { subscription: Subscription; onEdit: (sub: Subscription) => void }) {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
@@ -210,20 +245,38 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
       api.subscriptions.update(subscription.id, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      haptics.success();
       showToast(t('subscriptionUpdated') || 'Subscription updated', 'success');
     },
     onError: (err) => {
+      haptics.error();
       showToast(err instanceof Error ? err.message : t('failedToUpdate') || 'Failed to update', 'error');
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => api.subscriptions.delete(subscription.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      haptics.success();
+      showToast(t('subscriptionDeleted') || 'Subscription deleted', 'success');
+    },
+    onError: (err) => {
+      haptics.error();
+      showToast(err instanceof Error ? err.message : t('failedToDelete') || 'Failed to delete', 'error');
+    },
+  });
+
   const isPaused = subscription.status === 'paused';
+  const isCancelled = subscription.status === 'cancelled';
+  const isActive = subscription.status === 'active';
 
   const handleToggle = () => {
     const newStatus = isPaused ? 'active' : 'paused';
     const action = isPaused
       ? t('resumeSubscription') || 'Resume'
       : t('pauseSubscription') || 'Pause';
+    haptics.light();
     Alert.alert(
       action,
       isPaused
@@ -236,8 +289,37 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
     );
   };
 
+  const handleCancel = () => {
+    haptics.warning();
+    Alert.alert(
+      t('cancelSubscription') || 'Cancel Subscription',
+      t('confirmCancelSubscription') || `Are you sure you want to cancel ${subscription.name}? You can reactivate it later.`,
+      [
+        { text: t('cancel') || 'Cancel', style: 'cancel' },
+        { text: t('cancelSubscription') || 'Cancel Subscription', style: 'destructive', onPress: () => updateMutation.mutate('cancelled') },
+      ]
+    );
+  };
+
+  const handleDelete = () => {
+    haptics.warning();
+    Alert.alert(
+      t('confirmDelete') || 'Confirm Delete',
+      t('confirmDeleteSubscription') || `Are you sure you want to delete ${subscription.name}? This action cannot be undone.`,
+      [
+        { text: t('cancel') || 'Cancel', style: 'cancel' },
+        { text: t('delete') || 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate() },
+      ]
+    );
+  };
+
+  const handleEdit = () => {
+    haptics.light();
+    onEdit(subscription);
+  };
+
   return (
-    <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12, opacity: isPaused ? 0.6 : 1 }}>
+    <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12, opacity: isCancelled ? 0.5 : isPaused ? 0.6 : 1 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
           <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
@@ -259,26 +341,67 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
           <Calendar size={14} color={colors.placeholder} />
           <Text style={{ color: colors.mutedForeground, fontSize: 14, marginLeft: 4 }} numberOfLines={1}>
             {t('nextBilling')}: {formatDate(subscription.next_billing_date)}
           </Text>
         </View>
         <View style={{ flexDirection: 'row', gap: 8 }}>
+          {/* Pause/Resume toggle - not shown for cancelled */}
+          {!isCancelled && (
+            <Pressable
+              onPress={handleToggle}
+              disabled={updateMutation.isPending}
+              style={({ pressed }) => [{ padding: 8, borderRadius: 8, backgroundColor: isPaused ? colors.success + '33' : colors.warning + '33', cursor: 'pointer', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]}
+              accessibilityLabel={isPaused ? (t('resumeSubscription') || 'Resume') : (t('pauseSubscription') || 'Pause')}
+              accessibilityRole="button"
+            >
+              {updateMutation.isPending ? (
+                <ActivityIndicator size="small" />
+              ) : isPaused ? (
+                <Play size={16} color={colors.success} />
+              ) : (
+                <Pause size={16} color={colors.warning} />
+              )}
+            </Pressable>
+          )}
+
+          {/* Edit button */}
           <Pressable
-            onPress={handleToggle}
-            disabled={updateMutation.isPending}
-            style={({ pressed }) => [{ padding: 8, borderRadius: 8, backgroundColor: isPaused ? colors.success + '33' : colors.warning + '33', cursor: 'pointer', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]}
-            accessibilityLabel={isPaused ? (t('resumeSubscription') || 'Resume') : (t('pauseSubscription') || 'Pause')}
+            onPress={handleEdit}
+            style={({ pressed }) => [{ padding: 8, borderRadius: 8, backgroundColor: colors.primary + '33', cursor: 'pointer', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]}
+            accessibilityLabel={t('editSubscription') || 'Edit Subscription'}
             accessibilityRole="button"
           >
-            {updateMutation.isPending ? (
-              <ActivityIndicator size="small" />
-            ) : isPaused ? (
-              <Play size={16} color={colors.success} />
+            <Pencil size={16} color={colors.primary} />
+          </Pressable>
+
+          {/* Cancel button - only when active */}
+          {isActive && (
+            <Pressable
+              onPress={handleCancel}
+              disabled={updateMutation.isPending}
+              style={({ pressed }) => [{ padding: 8, borderRadius: 8, backgroundColor: colors.warning + '33', cursor: 'pointer', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]}
+              accessibilityLabel={t('cancelSubscription') || 'Cancel Subscription'}
+              accessibilityRole="button"
+            >
+              <XCircle size={16} color={colors.warning} />
+            </Pressable>
+          )}
+
+          {/* Delete button */}
+          <Pressable
+            onPress={handleDelete}
+            disabled={deleteMutation.isPending}
+            style={({ pressed }) => [{ padding: 8, borderRadius: 8, backgroundColor: colors.danger + '33', cursor: 'pointer', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]}
+            accessibilityLabel={t('delete') || 'Delete'}
+            accessibilityRole="button"
+          >
+            {deleteMutation.isPending ? (
+              <ActivityIndicator size="small" color={colors.danger} />
             ) : (
-              <Pause size={16} color={colors.warning} />
+              <Trash2 size={16} color={colors.danger} />
             )}
           </Pressable>
         </View>
@@ -287,7 +410,7 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
   );
 }
 
-function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+function SubscriptionFormModal({ visible, onClose, editSubscription }: { visible: boolean; onClose: () => void; editSubscription: Subscription | null }) {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
@@ -302,16 +425,49 @@ function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose
   const [category, setCategory] = useState('other');
   const [error, setError] = useState('');
 
-  const mutation = useMutation({
+  const isEditing = !!editSubscription;
+
+  useEffect(() => {
+    if (editSubscription) {
+      setName(editSubscription.name);
+      setAmount(String(editSubscription.amount));
+      setCurrency(editSubscription.currency);
+      setBillingCycle(editSubscription.billing_cycle);
+      setCategory(editSubscription.category || 'other');
+      setError('');
+    } else {
+      resetForm();
+    }
+  }, [editSubscription]);
+
+  const createMutation = useMutation({
     mutationFn: (data: CreateSubscriptionRequest) => api.subscriptions.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      haptics.success();
       onClose();
       resetForm();
       showToast(t('subscriptionCreated') || 'Subscription created', 'success');
     },
     onError: (err) => {
+      haptics.error();
       setError(err instanceof Error ? err.message : t('failedToCreate') || 'Failed to create subscription');
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: { name: string; amount: number; currency: string; billing_cycle: 'weekly' | 'monthly' | 'quarterly' | 'yearly'; category: string }) =>
+      api.subscriptions.update(editSubscription!.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      haptics.success();
+      onClose();
+      resetForm();
+      showToast(t('subscriptionUpdated') || 'Subscription updated', 'success');
+    },
+    onError: (err) => {
+      haptics.error();
+      setError(err instanceof Error ? err.message : t('failedToUpdate') || 'Failed to update subscription');
     },
   });
 
@@ -323,6 +479,8 @@ function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose
     setCategory('other');
     setError('');
   };
+
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   const handleSubmit = () => {
     if (!name.trim()) {
@@ -336,24 +494,36 @@ function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose
     }
     setError('');
 
-    const nextBillingDate = new Date();
-    nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+    if (isEditing) {
+      updateMutation.mutate({
+        name: name.trim(),
+        amount: parsedAmount,
+        currency,
+        billing_cycle: billingCycle,
+        category,
+      });
+    } else {
+      const nextBillingDate = new Date();
+      nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
 
-    mutation.mutate({
-      name: name.trim(),
-      amount: parsedAmount,
-      currency,
-      billing_cycle: billingCycle,
-      category,
-      next_billing_date: nextBillingDate.toISOString(),
-    });
+      createMutation.mutate({
+        name: name.trim(),
+        amount: parsedAmount,
+        currency,
+        billing_cycle: billingCycle,
+        category,
+        next_billing_date: nextBillingDate.toISOString(),
+      });
+    }
   };
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('addSubscription')}</Text>
+          <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
+            {isEditing ? (t('editSubscription') || 'Edit Subscription') : t('addSubscription')}
+          </Text>
           <Pressable onPress={onClose} style={({ pressed }) => [{ cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <X size={24} color={colors.placeholder} />
           </Pressable>
@@ -394,6 +564,50 @@ function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose
             />
           </View>
 
+          {/* Currency Picker */}
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>{t('currency') || 'Currency'}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              {COMMON_CURRENCIES.map((cur) => {
+                const display = getCurrencyDisplay(cur);
+                const isSelected = currency === cur;
+                return (
+                  <Pressable
+                    key={cur}
+                    onPress={() => { setCurrency(cur); haptics.selection(); }}
+                    style={({ pressed }) => [{
+                      paddingHorizontal: 16,
+                      paddingVertical: 10,
+                      borderRadius: 8,
+                      backgroundColor: isSelected ? colors.accent : colors.card,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      cursor: 'pointer',
+                    }, pressed && { opacity: 0.7 }]}
+                  >
+                    {display.flag ? (
+                      <Text style={{ fontSize: 16 }}>{display.flag}</Text>
+                    ) : null}
+                    <Text style={{
+                      color: isSelected ? colors.accentForeground : colors.foreground,
+                      fontFamily: isSelected ? 'Inter_600SemiBold' : 'Inter_500Medium',
+                      fontSize: 14,
+                    }}>
+                      {cur}
+                    </Text>
+                    <Text style={{
+                      color: isSelected ? colors.accentForeground + 'AA' : colors.mutedForeground,
+                      fontSize: 12,
+                    }}>
+                      {display.symbol}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+
           <View style={{ marginBottom: 24 }}>
             <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>{t('billingCycle')}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -432,8 +646,8 @@ function SubscriptionFormModal({ visible, onClose }: { visible: boolean; onClose
             </View>
           </View>
 
-          <Button variant="primary" size="lg" onPress={handleSubmit} isLoading={mutation.isPending}>
-            {t('addSubscription')}
+          <Button variant="primary" size="lg" onPress={handleSubmit} isLoading={isPending}>
+            {isEditing ? (t('updateSubscription') || 'Update Subscription') : t('addSubscription')}
           </Button>
         </ScrollView>
       </SafeAreaView>

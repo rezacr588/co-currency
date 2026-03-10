@@ -653,13 +653,13 @@ function ActiveChallengeCard({
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
             <Clock size={12} color={colors.mutedForeground} />
             <Text style={{ color: colors.mutedForeground, fontSize: 12, marginLeft: 4 }}>
-              {daysLeft} days left
+              {daysLeft} {t('daysLeft') || 'days left'}
             </Text>
             {userChallenge.streak_days > 0 && (
               <>
                 <Flame size={12} color={colors.warning} style={{ marginLeft: 12 }} />
                 <Text style={{ fontSize: 12, color: colors.warning, marginLeft: 4 }}>
-                  {userChallenge.streak_days} day streak
+                  {userChallenge.streak_days} {t('dayStreak') || 'day streak'}
                 </Text>
               </>
             )}
@@ -669,7 +669,7 @@ function ActiveChallengeCard({
 
       <View style={{ marginBottom: 12 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-          <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>Progress</Text>
+          <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>{t('progress') || 'Progress'}</Text>
           <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>
             {Math.round(userChallenge.progress)}%
           </Text>
@@ -685,7 +685,7 @@ function ActiveChallengeCard({
         <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.accent + '33', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}>
           <Star size={12} color={colors.accent} />
           <Text style={{ fontSize: 12, color: colors.accent, marginLeft: 4 }}>
-            +{challenge.points_reward} pts on completion
+            +{challenge.points_reward} {t('ptsOnCompletion') || 'pts on completion'}
           </Text>
         </View>
         <Pressable

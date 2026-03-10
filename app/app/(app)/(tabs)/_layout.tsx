@@ -134,7 +134,7 @@ function AppSidebar({
   const utilityItems = [
     { href: '/(app)/badges', label: t('badges') || 'Badges', icon: <Trophy size={18} color={theme.colors.secondaryForeground} /> },
     { href: '/(app)/historical', label: t('historicalRates') || 'Historical', icon: <History size={18} color={theme.colors.secondaryForeground} /> },
-    { href: '/todo', label: 'Planner', icon: <KanbanSquare size={18} color={theme.colors.secondaryForeground} /> },
+    { href: '/todo', label: t('planner') || 'Planner', icon: <KanbanSquare size={18} color={theme.colors.secondaryForeground} /> },
   ];
 
   const isRouteActive = (href: string) => {

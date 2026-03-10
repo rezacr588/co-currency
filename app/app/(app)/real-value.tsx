@@ -21,6 +21,8 @@ import { PageScaffold } from '../../src/components/ui';
 import { Card } from '../../src/components/ui';
 import { Input } from '../../src/components/ui';
 import { Button } from '../../src/components/ui';
+import { Select } from '../../src/components/ui';
+import { useCurrencies } from '../../src/hooks';
 import { RealValueCard } from '../../src/components/features/RealValue';
 import { haptics } from '../../src/utils/haptics';
 import type { WealthOverview, WealthAlert, WhatIfResult } from '../../src/types/wealth';
@@ -40,6 +42,11 @@ export default function RealValueScreen() {
   const [whatIfAmount, setWhatIfAmount] = useState('1000');
   const [whatIfMonths, setWhatIfMonths] = useState('12');
   const [whatIfResult, setWhatIfResult] = useState<WhatIfResult | null>(null);
+  const { data: currencies } = useCurrencies();
+  const currencyOptions = (currencies || []).map((c: { code: string; name: string }) => ({
+    label: `${c.code} - ${c.name}`,
+    value: c.code,
+  }));
 
   const { data: wealthData, isPending: isOverviewPending } = useQuery<WealthOverview>({
     queryKey: ['wealth', 'overview'],
@@ -241,23 +248,25 @@ export default function RealValueScreen() {
 
         <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
           <View style={{ flex: 1 }}>
-            <Input
-              label={t('whatIfFrom') || 'From'}
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 6 }}>
+              {t('whatIfFrom') || 'From'}
+            </Text>
+            <Select
               value={fromCurrency}
-              onChangeText={setFromCurrency}
-              placeholder="USD"
-              autoCapitalize="characters"
-              style={{ fontSize: 15, outlineStyle: 'none' } as any}
+              onValueChange={setFromCurrency}
+              options={currencyOptions}
+              placeholder={t('selectCurrency') || 'Select currency'}
             />
           </View>
           <View style={{ flex: 1 }}>
-            <Input
-              label={t('whatIfTo') || 'To'}
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 6 }}>
+              {t('whatIfTo') || 'To'}
+            </Text>
+            <Select
               value={toCurrency}
-              onChangeText={setToCurrency}
-              placeholder="EUR"
-              autoCapitalize="characters"
-              style={{ fontSize: 15, outlineStyle: 'none' } as any}
+              onValueChange={setToCurrency}
+              options={currencyOptions}
+              placeholder={t('selectCurrency') || 'Select currency'}
             />
           </View>
         </View>
