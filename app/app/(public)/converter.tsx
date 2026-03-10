@@ -4,6 +4,7 @@ import { useTheme } from 'styled-components/native';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { CurrencyConverter } from '../../src/components/features/CurrencyConverter';
 import { MarketingScaffold, SectionBlock, SurfaceCard } from '../../src/components/ui';
+import { SEOHead } from '../../src/components/seo';
 
 export default function ConverterScreen() {
   const { t } = useLanguage();
@@ -13,6 +14,11 @@ export default function ConverterScreen() {
 
   return (
     <MarketingScaffold>
+      <SEOHead
+        title={t('seoConverterTitle') || 'Free Currency Converter - 160+ Currencies'}
+        description={t('seoConverterDesc') || 'Convert between 160+ currencies with real-time ECB exchange rates. Free, fast, and accurate currency converter.'}
+        canonicalPath="/converter"
+      />
       <SectionBlock
         title={t('converterTitle')}
         subtitle={t('converterSubtitle')}

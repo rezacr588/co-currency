@@ -17,6 +17,7 @@ import { useTheme } from 'styled-components/native';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { LinkedInIcon } from '../../src/constants/icons';
 import { MarketingScaffold, SectionBlock, SurfaceCard } from '../../src/components/ui';
+import { SEOHead } from '../../src/components/seo';
 import { getVersionInfo } from '../../src/utils/version';
 
 function AboutStat({ icon, label }: { icon: React.ReactNode; label: string }) {
@@ -79,6 +80,18 @@ export default function AboutScreen() {
 
   return (
     <MarketingScaffold>
+      <SEOHead
+        title={t('seoAboutTitle') || 'About CoAI'}
+        description={t('seoAboutDesc') || 'CoAI is an AI-powered personal finance app built by Reza Zeraat. Track spending across 160+ currencies with smart insights.'}
+        canonicalPath="/about"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'Person',
+          name: 'Reza Zeraat',
+          jobTitle: 'Full Stack Developer & ML Engineer',
+          url: 'https://www.linkedin.com/in/reza-zeraat-6628781b3/',
+        }}
+      />
       <SectionBlock
         title={t('aboutUs') || 'About Us'}
         subtitle={t('aboutUsDescription') || 'Your complete personal finance companion'}

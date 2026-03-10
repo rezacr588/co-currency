@@ -10,6 +10,7 @@ import { useLanguage } from '../../src/context/LanguageContext';
 import { LinkedInIcon, GoogleIcon } from '../../src/constants/icons';
 import { prepareDashboardPostAuthRoute } from '../../src/navigation/mode';
 import { AuthScaffold, Button, FormError, Input } from '../../src/components/ui';
+import { SEOHead } from '../../src/components/seo';
 
 function AuthDivider() {
   const theme = useTheme();
@@ -198,6 +199,13 @@ export default function LoginScreen() {
   const isSubmitting = isLoading || isOAuthLoading;
 
   return (
+    <>
+    <SEOHead
+      title={t('seoLoginTitle') || 'Login'}
+      description="Log in to your CoAI account to manage your finances."
+      canonicalPath="/login"
+      noIndex
+    />
     <AuthScaffold
       title={t('welcomeBack')}
       subtitle={t('loginSubtitle')}
@@ -291,5 +299,6 @@ export default function LoginScreen() {
         </Button>
       </View>
     </AuthScaffold>
+    </>
   );
 }

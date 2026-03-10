@@ -506,11 +506,18 @@ export default function DashboardScreen() {
           </AICardGradient>
         )}
 
-        {/* Real Value - Purchasing Power */}
+        {/* Real Value - Purchasing Power (always visible) */}
         <SectionSpacing>
-          <CollapsibleSection title={t('realValue') || 'Real Value'} storageKey="dashboard_realvalue">
-            <RealValueCard compact />
-          </CollapsibleSection>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
+            <H3 style={{ fontSize: 16 }}>{t('realValue') || 'Real Value'}</H3>
+            <Link href="/(app)/real-value" asChild>
+              <Pressable hitSlop={8} style={{ minHeight: 44, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }}>
+                <Caption style={{ marginRight: 4 }}>{t('viewRealValueDetails') || 'View Details'}</Caption>
+                <ArrowRight size={14} color={theme.colors.mutedForeground} />
+              </Pressable>
+            </Link>
+          </View>
+          <RealValueCard compact />
         </SectionSpacing>
 
         {/* Financial Health Score */}

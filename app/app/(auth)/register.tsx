@@ -10,6 +10,7 @@ import { useLanguage } from '../../src/context/LanguageContext';
 import { LinkedInIcon, GoogleIcon } from '../../src/constants/icons';
 import { prepareDashboardPostAuthRoute } from '../../src/navigation/mode';
 import { AuthScaffold, Button, FormError, Input } from '../../src/components/ui';
+import { SEOHead } from '../../src/components/seo';
 
 function AuthDivider() {
   const theme = useTheme();
@@ -178,6 +179,12 @@ export default function RegisterScreen() {
   const isSubmitting = isLoading || isOAuthLoading;
 
   return (
+    <>
+    <SEOHead
+      title={t('seoRegisterTitle') || 'Create Your Free Account'}
+      description="Create a free CoAI account. Track spending across 160+ currencies with AI-powered insights."
+      canonicalPath="/register"
+    />
     <AuthScaffold
       title={t('createAccount')}
       subtitle={t('registerSubtitle')}
@@ -296,5 +303,6 @@ export default function RegisterScreen() {
         </Button>
       </View>
     </AuthScaffold>
+    </>
   );
 }

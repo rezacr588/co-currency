@@ -1,6 +1,7 @@
 import { View, Text, Pressable } from 'react-native';
 import { Link, Stack } from 'expo-router';
 import { useTheme } from 'styled-components/native';
+import { SEOHead } from '../src/components/seo';
 
 export default function NotFoundScreen() {
   const theme = useTheme();
@@ -8,6 +9,12 @@ export default function NotFoundScreen() {
 
   return (
     <>
+      <SEOHead
+        title="Page Not Found"
+        description="The page you're looking for doesn't exist."
+        canonicalPath="/404"
+        noIndex
+      />
       <Stack.Screen options={{ title: 'Oops!' }} />
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background, padding: 24 }}>
         <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 16 }}>

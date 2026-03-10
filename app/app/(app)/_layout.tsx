@@ -3,6 +3,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../../src/context/AuthContext';
 import { useTheme } from 'styled-components/native';
 import { DailyRewardModal } from '../../src/components/features/DailyReward';
+import { SEOHead } from '../../src/components/seo';
 
 export default function AppLayout() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -23,6 +24,12 @@ export default function AppLayout() {
 
   return (
     <>
+      <SEOHead
+        title="Dashboard"
+        description="Your personal finance dashboard."
+        canonicalPath="/dashboard"
+        noIndex
+      />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="finapp" />
         <Stack.Screen name="todo" />
@@ -40,6 +47,7 @@ export default function AppLayout() {
         <Stack.Screen name="loans" />
         <Stack.Screen name="notification-settings" />
         <Stack.Screen name="challenges" />
+        <Stack.Screen name="real-value" />
         <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal' }} />
       </Stack>
       {/* Daily Reward Modal - shows once per day */}
