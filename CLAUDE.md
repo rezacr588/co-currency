@@ -101,7 +101,7 @@ make clean                        # Remove build artifacts
 - JWT auth: access tokens (1 hour), refresh tokens (7 days)
 - Zerolog logging (console in dev, JSON in prod)
 - Swagger docs at `/swagger/`
-- Transaction API handler limit is 500 (`parsePaginationParams`), repository limit is 10,000
+- Pagination: default limit 50, API handler max 500, repository max 10,000, filter max 2,000 (configurable via `PAGINATION_DEFAULT_LIMIT`, `PAGINATION_MAX_FILTER_LIMIT`)
 - Pagination returns `limit`, `offset`, `total` with filters for category, type, currency, date range, search
 
 **Error handling (`pkg/httputil/errors.go`):**
@@ -329,10 +329,13 @@ make build       # Build Docker image
 make run-local   # Test production build locally on :8080
 ```
 
-**Koyeb** (use `koyeb` MCP server):
+**Koyeb** (use `koyeb` CLI):
 - App: `coai`, Service: `co-currency`
 - URL: https://coai.koyeb.app
 - Instance: free tier, region: Frankfurt, scaling: min=0 (scale to zero when idle), max=1
+- Update env vars: `koyeb services update coai/co-currency --env "KEY=VALUE"`
+- Redeploy: `koyeb services redeploy coai/co-currency`
+- Check logs: `koyeb services logs coai/co-currency -t runtime`
 
 **EAS Build profiles (app/eas.json):**
 - Development: dev client, internal distribution, debug APK, channel `development`
@@ -349,9 +352,11 @@ See `backend/.env.example` for full list. Key variable groups:
 
 **Database:** `DATABASE_URL` (PostgreSQL, required for user features; without it, currency-only mode)
 
-**Auth:** `JWT_SECRET` (validated in production — fails if default/empty), `FRONTEND_URL` (for OAuth redirects)
+**Auth:** `JWT_SECRET` (validated in production — fatal if default/empty; checked in both `config.go` and `main.go`), `FRONTEND_URL` (for OAuth redirects), `RESEND_API_KEY` (Resend email service for password reset)
 
 **OAuth:** `GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI`, `LINKEDIN_CLIENT_ID/SECRET/REDIRECT_URI`
+- Mobile OAuth: handler appends `:mobile` to OAuth state when `?platform=mobile` is passed; on callback, redirects to `coai://` custom scheme instead of `FRONTEND_URL` (`oauth.go`)
+- App uses `WebBrowser.openAuthSessionAsync()` on native (not `openBrowserAsync`) to intercept the `coai://` redirect and parse tokens directly
 
 **AI:** `AI_PROVIDER` (googleai/openai/cerebras/groq, default: googleai), `AI_API_KEY`, `AI_MODEL` (model name), `AI_FAST_MODEL` (fast response model), `AI_THINKING_MODEL` (higher-quality reasoning model), `AI_THINKING_MODE_DEFAULT` (auto|fast|thinking), `AI_VISION_MODEL` (vision model override), `AI_CLOUD_PROJECT` (Google Cloud project ID), `TAVILY_API_KEY` (web search in AI chat)
 
@@ -369,7 +374,7 @@ See `backend/.env.example` for full list. Key variable groups:
 
 ## Database
 
-Koyeb PostgreSQL v18 — hosted on Koyeb's managed Postgres (us-east-1).
+Aiven PostgreSQL (free tier) — previously Koyeb Postgres v18, migrated to Aiven.
 
 **Migration system:** Custom runner with `//go:embed` SQL files in `internal/migrations/sql/main/` and `sql/irr/`. Auto-runs on startup with per-migration transactions. Two tracking tables: `schema_migrations` (main), `schema_migrations_irr` (rates).
 
