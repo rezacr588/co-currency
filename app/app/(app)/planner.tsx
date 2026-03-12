@@ -49,6 +49,12 @@ import {
   setPlannerFundingRequired,
 } from '../../src/offline/plannerCache';
 import {
+  getPlannerBoardBackup,
+  plannerBoardsEqual,
+  setPlannerBoardBackup,
+  shouldUseLocalPlannerBackup,
+} from '../../src/offline/plannerBackup';
+import {
   discardFailedPlannerOps,
   enqueuePlannerOp,
   getPlannerOutbox,
@@ -133,6 +139,7 @@ export default function PlannerScreen() {
 
   // --- Core state ---
   const [cachedBoard, setCachedBoard] = useState<PlannerBoardResponse | null>(null);
+  const [backupBoard, setBackupBoard] = useState<PlannerBoardResponse | null>(null);
   const [outbox, setOutbox] = useState<PlannerOutboxOp[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
@@ -181,6 +188,7 @@ export default function PlannerScreen() {
   useEffect(() => {
     if (!userID) {
       setCachedBoard(null);
+      setBackupBoard(null);
       setOutbox([]);
       setFundingRequiredMap({});
       setFundingRequired(null);
@@ -189,14 +197,16 @@ export default function PlannerScreen() {
 
     let active = true;
     void (async () => {
-      const [cache, queue, online, storedFunding] = await Promise.all([
+      const [cache, backup, queue, online, storedFunding] = await Promise.all([
         getPlannerBoardCache(userID),
+        getPlannerBoardBackup(userID),
         getPlannerOutbox(userID),
         isPlannerOnline(),
         getPlannerFundingRequiredMap(userID),
       ]);
       if (!active) return;
       setCachedBoard(cache?.board ?? null);
+      setBackupBoard(backup?.board ?? null);
       setOutbox(queue);
       setIsOnline(online);
       setFundingRequiredMap(storedFunding);
@@ -210,9 +220,16 @@ export default function PlannerScreen() {
 
   useEffect(() => {
     if (!userID || !boardQuery.data) return;
-    setCachedBoard(boardQuery.data);
-    void setPlannerBoardCache(userID, boardQuery.data);
-  }, [boardQuery.data, userID]);
+
+    const remoteBoard = boardQuery.data;
+    const localBoard = backupBoard ?? cachedBoard;
+    if (shouldUseLocalPlannerBackup(remoteBoard, localBoard) && outbox.length === 0) {
+      return;
+    }
+
+    setCachedBoard(remoteBoard);
+    void setPlannerBoardCache(userID, remoteBoard);
+  }, [backupBoard, boardQuery.data, cachedBoard, outbox.length, userID]);
 
   // --- Sync ---
   const syncOutboxNow = useCallback(async () => {
@@ -282,8 +299,19 @@ export default function PlannerScreen() {
   }, [userID]);
 
   // --- Board derived state ---
-  const canonicalBoard = boardQuery.data ?? cachedBoard ?? emptyBoard();
+  const localPlannerBoard = backupBoard ?? cachedBoard;
+  const isUsingLocalPlannerBackup = shouldUseLocalPlannerBackup(boardQuery.data, localPlannerBoard) && outbox.length === 0;
+  const canonicalBoard = (isUsingLocalPlannerBackup ? localPlannerBoard : boardQuery.data) ?? cachedBoard ?? backupBoard ?? emptyBoard();
   const effectiveBoard = useMemo(() => applyOutboxLocally(canonicalBoard, outbox), [canonicalBoard, outbox]);
+
+  useEffect(() => {
+    if (!userID) return;
+
+    if (!plannerBoardsEqual(backupBoard, effectiveBoard)) {
+      setBackupBoard(effectiveBoard);
+    }
+    void setPlannerBoardBackup(userID, effectiveBoard);
+  }, [backupBoard, effectiveBoard, userID]);
 
   const pendingMarkers = useMemo(() => {
     const base = buildPlannerPendingMarkers(outbox);
@@ -299,7 +327,7 @@ export default function PlannerScreen() {
   // --- Funding resolution ---
   useEffect(() => {
     if (!userID) return;
-    if (!boardQuery.data && !cachedBoard) return;
+    if (!boardQuery.data && !cachedBoard && !backupBoard) return;
     const goalItemsByID = new Map<string, TodoItem>();
     for (const col of canonicalBoard.columns) for (const item of col.items) if (item.type === 'goal') goalItemsByID.set(item.id, item);
     const resolved = Object.keys(fundingRequiredMap).filter((gid) => {
@@ -310,7 +338,7 @@ export default function PlannerScreen() {
     setFundingRequiredMap((c) => { const n = { ...c }; for (const id of resolved) delete n[id]; return n; });
     setFundingRequired((c) => (!c ? c : resolved.includes(c.goal_id) ? null : c));
     void Promise.all(resolved.map((gid) => clearPlannerFundingRequired(userID, gid)));
-  }, [boardQuery.data, cachedBoard, canonicalBoard, fundingRequiredMap, userID]);
+  }, [backupBoard, boardQuery.data, cachedBoard, canonicalBoard, fundingRequiredMap, userID]);
 
   // --- Summary (now with To Do) ---
   const summaryCards = useMemo(() => [
@@ -591,16 +619,24 @@ export default function PlannerScreen() {
   const isEmpty = effectiveBoard.summary.total === 0;
 
   // --- Sync bar visibility ---
-  const showSyncBar = !isOnline || failedCount > 0 || isSyncing;
+  const showSyncBar = !isOnline || failedCount > 0 || isSyncing || isUsingLocalPlannerBackup;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
       <LinearGradient colors={[colors.background, colors.backgroundSecondary, colors.background]} style={{ flex: 1 }}>
         {/* Header */}
         <View style={{
-          paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12,
-          borderBottomWidth: 1, borderBottomColor: colors.border,
-          flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+          paddingHorizontal: 16,
+          paddingTop: 10,
+          paddingBottom: 12,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.border,
+          flexDirection: 'row',
+          alignItems: isCompactPhone ? 'flex-start' : 'center',
+          justifyContent: 'space-between',
+          flexWrap: isCompactPhone ? 'wrap' : 'nowrap',
+          rowGap: 10,
+          columnGap: 12,
         }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 }}>
             <Pressable
@@ -618,21 +654,32 @@ export default function PlannerScreen() {
               </Text>
             </View>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: isCompactPhone ? 'auto' : 0 }}>
             <AppSwitcherTrigger variant="header_inline" />
             <Pressable
               onPress={() => setIsTaskWizardVisible(true)}
               style={({ pressed }) => [{
-                flexDirection: 'row', alignItems: 'center', backgroundColor: colors.accent,
-                paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999,
+                minWidth: 44,
+                minHeight: 44,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.accent,
+                paddingHorizontal: isCompactPhone ? 10 : 12,
+                paddingVertical: 8,
+                borderRadius: 999,
                 shadowColor: colors.accent, shadowOpacity: 0.38, shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
                 elevation: 4,
               }, pressed && { opacity: 0.78 }]}
+              accessibilityRole="button"
+              accessibilityLabel={t('plannerNewTask') || 'New Task'}
             >
               <Plus size={14} color={colors.accentForeground} />
-              <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 6 }}>
-                {t('plannerNewTask') || 'New Task'}
-              </Text>
+              {!isCompactPhone ? (
+                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 6 }}>
+                  {t('plannerNewTask') || 'New Task'}
+                </Text>
+              ) : null}
             </Pressable>
           </View>
         </View>
@@ -641,6 +688,28 @@ export default function PlannerScreen() {
           {/* Sync bar — only when needed */}
           {showSyncBar && (
             <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+              {isUsingLocalPlannerBackup && (
+                <View
+                  accessibilityRole="alert"
+                  accessibilityLabel={t('plannerLocalBackup') || 'Local backup in use'}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: colors.warning + '66',
+                    backgroundColor: colors.warning + '16',
+                  }}
+                >
+                  <AlertTriangle size={12} color={colors.warning} />
+                  <Text style={{ color: colors.warning, fontSize: 11, marginLeft: 5, fontFamily: 'Inter_600SemiBold' }}>
+                    {t('plannerLocalBackup') || 'Local backup'}
+                  </Text>
+                </View>
+              )}
+
               {!isOnline && (
                 <View
                   accessibilityRole="alert"

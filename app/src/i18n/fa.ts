@@ -900,6 +900,7 @@ export const fa = {
   viewAllNotes: 'مشاهده همه',
   noNotesYet: 'هنوز یادداشتی ندارید',
   addNote: 'افزودن یادداشت',
+  notesLocalBackup: 'یادداشت های ذخیره شده محلی شما نمایش داده می شوند چون فهرست راه دور در دسترس نیست.',
 
   // AI Quick Actions
   analyzeSpending: 'تحلیل هزینه‌ها',
@@ -934,6 +935,7 @@ export const fa = {
   plannerOnline: 'آنلاین',
   plannerOffline: 'آفلاین',
   plannerSyncing: 'در حال همگام‌سازی...',
+  plannerLocalBackup: 'نسخه پشتیبان محلی',
   plannerOfflineHint: 'تغییرات پس از اتصال مجدد همگام خواهند شد',
   plannerSyncFailed: 'برخی تغییرات ناموفق بودند',
   plannerRetry: 'تلاش مجدد',

@@ -33,6 +33,7 @@ import {
   Plus,
 } from 'lucide-react-native';
 import { api, getAuthToken, API_BASE } from '../../../../src/api';
+import { useAuth } from '../../../../src/context/AuthContext';
 import { useLanguage } from '../../../../src/context/LanguageContext';
 import { useTheme } from '../../../../src/context/ThemeContext';
 import { useTheme as useStyledTheme } from 'styled-components/native';
@@ -43,6 +44,7 @@ import { SwipeableRow, type SwipeAction } from '../../../../src/components/ui';
 import { COMMON_CURRENCIES } from '../../../../src/constants/currencies';
 import type { Transaction, TransactionFilter, UpdateTransactionRequest } from '../../../../src/types/wallet';
 import type { Note, CreateNoteRequest } from '../../../../src/types/note';
+import { removeNoteBackup, upsertNoteBackup } from '../../../../src/offline/noteBackup';
 import { haptics } from '../../../../src/utils/haptics';
 
 const CATEGORIES = Object.keys(CATEGORY_ICONS);
@@ -50,6 +52,7 @@ const CURRENCIES = [...COMMON_CURRENCIES];
 
 export default function TransactionHistoryScreen() {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams<{
     category?: string | string[];
@@ -62,6 +65,7 @@ export default function TransactionHistoryScreen() {
   const { isDark } = useTheme();
   const styledTheme = useStyledTheme();
   const colors = styledTheme.colors;
+  const userID = user?.id ?? '';
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
@@ -136,7 +140,10 @@ export default function TransactionHistoryScreen() {
   // Create note mutation
   const createNoteMutation = useMutation({
     mutationFn: (data: CreateNoteRequest) => api.notes.create(data),
-    onSuccess: () => {
+    onSuccess: async ({ note }) => {
+      if (userID) {
+        await upsertNoteBackup(userID, note);
+      }
       haptics.success();
       queryClient.invalidateQueries({ queryKey: ['notes', 'transaction', selectedTransactionForNotes?.id] });
       setNewNoteTitle('');
@@ -154,7 +161,10 @@ export default function TransactionHistoryScreen() {
   // Delete note mutation
   const deleteNoteMutation = useMutation({
     mutationFn: (noteId: string) => api.notes.delete(noteId),
-    onSuccess: () => {
+    onSuccess: async (_result, noteID) => {
+      if (userID) {
+        await removeNoteBackup(userID, noteID);
+      }
       haptics.success();
       queryClient.invalidateQueries({ queryKey: ['notes', 'transaction', selectedTransactionForNotes?.id] });
     },

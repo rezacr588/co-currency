@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Pin, Edit3, Trash2 } from 'lucide-react-native';
+import { AlertTriangle, ChevronLeft, Pin, Edit3, Trash2 } from 'lucide-react-native';
 import { api } from '../../../src/api';
+import { useAuth } from '../../../src/context/AuthContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { NoteFormModal } from '../../../src/components/features/Notes';
-import type { UpdateNoteRequest } from '../../../src/types/note';
+import {
+  getBackupNote,
+  removeNoteBackup,
+  upsertNoteBackup,
+} from '../../../src/offline/noteBackup';
+import type { Note, UpdateNoteRequest } from '../../../src/types/note';
 
 const COLOR_STYLES: Record<string, { bg: string; border: string }> = {
   default: { bg: 'transparent', border: 'transparent' },
@@ -35,29 +41,80 @@ function asSingleParam(value: string | string[] | undefined): string | undefined
 
 export default function NoteDetailScreen() {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
   const theme = useTheme();
   const colors = theme.colors;
+  const userID = user?.id ?? '';
   const [showEditModal, setShowEditModal] = useState(false);
+  const [localNote, setLocalNote] = useState<Note | null>(null);
+  const [isUsingLocalBackup, setIsUsingLocalBackup] = useState(false);
 
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const noteID = asSingleParam(params.id);
 
+  useEffect(() => {
+    if (!userID || !noteID) {
+      setLocalNote(null);
+      setIsUsingLocalBackup(false);
+      return;
+    }
+
+    let active = true;
+    void (async () => {
+      const backupNote = await getBackupNote(userID, noteID);
+      if (!active) return;
+      setLocalNote(backupNote);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [noteID, userID]);
+
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ['note', noteID],
-    queryFn: () => api.notes.get(noteID as string),
     enabled: !!noteID,
+    queryFn: async () => {
+      try {
+        const response = await api.notes.get(noteID as string);
+        if (userID) {
+          await upsertNoteBackup(userID, response.note);
+        }
+        return { note: response.note, fromLocalBackup: false };
+      } catch (remoteError) {
+        if (userID) {
+          const backupNote = await getBackupNote(userID, noteID as string);
+          if (backupNote) {
+            return { note: backupNote, fromLocalBackup: true };
+          }
+        }
+
+        throw remoteError;
+      }
+    },
   });
 
-  const note = data?.note;
+  useEffect(() => {
+    if (!data?.note) return;
+    setLocalNote(data.note);
+    setIsUsingLocalBackup(data.fromLocalBackup);
+  }, [data]);
+
+  const note = useMemo(() => data?.note ?? localNote, [data, localNote]);
   const colorStyle = note ? (COLOR_STYLES[note.color] || COLOR_STYLES.default) : COLOR_STYLES.default;
 
   const updateMutation = useMutation({
     mutationFn: (payload: UpdateNoteRequest) => api.notes.update(noteID as string, payload),
-    onSuccess: () => {
+    onSuccess: async ({ note: updatedNote }) => {
+      setLocalNote(updatedNote);
+      if (userID) {
+        await upsertNoteBackup(userID, updatedNote);
+      }
       queryClient.invalidateQueries({ queryKey: ['notes'] });
       queryClient.invalidateQueries({ queryKey: ['note', noteID] });
+      setIsUsingLocalBackup(false);
       setShowEditModal(false);
     },
     onError: (err) => {
@@ -70,15 +127,23 @@ export default function NoteDetailScreen() {
 
   const togglePinMutation = useMutation({
     mutationFn: () => api.notes.togglePin(noteID as string),
-    onSuccess: () => {
+    onSuccess: async ({ note: updatedNote }) => {
+      setLocalNote(updatedNote);
+      if (userID) {
+        await upsertNoteBackup(userID, updatedNote);
+      }
       queryClient.invalidateQueries({ queryKey: ['notes'] });
       queryClient.invalidateQueries({ queryKey: ['note', noteID] });
+      setIsUsingLocalBackup(false);
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: () => api.notes.delete(noteID as string),
-    onSuccess: () => {
+    onSuccess: async () => {
+      if (userID && noteID) {
+        await removeNoteBackup(userID, noteID);
+      }
       queryClient.invalidateQueries({ queryKey: ['notes'] });
       router.back();
     },
@@ -171,11 +236,20 @@ export default function NoteDetailScreen() {
         )}
       </View>
 
-      {isPending ? (
+      {note && isUsingLocalBackup ? (
+        <View style={{ marginHorizontal: 16, marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.warning + '55', backgroundColor: colors.warning + '14', paddingHorizontal: 12, paddingVertical: 10 }}>
+          <AlertTriangle size={16} color={colors.warning} />
+          <Text style={{ color: colors.warning, flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium' }}>
+            {t('notesLocalBackup') || 'Showing your saved local notes while the remote list is unavailable.'}
+          </Text>
+        </View>
+      ) : null}
+
+      {isPending && !note ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator size="large" color={colors.accent} />
         </View>
-      ) : error || !note ? (
+      ) : error && !note ? (
         <View
           style={{
             flex: 1,
@@ -202,7 +276,7 @@ export default function NoteDetailScreen() {
             </Text>
           </Pressable>
         </View>
-      ) : (
+      ) : note ? (
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
@@ -218,29 +292,31 @@ export default function NoteDetailScreen() {
                 colorStyle.border === 'transparent' ? colors.border : colorStyle.border,
             }}
           >
-            <Text
-              style={{
-                color: colors.foreground,
-                fontFamily: 'Inter_700Bold',
-                fontSize: 24,
-                marginBottom: 10,
-              }}
-            >
-              {note.title}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{ fontSize: 22, fontFamily: 'Inter_700Bold', color: colors.foreground }}
+                >
+                  {note.title}
+                </Text>
+                <Text
+                  style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 6 }}
+                >
+                  Updated {new Date(note.updated_at).toLocaleString()}
+                </Text>
+              </View>
+              {note.is_pinned ? (
+                <View style={{ borderRadius: 999, backgroundColor: colors.accent + '18', paddingHorizontal: 10, paddingVertical: 6 }}>
+                  <Text style={{ color: colors.accent, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>
+                    {t('pin') || 'Pin'}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
 
             <Text
               style={{
-                color: colors.mutedForeground,
-                fontSize: 12,
-                marginBottom: 16,
-              }}
-            >
-              Updated {new Date(note.updated_at).toLocaleString()}
-            </Text>
-
-            <Text
-              style={{
+                marginTop: 18,
                 color: note.content ? colors.foreground : colors.mutedForeground,
                 fontSize: 16,
                 lineHeight: 24,
@@ -250,9 +326,9 @@ export default function NoteDetailScreen() {
             </Text>
           </View>
         </ScrollView>
-      )}
+      ) : null}
 
-      {note && (
+      {note ? (
         <NoteFormModal
           visible={showEditModal}
           note={note}
@@ -260,7 +336,7 @@ export default function NoteDetailScreen() {
           onSave={handleSave}
           isLoading={updateMutation.isPending}
         />
-      )}
+      ) : null}
     </SafeAreaView>
   );
 }

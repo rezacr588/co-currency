@@ -900,6 +900,7 @@ export const ar = {
   viewAllNotes: 'عرض الكل',
   noNotesYet: 'لا ملاحظات بعد',
   addNote: 'إضافة ملاحظة',
+  notesLocalBackup: 'نعرض ملاحظاتك المحفوظة محليا بينما القائمة البعيدة غير متاحة.',
 
   // AI Quick Actions
   analyzeSpending: 'تحليل الإنفاق',
@@ -934,6 +935,7 @@ export const ar = {
   plannerOnline: 'متصل',
   plannerOffline: 'غير متصل',
   plannerSyncing: 'جاري المزامنة...',
+  plannerLocalBackup: 'نسخة محلية احتياطية',
   plannerOfflineHint: 'سيتم مزامنة التغييرات عند الاتصال مجدداً',
   plannerSyncFailed: 'فشلت بعض التغييرات',
   plannerRetry: 'إعادة المحاولة',

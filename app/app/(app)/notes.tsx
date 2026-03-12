@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -15,24 +15,36 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRefreshableQuery } from '../../src/hooks/useRefreshableQuery';
 import { useRouter } from 'expo-router';
 import {
+  AlertTriangle,
   ChevronLeft,
   Plus,
   Search,
   StickyNote,
 } from 'lucide-react-native';
 import { api } from '../../src/api';
+import { useAuth } from '../../src/context/AuthContext';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { NoteCard, NoteFormModal } from '../../src/components/features/Notes';
+import {
+  filterNotesByQuery,
+  getNotesBackup,
+  setNotesBackup,
+  sortNotesByPinnedUpdated,
+  upsertNoteInCollection,
+  removeNoteFromCollection,
+} from '../../src/offline/noteBackup';
 import type { Note, CreateNoteRequest, UpdateNoteRequest } from '../../src/types/note';
 
 export default function NotesScreen() {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
   const theme = useTheme();
   const colors = theme.colors;
+  const userID = user?.id ?? '';
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
@@ -41,28 +53,72 @@ export default function NotesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFormModal, setShowFormModal] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [localNotes, setLocalNotes] = useState<Note[]>([]);
+  const [isUsingLocalBackup, setIsUsingLocalBackup] = useState(false);
+  const localNotesCountRef = useRef(0);
 
-  // Fetch notes with search
-  const { data, isPending, error, refetch, refreshing, onRefresh } = useRefreshableQuery({
-    queryKey: ['notes', searchQuery],
-    queryFn: () => api.notes.list(searchQuery || undefined),
-  });
+  localNotesCountRef.current = localNotes.length;
 
-  const notes = data?.notes || [];
+  const updateLocalNotes = useCallback((updater: (previous: Note[]) => Note[]) => {
+    setLocalNotes((previous) => {
+      const next = updater(previous);
+      if (userID) {
+        void setNotesBackup(userID, next);
+      }
+      return next;
+    });
+  }, [userID]);
 
-  // Sort notes: pinned first, then by updated date
-  const sortedNotes = [...notes].sort((a, b) => {
-    if (a.is_pinned !== b.is_pinned) {
-      return a.is_pinned ? -1 : 1;
+  useEffect(() => {
+    if (!userID) {
+      setLocalNotes([]);
+      setIsUsingLocalBackup(false);
+      return;
     }
-    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+
+    let active = true;
+    void (async () => {
+      const backup = await getNotesBackup(userID);
+      if (!active) return;
+      setLocalNotes(backup?.notes ?? []);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [userID]);
+
+  const { data, isPending, error, refreshing, onRefresh } = useRefreshableQuery({
+    queryKey: ['notes', userID, 'remote'],
+    queryFn: () => api.notes.list(),
+    enabled: !!userID,
   });
 
-  // Create mutation
+  useEffect(() => {
+    if (!userID || !data) return;
+
+    const remoteNotes = data.notes ?? [];
+    const shouldPreserveLocal = remoteNotes.length === 0 && localNotesCountRef.current > 0;
+    setIsUsingLocalBackup(shouldPreserveLocal);
+
+    if (shouldPreserveLocal) {
+      return;
+    }
+
+    setLocalNotes(remoteNotes);
+    void setNotesBackup(userID, remoteNotes);
+  }, [data, userID]);
+
+  const visibleNotes = useMemo(() => {
+    return sortNotesByPinnedUpdated(filterNotesByQuery(localNotes, searchQuery));
+  }, [localNotes, searchQuery]);
+
   const createMutation = useMutation({
-    mutationFn: (data: CreateNoteRequest) => api.notes.create(data),
-    onSuccess: () => {
+    mutationFn: (payload: CreateNoteRequest) => api.notes.create(payload),
+    onSuccess: ({ note }) => {
+      updateLocalNotes((previous) => upsertNoteInCollection(previous, note));
       queryClient.invalidateQueries({ queryKey: ['notes'] });
+      setIsUsingLocalBackup(false);
       setShowFormModal(false);
       setSelectedNote(null);
     },
@@ -74,12 +130,13 @@ export default function NotesScreen() {
     },
   });
 
-  // Update mutation
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateNoteRequest }) =>
-      api.notes.update(id, data),
-    onSuccess: () => {
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateNoteRequest }) =>
+      api.notes.update(id, payload),
+    onSuccess: ({ note }) => {
+      updateLocalNotes((previous) => upsertNoteInCollection(previous, note));
       queryClient.invalidateQueries({ queryKey: ['notes'] });
+      setIsUsingLocalBackup(false);
       setShowFormModal(false);
       setSelectedNote(null);
     },
@@ -91,10 +148,10 @@ export default function NotesScreen() {
     },
   });
 
-  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.notes.delete(id),
-    onSuccess: () => {
+    onSuccess: (_result, noteID) => {
+      updateLocalNotes((previous) => removeNoteFromCollection(previous, noteID));
       queryClient.invalidateQueries({ queryKey: ['notes'] });
     },
     onError: (err) => {
@@ -105,10 +162,10 @@ export default function NotesScreen() {
     },
   });
 
-  // Toggle pin mutation
   const togglePinMutation = useMutation({
     mutationFn: (id: string) => api.notes.togglePin(id),
-    onSuccess: () => {
+    onSuccess: ({ note }) => {
+      updateLocalNotes((previous) => upsertNoteInCollection(previous, note));
       queryClient.invalidateQueries({ queryKey: ['notes'] });
     },
   });
@@ -157,12 +214,13 @@ export default function NotesScreen() {
     ]);
   };
 
-  const handleSave = (data: CreateNoteRequest | UpdateNoteRequest) => {
+  const handleSave = (payload: CreateNoteRequest | UpdateNoteRequest) => {
     if (selectedNote) {
-      updateMutation.mutate({ id: selectedNote.id, data });
-    } else {
-      createMutation.mutate(data as CreateNoteRequest);
+      updateMutation.mutate({ id: selectedNote.id, payload });
+      return;
     }
+
+    createMutation.mutate(payload as CreateNoteRequest);
   };
 
   const handleAddNote = () => {
@@ -170,9 +228,11 @@ export default function NotesScreen() {
     setShowFormModal(true);
   };
 
+  const showLoadingState = isPending && localNotes.length === 0;
+  const showRemoteFallbackNotice = isUsingLocalBackup || (!!error && localNotes.length > 0);
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
-      {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
           <Pressable
@@ -193,8 +253,7 @@ export default function NotesScreen() {
         </Pressable>
       </View>
 
-      {/* Search Bar */}
-      <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+      <View style={{ paddingHorizontal: 16, paddingVertical: 12, gap: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.muted, borderRadius: 8, paddingHorizontal: 12 }}>
           <Search size={20} color={colors.placeholder} />
           <TextInput
@@ -214,9 +273,17 @@ export default function NotesScreen() {
             } as any}
           />
         </View>
+
+        {showRemoteFallbackNotice ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.warning + '55', backgroundColor: colors.warning + '14', paddingHorizontal: 12, paddingVertical: 10 }}>
+            <AlertTriangle size={16} color={colors.warning} />
+            <Text style={{ color: colors.warning, flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium' }}>
+              {t('notesLocalBackup') || 'Showing your saved local notes while the remote list is unavailable.'}
+            </Text>
+          </View>
+        ) : null}
       </View>
 
-      {/* Content */}
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
@@ -228,17 +295,17 @@ export default function NotesScreen() {
           />
         }
       >
-        {isPending ? (
+        {showLoadingState ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 48 }}>
             <ActivityIndicator size="large" color={colors.accent} />
           </View>
-        ) : error ? (
+        ) : error && localNotes.length === 0 ? (
           <View style={{ backgroundColor: colors.danger + '1a', padding: 16, borderRadius: 12 }}>
             <Text style={{ color: colors.danger, textAlign: 'center' }}>
               {t('errorLoadingNotes') || 'Error loading notes'}
             </Text>
           </View>
-        ) : sortedNotes.length === 0 ? (
+        ) : visibleNotes.length === 0 ? (
           <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 64 }}>
             <View style={{ backgroundColor: colors.muted + '80', padding: 24, borderRadius: 9999, marginBottom: 16 }}>
               <StickyNote size={48} color={colors.placeholder} />
@@ -273,7 +340,7 @@ export default function NotesScreen() {
               gap: 12,
             }}
           >
-            {sortedNotes.map((note) => (
+            {visibleNotes.map((note) => (
               <View
                 key={note.id}
                 style={{
@@ -292,7 +359,6 @@ export default function NotesScreen() {
         )}
       </ScrollView>
 
-      {/* Note Form Modal */}
       <NoteFormModal
         visible={showFormModal}
         note={selectedNote}

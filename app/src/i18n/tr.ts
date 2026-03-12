@@ -904,6 +904,7 @@ export const tr = {
   viewAllNotes: 'Tümünü gör',
   noNotesYet: 'Henüz not yok',
   addNote: 'Not ekle',
+  notesLocalBackup: 'Uzak liste kullanilamazken kaydedilmis yerel notlariniz gosteriliyor.',
 
   // AI Quick Actions
   analyzeSpending: 'Harcama analizi',
@@ -938,6 +939,7 @@ export const tr = {
   plannerOnline: 'Çevrimiçi',
   plannerOffline: 'Çevrimdışı',
   plannerSyncing: 'Senkronize ediliyor...',
+  plannerLocalBackup: 'Yerel yedek',
   plannerOfflineHint: 'Değişiklikler tekrar bağlandığınızda senkronize edilecek',
   plannerSyncFailed: 'Bazı değişiklikler başarısız oldu',
   plannerRetry: 'Tekrar Dene',

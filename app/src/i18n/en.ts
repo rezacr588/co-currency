@@ -902,6 +902,7 @@ export const en = {
   viewAllNotes: 'View all',
   noNotesYet: 'No notes yet',
   addNote: 'Add a note',
+  notesLocalBackup: 'Showing your saved local notes while the remote list is unavailable.',
 
   // AI Quick Actions
   analyzeSpending: 'Analyze spending',
@@ -936,6 +937,7 @@ export const en = {
   plannerOnline: 'Online',
   plannerOffline: 'Offline',
   plannerSyncing: 'Syncing...',
+  plannerLocalBackup: 'Local backup',
   plannerOfflineHint: 'Changes will sync when you are back online',
   plannerSyncFailed: 'Some changes failed',
   plannerRetry: 'Retry',

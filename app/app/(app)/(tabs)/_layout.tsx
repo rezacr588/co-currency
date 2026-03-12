@@ -24,6 +24,7 @@ import { useAuth } from '../../../src/context/AuthContext';
 import { ErrorBoundary } from '../../../src/components/ui/ErrorBoundary';
 import { AppSwitcherTrigger } from '../../../src/components/navigation/AppSwitcherTrigger';
 import { useScreenLayout } from '../../../src/hooks/useScreenLayout';
+import { isTodoPath } from '../../../src/navigation/mode';
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -139,8 +140,13 @@ function AppSidebar({
 
   const isRouteActive = (href: string) => {
     if (href === '/(app)/(tabs)') {
-      return pathname === '/' || pathname === '/(app)/(tabs)' || pathname === '/index';
+      return pathname === '/' || pathname === '/(app)/(tabs)' || pathname === '/(app)/(tabs)/index' || pathname === '/index';
     }
+
+    if (href === '/todo') {
+      return isTodoPath(pathname);
+    }
+
     return pathname.includes(href.replace('/(app)', '').replace('/(tabs)', ''));
   };
 

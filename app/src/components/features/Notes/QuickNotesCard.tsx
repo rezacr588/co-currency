@@ -1,11 +1,18 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { StickyNote, Plus, ArrowRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { api } from '../../../api';
+import { useAuth } from '../../../context/AuthContext';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
+import {
+  getNotesBackup,
+  setNotesBackup,
+  sortNotesByPinnedUpdated,
+  upsertNoteInCollection,
+} from '../../../offline/noteBackup';
 import { haptics } from '../../../utils/haptics';
 import { NoteFormModal } from './NoteFormModal';
 import type { Note, CreateNoteRequest } from '../../../types/note';
@@ -23,34 +30,75 @@ const NOTE_COLORS: Record<string, string> = {
 
 export function QuickNotesCard() {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const theme = useTheme();
   const colors = theme.colors;
   const router = useRouter();
   const queryClient = useQueryClient();
+  const userID = user?.id ?? '';
   const [showForm, setShowForm] = useState(false);
+  const [localNotes, setLocalNotes] = useState<Note[]>([]);
+  const localNotesCountRef = useRef(0);
+
+  localNotesCountRef.current = localNotes.length;
+
+  const updateLocalNotes = useCallback((updater: (previous: Note[]) => Note[]) => {
+    setLocalNotes((previous) => {
+      const next = updater(previous);
+      if (userID) {
+        void setNotesBackup(userID, next);
+      }
+      return next;
+    });
+  }, [userID]);
+
+  useEffect(() => {
+    if (!userID) {
+      setLocalNotes([]);
+      return;
+    }
+
+    let active = true;
+    void (async () => {
+      const backup = await getNotesBackup(userID);
+      if (!active) return;
+      setLocalNotes(backup?.notes ?? []);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [userID]);
 
   const createMutation = useMutation({
     mutationFn: (data: CreateNoteRequest) => api.notes.create(data),
-    onSuccess: () => {
+    onSuccess: ({ note }) => {
+      updateLocalNotes((previous) => upsertNoteInCollection(previous, note));
       queryClient.invalidateQueries({ queryKey: ['notes'] });
       setShowForm(false);
     },
   });
 
   const { data: notesData, isPending } = useQuery({
-    queryKey: ['notes'],
+    queryKey: ['notes', userID, 'quick'],
     queryFn: () => api.notes.list(),
+    enabled: !!userID,
     staleTime: 2 * 60 * 1000,
   });
 
-  const notes: Note[] = notesData?.notes || [];
+  useEffect(() => {
+    if (!userID || !notesData) return;
 
-  // Sort: pinned first, then by updated_at desc
-  const sortedNotes = [...notes].sort((a, b) => {
-    if (a.is_pinned && !b.is_pinned) return -1;
-    if (!a.is_pinned && b.is_pinned) return 1;
-    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-  }).slice(0, 3);
+    const remoteNotes = notesData.notes ?? [];
+    if (remoteNotes.length === 0 && localNotesCountRef.current > 0) {
+      return;
+    }
+
+    setLocalNotes(remoteNotes);
+    void setNotesBackup(userID, remoteNotes);
+  }, [notesData, userID]);
+
+  const sortedNotes = useMemo(() => sortNotesByPinnedUpdated(localNotes).slice(0, 3), [localNotes]);
 
   const handleAdd = () => {
     haptics.light();
@@ -62,7 +110,7 @@ export function QuickNotesCard() {
     router.push('/(app)/notes');
   };
 
-  if (isPending) {
+  if (isPending && localNotes.length === 0) {
     return (
       <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 20, borderRadius: 12, alignItems: 'center', justifyContent: 'center', minHeight: 60 }}>
         <ActivityIndicator size="small" color={colors.mutedForeground} />
@@ -82,7 +130,7 @@ export function QuickNotesCard() {
           <Pressable onPress={handleAdd} hitSlop={8} style={{ cursor: 'pointer', padding: 4, marginRight: 4 }}>
             <Plus size={18} color={colors.accent} />
           </Pressable>
-          {notes.length > 0 && (
+          {localNotes.length > 0 && (
             <Pressable onPress={handleViewAll} hitSlop={8} style={{ cursor: 'pointer', flexDirection: 'row', alignItems: 'center', padding: 4 }}>
               <Text style={{ fontSize: 12, color: colors.mutedForeground, marginRight: 4 }}>{t('viewAllNotes') || 'View all'}</Text>
               <ArrowRight size={12} color={colors.mutedForeground} />
