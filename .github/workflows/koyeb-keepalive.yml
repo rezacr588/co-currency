@@ -1,0 +1,44 @@
+name: Koyeb Keepalive
+
+on:
+  schedule:
+    # Keep the free Koyeb instance warm before the 1 hour idle window expires.
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    name: Ping Koyeb Health Endpoint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Ping public health endpoint over HTTP/1.1
+        env:
+          HEALTH_URL: https://coai.koyeb.app/health
+        run: |
+          for attempt in 1 2 3; do
+            echo "Ping attempt ${attempt}/3"
+
+            if curl \
+              --http1.1 \
+              --fail \
+              --silent \
+              --show-error \
+              --max-time 90 \
+              "$HEALTH_URL" > /dev/null; then
+              echo "Koyeb health check succeeded."
+              exit 0
+            fi
+
+            if [ "$attempt" -lt 3 ]; then
+              echo "Ping failed, waiting before retry..."
+              sleep 20
+            fi
+          done
+
+          echo "Koyeb health check failed after 3 attempts."
+          exit 1
