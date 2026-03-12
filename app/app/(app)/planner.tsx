@@ -36,7 +36,6 @@ import { AppSwitcherTrigger } from '../../src/components/navigation/AppSwitcherT
 import { useToast } from '../../src/components/ui/Toast';
 import { EmptyState } from '../../src/components/ui/EmptyState';
 import { PlannerCard } from '../../src/components/features/Planner/PlannerCard';
-import { TaskWizardModal } from '../../src/components/features/Planner/TaskWizardModal';
 import { TaskEditModal } from '../../src/components/features/Planner/TaskEditModal';
 import { useScreenLayout } from '../../src/hooks/useScreenLayout';
 import { haptics } from '../../src/utils/haptics';
@@ -71,7 +70,6 @@ import {
 import { COLUMN_ORDER, getStatusLabel } from '../../src/utils/plannerConstants';
 import type { Goal } from '../../src/types/goal';
 import type {
-  CreateTaskRequest,
   GoalFundingRequired,
   PlannerBoardResponse,
   PlannerPendingMarker,
@@ -94,10 +92,6 @@ function emptyBoard(): PlannerBoardResponse {
     summary: { total: 0, todo: 0, in_progress: 0, done: 0, archived: 0 },
     columns: COLUMN_ORDER.map((status) => ({ status, items: [] })),
   };
-}
-
-function createTempTaskID(): string {
-  return `temp-task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function markerKey(item: TodoItem): string {
@@ -146,7 +140,6 @@ export default function PlannerScreen() {
   const [fundingRequired, setFundingRequired] = useState<GoalFundingRequired | null>(null);
   const [fundingRequiredMap, setFundingRequiredMap] = useState<Record<string, GoalFundingRequired>>({});
 
-  const [isTaskWizardVisible, setIsTaskWizardVisible] = useState(false);
   const [launchingTaskID, setLaunchingTaskID] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<TodoItem | null>(null);
   const [completingTaskID, setCompletingTaskID] = useState<string | null>(null);
@@ -473,22 +466,6 @@ export default function PlannerScreen() {
     showToast(t('plannerTaskUpdated') || 'Task updated', 'success');
   }, [userID, syncOutboxNow, showToast, t]);
 
-  const handleWizardSubmit = useCallback(async (payload: CreateTaskRequest, tagIds: string[]) => {
-    if (!userID) return;
-    const tempTaskID = createTempTaskID();
-    const createOp = await enqueuePlannerOp({
-      user_id: userID, op_type: 'task_create', entity_type: 'task', entity_id: tempTaskID,
-      payload: { ...payload, local_temp_id: tempTaskID },
-    });
-    if (createOp && tagIds.length > 0) {
-      for (const tagID of tagIds) {
-        await enqueuePlannerOp({ user_id: userID, op_type: 'task_add_tag', entity_type: 'task', entity_id: tempTaskID, payload: { tag_id: tagID }, depends_on: createOp.id });
-      }
-    }
-    void syncOutboxNow();
-    showToast(t('plannerTaskCreated') || 'Task created!', 'success');
-  }, [userID, syncOutboxNow, showToast, t]);
-
   const retryFailed = useCallback(async () => {
     if (!userID) return;
     await retryFailedPlannerOps(userID);
@@ -657,7 +634,7 @@ export default function PlannerScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: isCompactPhone ? 'auto' : 0 }}>
             <AppSwitcherTrigger variant="header_inline" />
             <Pressable
-              onPress={() => setIsTaskWizardVisible(true)}
+              onPress={() => router.push('/planner-create' as any)}
               style={({ pressed }) => [{
                 minWidth: 44,
                 minHeight: 44,
@@ -906,7 +883,7 @@ export default function PlannerScreen() {
               title={t('plannerEmptyTitle') || 'No tasks yet'}
               description={t('plannerEmptyDescription') || 'Create your first task to get started with planning.'}
               actionLabel={t('plannerNewTask') || 'New Task'}
-              onAction={() => setIsTaskWizardVisible(true)}
+              onAction={() => router.push('/planner-create' as any)}
             />
           </View>
         ) : isPhone ? (
@@ -1008,17 +985,6 @@ export default function PlannerScreen() {
           </View>
         )}
       </LinearGradient>
-
-      {/* Task Wizard Modal */}
-      <TaskWizardModal
-        visible={isTaskWizardVisible}
-        onClose={() => setIsTaskWizardVisible(false)}
-        onSubmit={handleWizardSubmit}
-        userId={userID}
-        effectiveBoard={effectiveBoard}
-        tags={tags}
-        goals={goals}
-      />
 
       {/* Task Edit Modal */}
       <TaskEditModal

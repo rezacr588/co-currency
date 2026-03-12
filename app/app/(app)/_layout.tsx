@@ -42,6 +42,7 @@ export default function AppLayout() {
         <Stack.Screen name="badges" />
         <Stack.Screen name="historical" />
         <Stack.Screen name="planner" />
+        <Stack.Screen name="planner-create" />
         <Stack.Screen name="notes" />
         <Stack.Screen name="note/[id]" />
         <Stack.Screen name="loans" />

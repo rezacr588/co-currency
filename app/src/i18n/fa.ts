@@ -956,6 +956,8 @@ export const fa = {
   plannerStepOrganizationShort: 'سازمان',
   plannerStepFinanceReview: 'مالی و بررسی',
   plannerStepFinanceReviewShort: 'بررسی',
+  plannerWizardPageSubtitle: 'وظیفه را یک بار بسازید و سپس زمان‌بندی، اهداف و زمینه مالی آن را کامل کنید.',
+  plannerWizardDraftLabel: 'پیش‌نویس روی این دستگاه خودکار ذخیره می‌شود',
   plannerTaskTitle: 'عنوان وظیفه',
   plannerDescription: 'توضیحات',
   plannerInitialColumn: 'ستون اولیه',

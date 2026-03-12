@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronRight, Plus, Tag, Trash2 } from 'lucide-react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ArrowLeft, ChevronRight, Plus, Sparkles, Tag, Trash2 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from 'styled-components/native';
 import { DatePickerModal } from './DatePickerModal';
 import { CurrencyPicker } from '../../ui/CurrencyPicker';
@@ -37,7 +38,6 @@ function nextSortOrder(board: PlannerBoardResponse, status: PlannerStatus): numb
 }
 
 interface TaskWizardModalProps {
-  visible: boolean;
   onClose: () => void;
   onSubmit: (payload: CreateTaskRequest, tagIds: string[]) => Promise<void>;
   userId: string;
@@ -47,7 +47,6 @@ interface TaskWizardModalProps {
 }
 
 export function TaskWizardModal({
-  visible,
   onClose,
   onSubmit,
   userId,
@@ -126,8 +125,6 @@ export function TaskWizardModal({
   }, []);
 
   useEffect(() => {
-    if (!visible) return;
-
     // Always start with a clean slate immediately
     resetWizard();
 
@@ -155,10 +152,10 @@ export function TaskWizardModal({
         ],
       );
     })();
-  }, [visible, userId, resetWizard, applyDraft, t]);
+  }, [userId, resetWizard, applyDraft, t]);
 
   useEffect(() => {
-    if (!visible || !userId) return;
+    if (!userId) return;
 
     const draft: TaskWizardDraft = {
       version: TASK_WIZARD_DRAFT_VERSION,
@@ -188,7 +185,7 @@ export function TaskWizardModal({
 
     return () => clearTimeout(timeout);
   }, [
-    visible, userId, step, title, description, dueDate, selectedStatus,
+    userId, step, title, description, dueDate, selectedStatus,
     selectedPriority, reminderMode, selectedTagIDs, subtasks, selectedGoalID,
     autoLedgerEnabled, ledgerType, ledgerAmount, ledgerCurrency,
     ledgerWalletCurrency, ledgerCategory, ledgerDescription,
@@ -339,47 +336,96 @@ export function TaskWizardModal({
     : undefined;
 
   const statusLabel = (s: PlannerStatus) => getStatusLabel(s, t as (key: string) => string | undefined);
+  const currentStepNumber = WIZARD_STEPS.indexOf(step) + 1;
+  const pageMaxWidth = width >= 1280 ? 1080 : width >= 960 ? 960 : 880;
+  const pageSubtitle =
+    t('plannerWizardPageSubtitle') || 'Build the task once, then enrich it with timing, goals, and money context.';
+  const pageDraftLabel =
+    t('plannerWizardDraftLabel') || 'Draft autosaves on this device';
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
-        <View
-          style={{
-            maxHeight: '92%',
-            backgroundColor: colors.background,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            borderWidth: 1,
-            borderColor: colors.border,
-            paddingHorizontal: 16,
-            paddingTop: 14,
-            paddingBottom: Math.max(insets.bottom + 12, 20),
-          }}
-        >
-          {/* Drag handle */}
-          <View style={{ alignItems: 'center', paddingBottom: 10 }}>
-            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
-          </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
+      <LinearGradient colors={[colors.background, colors.backgroundSecondary, colors.background]} style={{ flex: 1 }}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={{ flex: 1, paddingHorizontal: isPhone ? 16 : 24, paddingTop: 10, paddingBottom: Math.max(insets.bottom + 12, 20) }}>
+            <View style={{ width: '100%', maxWidth: pageMaxWidth, alignSelf: 'center', flex: 1 }}>
+              <View
+                style={{
+                  overflow: 'hidden',
+                  borderRadius: 28,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  marginBottom: 16,
+                  shadowColor: colors.accent,
+                  shadowOpacity: 0.16,
+                  shadowRadius: 24,
+                  shadowOffset: { width: 0, height: 10 },
+                  elevation: 5,
+                }}
+              >
+                <LinearGradient
+                  colors={[colors.accent + '2A', colors.card, colors.backgroundSecondary]}
+                  style={{ paddingHorizontal: isPhone ? 16 : 20, paddingVertical: isPhone ? 18 : 22 }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 18 }}>
+                    <Pressable
+                      onPress={onClose}
+                      hitSlop={8}
+                      style={({ pressed }) => [{
+                        minHeight: 42,
+                        borderRadius: 999,
+                        paddingHorizontal: 14,
+                        paddingVertical: 9,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: colors.background + 'E6',
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                      }, pressed && { opacity: 0.72 }]}
+                    >
+                      <ArrowLeft size={16} color={colors.foreground} />
+                      <Text style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>
+                        {t('plannerClose') || 'Close'}
+                      </Text>
+                    </Pressable>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 18 }}>
-              {t('plannerTaskWizard') || 'Task Setup Wizard'}
-            </Text>
-            <Pressable
-              onPress={onClose}
-              hitSlop={8}
-              style={({ pressed }) => [{
-                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
-                backgroundColor: colors.muted,
-              }, pressed && { opacity: 0.72 }]}
-            >
-              <Text style={{ color: colors.mutedForeground, fontSize: 13, fontFamily: 'Inter_500Medium' }}>{t('plannerClose') || 'Close'}</Text>
-            </Pressable>
-          </View>
+                    <View
+                      style={{
+                        minHeight: 42,
+                        borderRadius: 999,
+                        paddingHorizontal: 14,
+                        paddingVertical: 9,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: colors.foreground,
+                      }}
+                    >
+                      <Sparkles size={14} color={colors.background} />
+                      <Text style={{ color: colors.background, fontSize: 13, fontFamily: 'Inter_700Bold', marginLeft: 8 }}>
+                        {currentStepNumber} / {WIZARD_STEPS.length}
+                      </Text>
+                    </View>
+                  </View>
 
-          {/* Step progress */}
-          <View style={{ flexDirection: 'row', flexWrap: isPhone ? 'wrap' : 'nowrap', alignItems: 'center', marginBottom: 16, gap: stepGap }}>
+                  <Text style={{ color: colors.accent, fontSize: 12, fontFamily: 'Inter_700Bold', textTransform: 'uppercase', letterSpacing: 1 }}>
+                    {t('plannerTaskWizard') || 'Task Setup Wizard'}
+                  </Text>
+                  <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: isPhone ? 26 : 32, marginTop: 10 }}>
+                    {stepLabels[step]}
+                  </Text>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 14, lineHeight: 22, marginTop: 8, maxWidth: 680 }}>
+                    {pageSubtitle}
+                  </Text>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 14 }}>
+                    <View style={{ borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background + 'CC', paddingHorizontal: 12, paddingVertical: 7 }}>
+                      <Text style={{ color: colors.foreground, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>
+                        {pageDraftLabel}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', flexWrap: isPhone ? 'wrap' : 'nowrap', alignItems: 'center', marginTop: 18, gap: stepGap }}>
             {WIZARD_STEPS.map((s, idx) => {
               const active = step === s;
               const completed = WIZARD_STEPS.indexOf(step) > idx;
@@ -392,18 +438,18 @@ export function TaskWizardModal({
                 >
                   <View style={{
                     flex: 1, flexDirection: 'row', alignItems: 'center',
-                    backgroundColor: active ? colors.accent + '18' : completed ? colors.success + '14' : colors.card,
+                    backgroundColor: active ? colors.foreground : completed ? colors.success + '20' : colors.background + 'E8',
                     borderWidth: 1,
-                    borderColor: active ? colors.accent + '55' : completed ? colors.success + '44' : colors.border,
-                    borderRadius: 10, paddingHorizontal: 8, paddingVertical: 8, gap: 6,
-                    minHeight: isPhone ? 48 : undefined,
+                    borderColor: active ? colors.foreground : completed ? colors.success + '55' : colors.border,
+                    borderRadius: 16, paddingHorizontal: 10, paddingVertical: 10, gap: 8,
+                    minHeight: isPhone ? 52 : undefined,
                   }}>
                     <View style={{
-                      width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center',
+                      width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
                       backgroundColor: active ? colors.accent : completed ? colors.success : colors.muted,
                     }}>
                       <Text style={{
-                        color: active || completed ? '#fff' : colors.mutedForeground,
+                        color: active ? colors.accentForeground : completed ? '#fff' : colors.mutedForeground,
                         fontSize: 11, fontFamily: 'Inter_700Bold',
                       }}>
                         {stepNum}
@@ -412,8 +458,9 @@ export function TaskWizardModal({
                     <Text
                       numberOfLines={isPhone ? 2 : 1}
                       style={{
-                        flex: 1, fontSize: isCompactPhone ? 10 : 11,
-                        color: active ? colors.accent : completed ? colors.success : colors.mutedForeground,
+                        flex: 1,
+                        fontSize: isCompactPhone ? 10 : 11,
+                        color: active ? colors.background : completed ? colors.success : colors.foreground,
                         fontFamily: active ? 'Inter_700Bold' : 'Inter_500Medium',
                         lineHeight: isPhone ? 14 : undefined,
                       }}
@@ -427,9 +474,32 @@ export function TaskWizardModal({
                 </Pressable>
               );
             })}
-          </View>
+                  </View>
+                </LinearGradient>
+              </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
+              <View
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.card,
+                  borderRadius: 28,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  paddingHorizontal: isPhone ? 16 : 20,
+                  paddingTop: 18,
+                  paddingBottom: 14,
+                }}
+              >
+                <View style={{ marginBottom: 14 }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_600SemiBold', textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                    {currentStepNumber} of {WIZARD_STEPS.length}
+                  </Text>
+                  <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 22, marginTop: 6 }}>
+                    {stepLabels[step]}
+                  </Text>
+                </View>
+
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 12 }}>
             {step === 'basics' && (
               <View style={{ gap: 14 }}>
                 <View>
@@ -902,19 +972,18 @@ export function TaskWizardModal({
             )}
           </ScrollView>
 
-          {/* Separator */}
-          <View style={{ height: 1, backgroundColor: colors.border, marginTop: 14, marginBottom: 12 }} />
+                <View style={{ height: 1, backgroundColor: colors.border, marginTop: 14, marginBottom: 12 }} />
 
-          <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
             <Pressable
               onPress={handleDiscard}
               hitSlop={4}
               accessibilityLabel={t('plannerDiscardDraft') || 'Discard draft'}
               accessibilityRole="button"
               style={({ pressed }) => [{
-                borderRadius: 12, borderWidth: 1, borderColor: colors.danger + '44',
+                borderRadius: 16, borderWidth: 1, borderColor: colors.danger + '44',
                 backgroundColor: colors.danger + '10', alignItems: 'center', justifyContent: 'center',
-                paddingVertical: 14, paddingHorizontal: 16, minWidth: 48, minHeight: 48,
+                paddingVertical: 14, paddingHorizontal: 16, minWidth: 52, minHeight: 52,
               }, pressed && { opacity: 0.72 }]}
             >
               <Trash2 size={16} color={colors.danger} />
@@ -924,8 +993,8 @@ export function TaskWizardModal({
               onPress={goBack}
               disabled={step === 'basics'}
               style={({ pressed }) => [{
-                flex: 1, borderRadius: 12, borderWidth: 1, borderColor: colors.border,
-                backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', paddingVertical: 14,
+                flex: 1, borderRadius: 16, borderWidth: 1, borderColor: colors.border,
+                backgroundColor: colors.backgroundSecondary, alignItems: 'center', justifyContent: 'center', paddingVertical: 14,
                 opacity: step === 'basics' ? 0.45 : pressed ? 0.72 : 1,
               }]}
             >
@@ -938,15 +1007,15 @@ export function TaskWizardModal({
               <Pressable
                 onPress={goNext}
                 style={({ pressed }) => [{
-                  flex: 1.5, borderRadius: 12, backgroundColor: colors.accent,
+                  flex: 1.5, borderRadius: 16, backgroundColor: colors.foreground,
                   alignItems: 'center', justifyContent: 'center', paddingVertical: 14,
-                  shadowColor: colors.accent, shadowOpacity: 0.34, shadowRadius: 14,
+                  shadowColor: colors.foreground, shadowOpacity: 0.18, shadowRadius: 16,
                   shadowOffset: { width: 0, height: 0 },
                   elevation: 4,
                   opacity: pressed ? 0.78 : 1,
                 }]}
               >
-                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_700Bold', fontSize: 14 }}>
+                <Text style={{ color: colors.background, fontFamily: 'Inter_700Bold', fontSize: 14 }}>
                   {t('plannerNext') || 'Next'}
                 </Text>
               </Pressable>
@@ -955,7 +1024,7 @@ export function TaskWizardModal({
                 onPress={handleSubmit}
                 disabled={isSubmitting}
                 style={({ pressed }) => [{
-                  flex: 1.5, borderRadius: 12, backgroundColor: colors.accent,
+                  flex: 1.5, borderRadius: 16, backgroundColor: colors.accent,
                   alignItems: 'center', justifyContent: 'center', paddingVertical: 14,
                   shadowColor: colors.accent, shadowOpacity: 0.34, shadowRadius: 14,
                   shadowOffset: { width: 0, height: 0 },
@@ -972,10 +1041,12 @@ export function TaskWizardModal({
                 )}
               </Pressable>
             )}
+                </View>
+              </View>
+            </View>
           </View>
-        </View>
-      </View>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
 
       <DatePickerModal
         visible={showDatePicker}
@@ -999,6 +1070,6 @@ export function TaskWizardModal({
         selectedCurrency={ledgerWalletCurrency}
         title={t('plannerWalletCurrency') || 'Wallet Currency'}
       />
-    </Modal>
+    </SafeAreaView>
   );
 }

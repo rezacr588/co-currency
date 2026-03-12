@@ -960,6 +960,8 @@ export const tr = {
   plannerStepOrganizationShort: 'Düzen',
   plannerStepFinanceReview: 'Finans ve İnceleme',
   plannerStepFinanceReviewShort: 'İncele',
+  plannerWizardPageSubtitle: 'Görevi bir kez kurun, sonra zamanlama, hedefler ve finans bağlamıyla zenginleştirin.',
+  plannerWizardDraftLabel: 'Taslak bu cihazda otomatik kaydedilir',
   plannerTaskTitle: 'Görev başlığı',
   plannerDescription: 'Açıklama',
   plannerInitialColumn: 'Başlangıç sütunu',

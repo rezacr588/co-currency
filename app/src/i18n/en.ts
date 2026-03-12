@@ -958,6 +958,8 @@ export const en = {
   plannerStepOrganizationShort: 'Org',
   plannerStepFinanceReview: 'Finance & Review',
   plannerStepFinanceReviewShort: 'Review',
+  plannerWizardPageSubtitle: 'Build the task once, then enrich it with timing, goals, and money context.',
+  plannerWizardDraftLabel: 'Draft autosaves on this device',
   plannerTaskTitle: 'Task title',
   plannerDescription: 'Description',
   plannerInitialColumn: 'Initial column',

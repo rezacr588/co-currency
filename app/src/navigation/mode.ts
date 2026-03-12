@@ -31,7 +31,8 @@ const STORAGE_LAST_ROUTE_FINAPP = 'last_route_finapp';
 const STORAGE_LAST_ROUTE_TODO = 'last_route_todo';
 
 const NON_APP_PREFIXES = ['/login', '/register', '/forgot-password', '/reset-password', '/about', '/converter', '/auth'];
-const TODO_PATH_PREFIXES = ['/todo', '/planner', '/(app)/planner'] as const;
+const TODO_PATH_PREFIXES = ['/todo', '/planner', '/(app)/planner', '/planner-create', '/(app)/planner-create'] as const;
+const TODO_TRANSIENT_PATHS = ['/planner-create', '/(app)/planner-create'] as const;
 const FINAPP_PATH_PREFIXES = [
   '/finapp',
   '/(app)/(tabs)',
@@ -121,6 +122,9 @@ function isModeEntryPath(path: string | null | undefined): boolean {
 
 function canPersistRoute(path: string, mode: AppMode): boolean {
   if (isModeEntryPath(path)) return false;
+  if (mode === 'todo' && TODO_TRANSIENT_PATHS.some((prefix) => matchesPrefix(path, prefix))) {
+    return false;
+  }
   return mode === 'todo' ? isTodoPath(path) : isFinAppPath(path);
 }
 

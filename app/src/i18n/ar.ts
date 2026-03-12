@@ -956,6 +956,8 @@ export const ar = {
   plannerStepOrganizationShort: 'تنظيم',
   plannerStepFinanceReview: 'المالية والمراجعة',
   plannerStepFinanceReviewShort: 'مراجعة',
+  plannerWizardPageSubtitle: 'أنشئ المهمة مرة واحدة ثم أضف التوقيت والأهداف والسياق المالي لها.',
+  plannerWizardDraftLabel: 'يتم حفظ المسودة تلقائيا على هذا الجهاز',
   plannerTaskTitle: 'عنوان المهمة',
   plannerDescription: 'الوصف',
   plannerInitialColumn: 'العمود الأولي',
