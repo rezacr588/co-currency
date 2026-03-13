@@ -15,7 +15,7 @@ func TestNewAIService_Success(t *testing.T) {
 	}
 
 	if service == nil {
-		t.Error("Expected service to be created")
+		t.Fatal("Expected service to be created")
 	}
 
 	if service.provider != "googleai" {

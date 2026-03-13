@@ -21,23 +21,23 @@ func (s *AIChatService) buildSystemPrompt(userName string, fctx *model.Financial
 		displayName = "User"
 	}
 
-	sb.WriteString(fmt.Sprintf(`You are a helpful and knowledgeable personal finance advisor for %s. You have access to their complete financial data, memories from past conversations, and real-time exchange rates. Use this information to provide personalized, actionable advice.
+	fmt.Fprintf(&sb, `You are a helpful and knowledgeable personal finance advisor for %s. You have access to their complete financial data, memories from past conversations, and real-time exchange rates. Use this information to provide personalized, actionable advice.
 
 ## TODAY'S DATE
 %s (%d days until month end)
 
-`, displayName, fctx.TodayDate, fctx.DaysUntilMonthEnd))
+`, displayName, fctx.TodayDate, fctx.DaysUntilMonthEnd)
 
 	// User profile
 	sb.WriteString("## USER PROFILE\n")
 	if fctx.UserName != "" {
-		sb.WriteString(fmt.Sprintf("- Name: %s\n", sanitizeForPrompt(fctx.UserName, 100)))
+		fmt.Fprintf(&sb, "- Name: %s\n", sanitizeForPrompt(fctx.UserName, 100))
 	}
 	if fctx.AccountAgeDays > 0 {
-		sb.WriteString(fmt.Sprintf("- Account age: %d days\n", fctx.AccountAgeDays))
+		fmt.Fprintf(&sb, "- Account age: %d days\n", fctx.AccountAgeDays)
 	}
 	if fctx.PreferredCurrency != "" {
-		sb.WriteString(fmt.Sprintf("- Primary currency: %s\n", fctx.PreferredCurrency))
+		fmt.Fprintf(&sb, "- Primary currency: %s\n", fctx.PreferredCurrency)
 	}
 	sb.WriteString("\n")
 
@@ -45,7 +45,7 @@ func (s *AIChatService) buildSystemPrompt(userName string, fctx *model.Financial
 	if len(memories) > 0 {
 		sb.WriteString("## WHAT I REMEMBER ABOUT YOU\n")
 		for _, m := range memories {
-			sb.WriteString(fmt.Sprintf("- [%s] %s\n", sanitizeForPrompt(m.Category, 100), sanitizeForPrompt(m.Content, 500)))
+			fmt.Fprintf(&sb, "- [%s] %s\n", sanitizeForPrompt(m.Category, 100), sanitizeForPrompt(m.Content, 500))
 		}
 		sb.WriteString("\n")
 	}
@@ -54,7 +54,7 @@ func (s *AIChatService) buildSystemPrompt(userName string, fctx *model.Financial
 	sb.WriteString("## WALLET BALANCES\n")
 	if len(fctx.Balances) > 0 {
 		for _, b := range fctx.Balances {
-			sb.WriteString(fmt.Sprintf("- %s: %.2f\n", b.Currency, b.Balance))
+			fmt.Fprintf(&sb, "- %s: %.2f\n", b.Currency, b.Balance)
 		}
 	} else {
 		sb.WriteString("- No balances yet\n")
@@ -366,9 +366,9 @@ func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.U
 			// This month
 			if tx.CreatedAt.After(startOfMonth) {
 				fctx.RecentTransactions++
-				if tx.Type == "credit" {
+				if tx.Type == model.TransactionTypeCredit {
 					fctx.MonthlyIncome += convertedAmount
-				} else if tx.Type == "debit" {
+				} else if tx.Type == model.TransactionTypeDebit {
 					fctx.MonthlyExpenses += convertedAmount
 					if tx.Category != "" {
 						categoryTotals[tx.Category] += convertedAmount

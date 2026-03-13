@@ -67,10 +67,11 @@ func parseToolCall(response string) *ToolCall {
 	if startIdx == -1 {
 		return nil
 	}
-	endIdx := strings.Index(response, endTag)
-	if endIdx == -1 {
+	endOffset := strings.Index(response[startIdx:], endTag)
+	if endOffset == -1 {
 		return nil
 	}
+	endIdx := startIdx + endOffset
 
 	jsonStr := strings.TrimSpace(response[startIdx+len(startTag) : endIdx])
 	var tc ToolCall
@@ -88,12 +89,13 @@ func stripToolCallMarkers(response string) string {
 		if startIdx == -1 {
 			break
 		}
-		endIdx := strings.Index(response, "</tool_call>")
-		if endIdx == -1 {
+		endOffset := strings.Index(response[startIdx:], "</tool_call>")
+		if endOffset == -1 {
 			// Malformed — strip from start tag to end
 			response = response[:startIdx]
 			break
 		}
+		endIdx := startIdx + endOffset
 		response = response[:startIdx] + response[endIdx+len("</tool_call>"):]
 	}
 	return strings.TrimSpace(response)
@@ -446,7 +448,9 @@ func (e *AIToolExecutor) executeWebSearch(ctx context.Context, params map[string
 	if err != nil {
 		return "", fmt.Errorf("search request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 512))

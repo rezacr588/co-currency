@@ -1,0 +1,110 @@
+internal/service/auth_service_test.go:961:17: Error return value of `mockRepo.Create` is not checked (errcheck)
+	mockRepo.Create(context.Background(), user)
+	               ^
+internal/service/auth_service_test.go:1001:17: Error return value of `mockRepo.Create` is not checked (errcheck)
+	mockRepo.Create(context.Background(), user)
+	               ^
+internal/service/category_service_test.go:131:32: Error return value of `mockRepo.InitDefaultCategories` is not checked (errcheck)
+	mockRepo.InitDefaultCategories(context.Background())
+	                              ^
+internal/service/embedding_service.go:210:23: Error return value of `resp.Body.Close` is not checked (errcheck)
+	defer resp.Body.Close()
+	                     ^
+internal/service/google_oauth.go:165:23: Error return value of `resp.Body.Close` is not checked (errcheck)
+	defer resp.Body.Close()
+	                     ^
+internal/service/linkedin_oauth.go:163:23: Error return value of `resp.Body.Close` is not checked (errcheck)
+	defer resp.Body.Close()
+	                     ^
+internal/service/notification_service.go:99:26: Error return value of `s.repo.LogNotification` is not checked (errcheck)
+			s.repo.LogNotification(ctx, userID, notifType, title, body, data, "failed")
+			                      ^
+internal/service/notification_service.go:104:25: Error return value of `s.repo.LogNotification` is not checked (errcheck)
+		s.repo.LogNotification(ctx, userID, notifType, title, body, data, "sent")
+		                      ^
+internal/service/wallet_service_test.go:853:24: Error return value of `service.AddTransaction` is not checked (errcheck)
+	service.AddTransaction(context.Background(), userID, req)
+	                      ^
+internal/service/wallet_service_test.go:854:24: Error return value of `service.AddTransaction` is not checked (errcheck)
+	service.AddTransaction(context.Background(), userID, req)
+	                      ^
+internal/service/wallet_service_test.go:901:25: Error return value of `service.AddTransaction` is not checked (errcheck)
+		service.AddTransaction(context.Background(), userID, req)
+		                      ^
+internal/service/reports_health.go:73:2: ineffectual assignment to goalProgress (ineffassign)
+	goalProgress := 50.0 // Default
+	^
+internal/service/wallet_service_test.go:1317:16: ineffectual assignment to total (ineffassign)
+	transactions, total, _ = service.GetTransactionsFiltered(context.Background(), userID, nil, 3, 3)
+	              ^
+internal/service/advice_service.go:165:4: QF1003: could use tagged switch on tx.Type (staticcheck)
+			if tx.Type == "credit" {
+			^
+internal/service/ai_chat_context.go:40:3: QF1012: Use fmt.Fprintf(...) instead of WriteString(fmt.Sprintf(...)) (staticcheck)
+		sb.WriteString(fmt.Sprintf("- Primary currency: %s\n", fctx.PreferredCurrency))
+		^
+internal/service/ai_chat_context.go:48:4: QF1012: Use fmt.Fprintf(...) instead of WriteString(fmt.Sprintf(...)) (staticcheck)
+			sb.WriteString(fmt.Sprintf("- [%s] %s\n", sanitizeForPrompt(m.Category, 100), sanitizeForPrompt(m.Content, 500)))
+			^
+internal/service/ai_chat_context.go:57:4: QF1012: Use fmt.Fprintf(...) instead of WriteString(fmt.Sprintf(...)) (staticcheck)
+			sb.WriteString(fmt.Sprintf("- %s: %.2f\n", b.Currency, b.Balance))
+			^
+internal/service/ai_chat_context.go:369:5: QF1003: could use tagged switch on tx.Type (staticcheck)
+				if tx.Type == "credit" {
+				^
+internal/service/challenge_service.go:131:23: S1012: should use time.Since instead of time.Now().Sub (staticcheck)
+				daysPassed := int(time.Now().Sub(uc.StartedAt).Hours() / 24)
+				                  ^
+internal/service/challenge_service.go:189:25: S1012: should use time.Since instead of time.Now().Sub (staticcheck)
+						daysPassed := int(time.Now().Sub(uc.StartedAt).Hours() / 24)
+						                  ^
+internal/service/google_oauth.go:18:32: ST1005: error strings should not be capitalized (staticcheck)
+	ErrGoogleOAuthNotConfigured = errors.New("Google OAuth not configured")
+	                              ^
+internal/service/google_oauth.go:19:32: ST1005: error strings should not be capitalized (staticcheck)
+	ErrGoogleOAuthFailed        = errors.New("Google OAuth failed")
+	                              ^
+internal/service/google_oauth.go:20:32: ST1005: error strings should not be capitalized (staticcheck)
+	ErrGoogleAccountLinked      = errors.New("Google account already linked to another user")
+	                              ^
+internal/service/reports_analytics.go:184:3: QF1003: could use tagged switch on row.Type (staticcheck)
+		if row.Type == model.TransactionTypeCredit {
+		^
+internal/service/reports_cashflow.go:85:3: QF1003: could use tagged switch on tx.Type (staticcheck)
+		if tx.Type == "credit" {
+		^
+internal/service/wealth_service.go:103:34: QF1005: could expand call to math.Pow (staticcheck)
+		realBalance := nominalInBase * math.Pow(1-monthlyInflation, 1)
+		                               ^
+internal/service/auth_service_test.go:78:6: func createTestAuthService is unused (unused)
+func createTestAuthService(mockRepo *MockUserRepository) *AuthService {
+     ^
+internal/service/reports_time.go:73:6: func reportNow is unused (unused)
+func reportNow() time.Time {
+     ^
+internal/service/reports_time.go:81:6: func reportDayStart is unused (unused)
+func reportDayStart(t time.Time) time.Time {
+     ^
+internal/service/reports_time.go:94:6: func reportDayEnd is unused (unused)
+func reportDayEnd(t time.Time) time.Time {
+     ^
+internal/service/reports_time.go:98:6: func reportDayEndForContext is unused (unused)
+func reportDayEndForContext(ctx context.Context, t time.Time) time.Time {
+     ^
+internal/service/reports_time.go:120:6: func reportWeekday is unused (unused)
+func reportWeekday(t time.Time) time.Weekday {
+     ^
+internal/service/reports_time.go:128:6: func reportDateString is unused (unused)
+func reportDateString(t time.Time) string {
+     ^
+internal/service/reports_time.go:136:6: func reportDayDiff is unused (unused)
+func reportDayDiff(anchor, day time.Time) int {
+     ^
+internal/service/reports_time.go:144:6: func reportMonthDiff is unused (unused)
+func reportMonthDiff(anchor, day time.Time) int {
+     ^
+35 issues:
+* errcheck: 11
+* ineffassign: 2
+* staticcheck: 13
+* unused: 9

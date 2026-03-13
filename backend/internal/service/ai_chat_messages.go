@@ -200,6 +200,16 @@ func extractUsageFromGenerationInfo(generationInfo map[string]any) (promptTokens
 		generationInfo["totalTokenCount"],
 	)
 
+	if value, ok := floatFromAny(
+		generationInfo["billed_cost_usd"],
+		generationInfo["billedCostUSD"],
+		generationInfo["cost_usd"],
+		generationInfo["costUSD"],
+		generationInfo["billed_cost"],
+	); ok {
+		billedCost = &value
+	}
+
 	// Some providers nest token usage in a usage object.
 	if usageObj := usageAsMap(generationInfo["usage"]); usageObj != nil {
 		if promptTokens == 0 {
