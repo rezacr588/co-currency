@@ -15,13 +15,13 @@ func (h *Handler) Convert(w http.ResponseWriter, r *http.Request) {
 	amountStr := r.URL.Query().Get("amount")
 
 	if from == "" || to == "" || amountStr == "" {
-		httputil.BadRequest(w, "Missing required parameters: from, to, amount")
+		httputil.BadRequestWithContext(r.Context(), w, "missing required parameters: from, to, amount")
 		return
 	}
 
 	amount, err := strconv.ParseFloat(amountStr, 64)
 	if err != nil || amount < 0 {
-		httputil.BadRequest(w, "Invalid amount value")
+		httputil.BadRequestWithContext(r.Context(), w, "invalid amount value")
 		return
 	}
 
@@ -32,7 +32,7 @@ func (h *Handler) Convert(w http.ResponseWriter, r *http.Request) {
 			Str("to", to).
 			Float64("amount", amount).
 			Msg("Currency conversion failed")
-		httputil.InternalServerError(w, "Failed to convert currency")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to convert currency", err)
 		return
 	}
 

@@ -10,7 +10,7 @@ import (
 func (h *Handler) GetCurrencies(w http.ResponseWriter, r *http.Request) {
 	currencies, err := h.exchangeService.GetCurrencies(r.Context())
 	if err != nil {
-		httputil.InternalServerError(w, "Failed to fetch currencies")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to fetch currencies", err)
 		return
 	}
 

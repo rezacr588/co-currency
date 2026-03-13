@@ -7,14 +7,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
-	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -23,23 +20,12 @@ var (
 	ErrGoogleAccountLinked      = errors.New("Google account already linked to another user")
 )
 
-// GoogleConfig holds Google OAuth configuration
-type GoogleConfig struct {
-	ClientID     string
-	ClientSecret string
-	RedirectURI  string
-	FrontendURL  string
-}
-
-// GoogleOAuthService handles Google OAuth operations
+// GoogleOAuthService handles Google OAuth operations.
 type GoogleOAuthService struct {
-	authService    *AuthService
-	userRepo       *repository.UserRepository
-	oauthStateRepo *repository.OAuthStateRepository
-	config         *GoogleConfig
+	baseOAuthService
 }
 
-// GoogleUser represents the user data returned by Google API
+// GoogleUser represents the user data returned by Google API.
 type GoogleUser struct {
 	ID            string `json:"id"`
 	Email         string `json:"email"`
@@ -50,102 +36,53 @@ type GoogleUser struct {
 	Picture       string `json:"picture"`
 }
 
-// GoogleAccessToken represents the access token response from Google
-type GoogleAccessToken struct {
-	AccessToken  string `json:"access_token"`
-	ExpiresIn    int    `json:"expires_in"`
-	Scope        string `json:"scope"`
-	TokenType    string `json:"token_type"`
-	RefreshToken string `json:"refresh_token,omitempty"`
-}
-
-// NewGoogleOAuthService creates a new GoogleOAuthService
+// NewGoogleOAuthService creates a new GoogleOAuthService.
 func NewGoogleOAuthService(authService *AuthService, userRepo *repository.UserRepository, oauthStateRepo *repository.OAuthStateRepository, config *GoogleConfig) *GoogleOAuthService {
 	return &GoogleOAuthService{
-		authService:    authService,
-		userRepo:       userRepo,
-		oauthStateRepo: oauthStateRepo,
-		config:         config,
+		baseOAuthService: baseOAuthService{
+			authService:    authService,
+			userRepo:       userRepo,
+			oauthStateRepo: oauthStateRepo,
+			config: &OAuthProviderConfig{
+				ClientID:     config.ClientID,
+				ClientSecret: config.ClientSecret,
+				RedirectURI:  config.RedirectURI,
+				FrontendURL:  config.FrontendURL,
+				AuthURL:      "https://accounts.google.com/o/oauth2/v2/auth",
+				TokenURL:     "https://oauth2.googleapis.com/token",
+				Scopes:       []string{"openid", "email", "profile"},
+				ExtraParams:  map[string]string{"access_type": "offline", "prompt": "consent"},
+			},
+		},
 	}
 }
 
-// IsConfigured returns true if Google OAuth is configured
-func (s *GoogleOAuthService) IsConfigured() bool {
-	return s.config != nil && s.config.ClientID != "" && s.config.ClientSecret != ""
+// GoogleConfig holds Google OAuth configuration.
+type GoogleConfig struct {
+	ClientID     string
+	ClientSecret string
+	RedirectURI  string
+	FrontendURL  string
 }
 
-// GetAuthURL generates the Google OAuth authorization URL
-func (s *GoogleOAuthService) GetAuthURL() (string, string, error) {
-	if !s.IsConfigured() {
-		return "", "", ErrGoogleOAuthNotConfigured
-	}
-
-	// Generate a random state token
-	state := uuid.New().String()
-
-	// Store state in database with 5 minute expiry
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	expiresAt := time.Now().Add(5 * time.Minute)
-	if err := s.oauthStateRepo.Create(ctx, state, expiresAt); err != nil {
-		log.Error().Err(err).Msg("failed to store OAuth state in database")
-		return "", "", fmt.Errorf("storing OAuth state: %w", err)
-	}
-
-	// Clean up expired states in background
-	go func() {
-		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cleanupCancel()
-		if err := s.oauthStateRepo.CleanupExpired(cleanupCtx); err != nil {
-			log.Warn().Err(err).Msg("failed to cleanup expired OAuth states")
-		}
-	}()
-
-	// Build authorization URL
-	params := url.Values{}
-	params.Set("response_type", "code")
-	params.Set("client_id", s.config.ClientID)
-	params.Set("redirect_uri", s.config.RedirectURI)
-	params.Set("scope", "openid email profile")
-	params.Set("state", state)
-	params.Set("access_type", "offline")
-	params.Set("prompt", "consent")
-
-	authURL := fmt.Sprintf("https://accounts.google.com/o/oauth2/v2/auth?%s", params.Encode())
-
-	return authURL, state, nil
-}
-
-// ValidateState validates the OAuth state parameter
-func (s *GoogleOAuthService) ValidateState(ctx context.Context, state string) error {
-	return s.oauthStateRepo.Validate(ctx, state)
-}
-
-// HandleCallback handles the Google OAuth callback
+// HandleCallback handles the Google OAuth callback.
 func (s *GoogleOAuthService) HandleCallback(ctx context.Context, code, state string) (*model.AuthResponse, error) {
 	if !s.IsConfigured() {
 		return nil, ErrGoogleOAuthNotConfigured
 	}
 
-	// Validate state from database
-	if err := s.ValidateState(ctx, state); err != nil {
-		if errors.Is(err, repository.ErrOAuthStateNotFound) {
-			return nil, fmt.Errorf("invalid or expired state parameter")
-		}
-		if errors.Is(err, repository.ErrOAuthStateExpired) {
-			return nil, fmt.Errorf("OAuth state has expired, please try again")
-		}
-		return nil, fmt.Errorf("validating state: %w", err)
+	// Validate state via shared base
+	if err := s.validateOAuthState(ctx, state); err != nil {
+		return nil, err
 	}
 
-	// Exchange code for access token
+	// Exchange code for access token via shared base
 	accessToken, err := s.exchangeCodeForToken(code)
 	if err != nil {
 		return nil, fmt.Errorf("exchanging code for token: %w", err)
 	}
 
-	// Get Google user info
+	// Get Google user info (provider-specific)
 	googleUser, err := s.getGoogleUser(accessToken)
 	if err != nil {
 		return nil, fmt.Errorf("getting Google user: %w", err)
@@ -155,7 +92,6 @@ func (s *GoogleOAuthService) HandleCallback(ctx context.Context, code, state str
 	googleID := googleUser.ID
 	user, err := s.userRepo.GetByGoogleID(ctx, googleID)
 	if err == nil {
-		// User found, generate token and return
 		return s.generateAuthResponse(ctx, user)
 	}
 
@@ -171,7 +107,6 @@ func (s *GoogleOAuthService) HandleCallback(ctx context.Context, code, state str
 			if err := s.userRepo.LinkGoogleAccount(ctx, existingUser.ID, googleID, googleUser.Picture); err != nil {
 				return nil, fmt.Errorf("linking Google account: %w", err)
 			}
-			// Reload user with updated data
 			existingUser, err = s.userRepo.GetByID(ctx, existingUser.ID)
 			if err != nil {
 				return nil, fmt.Errorf("reloading user: %w", err)
@@ -197,12 +132,9 @@ func (s *GoogleOAuthService) HandleCallback(ctx context.Context, code, state str
 		AvatarURL: &avatarURL,
 	}
 
-	// If no email from Google, use a placeholder
 	if newUser.Email == "" {
 		newUser.Email = fmt.Sprintf("%s@google.local", googleID)
 	}
-
-	// If no name, use "Google User"
 	if newUser.Name == "" {
 		newUser.Name = "Google User"
 	}
@@ -217,50 +149,7 @@ func (s *GoogleOAuthService) HandleCallback(ctx context.Context, code, state str
 	return s.generateAuthResponse(ctx, newUser)
 }
 
-// exchangeCodeForToken exchanges the authorization code for an access token
-func (s *GoogleOAuthService) exchangeCodeForToken(code string) (string, error) {
-	data := url.Values{}
-	data.Set("grant_type", "authorization_code")
-	data.Set("code", code)
-	data.Set("client_id", s.config.ClientID)
-	data.Set("client_secret", s.config.ClientSecret)
-	data.Set("redirect_uri", s.config.RedirectURI)
-
-	req, err := http.NewRequest("POST", "https://oauth2.googleapis.com/token", strings.NewReader(data.Encode()))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Google token error: %s", string(body))
-	}
-
-	var tokenResp GoogleAccessToken
-	if err := json.Unmarshal(body, &tokenResp); err != nil {
-		return "", fmt.Errorf("parsing token response: %w", err)
-	}
-
-	if tokenResp.AccessToken == "" {
-		return "", fmt.Errorf("no access token in response: %s", string(body))
-	}
-
-	return tokenResp.AccessToken, nil
-}
-
-// getGoogleUser fetches the authenticated user's profile from Google
+// getGoogleUser fetches the authenticated user's profile from Google (provider-specific).
 func (s *GoogleOAuthService) getGoogleUser(accessToken string) (*GoogleUser, error) {
 	req, err := http.NewRequest("GET", "https://www.googleapis.com/oauth2/v2/userinfo", nil)
 	if err != nil {
@@ -286,44 +175,4 @@ func (s *GoogleOAuthService) getGoogleUser(accessToken string) (*GoogleUser, err
 	}
 
 	return &user, nil
-}
-
-// generateAuthResponse generates JWT tokens for a user
-func (s *GoogleOAuthService) generateAuthResponse(ctx context.Context, user *model.User) (*model.AuthResponse, error) {
-	// Reset failed attempts on successful OAuth login
-	if err := s.userRepo.ResetFailedAttempts(ctx, user.ID); err != nil {
-		log.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to reset failed attempts")
-	}
-
-	// Generate access token
-	token, err := s.authService.generateToken(user)
-	if err != nil {
-		return nil, fmt.Errorf("generating token: %w", err)
-	}
-
-	response := &model.AuthResponse{
-		Token: token,
-		User:  user,
-	}
-
-	// Generate refresh token if repository is configured
-	if s.authService.refreshTokenRepo != nil {
-		refreshToken := uuid.New().String()
-		expiresAt := time.Now().Add(s.authService.refreshExpiry)
-		if err := s.authService.refreshTokenRepo.Create(ctx, user.ID, refreshToken, expiresAt); err != nil {
-			log.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to create refresh token")
-		} else {
-			response.RefreshToken = refreshToken
-		}
-	}
-
-	return response, nil
-}
-
-// GetFrontendURL returns the frontend URL for redirects
-func (s *GoogleOAuthService) GetFrontendURL() string {
-	if s.config != nil && s.config.FrontendURL != "" {
-		return s.config.FrontendURL
-	}
-	return "http://localhost:5173"
 }

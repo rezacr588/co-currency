@@ -96,7 +96,7 @@ func (h *WalletHandler) GetBalances(w http.ResponseWriter, r *http.Request) {
 
 	balances, err := h.walletService.GetBalances(r.Context(), userID)
 	if err != nil {
-		httputil.InternalServerError(w, "failed to get balances")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to get balances", err)
 		return
 	}
 
@@ -147,7 +147,7 @@ func (h *WalletHandler) AddTransaction(w http.ResponseWriter, r *http.Request) {
 			httputil.BadRequest(w, "insufficient balance")
 			return
 		}
-		httputil.BadRequest(w, err.Error())
+		httputil.BadRequestWithContext(r.Context(), w, "failed to add transaction", err)
 		return
 	}
 
@@ -176,7 +176,7 @@ func (h *WalletHandler) ConvertBalance(w http.ResponseWriter, r *http.Request) {
 			httputil.BadRequest(w, "insufficient balance")
 			return
 		}
-		httputil.BadRequest(w, err.Error())
+		httputil.BadRequestWithContext(r.Context(), w, "failed to convert balance", err)
 		return
 	}
 

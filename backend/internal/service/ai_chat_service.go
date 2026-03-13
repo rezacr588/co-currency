@@ -141,46 +141,49 @@ func sanitizeForPrompt(s string, maxLen int) string {
 	return strings.TrimSpace(s)
 }
 
-// NewAIChatService creates a new AIChatService
-func NewAIChatService(
-	aiService *AIService,
-	exchangeService *ExchangeService,
-	chatRepo *repository.ChatRepository,
-	walletRepo *repository.WalletRepository,
-	goalRepo *repository.GoalRepository,
-	budgetRepo *repository.BudgetRepository,
-	userRepo *repository.UserRepository,
-	recurringRepo *repository.RecurringRepository,
-	memoryRepo *repository.MemoryRepository,
-	memoryService *MemoryService,
-	loanRepo *repository.LoanRepository,
-	categoryRepo *repository.CategoryRepository,
-	reportsService *ReportsService,
-	subscriptionRepo *repository.SubscriptionRepository,
-	noteRepo *repository.NoteRepository,
-	tavilyAPIKey string,
-) *AIChatService {
-	toolExecutor := NewAIToolExecutor(walletRepo, categoryRepo, reportsService, subscriptionRepo, noteRepo, loanRepo, budgetRepo, tavilyAPIKey)
+// AIChatServiceConfig holds all dependencies needed to create an AIChatService.
+type AIChatServiceConfig struct {
+	AIService        *AIService
+	ExchangeService  *ExchangeService
+	ChatRepo         *repository.ChatRepository
+	WalletRepo       *repository.WalletRepository
+	GoalRepo         *repository.GoalRepository
+	BudgetRepo       *repository.BudgetRepository
+	UserRepo         *repository.UserRepository
+	RecurringRepo    *repository.RecurringRepository
+	MemoryRepo       *repository.MemoryRepository
+	MemoryService    *MemoryService
+	LoanRepo         *repository.LoanRepository
+	CategoryRepo     *repository.CategoryRepository
+	ReportsService   *ReportsService
+	SubscriptionRepo *repository.SubscriptionRepository
+	NoteRepo         *repository.NoteRepository
+	TavilyAPIKey     string
+}
+
+// NewAIChatService creates a new AIChatService from a config.
+func NewAIChatService(cfg AIChatServiceConfig) *AIChatService {
+	toolExecutor := NewAIToolExecutor(cfg.WalletRepo, cfg.CategoryRepo, cfg.ReportsService, cfg.SubscriptionRepo, cfg.NoteRepo, cfg.LoanRepo, cfg.BudgetRepo, cfg.TavilyAPIKey)
 	return &AIChatService{
-		aiService:        aiService,
-		exchangeService:  exchangeService,
-		chatRepo:         chatRepo,
-		walletRepo:       walletRepo,
-		goalRepo:         goalRepo,
-		budgetRepo:       budgetRepo,
-		userRepo:         userRepo,
-		recurringRepo:    recurringRepo,
-		memoryRepo:       memoryRepo,
-		memoryService:    memoryService,
-		loanRepo:         loanRepo,
-		categoryRepo:     categoryRepo,
-		reportsService:   reportsService,
-		subscriptionRepo: subscriptionRepo,
-		noteRepo:         noteRepo,
+		aiService:        cfg.AIService,
+		exchangeService:  cfg.ExchangeService,
+		chatRepo:         cfg.ChatRepo,
+		walletRepo:       cfg.WalletRepo,
+		goalRepo:         cfg.GoalRepo,
+		budgetRepo:       cfg.BudgetRepo,
+		userRepo:         cfg.UserRepo,
+		recurringRepo:    cfg.RecurringRepo,
+		memoryRepo:       cfg.MemoryRepo,
+		memoryService:    cfg.MemoryService,
+		loanRepo:         cfg.LoanRepo,
+		categoryRepo:     cfg.CategoryRepo,
+		reportsService:   cfg.ReportsService,
+		subscriptionRepo: cfg.SubscriptionRepo,
+		noteRepo:         cfg.NoteRepo,
 		toolExecutor:     toolExecutor,
 		contextCache:     gocache.New(60*time.Second, 2*time.Minute),
-		fastModel:        aiService.GetDefaultModel(),
-		thinkingModel:    aiService.GetDefaultModel(),
+		fastModel:        cfg.AIService.GetDefaultModel(),
+		thinkingModel:    cfg.AIService.GetDefaultModel(),
 		defaultMode:      model.ChatThinkingModeAuto,
 	}
 }

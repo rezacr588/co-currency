@@ -39,11 +39,7 @@ func TestHandler_HealthDetailed_NoDatabase(t *testing.T) {
 }
 
 func TestHandler_HealthDetailed_WithConfig(t *testing.T) {
-	handler := NewWithConfig(nil, &HandlerConfig{
-		DB:          nil,
-		Cache:       nil,
-		RateLimiter: nil,
-	})
+	handler := New(nil)
 
 	req := httptest.NewRequest("GET", "/health/detailed", nil)
 	rr := httptest.NewRecorder()
@@ -64,12 +60,12 @@ func TestNew_NilExchangeService(t *testing.T) {
 }
 
 func TestNewWithConfig(t *testing.T) {
-	handler := NewWithConfig(nil, nil)
+	handler := New(nil)
 	if handler == nil {
 		t.Error("Expected handler to be created with nil config")
 	}
 
-	handler = NewWithConfig(nil, &HandlerConfig{})
+	handler = New(nil)
 	if handler == nil {
 		t.Error("Expected handler to be created with empty config")
 	}

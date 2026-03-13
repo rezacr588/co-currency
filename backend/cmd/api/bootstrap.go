@@ -129,235 +129,10 @@ func initDatabase(cfg *config.Config) *databases {
 func initServices(cfg *config.Config, db *databases) *services {
 	svc := &services{}
 
-	// Initialize core dependencies
-	cache := repository.NewInMemoryCache(cfg.CacheTTL)
-
-	// IRR client for exchange service
-	var irrClient *repository.IRRClient
-	if db.irrDB != nil {
-		irrClient = repository.NewIRRClient(db.irrDB)
-	} else {
-		irrClient = repository.NewIRRClient(nil)
-	}
-
-	frankfurterClient := repository.NewFrankfurterClient(cfg.FrankfurterURL)
-	svc.exchange = service.NewExchangeService(cfg, frankfurterClient, cache, irrClient)
-
-	// Initialize auth service (requires database)
-	if db.userRepo != nil {
-		emailService := service.NewEmailService(cfg.ResendAPIKey, cfg.FrontendURL)
-		refreshTokenRepo := repository.NewRefreshTokenRepository(db.mainDB)
-		svc.auth = service.NewAuthServiceWithRefresh(db.userRepo, refreshTokenRepo, emailService, cfg.JWTSecret)
-		log.Info().Msg("Authentication service initialized")
-
-		oauthStateRepo := repository.NewOAuthStateRepository(db.mainDB)
-
-		if cfg.LinkedInClientID != "" && cfg.LinkedInClientSecret != "" {
-			linkedInConfig := &service.LinkedInConfig{
-				ClientID:     cfg.LinkedInClientID,
-				ClientSecret: cfg.LinkedInClientSecret,
-				RedirectURI:  cfg.LinkedInRedirectURI,
-				FrontendURL:  cfg.FrontendURL,
-			}
-			svc.linkedInAuth = service.NewLinkedInOAuthService(svc.auth, db.userRepo, oauthStateRepo, linkedInConfig)
-			log.Info().Msg("LinkedIn OAuth service initialized with database-backed state storage")
-		} else {
-			log.Info().Msg("LinkedIn OAuth not configured (LINKEDIN_CLIENT_ID/LINKEDIN_CLIENT_SECRET not set)")
-		}
-
-		if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" {
-			googleConfig := &service.GoogleConfig{
-				ClientID:     cfg.GoogleClientID,
-				ClientSecret: cfg.GoogleClientSecret,
-				RedirectURI:  cfg.GoogleRedirectURI,
-				FrontendURL:  cfg.FrontendURL,
-			}
-			svc.googleAuth = service.NewGoogleOAuthService(svc.auth, db.userRepo, oauthStateRepo, googleConfig)
-			log.Info().Msg("Google OAuth service initialized with database-backed state storage")
-		} else {
-			log.Info().Msg("Google OAuth not configured (GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET not set)")
-		}
-	} else {
-		log.Warn().Msg("Authentication service not available - no database connection")
-	}
-
-	// Initialize wallet service
-	if db.walletRepo != nil {
-		svc.wallet = service.NewWalletService(db.walletRepo, svc.exchange)
-		log.Info().Msg("Wallet service initialized")
-	} else {
-		log.Warn().Msg("Wallet service not available - no database connection")
-	}
-
-	// Initialize AI service (optional)
-	if cfg.AIAPIKey != "" {
-		var err error
-		svc.ai, err = service.NewAIService(cfg.AIProvider, cfg.AIAPIKey, cfg.AIModel, cfg.AIVisionModel, cfg.AICloudProject)
-		if err != nil {
-			log.Warn().Err(err).Msg("Failed to initialize AI service")
-		} else {
-			log.Info().
-				Str("provider", svc.ai.GetProvider()).
-				Str("project", cfg.AICloudProject).
-				Msg("AI service initialized")
-		}
-	} else {
-		log.Info().Msg("AI_API_KEY not configured, AI features disabled")
-	}
-
-	// Initialize services that require mainDB
-	if db.mainDB != nil {
-		db.goalRepo = repository.NewGoalRepository(db.mainDB)
-		svc.goal = service.NewGoalService(db.goalRepo)
-		log.Info().Msg("Goal service initialized")
-
-		taskRepo := repository.NewTaskRepository(db.mainDB)
-		svc.task = service.NewTaskService(taskRepo, db.goalRepo, db.walletRepo)
-		log.Info().Msg("Task service initialized")
-
-		svc.todo = service.NewTodoService(taskRepo, db.goalRepo)
-		log.Info().Msg("Todo service initialized")
-
-		tagRepo := repository.NewTagRepository(db.mainDB)
-		svc.tag = service.NewTagService(tagRepo)
-		log.Info().Msg("Tag service initialized")
-		svc.task.SetTagRepository(tagRepo)
-		if svc.wallet != nil {
-			svc.wallet.SetTagRepository(tagRepo)
-		}
-		svc.planner = service.NewPlannerService(taskRepo, db.goalRepo, svc.task)
-		log.Info().Msg("Planner service initialized")
-
-		categoryRepo := repository.NewCategoryRepository(db.mainDB)
-		if err := categoryRepo.InitDefaultCategories(context.Background()); err != nil {
-			log.Warn().Err(err).Msg("Failed to initialize default categories")
-		}
-		svc.category = service.NewCategoryService(categoryRepo)
-		log.Info().Msg("Category service initialized")
-
-		db.budgetRepo = repository.NewBudgetRepository(db.mainDB)
-		svc.budget = service.NewBudgetService(db.budgetRepo)
-		log.Info().Msg("Budget service initialized")
-
-		recurringRepo := repository.NewRecurringRepository(db.mainDB)
-		svc.recurring = service.NewRecurringService(recurringRepo)
-		log.Info().Msg("Recurring transaction service initialized")
-
-		subscriptionRepo := repository.NewSubscriptionRepository(db.mainDB)
-		svc.subscription = service.NewSubscriptionService(subscriptionRepo)
-		log.Info().Msg("Subscription service initialized")
-
-		if db.walletRepo != nil {
-			svc.reports = service.NewReportsService(db.walletRepo, svc.exchange, svc.ai, recurringRepo, subscriptionRepo)
-			log.Info().Msg("Reports service initialized")
-		}
-
-		badgeRepo := repository.NewBadgeRepository(db.mainDB)
-		if err := badgeRepo.InitDefaultBadges(context.Background()); err != nil {
-			log.Warn().Err(err).Msg("Failed to initialize default badges")
-		}
-		svc.badge = service.NewBadgeService(badgeRepo, db.walletRepo, db.budgetRepo, db.goalRepo, subscriptionRepo)
-		log.Info().Msg("Badge service initialized")
-
-		noteRepo := repository.NewNoteRepository(db.mainDB)
-		svc.note = service.NewNoteService(noteRepo, db.walletRepo)
-		log.Info().Msg("Note service initialized")
-
-		db.loanRepo = repository.NewLoanRepository(db.mainDB.Pool())
-		svc.loan = service.NewLoanService(db.loanRepo)
-		log.Info().Msg("Loan service initialized")
-
-		notificationRepo := repository.NewNotificationRepository(db.mainDB.Pool())
-		svc.notification = service.NewNotificationService(notificationRepo, db.budgetRepo, db.loanRepo)
-		log.Info().Msg("Notification service initialized")
-
-		challengeRepo := repository.NewChallengeRepository(db.mainDB)
-		svc.challenge = service.NewChallengeService(challengeRepo, db.walletRepo, db.budgetRepo)
-		log.Info().Msg("Challenge service initialized")
-
-		xpRepo := repository.NewXPRepository(db.mainDB.Pool())
-		svc.xp = service.NewXPService(xpRepo)
-		log.Info().Msg("XP service initialized")
-
-		// Initialize wealth service
-		if db.walletRepo != nil && db.inflationRepo != nil {
-			svc.wealth = service.NewWealthService(db.walletRepo, svc.exchange, db.inflationRepo)
-			log.Info().Msg("Wealth service initialized")
-		}
-
-		// Initialize AI Chat service
-		if svc.ai != nil {
-			chatRepo := repository.NewChatRepository(db.mainDB.Pool())
-			memoryRepo := repository.NewMemoryRepository(db.mainDB)
-			if err := memoryRepo.InitSchema(context.Background()); err != nil {
-				log.Warn().Err(err).Msg("Failed to initialize memory schema")
-			}
-
-			var memoryService *service.MemoryService
-			if cfg.QdrantEnabled && cfg.QdrantURL != "" {
-				qdrantClient, err := repository.NewQdrantClient(repository.QdrantConfig{
-					URL:        cfg.QdrantURL,
-					APIKey:     cfg.QdrantAPIKey,
-					Dimensions: uint64(cfg.EmbeddingDimensions),
-				})
-				if err != nil {
-					log.Warn().Err(err).Msg("Failed to initialize Qdrant client, semantic memory disabled")
-				} else {
-					log.Info().
-						Str("url", cfg.QdrantURL).
-						Int("dimensions", cfg.EmbeddingDimensions).
-						Msg("Qdrant client initialized")
-
-					embeddingService, err := service.NewEmbeddingService(service.EmbeddingConfig{
-						Provider:   service.EmbeddingProvider(cfg.EmbeddingProvider),
-						APIKey:     cfg.EmbeddingAPIKey,
-						Model:      cfg.EmbeddingModel,
-						Dimensions: cfg.EmbeddingDimensions,
-						OllamaURL:  cfg.OllamaURL,
-					})
-					if err != nil {
-						log.Warn().Err(err).Msg("Failed to initialize embedding service, semantic memory disabled")
-						qdrantClient.Close()
-					} else {
-						log.Info().
-							Str("provider", cfg.EmbeddingProvider).
-							Str("model", cfg.EmbeddingModel).
-							Msg("Embedding service initialized")
-
-						vectorMemoryRepo := repository.NewVectorMemoryRepository(qdrantClient, cfg.ShortTermMemoryTTL)
-						memoryService = service.NewMemoryService(memoryRepo, vectorMemoryRepo, embeddingService, cfg.MaxMemoryResults)
-						svc.qdrantClient = qdrantClient
-						log.Info().Msg("Memory service initialized with semantic search (Qdrant)")
-					}
-				}
-			}
-			if memoryService == nil {
-				memoryService = service.NewMemoryService(memoryRepo, nil, nil, cfg.MaxMemoryResults)
-				if cfg.QdrantEnabled && cfg.QdrantURL != "" {
-					log.Warn().Msg("Falling back to PostgreSQL-only memory service")
-				} else {
-					log.Info().Msg("Memory service initialized (PostgreSQL only, Qdrant disabled)")
-				}
-			}
-			svc.memoryService = memoryService
-
-			svc.aiChat = service.NewAIChatService(
-				svc.ai, svc.exchange, chatRepo,
-				db.walletRepo, db.goalRepo, db.budgetRepo, db.userRepo,
-				recurringRepo, memoryRepo, memoryService,
-				db.loanRepo, categoryRepo, svc.reports, subscriptionRepo, noteRepo,
-				cfg.TavilyAPIKey,
-			)
-			svc.aiChat.SetThinkingConfig(
-				cfg.AIFastModel, cfg.AIThinkingModel,
-				model.ChatThinkingMode(cfg.AIThinkingModeDefault),
-			)
-			if svc.wealth != nil {
-				svc.aiChat.SetWealthService(svc.wealth)
-			}
-			log.Info().Msg("AI Chat service initialized with full context")
-		}
-	}
+	initCoreServices(cfg, db, svc)
+	initAuthServices(cfg, db, svc)
+	initFeatureServices(cfg, db, svc)
+	initAIServices(cfg, db, svc)
 
 	// Initialize advice service
 	if svc.ai != nil && db.walletRepo != nil {
@@ -370,6 +145,283 @@ func initServices(cfg *config.Config, db *databases) *services {
 	log.Info().Msg("News service initialized")
 
 	return svc
+}
+
+// initCoreServices sets up the exchange service and cache.
+func initCoreServices(cfg *config.Config, db *databases, svc *services) {
+	cache := repository.NewInMemoryCache(cfg.CacheTTL)
+
+	var irrClient *repository.IRRClient
+	if db.irrDB != nil {
+		irrClient = repository.NewIRRClient(db.irrDB)
+	} else {
+		irrClient = repository.NewIRRClient(nil)
+	}
+
+	frankfurterClient := repository.NewFrankfurterClient(cfg.FrankfurterURL)
+	svc.exchange = service.NewExchangeService(cfg, frankfurterClient, cache, irrClient)
+}
+
+// initAuthServices sets up authentication and OAuth providers.
+func initAuthServices(cfg *config.Config, db *databases, svc *services) {
+	if db.userRepo == nil {
+		log.Warn().Msg("Authentication service not available - no database connection")
+		return
+	}
+
+	emailService := service.NewEmailService(cfg.ResendAPIKey, cfg.FrontendURL)
+	refreshTokenRepo := repository.NewRefreshTokenRepository(db.mainDB)
+	svc.auth = service.NewAuthServiceWithRefresh(db.userRepo, refreshTokenRepo, emailService, cfg.JWTSecret)
+	log.Info().Msg("Authentication service initialized")
+
+	oauthStateRepo := repository.NewOAuthStateRepository(db.mainDB)
+
+	if cfg.LinkedInClientID != "" && cfg.LinkedInClientSecret != "" {
+		linkedInConfig := &service.LinkedInConfig{
+			ClientID:     cfg.LinkedInClientID,
+			ClientSecret: cfg.LinkedInClientSecret,
+			RedirectURI:  cfg.LinkedInRedirectURI,
+			FrontendURL:  cfg.FrontendURL,
+		}
+		svc.linkedInAuth = service.NewLinkedInOAuthService(svc.auth, db.userRepo, oauthStateRepo, linkedInConfig)
+		log.Info().Msg("LinkedIn OAuth service initialized with database-backed state storage")
+	} else {
+		log.Info().Msg("LinkedIn OAuth not configured (LINKEDIN_CLIENT_ID/LINKEDIN_CLIENT_SECRET not set)")
+	}
+
+	if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" {
+		googleConfig := &service.GoogleConfig{
+			ClientID:     cfg.GoogleClientID,
+			ClientSecret: cfg.GoogleClientSecret,
+			RedirectURI:  cfg.GoogleRedirectURI,
+			FrontendURL:  cfg.FrontendURL,
+		}
+		svc.googleAuth = service.NewGoogleOAuthService(svc.auth, db.userRepo, oauthStateRepo, googleConfig)
+		log.Info().Msg("Google OAuth service initialized with database-backed state storage")
+	} else {
+		log.Info().Msg("Google OAuth not configured (GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET not set)")
+	}
+}
+
+// initFeatureServices sets up all domain feature services (wallet, goals, tasks, etc.).
+func initFeatureServices(cfg *config.Config, db *databases, svc *services) {
+	// Wallet service
+	if db.walletRepo != nil {
+		svc.wallet = service.NewWalletService(db.walletRepo, svc.exchange)
+		log.Info().Msg("Wallet service initialized")
+	} else {
+		log.Warn().Msg("Wallet service not available - no database connection")
+	}
+
+	if db.mainDB == nil {
+		return
+	}
+
+	// Goal, task, todo, planner
+	db.goalRepo = repository.NewGoalRepository(db.mainDB)
+	svc.goal = service.NewGoalService(db.goalRepo)
+	log.Info().Msg("Goal service initialized")
+
+	taskRepo := repository.NewTaskRepository(db.mainDB)
+	svc.task = service.NewTaskService(taskRepo, db.goalRepo, db.walletRepo)
+	log.Info().Msg("Task service initialized")
+
+	svc.todo = service.NewTodoService(taskRepo, db.goalRepo)
+	log.Info().Msg("Todo service initialized")
+
+	// Tags
+	tagRepo := repository.NewTagRepository(db.mainDB)
+	svc.tag = service.NewTagService(tagRepo)
+	log.Info().Msg("Tag service initialized")
+	svc.task.SetTagRepository(tagRepo)
+	if svc.wallet != nil {
+		svc.wallet.SetTagRepository(tagRepo)
+	}
+
+	svc.planner = service.NewPlannerService(taskRepo, db.goalRepo, svc.task)
+	log.Info().Msg("Planner service initialized")
+
+	// Categories
+	categoryRepo := repository.NewCategoryRepository(db.mainDB)
+	if err := categoryRepo.InitDefaultCategories(context.Background()); err != nil {
+		log.Warn().Err(err).Msg("Failed to initialize default categories")
+	}
+	svc.category = service.NewCategoryService(categoryRepo)
+	log.Info().Msg("Category service initialized")
+
+	// Budget
+	db.budgetRepo = repository.NewBudgetRepository(db.mainDB)
+	svc.budget = service.NewBudgetService(db.budgetRepo)
+	log.Info().Msg("Budget service initialized")
+
+	// Recurring & subscriptions
+	recurringRepo := repository.NewRecurringRepository(db.mainDB)
+	svc.recurring = service.NewRecurringService(recurringRepo)
+	log.Info().Msg("Recurring transaction service initialized")
+
+	subscriptionRepo := repository.NewSubscriptionRepository(db.mainDB)
+	svc.subscription = service.NewSubscriptionService(subscriptionRepo)
+	log.Info().Msg("Subscription service initialized")
+
+	// Reports
+	if db.walletRepo != nil {
+		svc.reports = service.NewReportsService(db.walletRepo, svc.exchange, svc.ai, recurringRepo, subscriptionRepo)
+		log.Info().Msg("Reports service initialized")
+	}
+
+	// Badges
+	badgeRepo := repository.NewBadgeRepository(db.mainDB)
+	if err := badgeRepo.InitDefaultBadges(context.Background()); err != nil {
+		log.Warn().Err(err).Msg("Failed to initialize default badges")
+	}
+	svc.badge = service.NewBadgeService(badgeRepo, db.walletRepo, db.budgetRepo, db.goalRepo, subscriptionRepo)
+	log.Info().Msg("Badge service initialized")
+
+	// Notes
+	noteRepo := repository.NewNoteRepository(db.mainDB)
+	svc.note = service.NewNoteService(noteRepo, db.walletRepo)
+	log.Info().Msg("Note service initialized")
+
+	// Loans
+	db.loanRepo = repository.NewLoanRepository(db.mainDB.Pool())
+	svc.loan = service.NewLoanService(db.loanRepo)
+	log.Info().Msg("Loan service initialized")
+
+	// Notifications
+	notificationRepo := repository.NewNotificationRepository(db.mainDB.Pool())
+	svc.notification = service.NewNotificationService(notificationRepo, db.budgetRepo, db.loanRepo)
+	log.Info().Msg("Notification service initialized")
+
+	// Challenges
+	challengeRepo := repository.NewChallengeRepository(db.mainDB)
+	svc.challenge = service.NewChallengeService(challengeRepo, db.walletRepo, db.budgetRepo)
+	log.Info().Msg("Challenge service initialized")
+
+	// XP
+	xpRepo := repository.NewXPRepository(db.mainDB.Pool())
+	svc.xp = service.NewXPService(xpRepo)
+	log.Info().Msg("XP service initialized")
+
+	// Wealth
+	if db.walletRepo != nil && db.inflationRepo != nil {
+		svc.wealth = service.NewWealthService(db.walletRepo, svc.exchange, db.inflationRepo)
+		log.Info().Msg("Wealth service initialized")
+	}
+}
+
+// initAIServices sets up AI, memory, embeddings, and chat services.
+func initAIServices(cfg *config.Config, db *databases, svc *services) {
+	if cfg.AIAPIKey == "" {
+		log.Info().Msg("AI_API_KEY not configured, AI features disabled")
+		return
+	}
+
+	var err error
+	svc.ai, err = service.NewAIService(cfg.AIProvider, cfg.AIAPIKey, cfg.AIModel, cfg.AIVisionModel, cfg.AICloudProject)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to initialize AI service")
+		return
+	}
+	log.Info().
+		Str("provider", svc.ai.GetProvider()).
+		Str("project", cfg.AICloudProject).
+		Msg("AI service initialized")
+
+	if db.mainDB == nil {
+		return
+	}
+
+	chatRepo := repository.NewChatRepository(db.mainDB.Pool())
+	memoryRepo := repository.NewMemoryRepository(db.mainDB)
+	if err := memoryRepo.InitSchema(context.Background()); err != nil {
+		log.Warn().Err(err).Msg("Failed to initialize memory schema")
+	}
+
+	memoryService := initMemoryService(cfg, memoryRepo, svc)
+	svc.memoryService = memoryService
+
+	// Retrieve repos created in initFeatureServices by querying the db directly.
+	// These repos are needed by the AI chat service constructor.
+	recurringRepo := repository.NewRecurringRepository(db.mainDB)
+	categoryRepo := repository.NewCategoryRepository(db.mainDB)
+	subscriptionRepo := repository.NewSubscriptionRepository(db.mainDB)
+	noteRepo := repository.NewNoteRepository(db.mainDB)
+
+	svc.aiChat = service.NewAIChatService(service.AIChatServiceConfig{
+		AIService:        svc.ai,
+		ExchangeService:  svc.exchange,
+		ChatRepo:         chatRepo,
+		WalletRepo:       db.walletRepo,
+		GoalRepo:         db.goalRepo,
+		BudgetRepo:       db.budgetRepo,
+		UserRepo:         db.userRepo,
+		RecurringRepo:    recurringRepo,
+		MemoryRepo:       memoryRepo,
+		MemoryService:    memoryService,
+		LoanRepo:         db.loanRepo,
+		CategoryRepo:     categoryRepo,
+		ReportsService:   svc.reports,
+		SubscriptionRepo: subscriptionRepo,
+		NoteRepo:         noteRepo,
+		TavilyAPIKey:     cfg.TavilyAPIKey,
+	})
+	svc.aiChat.SetThinkingConfig(
+		cfg.AIFastModel, cfg.AIThinkingModel,
+		model.ChatThinkingMode(cfg.AIThinkingModeDefault),
+	)
+	if svc.wealth != nil {
+		svc.aiChat.SetWealthService(svc.wealth)
+	}
+	log.Info().Msg("AI Chat service initialized with full context")
+}
+
+// initMemoryService creates the memory service, optionally with Qdrant-backed semantic search.
+func initMemoryService(cfg *config.Config, memoryRepo *repository.MemoryRepository, svc *services) *service.MemoryService {
+	if cfg.QdrantEnabled && cfg.QdrantURL != "" {
+		qdrantClient, err := repository.NewQdrantClient(repository.QdrantConfig{
+			URL:        cfg.QdrantURL,
+			APIKey:     cfg.QdrantAPIKey,
+			Dimensions: uint64(cfg.EmbeddingDimensions),
+		})
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to initialize Qdrant client, semantic memory disabled")
+		} else {
+			log.Info().
+				Str("url", cfg.QdrantURL).
+				Int("dimensions", cfg.EmbeddingDimensions).
+				Msg("Qdrant client initialized")
+
+			embeddingService, err := service.NewEmbeddingService(service.EmbeddingConfig{
+				Provider:   service.EmbeddingProvider(cfg.EmbeddingProvider),
+				APIKey:     cfg.EmbeddingAPIKey,
+				Model:      cfg.EmbeddingModel,
+				Dimensions: cfg.EmbeddingDimensions,
+				OllamaURL:  cfg.OllamaURL,
+			})
+			if err != nil {
+				log.Warn().Err(err).Msg("Failed to initialize embedding service, semantic memory disabled")
+				qdrantClient.Close()
+			} else {
+				log.Info().
+					Str("provider", cfg.EmbeddingProvider).
+					Str("model", cfg.EmbeddingModel).
+					Msg("Embedding service initialized")
+
+				vectorMemoryRepo := repository.NewVectorMemoryRepository(qdrantClient, cfg.ShortTermMemoryTTL)
+				ms := service.NewMemoryService(memoryRepo, vectorMemoryRepo, embeddingService, cfg.MaxMemoryResults)
+				svc.qdrantClient = qdrantClient
+				log.Info().Msg("Memory service initialized with semantic search (Qdrant)")
+				return ms
+			}
+		}
+	}
+
+	if cfg.QdrantEnabled && cfg.QdrantURL != "" {
+		log.Warn().Msg("Falling back to PostgreSQL-only memory service")
+	} else {
+		log.Info().Msg("Memory service initialized (PostgreSQL only, Qdrant disabled)")
+	}
+	return service.NewMemoryService(memoryRepo, nil, nil, cfg.MaxMemoryResults)
 }
 
 func initHandlers(cfg *config.Config, svc *services) *router.Handlers {

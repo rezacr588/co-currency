@@ -14,7 +14,7 @@ var dateRegex = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
 func (h *Handler) GetHistorical(w http.ResponseWriter, r *http.Request) {
 	date := chi.URLParam(r, "date")
 	if date == "" || !dateRegex.MatchString(date) {
-		httputil.BadRequest(w, "Invalid date format. Use YYYY-MM-DD")
+		httputil.BadRequestWithContext(r.Context(), w, "invalid date format, use YYYY-MM-DD")
 		return
 	}
 
@@ -25,7 +25,7 @@ func (h *Handler) GetHistorical(w http.ResponseWriter, r *http.Request) {
 
 	rates, err := h.exchangeService.GetHistoricalRates(r.Context(), date, base)
 	if err != nil {
-		httputil.InternalServerError(w, "Failed to fetch historical rates")
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to fetch historical rates", err)
 		return
 	}
 

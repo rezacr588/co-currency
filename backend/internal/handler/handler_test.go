@@ -305,60 +305,7 @@ func TestDateRegex(t *testing.T) {
 	}
 }
 
-// Test NewWithConfig
-func TestNewWithConfig_WithNilConfig(t *testing.T) {
-	cfg := &config.Config{
-		Port:            "8080",
-		Environment:     "test",
-		CacheTTL:        5 * time.Minute,
-		RateLimitPerMin: 100,
-		FrankfurterURL:  "https://api.frankfurter.app",
-	}
-	cache := repository.NewInMemoryCache(cfg.CacheTTL)
-	client := repository.NewFrankfurterClient(cfg.FrankfurterURL)
-	exchangeService := service.NewExchangeService(cfg, client, cache, nil)
 
-	h := NewWithConfig(exchangeService, nil)
-
-	if h == nil {
-		t.Fatal("Expected handler to be created with nil config")
-	}
-
-	if h.exchangeService == nil {
-		t.Error("Expected exchange service to be set")
-	}
-}
-
-func TestNewWithConfig_WithEmptyConfig(t *testing.T) {
-	cfg := &config.Config{
-		Port:            "8080",
-		Environment:     "test",
-		CacheTTL:        5 * time.Minute,
-		RateLimitPerMin: 100,
-		FrankfurterURL:  "https://api.frankfurter.app",
-	}
-	cache := repository.NewInMemoryCache(cfg.CacheTTL)
-	client := repository.NewFrankfurterClient(cfg.FrankfurterURL)
-	exchangeService := service.NewExchangeService(cfg, client, cache, nil)
-
-	h := NewWithConfig(exchangeService, &HandlerConfig{})
-
-	if h == nil {
-		t.Fatal("Expected handler to be created with empty config")
-	}
-
-	if h.db != nil {
-		t.Error("Expected db to be nil")
-	}
-
-	if h.cache != nil {
-		t.Error("Expected cache to be nil")
-	}
-
-	if h.rateLimiter != nil {
-		t.Error("Expected rateLimiter to be nil")
-	}
-}
 
 // Test Convert with valid parameters
 func TestConvert_Success(t *testing.T) {
@@ -438,44 +385,4 @@ func TestGetRates_ResponseStructure(t *testing.T) {
 	}
 }
 
-// Test Handler structure
-func TestHandlerStructure(t *testing.T) {
-	h := &Handler{}
 
-	if h.exchangeService != nil {
-		t.Error("Expected exchangeService to be nil in empty handler")
-	}
-
-	if h.db != nil {
-		t.Error("Expected db to be nil in empty handler")
-	}
-
-	if h.cache != nil {
-		t.Error("Expected cache to be nil in empty handler")
-	}
-
-	if h.rateLimiter != nil {
-		t.Error("Expected rateLimiter to be nil in empty handler")
-	}
-}
-
-// Test HandlerConfig structure
-func TestHandlerConfigStructure(t *testing.T) {
-	cfg := &HandlerConfig{
-		DB:          nil,
-		Cache:       nil,
-		RateLimiter: nil,
-	}
-
-	if cfg.DB != nil {
-		t.Error("Expected DB to be nil")
-	}
-
-	if cfg.Cache != nil {
-		t.Error("Expected Cache to be nil")
-	}
-
-	if cfg.RateLimiter != nil {
-		t.Error("Expected RateLimiter to be nil")
-	}
-}
