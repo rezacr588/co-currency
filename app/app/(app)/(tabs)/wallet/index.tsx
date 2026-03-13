@@ -124,7 +124,7 @@ export default function WalletScreen() {
                 {formatCurrency(summary?.total_balance_usd ?? 0, 'USD')}
               </Text>
               <View style={{ flexDirection: 'row', gap: 12 }}>
-                <Link href={'/(app)/(tabs)/add' as any} asChild>
+                <Link href={'/transaction-create' as any} asChild>
                   <Pressable
                     style={({ pressed }) => [{ flex: 1, backgroundColor: colors.primary, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 44, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
                     accessibilityLabel={t('addTransaction') || 'Add Transaction'}

@@ -138,7 +138,7 @@ export default function WalletConvertScreen() {
             <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 12 }}>
               {t('noWalletBalancesDescription') || 'Add a transaction to create a wallet balance before converting.'}
             </Text>
-            <Link href="/(app)/(tabs)/add" asChild>
+            <Link href={'/transaction-create' as any} asChild>
               <Pressable style={{ cursor: 'pointer', backgroundColor: colors.accent, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, alignSelf: 'flex-start' }}>
                 <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_500Medium', fontSize: 14 }}>{t('addTransaction') || 'Add Transaction'}</Text>
               </Pressable>

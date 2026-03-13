@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { View, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { TrendingUp, TrendingDown, Wallet, ArrowRight, DollarSign, PiggyBank, CreditCard, Bot, PieChart, BarChart3, Target, Shield } from 'lucide-react-native';
@@ -146,6 +146,7 @@ const ErrorBanner = styled.View`
 
 // ─── Component ───────────────────────────────────────────────
 export default function DashboardScreen() {
+  const router = useRouter();
   const { user } = useAuth();
   const { t } = useLanguage();
   const theme = useTheme();
@@ -212,6 +213,13 @@ export default function DashboardScreen() {
     ]);
     setRefreshing(false);
   }, [refetchSummary, refetchMonthly, refetchGoals, refetchBudgets]);
+
+  const handleOpenHealthScoreDetails = useCallback(() => {
+    router.push({
+      pathname: '/(app)/(tabs)/reports',
+      params: { period: 'all_time' },
+    });
+  }, [router]);
 
   const totalGoals = goals?.length || 0;
   const activeGoals = goals?.filter((g) => g.current_amount < g.target_amount).length || 0;
@@ -538,7 +546,7 @@ export default function DashboardScreen() {
         {/* Financial Health Score */}
         <SectionSpacing>
           <CollapsibleSection title={t('financialHealth') || 'Financial Health'} storageKey="dashboard_health">
-            <HealthScoreCard compact />
+            <HealthScoreCard compact onViewDetails={handleOpenHealthScoreDetails} />
           </CollapsibleSection>
         </SectionSpacing>
 
@@ -739,7 +747,7 @@ export default function DashboardScreen() {
                   <EmptyCard>
                     <CreditCard size={28} color={theme.colors.subtleForeground} />
                     <Caption style={{ marginTop: theme.spacing.sm }}>{t('noTransactionsYet') || 'No transactions yet'}</Caption>
-                    <Link href="/(app)/(tabs)/add" asChild>
+                    <Link href={'/transaction-create' as any} asChild>
                       <Pressable style={{
                         backgroundColor: theme.colors.primary,
                         paddingHorizontal: theme.spacing.lg,

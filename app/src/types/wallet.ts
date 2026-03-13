@@ -86,6 +86,8 @@ export interface Transaction {
   balance_after?: number;
 }
 
+export type AddTransactionStep = 'basics' | 'currency' | 'category' | 'review';
+
 export interface TransactionRequest {
   type: 'credit' | 'debit';
   currency: string;           // Transaction currency (what you're paying/receiving in)
@@ -103,6 +105,19 @@ export interface UpdateTransactionRequest {
   category?: string;
   icon?: string;
   description?: string;
+}
+
+export interface AddTransactionDraft {
+  version: number;
+  updated_at: number;
+  step: AddTransactionStep;
+  type: 'credit' | 'debit';
+  amount: string;
+  currency: string;
+  enable_target_conversion: boolean;
+  wallet_currency: string;
+  category: string;
+  description: string;
 }
 
 export interface TransactionFilter {
