@@ -32,7 +32,7 @@ export default function AddTransactionLauncherScreen() {
   useEffect(() => {
     if (hasNavigatedRef.current) return;
     hasNavigatedRef.current = true;
-    router.replace({ pathname: '/transaction-create', params: forwardedParams } as any);
+    router.push({ pathname: '/transaction-create', params: forwardedParams } as any);
   }, [forwardedParams, router]);
 
   return (

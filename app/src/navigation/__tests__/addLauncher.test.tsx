@@ -5,12 +5,12 @@ import AddTransactionLauncherScreen from '../../../app/(app)/(tabs)/add';
 import { darkColors } from '../../constants/colors';
 import { buildTheme } from '../../theme';
 
-const mockReplace = jest.fn();
+const mockPush = jest.fn();
 const mockUseLocalSearchParams = jest.fn();
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({
-    replace: mockReplace,
+    push: mockPush,
   }),
   useLocalSearchParams: () => mockUseLocalSearchParams(),
 }));
@@ -41,7 +41,7 @@ describe('AddTransactionLauncherScreen', () => {
     renderScreen();
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith({
+      expect(mockPush).toHaveBeenCalledWith({
         pathname: '/transaction-create',
         params: {
           amount: '18',
