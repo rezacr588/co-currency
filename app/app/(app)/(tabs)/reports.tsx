@@ -83,7 +83,7 @@ function ReportContextStrip({
             {t('activeReportView') || 'Active View'}
           </Text>
           <Text
-            style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_600SemiBold', flexShrink: 1, marginLeft: 12, textAlign: 'right' }}
+            style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_600SemiBold', flexShrink: 1, marginStart: 12, textAlign: 'right' }}
             numberOfLines={1}
           >
             {activeLabel}
@@ -284,12 +284,12 @@ function DateRangeSelector({
         >
           <Calendar size={18} color={colors.primary} />
           <Text
-            style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginLeft: 8, flexShrink: 1 }}
+            style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginStart: 8, flexShrink: 1 }}
             numberOfLines={1}
           >
             {dateLabel}
           </Text>
-          <ChevronRight size={16} color={colors.mutedForeground} style={{ marginLeft: 4 }} />
+          <ChevronRight size={16} color={colors.mutedForeground} style={{ marginStart: 4 }} />
         </Pressable>
       </View>
 
@@ -421,7 +421,7 @@ function RingChart({
         {segments.slice(0, 4).map((segment, index) => (
           <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
             <View
-              style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: segment.color, marginRight: 4 }}
+              style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: segment.color, marginEnd: 4 }}
             />
             <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
               {segment.label} ({formatNumber((segment.value / total) * 100, 0)}%)
@@ -603,7 +603,7 @@ export default function ReportsScreen() {
         {networth && !networthError && (
           <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 12, marginBottom: 24 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-              <View style={{ backgroundColor: colors.primary + '18', padding: 8, borderRadius: 8, marginRight: 12 }}>
+              <View style={{ backgroundColor: colors.primary + '18', padding: 8, borderRadius: 8, marginEnd: 12 }}>
                 <Wallet size={20} color={colors.primary} />
               </View>
               <Text style={{ color: colors.mutedForeground }}>{t('netWorth')}</Text>

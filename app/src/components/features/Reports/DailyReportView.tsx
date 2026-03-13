@@ -130,7 +130,7 @@ export function DailyReportView({ isTablet = false, onOpenHistory }: DailyReport
         <View style={{ backgroundColor: colors.success + '1a', borderWidth: 1, borderColor: colors.success + '4d', borderRadius: 12, padding: 16, width: isTablet ? '48.5%' : '48%' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
             <TrendingUp size={16} color={colors.success} />
-            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginLeft: 8 }}>{t('totalIncome')}</Text>
+            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginStart: 8 }}>{t('totalIncome')}</Text>
           </View>
           <Text style={{ color: colors.success, fontSize: 18, fontFamily: 'Inter_700Bold' }}>
             {formatCompactCurrency(report.totals.income, report.reportCurrency)}
@@ -140,7 +140,7 @@ export function DailyReportView({ isTablet = false, onOpenHistory }: DailyReport
         <View style={{ backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', borderRadius: 12, padding: 16, width: isTablet ? '48.5%' : '48%' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
             <TrendingDown size={16} color={colors.danger} />
-            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginLeft: 8 }}>{t('totalExpenses')}</Text>
+            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginStart: 8 }}>{t('totalExpenses')}</Text>
           </View>
           <Text style={{ color: colors.danger, fontSize: 18, fontFamily: 'Inter_700Bold' }}>
             {formatCompactCurrency(report.totals.expenses, report.reportCurrency)}
@@ -180,7 +180,7 @@ export function DailyReportView({ isTablet = false, onOpenHistory }: DailyReport
                 style={{
                   fontSize: 14,
                   fontFamily: 'Inter_600SemiBold',
-                  marginLeft: 8,
+                  marginStart: 8,
                   color: report.comparedToLast <= 0 ? colors.success : colors.danger,
                 }}
               >
@@ -193,7 +193,7 @@ export function DailyReportView({ isTablet = false, onOpenHistory }: DailyReport
             <View>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                 <PieChart size={14} color="#a1a1aa" />
-                <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_500Medium', marginLeft: 8 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_500Medium', marginStart: 8 }}>
                   {t('topCategories') || 'Top Categories'}
                 </Text>
               </View>
@@ -226,10 +226,10 @@ export function DailyReportView({ isTablet = false, onOpenHistory }: DailyReport
                       borderRadius={4}
                       padding={4}
                     />
-                    <Text style={{ color: colors.foreground, fontSize: 14, marginLeft: 8, textTransform: 'capitalize' }}>{cat.category}</Text>
+                    <Text style={{ color: colors.foreground, fontSize: 14, marginStart: 8, textTransform: 'capitalize' }}>{cat.category}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold', marginRight: 8 }}>
+                    <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold', marginEnd: 8 }}>
                       {formatCompactCurrency(cat.amount, report.reportCurrency)}
                     </Text>
                     <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>

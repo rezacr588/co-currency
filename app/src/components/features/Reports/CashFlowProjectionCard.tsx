@@ -148,7 +148,7 @@ export function CashFlowProjectionCard() {
   return (
     <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-        <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
+        <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginEnd: 12 }}>
           <TrendingUp size={20} color={colors.accent} />
         </View>
         <View style={{ flex: 1 }}>
@@ -207,15 +207,15 @@ export function CashFlowProjectionCard() {
 
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginBottom: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.success, marginRight: 4 }} />
+          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.success, marginEnd: 4 }} />
           <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('healthy') || 'Healthy'}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 8, height: 8, borderRadius: 9999, marginRight: 4, backgroundColor: colors.warning }} />
+          <View style={{ width: 8, height: 8, borderRadius: 9999, marginEnd: 4, backgroundColor: colors.warning }} />
           <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('low') || 'Low'}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.danger, marginRight: 4 }} />
+          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.danger, marginEnd: 4 }} />
           <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('negative') || 'Negative'}</Text>
         </View>
       </View>
@@ -223,7 +223,7 @@ export function CashFlowProjectionCard() {
       {report.danger_zone && report.danger_date && (
         <View style={{ backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
           <AlertTriangle size={20} color={colors.danger} />
-          <View style={{ marginLeft: 12, flex: 1 }}>
+          <View style={{ marginStart: 12, flex: 1 }}>
             <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium', fontSize: 14 }}>
               {t('dangerZone') || 'Danger Zone'}
             </Text>
@@ -411,7 +411,7 @@ export function CashFlowProjectionCard() {
                             borderBottomColor: colors.border + '80',
                           }}
                         >
-                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 12 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingEnd: 12 }}>
                             <View
                               style={{
                                 width: 26,
@@ -419,7 +419,7 @@ export function CashFlowProjectionCard() {
                                 borderRadius: 6,
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                marginRight: 10,
+                                marginEnd: 10,
                                 backgroundColor: event.type === 'subscription' ? colors.accent + '20' : eventTint + '20',
                               }}
                             >

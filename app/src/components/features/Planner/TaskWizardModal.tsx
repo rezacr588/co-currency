@@ -537,7 +537,7 @@ export function TaskWizardModal({
                 <View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                     <Tag size={13} color={colors.mutedForeground} />
-                    <Text style={{ color: colors.mutedForeground, fontSize: 12, marginLeft: 6 }}>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 12, marginStart: 6 }}>
                       {t('plannerTags') || 'Tags'}
                     </Text>
                   </View>

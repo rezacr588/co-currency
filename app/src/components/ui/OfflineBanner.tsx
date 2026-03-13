@@ -100,7 +100,7 @@ export function OfflineBanner() {
         ) : (
           <WifiOff size={16} color="white" />
         )}
-        <Text style={{ color: '#ffffff', fontFamily: 'Inter_500Medium', marginLeft: 8, fontSize: 14 }}>
+        <Text style={{ color: '#ffffff', fontFamily: 'Inter_500Medium', marginStart: 8, fontSize: 14 }}>
           {isOnline ? t('backOnline') : t('youAreOffline')}
         </Text>
       </View>

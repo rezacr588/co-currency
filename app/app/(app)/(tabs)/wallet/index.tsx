@@ -116,7 +116,7 @@ export default function WalletScreen() {
             <>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 <Wallet size={16} color={colors.secondaryForeground} />
-                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginLeft: 8, fontFamily: 'Inter_500Medium' }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginStart: 8, fontFamily: 'Inter_500Medium' }}>
                   {t('totalBalance') || 'Total Balance'}
                 </Text>
               </View>
@@ -131,7 +131,7 @@ export default function WalletScreen() {
                     accessibilityRole="button"
                   >
                     <Plus size={18} color={colors.primaryForeground} />
-                    <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 8, fontSize: 14 }}>
+                    <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginStart: 8, fontSize: 14 }}>
                       {t('addTransaction')}
                     </Text>
                   </Pressable>
@@ -143,7 +143,7 @@ export default function WalletScreen() {
                     accessibilityRole="button"
                   >
                     <ArrowLeftRight size={18} color={colors.secondaryForeground} />
-                    <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginLeft: 8, fontSize: 14 }}>
+                    <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginStart: 8, fontSize: 14 }}>
                       {t('convertCurrency') || t('convert') || 'Convert'}
                     </Text>
                   </Pressable>
@@ -208,7 +208,7 @@ export default function WalletScreen() {
               accessibilityRole="button"
             >
               <Shield size={12} color={showRealValue ? colors.accent : colors.mutedForeground} />
-              <Text style={{ fontSize: 11, color: showRealValue ? colors.accent : colors.mutedForeground, fontFamily: 'Inter_500Medium', marginLeft: 4 }}>
+              <Text style={{ fontSize: 11, color: showRealValue ? colors.accent : colors.mutedForeground, fontFamily: 'Inter_500Medium', marginStart: 4 }}>
                 {showRealValue ? (t('realBalance') || 'Real') : (t('nominalBalance') || 'Nominal')}
               </Text>
             </Pressable>
@@ -255,11 +255,11 @@ export default function WalletScreen() {
                           borderBottomLeftRadius: 12,
                         }}
                       />
-                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4, paddingLeft: 4 }}>
-                        <Text style={{ fontSize: 24, marginRight: 8 }}>{display.flag || '🌐'}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4, paddingStart: 4 }}>
+                        <Text style={{ fontSize: 24, marginEnd: 8 }}>{display.flag || '🌐'}</Text>
                         <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 14 }}>{balance.currency}</Text>
                         {showRealValue && exposure && (
-                          <View style={{ backgroundColor: accentColor + '20', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginLeft: 6 }}>
+                          <View style={{ backgroundColor: accentColor + '20', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginStart: 6 }}>
                             <Text style={{ fontSize: 9, color: accentColor, fontFamily: 'Inter_500Medium' }}>
                               {inflationRate.toFixed(1)}%
                             </Text>
@@ -267,7 +267,7 @@ export default function WalletScreen() {
                         )}
                       </View>
                       {showRealValue && exposure ? (
-                        <View style={{ paddingLeft: 4 }}>
+                        <View style={{ paddingStart: 4 }}>
                           <Text
                             style={{
                               fontFamily: 'Inter_400Regular',
@@ -296,7 +296,7 @@ export default function WalletScreen() {
                             fontFamily: 'Inter_600SemiBold',
                             color: balance.balance >= 0 ? colors.foreground : colors.danger,
                             fontSize: 15,
-                            paddingLeft: 4,
+                            paddingStart: 4,
                           }}
                           numberOfLines={1}
                         >
@@ -325,7 +325,7 @@ export default function WalletScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <History size={18} color={colors.primary} />
-              <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginLeft: 8 }}>
+              <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginStart: 8 }}>
                 {t('recentTransactions')}
               </Text>
             </View>
@@ -357,7 +357,7 @@ export default function WalletScreen() {
                   }}
                 >
                   <StyledCategoryIcon category={tx.category || 'other'} size={18} />
-                  <View style={{ flex: 1, marginLeft: 12 }}>
+                  <View style={{ flex: 1, marginStart: 12 }}>
                     <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground, fontSize: 14 }} numberOfLines={1}>
                       {tx.description || tx.category || 'Transaction'}
                     </Text>

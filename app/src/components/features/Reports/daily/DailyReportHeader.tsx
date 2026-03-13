@@ -53,7 +53,7 @@ export function DailyReportHeader({
         <View style={{ flex: 1, backgroundColor: colors.secondary + '66', borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Calendar size={16} color={colors.accent} />
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>{timelineLabel}</Text>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginStart: 8 }}>{timelineLabel}</Text>
           </View>
           <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 4 }}>{rangeLabel}</Text>
           <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 4 }}>
@@ -114,7 +114,7 @@ export function DailyReportHeader({
           accessibilityLabel={t('goToCurrentPeriod')}
         >
           <RotateCcw size={14} color={colors.accent} />
-          <Text style={{ color: colors.accent, fontFamily: 'Inter_500Medium', marginLeft: 8 }}>{t('goToCurrentPeriod')}</Text>
+          <Text style={{ color: colors.accent, fontFamily: 'Inter_500Medium', marginStart: 8 }}>{t('goToCurrentPeriod')}</Text>
         </Pressable>
       ) : null}
 

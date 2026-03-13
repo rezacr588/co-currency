@@ -112,7 +112,7 @@ export function SkeletonCard() {
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
         <StyledSkeleton variant="circular" width={40} height={40} />
-        <View style={{ marginLeft: 12, flex: 1 }}>
+        <View style={{ marginStart: 12, flex: 1 }}>
           <StyledSkeleton width="60%" height={16} style={{ marginBottom: 8 }} />
           <StyledSkeleton width="40%" height={12} />
         </View>
@@ -141,7 +141,7 @@ export function SkeletonTransaction() {
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
         <StyledSkeleton variant="circular" width={40} height={40} />
-        <View style={{ marginLeft: 12, flex: 1 }}>
+        <View style={{ marginStart: 12, flex: 1 }}>
           <StyledSkeleton width="70%" height={14} style={{ marginBottom: 8 }} />
           <StyledSkeleton width="40%" height={12} />
         </View>

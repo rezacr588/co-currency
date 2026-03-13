@@ -160,7 +160,7 @@ export function CalendarHeatMap({
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View>
           {/* Month labels */}
-          <View style={{ flexDirection: 'row', marginBottom: 4, paddingLeft: 24 }}>
+          <View style={{ flexDirection: 'row', marginBottom: 4, paddingStart: 24 }}>
             {monthLabels.map((label, idx) => (
               <Text
                 key={idx}
@@ -178,7 +178,7 @@ export function CalendarHeatMap({
 
           <View style={{ flexDirection: 'row', marginTop: 16 }}>
             {/* Weekday labels */}
-            <View style={{ marginRight: 8 }}>
+            <View style={{ marginEnd: 8 }}>
               {weekdayLabels.map((label, idx) => (
                 <View
                   key={idx}
@@ -198,7 +198,7 @@ export function CalendarHeatMap({
             {/* Days grid */}
             <View style={{ flexDirection: 'row' }}>
               {calendarData.map((week, weekIdx) => (
-                <View key={weekIdx} style={{ marginRight: DAY_GAP }}>
+                <View key={weekIdx} style={{ marginEnd: DAY_GAP }}>
                   {week.map((day) => {
                     const dayData = dataMap[day.dateStr];
                     const amount = dayData?.amount || 0;
@@ -235,7 +235,7 @@ export function CalendarHeatMap({
 
           {/* Legend */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 16 }}>
-            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginRight: 8 }}>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginEnd: 8 }}>
               {t('heatmapLess') || 'Less'}
             </Text>
             {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => (
@@ -245,12 +245,12 @@ export function CalendarHeatMap({
                   width: DAY_SIZE,
                   height: DAY_SIZE,
                   borderRadius: 2,
-                  marginRight: 2,
+                  marginEnd: 2,
                   backgroundColor: getColor(ratio * maxAmount, maxAmount, isDark, colors.muted),
                 }}
               />
             ))}
-            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginLeft: 4 }}>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginStart: 4 }}>
               {t('heatmapMore') || 'More'}
             </Text>
           </View>

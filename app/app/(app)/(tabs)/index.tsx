@@ -466,7 +466,7 @@ export default function DashboardScreen() {
                       borderRadius: theme.radii.lg,
                       backgroundColor: 'rgba(0,0,0,0.15)',
                       alignItems: 'center', justifyContent: 'center',
-                      marginRight: theme.spacing.lg,
+                      marginEnd: theme.spacing.lg,
                     }}
                   >
                     <Bot size={24} color={theme.colors.accentForeground} />
@@ -489,7 +489,7 @@ export default function DashboardScreen() {
                 <Pressable style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
                   <ChipButton>
                     <BarChart3 size={12} color={theme.colors.accentForeground} />
-                    <Caption $color={theme.colors.accentForeground} style={{ marginLeft: 4 }}>
+                    <Caption $color={theme.colors.accentForeground} style={{ marginStart: 4 }}>
                       {t('analyzeSpending') || 'Analyze spending'}
                     </Caption>
                   </ChipButton>
@@ -499,7 +499,7 @@ export default function DashboardScreen() {
                 <Pressable style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
                   <ChipButton>
                     <PieChart size={12} color={theme.colors.accentForeground} />
-                    <Caption $color={theme.colors.accentForeground} style={{ marginLeft: 4 }}>
+                    <Caption $color={theme.colors.accentForeground} style={{ marginStart: 4 }}>
                       {t('budgetCheck') || 'Budget check'}
                     </Caption>
                   </ChipButton>
@@ -509,7 +509,7 @@ export default function DashboardScreen() {
                 <Pressable style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
                   <ChipButton>
                     <Target size={12} color={theme.colors.accentForeground} />
-                    <Caption $color={theme.colors.accentForeground} style={{ marginLeft: 4 }}>
+                    <Caption $color={theme.colors.accentForeground} style={{ marginStart: 4 }}>
                       {t('goalAdvice') || 'Goal advice'}
                     </Caption>
                   </ChipButton>
@@ -519,7 +519,7 @@ export default function DashboardScreen() {
                 <Pressable style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
                   <ChipButton>
                     <Shield size={12} color={theme.colors.accentForeground} />
-                    <Caption $color={theme.colors.accentForeground} style={{ marginLeft: 4 }}>
+                    <Caption $color={theme.colors.accentForeground} style={{ marginStart: 4 }}>
                       {t('wealthProtection') || 'Wealth protection'}
                     </Caption>
                   </ChipButton>
@@ -535,7 +535,7 @@ export default function DashboardScreen() {
             <H3 style={{ fontSize: 16 }}>{t('realValue') || 'Real Value'}</H3>
             <Link href="/(app)/real-value" asChild>
               <Pressable hitSlop={8} style={{ minHeight: 44, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }}>
-                <Caption style={{ marginRight: 4 }}>{t('viewRealValueDetails') || 'View Details'}</Caption>
+                <Caption style={{ marginEnd: 4 }}>{t('viewRealValueDetails') || 'View Details'}</Caption>
                 <ArrowRight size={14} color={theme.colors.mutedForeground} />
               </Pressable>
             </Link>
@@ -656,7 +656,7 @@ export default function DashboardScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: theme.spacing.md }}>
               <Link href="/(app)/(tabs)/wallet/convert" asChild>
                 <Pressable hitSlop={8} style={{ minHeight: 44, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }}>
-                  <Caption style={{ marginRight: 4 }}>{t('fullConverter') || 'Full converter'}</Caption>
+                  <Caption style={{ marginEnd: 4 }}>{t('fullConverter') || 'Full converter'}</Caption>
                   <ArrowRight size={14} color={theme.colors.mutedForeground} />
                 </Pressable>
               </Link>
@@ -674,7 +674,7 @@ export default function DashboardScreen() {
                 <H3 style={{ fontSize: 16 }}>{t('walletBalances') || 'Wallet Balances'}</H3>
                 <Link href="/(app)/(tabs)/wallet" asChild>
                   <Pressable hitSlop={8} style={{ minHeight: 44, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }}>
-                    <Caption style={{ marginRight: 4 }}>{t('viewAll')}</Caption>
+                    <Caption style={{ marginEnd: 4 }}>{t('viewAll')}</Caption>
                     <ArrowRight size={14} color={theme.colors.mutedForeground} />
                   </Pressable>
                 </Link>
@@ -686,7 +686,7 @@ export default function DashboardScreen() {
                   {(summary?.balances || []).slice(0, isDesktop ? 5 : 3).map((balance) => (
                     <BalanceRow key={balance.currency} style={theme.shadows.sm}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <IconCircle style={{ marginRight: theme.spacing.md }}>
+                        <IconCircle style={{ marginEnd: theme.spacing.md }}>
                           <Wallet size={16} color={theme.colors.secondaryForeground} />
                         </IconCircle>
                         <BodyMedium numberOfLines={1}>{balance.currency}</BodyMedium>
@@ -713,7 +713,7 @@ export default function DashboardScreen() {
               <H3 style={{ fontSize: 16 }}>{t('recentTransactions')}</H3>
               <Link href="/(app)/(tabs)/wallet/history" asChild>
                 <Pressable hitSlop={8} style={{ minHeight: 44, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }}>
-                  <Caption style={{ marginRight: 4 }}>{t('viewAll')}</Caption>
+                  <Caption style={{ marginEnd: 4 }}>{t('viewAll')}</Caption>
                   <ArrowRight size={14} color={theme.colors.mutedForeground} />
                 </Pressable>
               </Link>
@@ -725,7 +725,7 @@ export default function DashboardScreen() {
                 {(summary?.recent_transactions || []).slice(0, isDesktop ? 6 : 5).map((tx) => (
                   <TransactionRow key={tx.id} style={theme.shadows.sm}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                      <View style={{ marginRight: theme.spacing.md }}>
+                      <View style={{ marginEnd: theme.spacing.md }}>
                         <StyledCategoryIcon category={tx.category || 'other'} />
                       </View>
                       <View style={{ flex: 1 }}>
@@ -737,7 +737,7 @@ export default function DashboardScreen() {
                     </View>
                     <BodyMedium
                       $color={tx.type === 'credit' ? theme.colors.success : theme.colors.danger}
-                      style={{ marginLeft: theme.spacing.sm, fontFamily: theme.typography.h3.fontFamily }}
+                      style={{ marginStart: theme.spacing.sm, fontFamily: theme.typography.h3.fontFamily }}
                     >
                       {formatTransactionAmount(tx)}
                     </BodyMedium>

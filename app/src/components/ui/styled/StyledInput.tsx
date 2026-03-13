@@ -100,7 +100,7 @@ export const StyledInput = forwardRef<TextInput, StyledInputProps>(
           ]}
         >
           {leftIcon && (
-            <View style={{ marginRight: theme.spacing.md }} accessibilityElementsHidden>
+            <View style={{ marginEnd: theme.spacing.md }} accessibilityElementsHidden>
               {leftIcon}
             </View>
           )}
@@ -123,7 +123,7 @@ export const StyledInput = forwardRef<TextInput, StyledInputProps>(
             {...props}
           />
           {rightIcon && (
-            <View style={{ marginLeft: theme.spacing.md }} accessibilityElementsHidden>
+            <View style={{ marginStart: theme.spacing.md }} accessibilityElementsHidden>
               {rightIcon}
             </View>
           )}

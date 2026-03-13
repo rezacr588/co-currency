@@ -71,7 +71,7 @@ export function Toggle({ value, onValueChange, disabled = false, label }: Toggle
       accessibilityLabel={label}
     >
       {label && (
-        <Text style={{ color: colors.foreground, fontSize: 16, flex: 1, marginRight: 12 }}>
+        <Text style={{ color: colors.foreground, fontSize: 16, flex: 1, marginEnd: 12 }}>
           {label}
         </Text>
       )}

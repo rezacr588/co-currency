@@ -153,7 +153,7 @@ export default function BadgesScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Pressable
               onPress={() => router.back()}
-              style={({ pressed }) => [{ cursor: 'pointer', padding: 8, marginRight: 8 }, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [{ cursor: 'pointer', padding: 8, marginEnd: 8 }, pressed && { opacity: 0.7 }]}
               accessibilityLabel={t('back') || 'Go back'}
               accessibilityRole="button"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -176,7 +176,7 @@ export default function BadgesScreen() {
             ) : (
               <>
                 <Gift size={18} color={colors.primaryForeground} />
-                <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>
+                <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginStart: 8 }}>
                   {t('claimRewards') || 'Claim Rewards'}
                 </Text>
               </>

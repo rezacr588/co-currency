@@ -185,7 +185,7 @@ export default function OnboardingScreen() {
                     onPress={handleNext}
                     style={{ cursor: 'pointer', flex: 1, backgroundColor: colors.primary, padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
                   >
-                    <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginRight: 8 }}>
+                    <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginEnd: 8 }}>
                       {t('getStarted') || 'Get Started'}
                     </Text>
                     <ArrowRight size={20} color={colors.primaryForeground} />
@@ -225,7 +225,7 @@ export default function OnboardingScreen() {
                     style={{ cursor: 'pointer', flex: 1, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
                   >
                     <ArrowLeft size={20} color={colors.placeholder} />
-                    <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_500Medium', marginLeft: 8 }}>
+                    <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_500Medium', marginStart: 8 }}>
                       {t('back') || 'Back'}
                     </Text>
                   </Pressable>
@@ -233,7 +233,7 @@ export default function OnboardingScreen() {
                     onPress={handleNext}
                     style={{ cursor: 'pointer', flex: 1, backgroundColor: colors.primary, padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
                   >
-                    <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginRight: 8 }}>
+                    <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginEnd: 8 }}>
                       {t('next') || 'Next'}
                     </Text>
                     <ArrowRight size={20} color={colors.primaryForeground} />
@@ -263,7 +263,7 @@ export default function OnboardingScreen() {
                     {t('amount') || 'Amount'} ({selectedCurrency})
                   </Text>
                   <View style={{ backgroundColor: colors.muted, borderRadius: 12, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, borderWidth: 1, borderColor: colors.border }}>
-                    <Text style={{ color: colors.mutedForeground, marginRight: 8 }}>{selectedCurrency}</Text>
+                    <Text style={{ color: colors.mutedForeground, marginEnd: 8 }}>{selectedCurrency}</Text>
                     <TextInput
                       style={{ flex: 1, padding: 16, color: colors.foreground, fontSize: 18, outlineStyle: 'none' } as any}
                       placeholder="0.00"
@@ -281,7 +281,7 @@ export default function OnboardingScreen() {
                     style={{ cursor: 'pointer', flex: 1, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
                   >
                     <ArrowLeft size={20} color={colors.placeholder} />
-                    <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_500Medium', marginLeft: 8 }}>
+                    <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_500Medium', marginStart: 8 }}>
                       {t('back') || 'Back'}
                     </Text>
                   </Pressable>
@@ -297,7 +297,7 @@ export default function OnboardingScreen() {
                       <ActivityIndicator color={colors.primaryForeground} />
                     ) : (
                       <>
-                        <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginRight: 8 }}>
+                        <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginEnd: 8 }}>
                           {initialBalance ? t('addAndContinue') || 'Add & Continue' : t('skip') || 'Skip'}
                         </Text>
                         <ArrowRight size={20} color={colors.primaryForeground} />

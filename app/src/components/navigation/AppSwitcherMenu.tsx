@@ -104,7 +104,7 @@ export function AppSwitcherMenu({ title, subtitle, actions, onClose }: AppSwitch
                 {action.icon}
               </View>
 
-              <View style={{ flex: 1, marginLeft: 10 }}>
+              <View style={{ flex: 1, marginStart: 10 }}>
                 <Text style={{ color: tone.text, fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>{action.label}</Text>
                 {action.description ? (
                   <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 1 }}>{action.description}</Text>

@@ -55,7 +55,7 @@ export function CurrencyBadge({
         <Globe size={badgeIconSizes[size]} color={ICON_COLOR_MUTED} />
       )}
       {showCode && (
-        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginLeft: 8, fontSize: styles.codeFontSize }}>
+        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginStart: 8, fontSize: styles.codeFontSize }}>
           {code}
         </Text>
       )}

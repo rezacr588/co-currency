@@ -237,7 +237,7 @@ export default function NotesScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
           <Pressable
             onPress={() => router.back()}
-            style={{ cursor: 'pointer', padding: 8, marginRight: 8 }}
+            style={{ cursor: 'pointer', padding: 8, marginEnd: 8 }}
           >
             <ChevronLeft size={24} color={colors.placeholder} />
           </Pressable>
@@ -326,7 +326,7 @@ export default function NotesScreen() {
                 style={{ cursor: 'pointer', backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}
               >
                 <Plus size={20} color={colors.primaryForeground} />
-                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_500Medium', marginLeft: 8 }}>
+                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_500Medium', marginStart: 8 }}>
                   {t('addNote') || 'Add Note'}
                 </Text>
               </Pressable>

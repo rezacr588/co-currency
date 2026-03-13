@@ -101,7 +101,7 @@ export default function SubscriptionsScreen() {
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Pressable onPress={() => router.back()} style={({ pressed }) => [{ cursor: 'pointer', padding: 8, marginRight: 8 }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('back') || 'Go back'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Pressable onPress={() => router.back()} style={({ pressed }) => [{ cursor: 'pointer', padding: 8, marginEnd: 8 }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('back') || 'Go back'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <ArrowLeft size={24} color={colors.foreground} />
           </Pressable>
           <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('subscriptions')}</Text>
@@ -322,7 +322,7 @@ function SubscriptionCard({ subscription, onEdit }: { subscription: Subscription
     <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12, opacity: isCancelled ? 0.5 : isPaused ? 0.6 : 1 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-          <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
+          <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginEnd: 12 }}>
             <CreditCard size={24} color={colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
@@ -343,7 +343,7 @@ function SubscriptionCard({ subscription, onEdit }: { subscription: Subscription
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
           <Calendar size={14} color={colors.placeholder} />
-          <Text style={{ color: colors.mutedForeground, fontSize: 14, marginLeft: 4 }} numberOfLines={1}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 14, marginStart: 4 }} numberOfLines={1}>
             {t('nextBilling')}: {formatDate(subscription.next_billing_date)}
           </Text>
         </View>

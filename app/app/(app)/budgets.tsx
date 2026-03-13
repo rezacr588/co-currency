@@ -111,7 +111,7 @@ export default function BudgetsScreen() {
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Pressable onPress={() => router.back()} style={({ pressed }) => [{ cursor: 'pointer', padding: 8, marginRight: 8 }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('back') || 'Go back'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Pressable onPress={() => router.back()} style={({ pressed }) => [{ cursor: 'pointer', padding: 8, marginEnd: 8 }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('back') || 'Go back'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <ArrowLeft size={24} color={colors.foreground} />
           </Pressable>
           <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('budgets')}</Text>
@@ -197,7 +197,7 @@ function BudgetCard({ budget, onEdit, onDelete }: { budget: Budget; onEdit: () =
               style={{
                 padding: 8,
                 borderRadius: 8,
-                marginRight: 12,
+                marginEnd: 12,
                 backgroundColor: budget.is_over_budget ? `${colors.danger}26` : `${colors.accent}26`,
               }}
             >
@@ -207,7 +207,7 @@ function BudgetCard({ budget, onEdit, onDelete }: { budget: Budget; onEdit: () =
               />
             </View>
           ) : (
-            <View style={{ marginRight: 12 }}>
+            <View style={{ marginEnd: 12 }}>
               <StyledCategoryIcon
                 category={budget.category}
                 size={22}
@@ -224,7 +224,7 @@ function BudgetCard({ budget, onEdit, onDelete }: { budget: Budget; onEdit: () =
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           {budget.is_over_budget && (
-            <View style={{ backgroundColor: colors.danger + '33', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, marginRight: 4 }}>
+            <View style={{ backgroundColor: colors.danger + '33', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, marginEnd: 4 }}>
               <Text style={{ color: colors.danger, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>{t('overBudget')}</Text>
             </View>
           )}

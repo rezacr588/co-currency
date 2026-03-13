@@ -79,7 +79,7 @@ export function WeeklyRecapCard({
         onPress={handleAskAI}
         style={{ cursor: 'pointer', backgroundColor: colors.accent + '1a', borderWidth: 1, borderColor: colors.accent + '33', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center' }}
       >
-        <View style={{ width: 40, height: 40, borderRadius: 9999, backgroundColor: colors.accent + '33', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+        <View style={{ width: 40, height: 40, borderRadius: 9999, backgroundColor: colors.accent + '33', alignItems: 'center', justifyContent: 'center', marginEnd: 12 }}>
           <Sparkles size={20} color={colors.accent} />
         </View>
         <View style={{ flex: 1 }}>
@@ -100,7 +100,7 @@ export function WeeklyRecapCard({
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 40, height: 40, borderRadius: 9999, backgroundColor: colors.accent + '33', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+          <View style={{ width: 40, height: 40, borderRadius: 9999, backgroundColor: colors.accent + '33', alignItems: 'center', justifyContent: 'center', marginEnd: 12 }}>
             <Sparkles size={20} color={colors.accent} />
           </View>
           <View>
@@ -137,7 +137,7 @@ export function WeeklyRecapCard({
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TrendingUp size={14} color={colors.success} />
               <Text
-                style={{ flex: 1, fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginLeft: 4 }}
+                style={{ flex: 1, fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginStart: 4 }}
                 numberOfLines={2}
               >
                 {formatCompactCurrency(weeklyRecap.total_income, weeklyRecap.currency)}
@@ -152,7 +152,7 @@ export function WeeklyRecapCard({
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TrendingDown size={14} color={colors.danger} />
               <Text
-                style={{ flex: 1, fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginLeft: 4 }}
+                style={{ flex: 1, fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginStart: 4 }}
                 numberOfLines={2}
               >
                 {formatCompactCurrency(weeklyRecap.total_spent, weeklyRecap.currency)}
@@ -175,7 +175,7 @@ export function WeeklyRecapCard({
                   fontSize: 14,
                   fontFamily: 'Inter_600SemiBold',
                   flex: 1,
-                  marginLeft: 4,
+                  marginStart: 4,
                   color: weeklyRecap.compared_to_last <= 0 ? colors.success : colors.danger,
                 }}
                 numberOfLines={2}
@@ -238,7 +238,7 @@ export function WeeklyRecapCard({
               </Text>
               {insights.action_items.slice(0, 3).map((item, idx) => (
                 <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 }}>
-                  <Text style={{ color: colors.accent, marginRight: 8 }}>•</Text>
+                  <Text style={{ color: colors.accent, marginEnd: 8 }}>•</Text>
                   <Text style={{ color: colors.foreground, fontSize: 14, flex: 1 }}>{item}</Text>
                 </View>
               ))}
@@ -259,7 +259,7 @@ export function WeeklyRecapCard({
         style={{ cursor: 'pointer', backgroundColor: colors.accent, padding: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
       >
         <Sparkles size={18} color="#09090b" />
-        <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>
+        <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginStart: 8 }}>
           {t('askForDetailedRecap') || 'Ask AI for Detailed Recap'}
         </Text>
       </Pressable>

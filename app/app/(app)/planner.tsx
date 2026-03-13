@@ -631,7 +631,7 @@ export default function PlannerScreen() {
               </Text>
             </View>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: isCompactPhone ? 'auto' : 0 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginStart: isCompactPhone ? 'auto' : 0 }}>
             <AppSwitcherTrigger variant="header_inline" />
             <Pressable
               onPress={() => router.push('/planner-create' as any)}
@@ -653,7 +653,7 @@ export default function PlannerScreen() {
             >
               <Plus size={14} color={colors.accentForeground} />
               {!isCompactPhone ? (
-                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 6 }}>
+                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginStart: 6 }}>
                   {t('plannerNewTask') || 'New Task'}
                 </Text>
               ) : null}
@@ -681,7 +681,7 @@ export default function PlannerScreen() {
                   }}
                 >
                   <AlertTriangle size={12} color={colors.warning} />
-                  <Text style={{ color: colors.warning, fontSize: 11, marginLeft: 5, fontFamily: 'Inter_600SemiBold' }}>
+                  <Text style={{ color: colors.warning, fontSize: 11, marginStart: 5, fontFamily: 'Inter_600SemiBold' }}>
                     {t('plannerLocalBackup') || 'Local backup'}
                   </Text>
                 </View>
@@ -697,7 +697,7 @@ export default function PlannerScreen() {
                   }}
                 >
                   <WifiOff size={12} color={colors.danger} />
-                  <Text style={{ color: colors.danger, fontSize: 11, marginLeft: 5, fontFamily: 'Inter_600SemiBold' }}>
+                  <Text style={{ color: colors.danger, fontSize: 11, marginStart: 5, fontFamily: 'Inter_600SemiBold' }}>
                     {t('plannerOffline') || 'Offline'}
                   </Text>
                 </View>
@@ -711,7 +711,7 @@ export default function PlannerScreen() {
                     borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card,
                   }}
                 >
-                  <ActivityIndicator size="small" color={colors.accent} style={{ marginRight: 5 }} />
+                  <ActivityIndicator size="small" color={colors.accent} style={{ marginEnd: 5 }} />
                   <Text style={{ color: colors.mutedForeground, fontSize: 11, fontFamily: 'Inter_500Medium' }}>
                     {t('plannerSyncing') || 'Syncing...'}
                   </Text>
@@ -728,7 +728,7 @@ export default function PlannerScreen() {
                       {t('plannerSyncFailed') || 'Some changes failed'}
                     </Text>
                   </View>
-                  <View style={{ flexDirection: 'row', gap: 8, marginLeft: 'auto' }}>
+                  <View style={{ flexDirection: 'row', gap: 8, marginStart: 'auto' }}>
                     <Pressable
                       onPress={retryFailed}
                       disabled={isSyncing}
@@ -743,7 +743,7 @@ export default function PlannerScreen() {
                       ) : (
                         <RotateCw size={12} color={colors.foreground} />
                       )}
-                      <Text style={{ color: colors.foreground, fontSize: 11, marginLeft: 5, fontFamily: 'Inter_600SemiBold' }}>
+                      <Text style={{ color: colors.foreground, fontSize: 11, marginStart: 5, fontFamily: 'Inter_600SemiBold' }}>
                         {t('plannerRetry') || 'Retry'}
                       </Text>
                     </Pressable>
@@ -862,7 +862,7 @@ export default function PlannerScreen() {
                   <Text style={{ color: active ? colors.foreground : colors.mutedForeground, fontSize: 12, fontFamily: active ? 'Inter_700Bold' : 'Inter_600SemiBold' }}>
                     {columnLabel(status)}
                   </Text>
-                  <Text style={{ color: active ? colors.foreground : colors.mutedForeground, fontSize: 11, marginLeft: 6 }}>
+                  <Text style={{ color: active ? colors.foreground : colors.mutedForeground, fontSize: 11, marginStart: 6 }}>
                     {statusCounts[status]}
                   </Text>
                 </Pressable>
@@ -901,7 +901,7 @@ export default function PlannerScreen() {
               contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: Math.max(insets.bottom + 20, 30) }}
             >
               {COLUMN_ORDER.map((status, index) => (
-                <View key={status} style={{ width: phonePageWidth, paddingRight: 10 }}>
+                <View key={status} style={{ width: phonePageWidth, paddingEnd: 10 }}>
                   <ScrollView
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ paddingBottom: 14 }}
@@ -1002,7 +1002,7 @@ export default function PlannerScreen() {
           <View style={{ width: '100%', maxWidth: 360, borderRadius: 16, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
               <AlertTriangle size={16} color={colors.warning} />
-              <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 16, marginLeft: 8 }}>
+              <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 16, marginStart: 8 }}>
                 {t('plannerGoalFunding') || 'Goal Funding Required'}
               </Text>
             </View>

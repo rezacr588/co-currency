@@ -92,7 +92,7 @@ export function DatePickerModal({ visible, onClose, onSelect, initialDate, title
     borderWidth: 1,
     borderColor: selected ? colors.accent : colors.border,
     backgroundColor: selected ? colors.accent + '22' : colors.card,
-    marginRight: 8,
+    marginEnd: 8,
     marginBottom: 8,
     minHeight: 40,
     justifyContent: 'center' as const,

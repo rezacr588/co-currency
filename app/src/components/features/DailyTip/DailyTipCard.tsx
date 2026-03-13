@@ -85,7 +85,7 @@ export function DailyTipCard({ compact = false, showDismiss = true, onDismiss }:
       <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View
-            style={{ width: 40, height: 40, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', marginRight: 12, backgroundColor: `${categoryColor}20` }}
+            style={{ width: 40, height: 40, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', marginEnd: 12, backgroundColor: `${categoryColor}20` }}
           >
             <Lightbulb size={20} color={categoryColor} />
           </View>
@@ -114,7 +114,7 @@ export function DailyTipCard({ compact = false, showDismiss = true, onDismiss }:
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View
-            style={{ width: 40, height: 40, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', marginRight: 12, backgroundColor: `${categoryColor}20` }}
+            style={{ width: 40, height: 40, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', marginEnd: 12, backgroundColor: `${categoryColor}20` }}
           >
             <Lightbulb size={20} color={categoryColor} />
           </View>
@@ -124,7 +124,7 @@ export function DailyTipCard({ compact = false, showDismiss = true, onDismiss }:
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View
-                style={{ width: 8, height: 8, borderRadius: 9999, marginRight: 8, backgroundColor: categoryColor }}
+                style={{ width: 8, height: 8, borderRadius: 9999, marginEnd: 8, backgroundColor: categoryColor }}
               />
               <Text style={{ fontSize: 12, color: colors.mutedForeground, textTransform: 'capitalize' }}>
                 {tip.category}

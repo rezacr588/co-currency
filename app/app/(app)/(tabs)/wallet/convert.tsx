@@ -96,7 +96,7 @@ export default function WalletConvertScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, maxWidth: 800, width: '100%', alignSelf: 'center' }}>
         <Pressable
           onPress={() => router.back()}
-          style={{ padding: 8, marginRight: 8, cursor: 'pointer' }}
+          style={{ padding: 8, marginEnd: 8, cursor: 'pointer' }}
           hitSlop={12}
         >
           <ArrowLeft size={24} color={iconColor} />

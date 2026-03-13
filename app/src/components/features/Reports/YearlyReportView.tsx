@@ -166,7 +166,7 @@ export function YearlyReportView({
         </Pressable>
         <View style={{ backgroundColor: colors.card, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center' }}>
           <Calendar size={18} color={colors.accent} />
-          <Text style={{ color: colors.foreground, fontSize: 20, fontFamily: 'Inter_700Bold', marginLeft: 8 }}>{selectedYear}</Text>
+          <Text style={{ color: colors.foreground, fontSize: 20, fontFamily: 'Inter_700Bold', marginStart: 8 }}>{selectedYear}</Text>
         </View>
         <Pressable
           onPress={() => selectedYear < currentYear && setSelectedYear((y) => y + 1)}
@@ -184,7 +184,7 @@ export function YearlyReportView({
           {/* Annual Summary Card */}
           <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-              <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
+              <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginEnd: 12 }}>
                 <Calendar size={20} color={colors.accent} />
               </View>
               <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('annualSummary')}</Text>
@@ -201,7 +201,7 @@ export function YearlyReportView({
               <View style={{ flex: 1, backgroundColor: colors.success + '1a', borderWidth: 1, borderColor: colors.success + '4d', padding: 16, borderRadius: 12 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                   <TrendingUp size={16} color={colors.success} />
-                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginLeft: 8 }}>{t('totalIncome')}</Text>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginStart: 8 }}>{t('totalIncome')}</Text>
                 </View>
                 <Text style={{ color: colors.success, fontSize: 24, fontFamily: 'Inter_700Bold' }}>
                   {formatCompactCurrency(yearlyReport.income, yearlyReport.currency)}
@@ -212,7 +212,7 @@ export function YearlyReportView({
               <View style={{ flex: 1, backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', padding: 16, borderRadius: 12 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                   <TrendingDown size={16} color={colors.danger} />
-                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginLeft: 8 }}>{t('totalExpenses')}</Text>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginStart: 8 }}>{t('totalExpenses')}</Text>
                 </View>
                 <Text style={{ color: colors.danger, fontSize: 24, fontFamily: 'Inter_700Bold' }}>
                   {formatCompactCurrency(yearlyReport.expenses, yearlyReport.currency)}
@@ -298,7 +298,7 @@ export function YearlyReportView({
           {monthsInScope.length > 0 && (
             <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-                <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginRight: 12 }}>
+                <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginEnd: 12 }}>
                   <Calendar size={20} color={colors.mutedForeground} />
                 </View>
                 <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('incomeVsExpenses')}</Text>
@@ -358,11 +358,11 @@ export function YearlyReportView({
               {/* Legend */}
               <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 16 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.success, marginRight: 4 }} />
+                  <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.success, marginEnd: 4 }} />
                   <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('income')}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.danger, marginRight: 4 }} />
+                  <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.danger, marginEnd: 4 }} />
                   <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('expenses')}</Text>
                 </View>
               </View>
@@ -380,7 +380,7 @@ export function YearlyReportView({
           {categoryReport && categoryReport.categories.length > 0 && (
             <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-                <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginRight: 12 }}>
+                <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginEnd: 12 }}>
                   <PieChart size={20} color={colors.mutedForeground} />
                 </View>
                 <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>

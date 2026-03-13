@@ -113,7 +113,7 @@ export default function HistoricalScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
           <Pressable
             onPress={() => router.back()}
-            style={{ cursor: 'pointer', padding: 8, marginRight: 8 }}
+            style={{ cursor: 'pointer', padding: 8, marginEnd: 8 }}
           >
             <ChevronLeft size={24} color={colors.placeholder} />
           </Pressable>

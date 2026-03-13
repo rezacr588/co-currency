@@ -124,15 +124,15 @@ export function QuickNotesCard() {
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <StickyNote size={18} color={colors.mutedForeground} />
-          <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginLeft: 8 }}>{t('quickNotes') || 'Quick Notes'}</Text>
+          <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginStart: 8 }}>{t('quickNotes') || 'Quick Notes'}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Pressable onPress={handleAdd} hitSlop={8} style={{ cursor: 'pointer', padding: 4, marginRight: 4 }}>
+          <Pressable onPress={handleAdd} hitSlop={8} style={{ cursor: 'pointer', padding: 4, marginEnd: 4 }}>
             <Plus size={18} color={colors.accent} />
           </Pressable>
           {localNotes.length > 0 && (
             <Pressable onPress={handleViewAll} hitSlop={8} style={{ cursor: 'pointer', flexDirection: 'row', alignItems: 'center', padding: 4 }}>
-              <Text style={{ fontSize: 12, color: colors.mutedForeground, marginRight: 4 }}>{t('viewAllNotes') || 'View all'}</Text>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, marginEnd: 4 }}>{t('viewAllNotes') || 'View all'}</Text>
               <ArrowRight size={12} color={colors.mutedForeground} />
             </Pressable>
           )}
@@ -165,7 +165,7 @@ export function QuickNotesCard() {
               style={({ pressed }) => [{ cursor: 'pointer', backgroundColor: colors.muted + '80', padding: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'flex-start' }, pressed && { opacity: 0.7 }]}
             >
               <View
-                style={{ width: 12, height: 12, borderRadius: 9999, marginTop: 4, marginRight: 12, backgroundColor: NOTE_COLORS[note.color] || NOTE_COLORS.yellow }}
+                style={{ width: 12, height: 12, borderRadius: 9999, marginTop: 4, marginEnd: 12, backgroundColor: NOTE_COLORS[note.color] || NOTE_COLORS.yellow }}
               />
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -173,7 +173,7 @@ export function QuickNotesCard() {
                     {note.title}
                   </Text>
                   {note.is_pinned && (
-                    <Text style={{ fontSize: 12, color: colors.mutedForeground, marginLeft: 8 }}>📌</Text>
+                    <Text style={{ fontSize: 12, color: colors.mutedForeground, marginStart: 8 }}>📌</Text>
                   )}
                 </View>
                 {note.content ? (

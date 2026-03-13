@@ -82,7 +82,7 @@ export function SkeletonCard() {
     <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
         <Skeleton variant="circular" width={40} height={40} />
-        <View style={{ marginLeft: 12, flex: 1 }}>
+        <View style={{ marginStart: 12, flex: 1 }}>
           <Skeleton width="60%" height={16} style={{ marginBottom: 8 }} />
           <Skeleton width="40%" height={12} />
         </View>
@@ -100,7 +100,7 @@ export function SkeletonTransaction() {
     <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
         <Skeleton variant="circular" width={40} height={40} />
-        <View style={{ marginLeft: 12, flex: 1 }}>
+        <View style={{ marginStart: 12, flex: 1 }}>
           <Skeleton width="70%" height={14} style={{ marginBottom: 8 }} />
           <Skeleton width="40%" height={12} />
         </View>
@@ -117,7 +117,7 @@ export function SkeletonBalance() {
     <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Skeleton variant="circular" width={40} height={40} />
-        <View style={{ marginLeft: 12 }}>
+        <View style={{ marginStart: 12 }}>
           <Skeleton width={60} height={18} style={{ marginBottom: 8 }} />
           <Skeleton width={40} height={12} />
         </View>
@@ -135,7 +135,7 @@ export function SkeletonGoalCard() {
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
           <Skeleton variant="circular" width={36} height={36} />
-          <Skeleton width="50%" height={16} style={{ marginLeft: 12 }} />
+          <Skeleton width="50%" height={16} style={{ marginStart: 12 }} />
         </View>
         <Skeleton width={50} height={20} borderRadius={12} />
       </View>

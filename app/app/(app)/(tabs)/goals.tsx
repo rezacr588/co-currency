@@ -324,7 +324,7 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
   const cardContent = (
     <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-        <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 6, marginRight: 12 }}>
+        <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 6, marginEnd: 12 }}>
           {goal.is_completed ? (
             <CheckCircle size={20} color={colors.success} />
           ) : (
@@ -601,7 +601,7 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
                   />
                   <Text
                     style={{
-                      marginLeft: 8,
+                      marginStart: 8,
                       fontSize: 14,
                       color: category === cat ? colors.background : colors.foreground,
                       fontFamily: category === cat ? 'Inter_500Medium' : undefined,
@@ -784,7 +784,7 @@ function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goa
                   />
                   <Text
                     style={{
-                      marginLeft: 8,
+                      marginStart: 8,
                       fontSize: 14,
                       color: category === cat ? colors.background : colors.foreground,
                       fontFamily: category === cat ? 'Inter_500Medium' : undefined,

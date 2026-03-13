@@ -31,7 +31,7 @@ export function DailyTimelineChart({
     <View style={{ backgroundColor: colors.card, padding: 20, borderRadius: 12, marginBottom: 24 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginRight: 12 }}>
+          <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginEnd: 12 }}>
             <Calendar size={18} color={colors.mutedForeground} />
           </View>
           <View>
@@ -43,7 +43,7 @@ export function DailyTimelineChart({
 
       <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 12 }}>{t('tapBarForDetails')}</Text>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingEnd: 8 }}>
         {chartBuckets.map((bucket, index) => {
           const incomeHeight = bucket.income > 0 ? Math.max((bucket.income / maxBucketValue) * 96, 4) : 2;
           const expenseHeight = bucket.expenses > 0 ? Math.max((bucket.expenses / maxBucketValue) * 96, 4) : 2;
@@ -105,11 +105,11 @@ export function DailyTimelineChart({
 
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.success, marginRight: 4 }} />
+          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.success, marginEnd: 4 }} />
           <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('income')}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.danger, marginRight: 4 }} />
+          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.danger, marginEnd: 4 }} />
           <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('expenses')}</Text>
         </View>
       </View>

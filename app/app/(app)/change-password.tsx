@@ -109,7 +109,7 @@ export default function ChangePasswordScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
           <Pressable
             onPress={() => router.back()}
-            style={{ cursor: 'pointer', padding: 8, marginRight: 8 }}
+            style={{ cursor: 'pointer', padding: 8, marginEnd: 8 }}
           >
             <ArrowLeft size={24} color={colors.foreground} />
           </Pressable>
@@ -137,7 +137,7 @@ export default function ChangePasswordScreen() {
               <View style={{ backgroundColor: colors.background, borderRadius: 12, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
                 <Lock size={20} color={colors.placeholder} />
                 <TextInput
-                  style={{ flex: 1, paddingVertical: 16, marginLeft: 12, color: colors.foreground, outlineStyle: 'none' } as any}
+                  style={{ flex: 1, paddingVertical: 16, marginStart: 12, color: colors.foreground, outlineStyle: 'none' } as any}
                   value={currentPassword}
                   onChangeText={(text) => {
                     setCurrentPassword(text);
@@ -173,7 +173,7 @@ export default function ChangePasswordScreen() {
             <View style={{ backgroundColor: colors.background, borderRadius: 12, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
               <Lock size={20} color={colors.placeholder} />
               <TextInput
-                style={{ flex: 1, paddingVertical: 16, marginLeft: 12, color: colors.foreground, outlineStyle: 'none' } as any}
+                style={{ flex: 1, paddingVertical: 16, marginStart: 12, color: colors.foreground, outlineStyle: 'none' } as any}
                 value={newPassword}
                 onChangeText={(text) => {
                   setNewPassword(text);
@@ -210,7 +210,7 @@ export default function ChangePasswordScreen() {
             <View style={{ backgroundColor: colors.background, borderRadius: 12, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
               <Lock size={20} color={colors.placeholder} />
               <TextInput
-                style={{ flex: 1, paddingVertical: 16, marginLeft: 12, color: colors.foreground, outlineStyle: 'none' } as any}
+                style={{ flex: 1, paddingVertical: 16, marginStart: 12, color: colors.foreground, outlineStyle: 'none' } as any}
                 value={confirmPassword}
                 onChangeText={(text) => {
                   setConfirmPassword(text);

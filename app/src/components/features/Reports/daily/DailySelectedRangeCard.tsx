@@ -90,7 +90,7 @@ export function DailySelectedRangeCard({
                 const tx = item.transaction;
                 return (
                   <View key={tx.id} style={{ borderRadius: 8, borderWidth: 1, borderColor: colors.border + '99', backgroundColor: colors.secondary + '33', padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingEnd: 12 }}>
                       <StyledCategoryIcon
                         category={tx.category || 'other'}
                         size={12}
@@ -98,7 +98,7 @@ export function DailySelectedRangeCard({
                         borderRadius={4}
                         padding={4}
                       />
-                      <View style={{ marginLeft: 8, flex: 1 }}>
+                      <View style={{ marginStart: 8, flex: 1 }}>
                         <Text style={{ color: colors.foreground, fontSize: 12, fontFamily: 'Inter_500Medium' }} numberOfLines={1}>
                           {tx.description || tx.category || t('transactions')}
                         </Text>

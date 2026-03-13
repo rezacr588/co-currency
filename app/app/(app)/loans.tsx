@@ -246,7 +246,7 @@ export default function LoansScreen() {
               <View style={{ flex: 1, alignItems: 'center' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                   <TrendingDown size={16} color={colors.danger} />
-                  <Text style={{ fontSize: 12, color: colors.mutedForeground, marginLeft: 4 }}>
+                  <Text style={{ fontSize: 12, color: colors.mutedForeground, marginStart: 4 }}>
                     {t('youOwe') || 'You Owe'}
                   </Text>
                 </View>
@@ -257,7 +257,7 @@ export default function LoansScreen() {
               <View style={{ flex: 1, alignItems: 'center' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                   <TrendingUp size={16} color={colors.success} />
-                  <Text style={{ fontSize: 12, color: colors.mutedForeground, marginLeft: 4 }}>
+                  <Text style={{ fontSize: 12, color: colors.mutedForeground, marginStart: 4 }}>
                     {t('owedToYou') || 'Owed to You'}
                   </Text>
                 </View>
@@ -268,7 +268,7 @@ export default function LoansScreen() {
             </View>
             <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginRight: 8 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginEnd: 8 }}>
                   {t('netPosition') || 'Net Position'}:
                 </Text>
                 <Text
@@ -361,7 +361,7 @@ export default function LoansScreen() {
                           borderRadius: 9999,
                           alignItems: 'center',
                           justifyContent: 'center',
-                          marginRight: 12,
+                          marginEnd: 12,
                           backgroundColor: isBorrowed ? colors.danger + '33' : colors.success + '33',
                         }}
                       >
@@ -378,7 +378,7 @@ export default function LoansScreen() {
                         {loan.counterparty && (
                           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
                             <User size={12} color={colors.mutedForeground} />
-                            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginLeft: 4 }}>
+                            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginStart: 4 }}>
                               {isBorrowed ? t('from') || 'From' : t('to') || 'To'}: {loan.counterparty}
                             </Text>
                           </View>
@@ -388,7 +388,7 @@ export default function LoansScreen() {
                     {isOverdue && (
                       <View style={{ backgroundColor: colors.danger + '33', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, flexDirection: 'row', alignItems: 'center' }}>
                         <AlertCircle size={12} color={colors.danger} />
-                        <Text style={{ color: colors.danger, fontSize: 12, marginLeft: 4 }}>{t('overdue') || 'Overdue'}</Text>
+                        <Text style={{ color: colors.danger, fontSize: 12, marginStart: 4 }}>{t('overdue') || 'Overdue'}</Text>
                       </View>
                     )}
                   </View>
@@ -418,7 +418,7 @@ export default function LoansScreen() {
                     {loan.due_date && (
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Calendar size={12} color={colors.mutedForeground} />
-                        <Text style={{ color: colors.mutedForeground, fontSize: 12, marginLeft: 4 }}>
+                        <Text style={{ color: colors.mutedForeground, fontSize: 12, marginStart: 4 }}>
                           {t('due') || 'Due'}: {formatDate(loan.due_date)}
                         </Text>
                       </View>
@@ -433,7 +433,7 @@ export default function LoansScreen() {
                         style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.accent, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}
                       >
                         <DollarSign size={14} color={colors.accentForeground} />
-                        <Text style={{ color: colors.accentForeground, fontSize: 12, fontFamily: 'Inter_500Medium', marginLeft: 4 }}>
+                        <Text style={{ color: colors.accentForeground, fontSize: 12, fontFamily: 'Inter_500Medium', marginStart: 4 }}>
                           {t('pay') || 'Pay'}
                         </Text>
                       </Pressable>
@@ -499,7 +499,7 @@ export default function LoansScreen() {
                       <CreditCard size={20} color={formType === 'borrowed' ? colors.danger : colors.mutedForeground} />
                       <Text
                         style={{
-                          marginLeft: 8,
+                          marginStart: 8,
                           fontFamily: 'Inter_500Medium',
                           color: formType === 'borrowed' ? colors.danger : colors.foreground,
                         }}
@@ -524,7 +524,7 @@ export default function LoansScreen() {
                       <HandCoins size={20} color={formType === 'lent' ? colors.success : colors.mutedForeground} />
                       <Text
                         style={{
-                          marginLeft: 8,
+                          marginStart: 8,
                           fontFamily: 'Inter_500Medium',
                           color: formType === 'lent' ? colors.success : colors.foreground,
                         }}
@@ -551,7 +551,7 @@ export default function LoansScreen() {
                 <View style={{ marginBottom: 20 }}>
                   <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('amount') || 'Amount'} *</Text>
                   <View style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 8, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
-                    <Text style={{ fontSize: 20, color: colors.mutedForeground, marginRight: 8 }}>
+                    <Text style={{ fontSize: 20, color: colors.mutedForeground, marginEnd: 8 }}>
                       {getCurrencyDisplay(formCurrency).symbol}
                     </Text>
                     <TextInput
@@ -587,7 +587,7 @@ export default function LoansScreen() {
                               borderColor: formCurrency === code ? colors.foreground : colors.border,
                             }}
                           >
-                            <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || ''}</Text>
+                            <Text style={{ marginEnd: 4, fontSize: 14 }}>{display.flag || ''}</Text>
                             <Text
                               style={{
                                 fontSize: 14,
@@ -729,7 +729,7 @@ export default function LoansScreen() {
                       {t('paymentAmount') || 'Payment Amount'}
                     </Text>
                     <View style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 8, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
-                      <Text style={{ fontSize: 20, color: colors.mutedForeground, marginRight: 8 }}>
+                      <Text style={{ fontSize: 20, color: colors.mutedForeground, marginEnd: 8 }}>
                         {getCurrencyDisplay(selectedLoan.currency).symbol}
                       </Text>
                       <TextInput

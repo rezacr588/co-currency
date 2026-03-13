@@ -411,7 +411,7 @@ export default function TransactionHistoryScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             {filterCategory && (
               <View style={{ backgroundColor: colors.accent + '33', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 9999, flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ color: colors.accent, fontSize: 14, marginRight: 4 }}>{filterCategory}</Text>
+                <Text style={{ color: colors.accent, fontSize: 14, marginEnd: 4 }}>{filterCategory}</Text>
                 <Pressable onPress={() => setFilterCategory(null)} hitSlop={12} style={{ padding: 4 }}>
                   <X size={14} color={colors.accent} />
                 </Pressable>
@@ -419,7 +419,7 @@ export default function TransactionHistoryScreen() {
             )}
             {filterType && (
               <View style={{ backgroundColor: colors.accent + '33', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 9999, flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ color: colors.accent, fontSize: 14, marginRight: 4 }}>{t(filterType)}</Text>
+                <Text style={{ color: colors.accent, fontSize: 14, marginEnd: 4 }}>{t(filterType)}</Text>
                 <Pressable onPress={() => setFilterType(null)} hitSlop={12} style={{ padding: 4 }}>
                   <X size={14} color={colors.accent} />
                 </Pressable>
@@ -427,7 +427,7 @@ export default function TransactionHistoryScreen() {
             )}
             {(filterFromDate || filterToDate) && (
               <View style={{ backgroundColor: colors.accent + '33', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 9999, flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ color: colors.accent, fontSize: 14, marginRight: 4 }}>
+                <Text style={{ color: colors.accent, fontSize: 14, marginEnd: 4 }}>
                   {filterFromDate || '...'} - {filterToDate || '...'}
                 </Text>
                 <Pressable
@@ -509,7 +509,7 @@ export default function TransactionHistoryScreen() {
                   minWidth: 300,
                 }}
               >
-                <View style={{ marginRight: 12 }}>
+                <View style={{ marginEnd: 12 }}>
                   <StyledCategoryIcon
                     category={tx.category || 'other'}
                     size={20}
@@ -543,7 +543,7 @@ export default function TransactionHistoryScreen() {
                     <Pressable
                       onPress={() => handleOpenNotes(tx)}
                       hitSlop={10}
-                      style={({ pressed }) => [{ marginLeft: 8, padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                      style={({ pressed }) => [{ marginStart: 8, padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
                       accessibilityLabel={t('transactionNotes') || 'Notes'}
                       accessibilityRole="button"
                     >
@@ -554,7 +554,7 @@ export default function TransactionHistoryScreen() {
                       <Pressable
                         onPress={() => handleEdit(tx)}
                         hitSlop={10}
-                        style={({ pressed }) => [{ marginLeft: 4, padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                        style={({ pressed }) => [{ marginStart: 4, padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
                         accessibilityLabel={t('editTransaction') || 'Edit'}
                         accessibilityRole="button"
                       >
@@ -564,7 +564,7 @@ export default function TransactionHistoryScreen() {
                     <Pressable
                       onPress={() => handleDelete(tx)}
                       hitSlop={10}
-                      style={({ pressed }) => [{ marginLeft: 4, padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                      style={({ pressed }) => [{ marginStart: 4, padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
                       disabled={deleteMutation.isPending}
                       accessibilityLabel={t('deleteTransaction') || 'Delete'}
                       accessibilityRole="button"
@@ -672,7 +672,7 @@ export default function TransactionHistoryScreen() {
                     <Text
                       style={{
                         fontFamily: 'Inter_500Medium',
-                        marginLeft: 8,
+                        marginStart: 8,
                         fontSize: 14,
                         color: filterType === 'debit' ? colors.background : colors.foreground,
                       }}
@@ -702,7 +702,7 @@ export default function TransactionHistoryScreen() {
                     <Text
                       style={{
                         fontFamily: 'Inter_500Medium',
-                        marginLeft: 8,
+                        marginStart: 8,
                         fontSize: 14,
                         color: filterType === 'credit' ? colors.background : colors.foreground,
                       }}
@@ -876,7 +876,7 @@ export default function TransactionHistoryScreen() {
                     <Text
                       style={{
                         fontFamily: 'Inter_500Medium',
-                        marginLeft: 8,
+                        marginStart: 8,
                         fontSize: 14,
                         color: editType === 'debit' ? colors.background : colors.foreground,
                       }}
@@ -903,7 +903,7 @@ export default function TransactionHistoryScreen() {
                     <Text
                       style={{
                         fontFamily: 'Inter_500Medium',
-                        marginLeft: 8,
+                        marginStart: 8,
                         fontSize: 14,
                         color: editType === 'credit' ? colors.background : colors.foreground,
                       }}
@@ -918,7 +918,7 @@ export default function TransactionHistoryScreen() {
               <View style={{ marginBottom: 20 }}>
                 <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('amount')}</Text>
                 <View style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 8, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
-                  <Text style={{ fontSize: 20, color: colors.mutedForeground, marginRight: 8 }}>
+                  <Text style={{ fontSize: 20, color: colors.mutedForeground, marginEnd: 8 }}>
                     {getCurrencyDisplay(editCurrency).symbol}
                   </Text>
                   <TextInput
@@ -956,7 +956,7 @@ export default function TransactionHistoryScreen() {
                             minHeight: 44,
                           }}
                         >
-                          <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || ''}</Text>
+                          <Text style={{ marginEnd: 4, fontSize: 14 }}>{display.flag || ''}</Text>
                           <Text
                             style={{
                               fontSize: 14,
@@ -1050,7 +1050,7 @@ export default function TransactionHistoryScreen() {
                 ) : (
                   <>
                     <Check size={18} color={colors.primaryForeground} />
-                    <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>
+                    <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginStart: 8 }}>
                       {t('saveChanges')}
                     </Text>
                   </>
@@ -1184,7 +1184,7 @@ export default function TransactionHistoryScreen() {
                     ) : (
                       <>
                         <Plus size={18} color={colors.primaryForeground} />
-                        <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>
+                        <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginStart: 8 }}>
                           {t('addNote') || 'Add Note'}
                         </Text>
                       </>

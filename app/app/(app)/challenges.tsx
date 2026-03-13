@@ -326,7 +326,7 @@ export default function ChallengesScreen() {
           <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12, marginBottom: 24 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <Award size={24} color={colors.accent} />
-              <Text style={{ fontSize: 16, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginLeft: 8 }}>
+              <Text style={{ fontSize: 16, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginStart: 8 }}>
                 {t('yourProgress') || 'Your Progress'}
               </Text>
             </View>
@@ -346,7 +346,7 @@ export default function ChallengesScreen() {
               <View style={{ alignItems: 'center', flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Flame size={16} color={colors.warning} />
-                  <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground, marginLeft: 4 }}>
+                  <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground, marginStart: 4 }}>
                     {stats.current_streak}
                   </Text>
                 </View>
@@ -450,13 +450,13 @@ export default function ChallengesScreen() {
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.muted, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}>
                       <Clock size={12} color={colors.mutedForeground} />
-                      <Text style={{ fontSize: 12, color: colors.mutedForeground, marginLeft: 4 }}>
+                      <Text style={{ fontSize: 12, color: colors.mutedForeground, marginStart: 4 }}>
                         {selectedChallenge.duration_days} {t('days') || 'days'}
                       </Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.accent + '33', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}>
                       <Star size={12} color={colors.accent} />
-                      <Text style={{ fontSize: 12, color: colors.accent, marginLeft: 4 }}>
+                      <Text style={{ fontSize: 12, color: colors.accent, marginStart: 4 }}>
                         {selectedChallenge.points_reward} {t('pts') || 'pts'}
                       </Text>
                     </View>
@@ -542,7 +542,7 @@ function ChallengeCard({
     >
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <View
-          style={{ width: 48, height: 48, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', marginRight: 12, backgroundColor: `${DIFFICULTY_COLORS[challenge.difficulty]}20` }}
+          style={{ width: 48, height: 48, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', marginEnd: 12, backgroundColor: `${DIFFICULTY_COLORS[challenge.difficulty]}20` }}
         >
           {getChallengeIcon(
             challenge.icon,
@@ -556,7 +556,7 @@ function ChallengeCard({
               {challenge.name}
             </Text>
             {challenge.is_featured && (
-              <View style={{ backgroundColor: colors.accent + '33', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginLeft: 8 }}>
+              <View style={{ backgroundColor: colors.accent + '33', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginStart: 8 }}>
                 <Text style={{ fontSize: 12, color: colors.accent, fontFamily: 'Inter_500Medium' }}>{t('featured') || 'Featured'}</Text>
               </View>
             )}
@@ -576,20 +576,20 @@ function ChallengeCard({
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Clock size={12} color={colors.mutedForeground} />
-              <Text style={{ fontSize: 12, color: colors.mutedForeground, marginLeft: 4 }}>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, marginStart: 4 }}>
                 {challenge.duration_days}d
               </Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Star size={12} color={colors.accent} />
-              <Text style={{ fontSize: 12, color: colors.accent, marginLeft: 4 }}>
+              <Text style={{ fontSize: 12, color: colors.accent, marginStart: 4 }}>
                 +{challenge.points_reward}
               </Text>
             </View>
           </View>
         </View>
         {isActive && (
-          <View style={{ backgroundColor: colors.success + '33', padding: 8, borderRadius: 9999, marginLeft: 8 }}>
+          <View style={{ backgroundColor: colors.success + '33', padding: 8, borderRadius: 9999, marginStart: 8 }}>
             <Play size={16} color={colors.success} />
           </View>
         )}
@@ -640,7 +640,7 @@ function ActiveChallengeCard({
     <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
         <View
-          style={{ width: 48, height: 48, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', marginRight: 12, backgroundColor: `${DIFFICULTY_COLORS[challenge.difficulty]}20` }}
+          style={{ width: 48, height: 48, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', marginEnd: 12, backgroundColor: `${DIFFICULTY_COLORS[challenge.difficulty]}20` }}
         >
           {getChallengeIcon(
             challenge.icon,
@@ -652,13 +652,13 @@ function ActiveChallengeCard({
           <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }} numberOfLines={1}>{challenge.name}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
             <Clock size={12} color={colors.mutedForeground} />
-            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginLeft: 4 }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginStart: 4 }}>
               {daysLeft} {t('daysLeft') || 'days left'}
             </Text>
             {userChallenge.streak_days > 0 && (
               <>
-                <Flame size={12} color={colors.warning} style={{ marginLeft: 12 }} />
-                <Text style={{ fontSize: 12, color: colors.warning, marginLeft: 4 }}>
+                <Flame size={12} color={colors.warning} style={{ marginStart: 12 }} />
+                <Text style={{ fontSize: 12, color: colors.warning, marginStart: 4 }}>
                   {userChallenge.streak_days} {t('dayStreak') || 'day streak'}
                 </Text>
               </>
@@ -684,7 +684,7 @@ function ActiveChallengeCard({
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.accent + '33', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}>
           <Star size={12} color={colors.accent} />
-          <Text style={{ fontSize: 12, color: colors.accent, marginLeft: 4 }}>
+          <Text style={{ fontSize: 12, color: colors.accent, marginStart: 4 }}>
             +{challenge.points_reward} {t('ptsOnCompletion') || 'pts on completion'}
           </Text>
         </View>
@@ -724,7 +724,7 @@ function HistoryChallengeCard({
     <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12, opacity: 0.8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <View
-          style={{ width: 40, height: 40, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', marginRight: 12, backgroundColor: `${statusColor}20` }}
+          style={{ width: 40, height: 40, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', marginEnd: 12, backgroundColor: `${statusColor}20` }}
         >
           <StatusIcon size={20} color={statusColor} />
         </View>
@@ -737,9 +737,9 @@ function HistoryChallengeCard({
               {userChallenge.status}
             </Text>
             {isCompleted && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginStart: 12 }}>
                 <Star size={12} color={colors.accent} />
-                <Text style={{ fontSize: 12, color: colors.accent, marginLeft: 4 }}>
+                <Text style={{ fontSize: 12, color: colors.accent, marginStart: 4 }}>
                   +{challenge.points_reward} pts
                 </Text>
               </View>

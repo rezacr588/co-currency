@@ -105,7 +105,7 @@ export function CurrencyPicker({
                     backgroundColor: isSelected ? colors.accent : colors.card,
                   }}
                 >
-                  <Text style={{ fontSize: 24, marginRight: 12 }}>{display.flag || '🌐'}</Text>
+                  <Text style={{ fontSize: 24, marginEnd: 12 }}>{display.flag || '🌐'}</Text>
                   <View style={{ flex: 1 }}>
                     <Text
                       style={{
@@ -127,7 +127,7 @@ export function CurrencyPicker({
                   </View>
                   <Text
                     style={{
-                      marginRight: 8,
+                      marginEnd: 8,
                       color: isSelected ? colors.accentForeground : colors.mutedForeground,
                     }}
                   >

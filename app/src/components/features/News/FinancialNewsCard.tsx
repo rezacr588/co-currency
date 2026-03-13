@@ -58,7 +58,7 @@ export function FinancialNewsCard() {
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
         <Newspaper size={18} color={colors.mutedForeground} />
-        <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginLeft: 8 }}>{t('financialNews') || 'Financial News'}</Text>
+        <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginStart: 8 }}>{t('financialNews') || 'Financial News'}</Text>
       </View>
 
       {/* News Items */}
@@ -77,14 +77,14 @@ export function FinancialNewsCard() {
                     {item.title}
                   </Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                    <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginRight: 8, backgroundColor: `${catColor}20` }}>
+                    <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginEnd: 8, backgroundColor: `${catColor}20` }}>
                       <Text style={{ color: catColor, fontSize: 10, fontFamily: 'Inter_600SemiBold' }}>{item.source}</Text>
                     </View>
                     <Clock size={10} color={colors.mutedForeground} />
-                    <Text style={{ fontSize: 12, color: colors.mutedForeground, marginLeft: 4 }}>{timeAgo(item.published_at)}</Text>
+                    <Text style={{ fontSize: 12, color: colors.mutedForeground, marginStart: 4 }}>{timeAgo(item.published_at)}</Text>
                   </View>
                 </View>
-                <ExternalLink size={14} color={colors.mutedForeground} style={{ marginTop: 2, marginLeft: 8 }} />
+                <ExternalLink size={14} color={colors.mutedForeground} style={{ marginTop: 2, marginStart: 8 }} />
               </View>
             </Pressable>
           );

@@ -39,7 +39,7 @@ export function ComparisonBarChart({
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <TrendingUp size={14} color={colors.success} />
-            <Text style={{ color: colors.foreground, fontSize: 14, marginLeft: 4 }}>{t('income')}</Text>
+            <Text style={{ color: colors.foreground, fontSize: 14, marginStart: 4 }}>{t('income')}</Text>
           </View>
           <Text style={{ color: colors.success, fontSize: 14, fontFamily: 'Inter_500Medium' }}>
             {formatCompactCurrency(income, currency)}
@@ -55,7 +55,7 @@ export function ComparisonBarChart({
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <TrendingUp size={14} color={colors.danger} style={{ transform: [{ rotate: '180deg' }] }} />
-            <Text style={{ color: colors.foreground, fontSize: 14, marginLeft: 4 }}>{t('expenses')}</Text>
+            <Text style={{ color: colors.foreground, fontSize: 14, marginStart: 4 }}>{t('expenses')}</Text>
           </View>
           <Text style={{ color: colors.danger, fontSize: 14, fontFamily: 'Inter_500Medium' }}>
             {formatCompactCurrency(expenses, currency)}
@@ -179,11 +179,11 @@ export function TrendsChart({
       </View>
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.success, marginRight: 4 }} />
+          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.success, marginEnd: 4 }} />
           <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('income')}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.danger, marginRight: 4 }} />
+          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.danger, marginEnd: 4 }} />
           <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('expenses')}</Text>
         </View>
       </View>
@@ -364,7 +364,7 @@ export function MonthlyReportView({
       {monthlyReport && (
         <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginRight: 12 }}>
+            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginEnd: 12 }}>
               <Calendar size={20} color={colors.placeholder} />
             </View>
             <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
@@ -401,7 +401,7 @@ export function MonthlyReportView({
                   style={{
                     fontSize: 14,
                     fontFamily: 'Inter_600SemiBold',
-                    marginLeft: 4,
+                    marginStart: 4,
                     color: expenseChange <= 0 ? colors.success : colors.danger,
                   }}
                 >
@@ -449,7 +449,7 @@ export function MonthlyReportView({
       {categoryReport && categoryReport.categories.length > 0 && (
         <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginRight: 12 }}>
+            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginEnd: 12 }}>
               <PieChart size={20} color={colors.placeholder} />
             </View>
             <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('spendingByCategory')}</Text>
@@ -490,7 +490,7 @@ export function MonthlyReportView({
                         borderRadius={6}
                         padding={6}
                       />
-                      <Text style={{ fontFamily: 'Inter_500Medium', color: colors.foreground, textTransform: 'capitalize', marginLeft: 8 }}>
+                      <Text style={{ fontFamily: 'Inter_500Medium', color: colors.foreground, textTransform: 'capitalize', marginStart: 8 }}>
                         {cat.category}
                       </Text>
                     </View>
@@ -567,11 +567,11 @@ export function MonthlyReportView({
       {trendsReport && trendsReport.trends && trendsReport.trends.length > 0 && (
         <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginRight: 12 }}>
+            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginEnd: 12 }}>
               <BarChart3 size={20} color={colors.placeholder} />
             </View>
             <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('incomeVsExpenses')}</Text>
-            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginLeft: 8 }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginStart: 8 }}>
               ({trendsReport.months} {t('months')})
             </Text>
           </View>
@@ -586,7 +586,7 @@ export function MonthlyReportView({
       {forecast && (
         <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginRight: 12 }}>
+            <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginEnd: 12 }}>
               <TrendingUp size={20} color={colors.accent} />
             </View>
             <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('forecast')}</Text>
@@ -612,7 +612,7 @@ export function MonthlyReportView({
               {forecast.net_daily_flow < 0 && (
                 <View style={{ backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center' }}>
                   <AlertCircle size={20} color={colors.danger} />
-                  <View style={{ marginLeft: 12, flex: 1 }}>
+                  <View style={{ marginStart: 12, flex: 1 }}>
                     <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>{t('daysUntilZero')}</Text>
                     <Text style={{ color: colors.danger, fontSize: 20, fontFamily: 'Inter_700Bold' }}>
                       {forecast.days_until_zero} {t('days')}

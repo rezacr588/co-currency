@@ -152,11 +152,11 @@ export function CurrencyConverter({
         {type === 'from' ? (t('from') || 'From') : (t('to') || 'To')}
       </Text>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Text style={{ fontSize: 24, marginRight: 8 }}>{display.flag || '🌐'}</Text>
+        <Text style={{ fontSize: 24, marginEnd: 8 }}>{display.flag || '🌐'}</Text>
         <Text style={{ fontSize: 20, color: colors.foreground, flex: 1, fontFamily: fonts.semibold }}>
           {currency}
         </Text>
-        <Text style={{ color: colors.mutedForeground, marginRight: 8, fontFamily: fonts.regular }}>{display.symbol}</Text>
+        <Text style={{ color: colors.mutedForeground, marginEnd: 8, fontFamily: fonts.regular }}>{display.symbol}</Text>
         <ChevronDown size={20} color={colors.mutedForeground} />
       </View>
     </TouchableOpacity>
@@ -255,7 +255,7 @@ export function CurrencyConverter({
         )}
 
         {/* All Currencies */}
-        <Text style={{ fontSize: 12, color: colors.mutedForeground, marginLeft: 16, marginTop: 8, marginBottom: 4, fontFamily: fonts.medium }}>
+        <Text style={{ fontSize: 12, color: colors.mutedForeground, marginStart: 16, marginTop: 8, marginBottom: 4, fontFamily: fonts.medium }}>
           {searchQuery ? 'Search Results' : 'All Currencies'}
         </Text>
 
@@ -292,7 +292,7 @@ export function CurrencyConverter({
                     backgroundColor: isSelected ? colors.accent : 'transparent',
                   }}
                 >
-                  <Text style={{ fontSize: 24, marginRight: 12 }}>{display.flag || '🌐'}</Text>
+                  <Text style={{ fontSize: 24, marginEnd: 12 }}>{display.flag || '🌐'}</Text>
                   <View style={{ flex: 1 }}>
                     <Text style={{
                       color: isSelected ? colors.primaryForeground : colors.foreground,
@@ -502,12 +502,12 @@ export function CurrencyConverter({
                 paddingHorizontal: 10,
                 paddingVertical: 8,
                 borderRadius: 6,
-                marginRight: 8,
+                marginEnd: 8,
               }}
             >
-              <Text style={{ fontSize: 16, marginRight: 4 }}>{fromDisplay.flag || '🌐'}</Text>
+              <Text style={{ fontSize: 16, marginEnd: 4 }}>{fromDisplay.flag || '🌐'}</Text>
               <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: fonts.medium }}>{fromCurrency}</Text>
-              <ChevronDown size={14} color={colors.mutedForeground} style={{ marginLeft: 2 }} />
+              <ChevronDown size={14} color={colors.mutedForeground} style={{ marginStart: 2 }} />
             </TouchableOpacity>
           </View>
         </View>
@@ -559,9 +559,9 @@ export function CurrencyConverter({
               paddingVertical: 8,
               borderRadius: 6,
             }}>
-              <Text style={{ fontSize: 16, marginRight: 4 }}>{toDisplay.flag || '🌐'}</Text>
+              <Text style={{ fontSize: 16, marginEnd: 4 }}>{toDisplay.flag || '🌐'}</Text>
               <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: fonts.medium }}>{toCurrency}</Text>
-              <ChevronDown size={14} color={colors.mutedForeground} style={{ marginLeft: 2 }} />
+              <ChevronDown size={14} color={colors.mutedForeground} style={{ marginStart: 2 }} />
             </View>
           </TouchableOpacity>
         </View>

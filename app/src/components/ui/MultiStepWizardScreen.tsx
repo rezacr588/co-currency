@@ -150,7 +150,7 @@ export function MultiStepWizardScreen({
                     >
                       <ArrowLeft size={16} color={colors.foreground} />
                       {!isCompactPhone && (
-                        <Text style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>
+                        <Text style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_600SemiBold', marginStart: 8 }}>
                           {closeLabel}
                         </Text>
                       )}
@@ -189,7 +189,7 @@ export function MultiStepWizardScreen({
                       horizontal
                       showsHorizontalScrollIndicator={false}
                       keyboardShouldPersistTaps="handled"
-                      contentContainerStyle={{ gap: 8, marginTop: isPhone ? 6 : 16, paddingRight: 4 }}
+                      contentContainerStyle={{ gap: 8, marginTop: isPhone ? 6 : 16, paddingEnd: 4 }}
                     >
                       {steps.map((step, index) => {
                         const active = step.key === activeStep;

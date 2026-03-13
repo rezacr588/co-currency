@@ -65,7 +65,7 @@ export const Input = forwardRef<TextInput, InputProps>(
           }}
         >
           {leftIcon && (
-            <View style={{ marginRight: 12 }} accessibilityElementsHidden>
+            <View style={{ marginEnd: 12 }} accessibilityElementsHidden>
               {leftIcon}
             </View>
           )}
@@ -82,7 +82,7 @@ export const Input = forwardRef<TextInput, InputProps>(
             {...props}
           />
           {rightIcon && (
-            <View style={{ marginLeft: 12 }} accessibilityElementsHidden>
+            <View style={{ marginStart: 12 }} accessibilityElementsHidden>
               {rightIcon}
             </View>
           )}

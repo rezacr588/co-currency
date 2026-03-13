@@ -177,7 +177,7 @@ export function DailyRewardModal({ onClose }: DailyRewardModalProps) {
               <View style={{ alignItems: 'center', marginBottom: 16 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                   <Star size={16} color="#f59e0b" fill="#f59e0b" />
-                  <Text style={{ color: colors.mutedForeground, marginLeft: 4 }}>
+                  <Text style={{ color: colors.mutedForeground, marginStart: 4 }}>
                     {status.consecutive_days} {t('dayStreak') || 'day streak'}
                   </Text>
                 </View>
@@ -190,7 +190,7 @@ export function DailyRewardModal({ onClose }: DailyRewardModalProps) {
                     {claimMutation.data.leveled_up && (
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8 }}>
                         <ChevronUp size={16} color="#22c55e" />
-                        <Text style={{ color: colors.success, fontFamily: 'Inter_500Medium', marginLeft: 4 }}>
+                        <Text style={{ color: colors.success, fontFamily: 'Inter_500Medium', marginStart: 4 }}>
                           {t('levelUp') || 'Level Up!'} {claimMutation.data.new_level}
                         </Text>
                       </View>

@@ -86,7 +86,7 @@ export function BiometricLock() {
           ) : (
             <>
               <BiometricIcon size={24} color={colors.accentForeground} />
-              <Text style={{ fontFamily: 'Inter_600SemiBold', marginLeft: 12, fontSize: 18, color: colors.accentForeground }}>
+              <Text style={{ fontFamily: 'Inter_600SemiBold', marginStart: 12, fontSize: 18, color: colors.accentForeground }}>
                 {t('unlockWith') || 'Unlock with'} {biometricType || 'Biometrics'}
               </Text>
             </>

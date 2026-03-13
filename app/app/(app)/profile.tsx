@@ -236,7 +236,7 @@ export default function ProfileScreen() {
         <Text
           style={{
             color: colors.foreground,
-            marginLeft: 12,
+            marginStart: 12,
             fontFamily: isDesktop ? 'Inter_500Medium' : undefined,
             flexShrink: 1,
           }}
@@ -245,11 +245,11 @@ export default function ProfileScreen() {
           {label}
         </Text>
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginStart: 12 }}>
         {value && (
           <View
             style={{
-              marginRight: 8,
+              marginEnd: 8,
               borderRadius: 999,
               borderWidth: 1,
               borderColor: colors.border,
@@ -311,11 +311,11 @@ export default function ProfileScreen() {
                 >
                   <User size={34} color={colors.primary} />
                 </View>
-                <View style={{ marginLeft: 14 }}>
+                <View style={{ marginStart: 14 }}>
                   <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{user?.name}</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                     <Mail size={14} color={colors.placeholder} />
-                    <Text style={{ color: colors.mutedForeground, marginLeft: 6 }}>{user?.email}</Text>
+                    <Text style={{ color: colors.mutedForeground, marginStart: 6 }}>{user?.email}</Text>
                   </View>
                 </View>
               </View>
@@ -333,7 +333,7 @@ export default function ProfileScreen() {
                 }]}
               >
                 <Pencil size={15} color={colors.primaryForeground} />
-                <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>
+                <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginStart: 8 }}>
                   {t('editProfile')}
                 </Text>
               </Pressable>
@@ -357,11 +357,11 @@ export default function ProfileScreen() {
                   <View style={{ backgroundColor: colors.accent + '1A', borderWidth: 1, borderColor: colors.accent + '33', padding: 14, borderRadius: 9999 }}>
                     <User size={32} color={colors.accent} />
                   </View>
-                  <View style={{ marginLeft: 14, flex: 1 }}>
+                  <View style={{ marginStart: 14, flex: 1 }}>
                     <Text style={{ fontSize: 18, fontFamily: 'Inter_700Bold', color: colors.foreground }} numberOfLines={1}>{user?.name}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                       <Mail size={14} color={colors.placeholder} />
-                      <Text style={{ color: colors.mutedForeground, marginLeft: 6, fontSize: 14 }} numberOfLines={1}>{user?.email}</Text>
+                      <Text style={{ color: colors.mutedForeground, marginStart: 6, fontSize: 14 }} numberOfLines={1}>{user?.email}</Text>
                     </View>
                   </View>
                 </View>
@@ -383,7 +383,7 @@ export default function ProfileScreen() {
                   }]}
                 >
                   <Pencil size={16} color={colors.accent} />
-                  <Text style={{ color: colors.accent, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>{t('editProfile')}</Text>
+                  <Text style={{ color: colors.accent, fontFamily: 'Inter_600SemiBold', marginStart: 8 }}>{t('editProfile')}</Text>
                 </Pressable>
               </View>
             )}
@@ -433,7 +433,7 @@ export default function ProfileScreen() {
                     }]}
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={{ fontSize: 20, marginRight: 12 }}>{lang.flag}</Text>
+                      <Text style={{ fontSize: 20, marginEnd: 12 }}>{lang.flag}</Text>
                       <Text style={{ color: colors.foreground, fontFamily: language === lang.code ? 'Inter_500Medium' : undefined }}>
                         {lang.name}
                       </Text>
@@ -477,7 +477,7 @@ export default function ProfileScreen() {
                 }]}
               >
                 <LogOut size={20} color={colors.danger} />
-                <Text style={{ color: colors.danger, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>{t('logout')}</Text>
+                <Text style={{ color: colors.danger, fontFamily: 'Inter_600SemiBold', marginStart: 8 }}>{t('logout')}</Text>
               </Pressable>
             )}
           </View>
@@ -553,7 +553,7 @@ export default function ProfileScreen() {
                       borderBottomColor: colors.border,
                     }}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 16 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginEnd: 16 }}>
                       <View
                         style={{
                           width: 34,
@@ -568,7 +568,7 @@ export default function ProfileScreen() {
                       >
                         <Fingerprint size={20} color={colors.accent} />
                       </View>
-                      <View style={{ marginLeft: 12, flex: 1 }}>
+                      <View style={{ marginStart: 12, flex: 1 }}>
                         <Text style={{ color: colors.foreground }}>{biometricType || t('biometricLock') || 'Biometric Lock'}</Text>
                         <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 2 }}>
                           {t('requireAuthOnOpen') || 'Require authentication when opening app'}
@@ -593,7 +593,7 @@ export default function ProfileScreen() {
                     borderBottomColor: colors.border,
                   }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 16 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginEnd: 16 }}>
                     <View
                       style={{
                         width: 34,
@@ -612,7 +612,7 @@ export default function ProfileScreen() {
                         <Eye size={20} color={colors.accent} />
                       )}
                     </View>
-                    <View style={{ marginLeft: 12, flex: 1 }}>
+                    <View style={{ marginStart: 12, flex: 1 }}>
                       <Text style={{ color: colors.foreground }}>{t('hideBalances') || 'Hide Balances'}</Text>
                       <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 2 }}>
                         {t('hideBalancesDesc') || 'Hide amounts on dashboard for privacy'}
@@ -675,7 +675,7 @@ export default function ProfileScreen() {
                 }]}
               >
                 <LogOut size={20} color={colors.danger} />
-                <Text style={{ color: colors.danger, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>{t('logout')}</Text>
+                <Text style={{ color: colors.danger, fontFamily: 'Inter_600SemiBold', marginStart: 8 }}>{t('logout')}</Text>
               </Pressable>
             )}
           </View>
@@ -761,7 +761,7 @@ export default function ProfileScreen() {
                 ) : (
                   <>
                     <Check size={18} color={colors.primaryForeground} />
-                    <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_500Medium', marginLeft: 8 }}>
+                    <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_500Medium', marginStart: 8 }}>
                       {t('saveChanges')}
                     </Text>
                   </>
@@ -820,7 +820,7 @@ export default function ProfileScreen() {
                     }]}
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <View style={{ flex: 1, paddingRight: 12 }}>
+                      <View style={{ flex: 1, paddingEnd: 12 }}>
                         <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
                           {option.label}
                         </Text>

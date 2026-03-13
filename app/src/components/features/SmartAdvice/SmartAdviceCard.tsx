@@ -92,7 +92,7 @@ export function SmartAdviceCard() {
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View
-            style={{ width: 40, height: 40, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', marginRight: 12, backgroundColor: `${catColor}20` }}
+            style={{ width: 40, height: 40, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', marginEnd: 12, backgroundColor: `${catColor}20` }}
           >
             <Sparkles size={20} color={catColor} />
           </View>
@@ -102,13 +102,13 @@ export function SmartAdviceCard() {
                 {t('smartAdvice') || 'Smart Advice'}
               </Text>
               {displayAdvice.is_ai && (
-                <View style={{ marginLeft: 8, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9999, backgroundColor: `${colors.accent}20` }}>
+                <View style={{ marginStart: 8, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9999, backgroundColor: `${colors.accent}20` }}>
                   <Text style={{ color: colors.accent, fontSize: 10, fontFamily: 'Inter_600SemiBold' }}>AI</Text>
                 </View>
               )}
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={{ width: 8, height: 8, borderRadius: 9999, marginRight: 8, backgroundColor: catColor }} />
+              <View style={{ width: 8, height: 8, borderRadius: 9999, marginEnd: 8, backgroundColor: catColor }} />
               <Text style={{ fontSize: 12, color: colors.mutedForeground, textTransform: 'capitalize' }}>{displayAdvice.category}</Text>
             </View>
           </View>
@@ -137,7 +137,7 @@ export function SmartAdviceCard() {
         style={({ pressed }) => [{ cursor: 'pointer', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12, paddingVertical: 8, borderRadius: 8 }, pressed && { opacity: 0.7 }]}
       >
         <MessageCircle size={14} color={colors.accent} />
-        <Text style={{ color: colors.accent, fontSize: 13, fontFamily: 'Inter_600SemiBold', marginLeft: 6 }}>
+        <Text style={{ color: colors.accent, fontSize: 13, fontFamily: 'Inter_600SemiBold', marginStart: 6 }}>
           {t('askForMore') || 'Ask AI for more'}
         </Text>
       </Pressable>

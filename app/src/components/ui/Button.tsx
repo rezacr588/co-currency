@@ -126,13 +126,13 @@ export const Button = forwardRef<View, ButtonProps>(
           />
         ) : (
           <>
-            {leftIcon && <View style={{ marginRight: 8 }}>{leftIcon}</View>}
+            {leftIcon && <View style={{ marginEnd: 8 }}>{leftIcon}</View>}
             <Text
               style={{ fontFamily: 'Inter_600SemiBold', color: variantTextColors[variant], fontSize: sizeVal.fontSize }}
             >
               {children}
             </Text>
-            {rightIcon && <View style={{ marginLeft: 8 }}>{rightIcon}</View>}
+            {rightIcon && <View style={{ marginStart: 8 }}>{rightIcon}</View>}
           </>
         )}
       </Pressable>

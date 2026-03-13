@@ -121,9 +121,9 @@ export default function NotificationSettingsScreen() {
         opacity: disabled ? 0.5 : 1,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 16 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginEnd: 16 }}>
         {icon}
-        <View style={{ marginLeft: 12, flex: 1 }}>
+        <View style={{ marginStart: 12, flex: 1 }}>
           <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>{title}</Text>
           <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 2 }}>{description}</Text>
         </View>
@@ -160,7 +160,7 @@ export default function NotificationSettingsScreen() {
         <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12, marginBottom: 24 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <Bell size={20} color={colors.accent} />
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginStart: 8 }}>
               {t('pushNotifications') || 'Push Notifications'}
             </Text>
           </View>
@@ -182,7 +182,7 @@ export default function NotificationSettingsScreen() {
               <View style={{ backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '33', padding: 12, borderRadius: 8, marginBottom: 12 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <AlertCircle size={16} color={colors.danger} />
-                  <Text style={{ color: colors.danger, fontSize: 14, marginLeft: 8 }}>{pushError}</Text>
+                  <Text style={{ color: colors.danger, fontSize: 14, marginStart: 8 }}>{pushError}</Text>
                 </View>
               </View>
               <Pressable
@@ -275,7 +275,7 @@ export default function NotificationSettingsScreen() {
             style={{ backgroundColor: colors.secondary, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
           >
             <Bell size={20} color={iconColor} />
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium', marginLeft: 8 }}>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium', marginStart: 8 }}>
               {t('sendTestNotification') || 'Send Test Notification'}
             </Text>
           </Pressable>

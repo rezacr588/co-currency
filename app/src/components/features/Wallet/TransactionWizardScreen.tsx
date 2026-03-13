@@ -735,7 +735,7 @@ export function TransactionWizardScreen() {
           const isSelected = selectedCode === code;
           return (
             <CurrencyChip key={code} $active={isSelected} onPress={() => onSelect(code)}>
-              <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || '🌐'}</Text>
+              <Text style={{ marginEnd: 4, fontSize: 14 }}>{display.flag || '🌐'}</Text>
               <BodyMedium
                 $color={isSelected ? theme.colors.background : theme.colors.foreground}
                 style={{ fontSize: 14 }}
@@ -871,7 +871,7 @@ export function TransactionWizardScreen() {
                   <TrendingDown size={18} color={type === 'debit' ? theme.colors.primaryForeground : theme.colors.danger} />
                   <BodyMedium
                     $color={type === 'debit' ? theme.colors.background : theme.colors.foreground}
-                    style={{ marginLeft: theme.spacing.sm, fontSize: 14 }}
+                    style={{ marginStart: theme.spacing.sm, fontSize: 14 }}
                   >
                     {t('expense') || 'Expense'}
                   </BodyMedium>
@@ -880,7 +880,7 @@ export function TransactionWizardScreen() {
                   <TrendingUp size={18} color={type === 'credit' ? theme.colors.primaryForeground : theme.colors.success} />
                   <BodyMedium
                     $color={type === 'credit' ? theme.colors.background : theme.colors.foreground}
-                    style={{ marginLeft: theme.spacing.sm, fontSize: 14 }}
+                    style={{ marginStart: theme.spacing.sm, fontSize: 14 }}
                   >
                     {t('income') || 'Income'}
                   </BodyMedium>
@@ -891,7 +891,7 @@ export function TransactionWizardScreen() {
             <View style={{ marginBottom: theme.spacing.xl, flex: isDesktop ? 1 : undefined }}>
               <Caption style={{ marginBottom: theme.spacing.sm }}>{t('amount') || 'Amount'}</Caption>
               <AmountContainer>
-                <Text style={{ fontSize: 20, color: theme.colors.mutedForeground, marginRight: theme.spacing.sm }}>
+                <Text style={{ fontSize: 20, color: theme.colors.mutedForeground, marginEnd: theme.spacing.sm }}>
                   {currencyDisplay.symbol}
                 </Text>
                 <TextInput
@@ -931,7 +931,7 @@ export function TransactionWizardScreen() {
 
           <SectionCard>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
-              <View style={{ flex: 1, paddingRight: theme.spacing.md }}>
+              <View style={{ flex: 1, paddingEnd: theme.spacing.md }}>
                 <BodyMedium style={{ fontSize: 14 }}>{t('sourceWallet') || 'Source Wallet'}</BodyMedium>
                 <Caption style={{ marginTop: 4 }}>
                   {t('sourceWalletDescription') || 'Choose which wallet balance this transaction will affect. USD stays prefilled.'}
@@ -960,7 +960,7 @@ export function TransactionWizardScreen() {
                     {isLoadingConversionPreview ? (
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <ActivityIndicator size="small" color={theme.colors.accent} />
-                        <Caption style={{ marginLeft: theme.spacing.sm }}>{t('converting')}</Caption>
+                        <Caption style={{ marginStart: theme.spacing.sm }}>{t('converting')}</Caption>
                       </View>
                     ) : null}
                     {isConversionPreviewError ? (
@@ -993,14 +993,14 @@ export function TransactionWizardScreen() {
                     onPress={handleAISuggestCategory}
                     disabled={isSuggestingCategory}
                     hitSlop={8}
-                    style={{ marginRight: theme.spacing.sm, flexDirection: 'row', alignItems: 'center', paddingHorizontal: theme.spacing.sm, paddingVertical: 4, borderRadius: theme.radii.md }}
+                    style={{ marginEnd: theme.spacing.sm, flexDirection: 'row', alignItems: 'center', paddingHorizontal: theme.spacing.sm, paddingVertical: 4, borderRadius: theme.radii.md }}
                   >
                     {isSuggestingCategory ? (
                       <ActivityIndicator size="small" color={theme.colors.accent} />
                     ) : (
                       <>
                         <Sparkles size={14} color={theme.colors.accent} />
-                        <Text style={{ color: theme.colors.accent, fontSize: 11, fontFamily: 'Inter_600SemiBold', marginLeft: 3 }}>AI</Text>
+                        <Text style={{ color: theme.colors.accent, fontSize: 11, fontFamily: 'Inter_600SemiBold', marginStart: 3 }}>AI</Text>
                       </>
                     )}
                   </Pressable>
@@ -1072,7 +1072,7 @@ export function TransactionWizardScreen() {
                 ) : (
                   <>
                     <Plus size={14} color={theme.colors.primaryForeground} />
-                    <BodyMedium $color={theme.colors.accentForeground} style={{ marginLeft: 4, fontSize: 12 }}>
+                    <BodyMedium $color={theme.colors.accentForeground} style={{ marginStart: 4, fontSize: 12 }}>
                       {t('addCategory') || 'Add'}
                     </BodyMedium>
                   </>

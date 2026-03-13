@@ -368,7 +368,7 @@ export default function AIChatScreen() {
       backgroundColor: colors.overlay,
       borderLeftColor: colors.accent,
       borderLeftWidth: 3,
-      paddingLeft: 12,
+      paddingStart: 12,
       paddingVertical: 4,
       marginVertical: 8,
     },
@@ -415,12 +415,12 @@ export default function AIChatScreen() {
     bullet_list_icon: {
       color: colors.accent,
       fontSize: 14,
-      marginRight: 8,
+      marginEnd: 8,
     },
     ordered_list_icon: {
       color: colors.accent,
       fontSize: 14,
-      marginRight: 8,
+      marginEnd: 8,
     },
     hr: {
       backgroundColor: colors.secondary,
@@ -1169,7 +1169,7 @@ export default function AIChatScreen() {
           style={({ pressed }) => [{ backgroundColor: colors.primary, padding: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }, pressed && { opacity: 0.7 }]}
         >
           <Plus size={20} color={colors.primaryForeground} />
-          <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginLeft: 8 }}>{t('newConversation')}</Text>
+          <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', marginStart: 8 }}>{t('newConversation')}</Text>
         </Pressable>
       </View>
       <ScrollView style={{ flex: 1, padding: 8 }}>
@@ -1197,7 +1197,7 @@ export default function AIChatScreen() {
             <Text
               style={{
                 flex: 1,
-                marginLeft: 8,
+                marginStart: 8,
                 fontSize: 14,
                 color: conv.id === activeConversationId ? colors.accent : colors.foreground,
                 fontFamily: conv.id === activeConversationId ? 'Inter_500Medium' : undefined,
@@ -1372,7 +1372,7 @@ export default function AIChatScreen() {
                   }, pressed && { opacity: 0.7 }]}
                 >
                   <AlertTriangle size={12} color={colors.danger} />
-                  <Text style={{ color: colors.danger, fontSize: 11, marginLeft: 5, fontFamily: 'Inter_500Medium' }}>
+                  <Text style={{ color: colors.danger, fontSize: 11, marginStart: 5, fontFamily: 'Inter_500Medium' }}>
                     {t('responseInterrupted') || 'Response interrupted'} · {t('tapToRetry') || 'Tap to retry'}
                   </Text>
                 </Pressable>
@@ -1420,7 +1420,7 @@ export default function AIChatScreen() {
                 {pendingAction.status === 'loading' && (
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <ActivityIndicator size="small" color={colors.accent} />
-                    <Text style={{ fontSize: 14, color: colors.mutedForeground, marginLeft: 8 }}>
+                    <Text style={{ fontSize: 14, color: colors.mutedForeground, marginStart: 8 }}>
                       {pendingAction.kind === 'transaction' || pendingAction.kind === 'recurring' || pendingAction.kind === 'goal_contribution'
                         ? 'Analyzing…'
                         : 'Fetching rate…'}
@@ -1941,7 +1941,7 @@ export default function AIChatScreen() {
                             }, pressed && { opacity: 0.75 }]}
                           >
                             <Table2 size={13} color={colors.accent} />
-                            <Text style={{ color: colors.foreground, marginLeft: 6, fontSize: 12, fontFamily: 'Inter_500Medium' }}>
+                            <Text style={{ color: colors.foreground, marginStart: 6, fontSize: 12, fontFamily: 'Inter_500Medium' }}>
                               Open Table
                             </Text>
                           </Pressable>
@@ -1980,7 +1980,7 @@ export default function AIChatScreen() {
                             {msg.provider || msg.model ? (
                               <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 7, paddingVertical: 4, borderRadius: 999, backgroundColor: colors.secondary }}>
                                 <Cpu size={11} color={colors.mutedForeground} />
-                                <Text style={{ color: colors.mutedForeground, fontSize: 10, marginLeft: 4 }} numberOfLines={1}>
+                                <Text style={{ color: colors.mutedForeground, fontSize: 10, marginStart: 4 }} numberOfLines={1}>
                                   {[msg.provider, msg.model].filter(Boolean).join(' · ')}
                                 </Text>
                               </View>
@@ -1998,7 +1998,7 @@ export default function AIChatScreen() {
                             {(msg.estimated_cost_usd || msg.billed_cost_usd) ? (
                               <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 7, paddingVertical: 4, borderRadius: 999, backgroundColor: colors.secondary }}>
                                 <Coins size={11} color={colors.mutedForeground} />
-                                <Text style={{ color: colors.mutedForeground, fontSize: 10, marginLeft: 4 }}>
+                                <Text style={{ color: colors.mutedForeground, fontSize: 10, marginStart: 4 }}>
                                   {formatUsd(msg.billed_cost_usd ?? msg.estimated_cost_usd)} {msg.billing_source ? `(${msg.billing_source})` : ''}
                                 </Text>
                               </View>
@@ -2025,7 +2025,7 @@ export default function AIChatScreen() {
                           }, pressed && { opacity: 0.75 }]}
                         >
                           <Activity size={11} color={colors.mutedForeground} />
-                          <Text style={{ color: colors.mutedForeground, fontSize: 10, marginLeft: 4 }}>
+                          <Text style={{ color: colors.mutedForeground, fontSize: 10, marginStart: 4 }}>
                             Agent Activity {activityLabel ? `(${activityLabel})` : ''}
                           </Text>
                         </Pressable>
@@ -2118,7 +2118,7 @@ export default function AIChatScreen() {
                   ]}
                 >
                   <Activity size={13} color={colors.foreground} />
-                  <Text style={{ fontSize: 11, color: colors.foreground, marginLeft: 5 }}>Activity</Text>
+                  <Text style={{ fontSize: 11, color: colors.foreground, marginStart: 5 }}>Activity</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => setIsUsageModalVisible(true)}
@@ -2141,7 +2141,7 @@ export default function AIChatScreen() {
                   ]}
                 >
                   <Coins size={13} color={colors.foreground} />
-                  <Text style={{ fontSize: 11, color: colors.foreground, marginLeft: 5 }}>Usage</Text>
+                  <Text style={{ fontSize: 11, color: colors.foreground, marginStart: 5 }}>Usage</Text>
                 </Pressable>
                 <Pressable
                   onPress={handleNewConversation}
@@ -2164,7 +2164,7 @@ export default function AIChatScreen() {
                   ]}
                 >
                   <Plus size={14} color={colors.foreground} />
-                  <Text style={{ fontSize: 11, color: colors.foreground, marginLeft: 6 }}>{t('newChat') || 'New Chat'}</Text>
+                  <Text style={{ fontSize: 11, color: colors.foreground, marginStart: 6 }}>{t('newChat') || 'New Chat'}</Text>
                 </Pressable>
               </View>
             </View>
@@ -2183,7 +2183,7 @@ export default function AIChatScreen() {
                     style={({ pressed }) => [{ backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 9999, flexDirection: 'row', alignItems: 'center' }, pressed && { opacity: 0.7 }]}
                   >
                     <Plus size={16} color={colors.primaryForeground} />
-                    <Text style={{ color: colors.primaryForeground, fontSize: 14, marginLeft: 4 }}>{t('newConversation')}</Text>
+                    <Text style={{ color: colors.primaryForeground, fontSize: 14, marginStart: 4 }}>{t('newConversation')}</Text>
                   </Pressable>
                   {conversations.map((conv) => (
                     <Pressable
@@ -2235,11 +2235,11 @@ export default function AIChatScreen() {
                           paddingHorizontal: 8,
                           paddingVertical: 4,
                           borderRadius: 6,
-                          marginLeft: 8,
+                          marginStart: 8,
                         }}
                       >
                         <RotateCcw size={12} color={colors.danger} />
-                        <Text style={{ color: colors.danger, fontSize: 11, fontFamily: 'Inter_600SemiBold', marginLeft: 4 }}>
+                        <Text style={{ color: colors.danger, fontSize: 11, fontFamily: 'Inter_600SemiBold', marginStart: 4 }}>
                           {t('retry') || 'Retry'}
                         </Text>
                       </Pressable>
@@ -2356,7 +2356,7 @@ export default function AIChatScreen() {
                       <Text style={{
                         textAlign: 'right',
                         marginTop: 4,
-                        marginRight: 4,
+                        marginEnd: 4,
                         fontSize: 10,
                         color: message.length >= MAX_MESSAGE_LENGTH ? colors.danger : colors.mutedForeground,
                       }}>
@@ -2632,7 +2632,7 @@ export default function AIChatScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Table2 size={15} color={colors.accent} />
-                <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 15, marginLeft: 7 }}>
+                <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 15, marginStart: 7 }}>
                   {tableModalContent?.title || 'Table'}
                 </Text>
               </View>

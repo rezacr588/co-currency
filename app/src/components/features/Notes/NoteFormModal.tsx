@@ -229,7 +229,7 @@ export function NoteFormModal({
                   color={isPinned ? colors.accent : colors.placeholder}
                   fill={isPinned ? colors.accent : 'transparent'}
                 />
-                <Text style={{ color: colors.foreground, marginLeft: 12 }}>
+                <Text style={{ color: colors.foreground, marginStart: 12 }}>
                   {t('pinNote') || 'Pin this note'}
                 </Text>
               </View>

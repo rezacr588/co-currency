@@ -67,7 +67,7 @@ export default function RecurringScreen() {
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Pressable onPress={() => router.back()} style={({ pressed }) => [{ cursor: 'pointer', padding: 8, marginRight: 8 }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('back') || 'Go back'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Pressable onPress={() => router.back()} style={({ pressed }) => [{ cursor: 'pointer', padding: 8, marginEnd: 8 }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('back') || 'Go back'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <ArrowLeft size={24} color={colors.foreground} />
           </Pressable>
           <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('recurring')}</Text>
@@ -255,7 +255,7 @@ function RecurringCard({ transaction, onEdit }: { transaction: RecurringTransact
     <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12, opacity: !transaction.is_active ? 0.6 : 1 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-          <View style={{ marginRight: 12 }}>
+          <View style={{ marginEnd: 12 }}>
             <StyledCategoryIcon
               category={transaction.category || 'other'}
               size={22}
@@ -270,7 +270,7 @@ function RecurringCard({ transaction, onEdit }: { transaction: RecurringTransact
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <FrequencyIcon frequency={transaction.frequency} size={12} color={colors.placeholder} />
-              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginLeft: 4 }}>{t(transaction.frequency)}</Text>
+              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginStart: 4 }}>{t(transaction.frequency)}</Text>
             </View>
           </View>
         </View>
@@ -534,7 +534,7 @@ function RecurringFormModal({ visible, onClose, editTransaction }: { visible: bo
                         borderColor: currency === code ? colors.accent : colors.border,
                       }}
                     >
-                      <Text style={{ marginRight: 4, fontSize: 14 }}>{display.flag || ''}</Text>
+                      <Text style={{ marginEnd: 4, fontSize: 14 }}>{display.flag || ''}</Text>
                       <Text
                         style={{
                           fontSize: 14,
