@@ -12,6 +12,11 @@ export { Select } from './Select';
 export { Toast, ToastProvider, useToast } from './Toast';
 export { SwipeableRow, type SwipeAction } from './SwipeableRow';
 export {
+  MultiStepWizardScreen,
+  WizardStepJumpChips,
+  type MultiStepWizardItem,
+} from './MultiStepWizardScreen';
+export {
   SurfaceCard,
   PageScaffold,
   PageHeader,

@@ -2,9 +2,9 @@ import { useEffect } from 'react';
 import type { Router } from 'expo-router';
 import { usePathname } from 'expo-router';
 import { readStorage, writeStorage } from '../utils/storage';
+import type { AddTransactionStep } from '../types/wallet';
 
 export type AppMode = 'finapp' | 'todo';
-export type AddTransactionStep = 'basics' | 'currency' | 'category' | 'review';
 
 export interface AddTransactionPrefill {
   type?: 'credit' | 'debit';
@@ -33,6 +33,12 @@ const STORAGE_LAST_ROUTE_TODO = 'last_route_todo';
 const NON_APP_PREFIXES = ['/login', '/register', '/forgot-password', '/reset-password', '/about', '/converter', '/auth'];
 const TODO_PATH_PREFIXES = ['/todo', '/planner', '/(app)/planner', '/planner-create', '/(app)/planner-create'] as const;
 const TODO_TRANSIENT_PATHS = ['/planner-create', '/(app)/planner-create'] as const;
+const FINAPP_TRANSIENT_PATHS = [
+  '/(app)/(tabs)/add',
+  '/add',
+  '/transaction-create',
+  '/(app)/transaction-create',
+] as const;
 const FINAPP_PATH_PREFIXES = [
   '/finapp',
   '/(app)/(tabs)',
@@ -59,6 +65,8 @@ const FINAPP_PATH_PREFIXES = [
   '/notification-settings',
   '/challenges',
   '/onboarding',
+  '/transaction-create',
+  '/(app)/transaction-create',
 ] as const;
 const COMPATIBILITY_REDIRECTS: Record<string, string> = {
   '/(app)/planner': '/planner',
@@ -125,6 +133,9 @@ function canPersistRoute(path: string, mode: AppMode): boolean {
   if (mode === 'todo' && TODO_TRANSIENT_PATHS.some((prefix) => matchesPrefix(path, prefix))) {
     return false;
   }
+  if (mode === 'finapp' && FINAPP_TRANSIENT_PATHS.some((prefix) => matchesPrefix(path, prefix))) {
+    return false;
+  }
   return mode === 'todo' ? isTodoPath(path) : isFinAppPath(path);
 }
 
@@ -160,6 +171,12 @@ export async function getLastRouteForMode(mode: AppMode): Promise<string | null>
   if (!stored) return null;
 
   const normalized = canonicalizePath(stored);
+  if (mode === 'todo' && TODO_TRANSIENT_PATHS.some((prefix) => matchesPrefix(normalized, prefix))) {
+    return null;
+  }
+  if (mode === 'finapp' && FINAPP_TRANSIENT_PATHS.some((prefix) => matchesPrefix(normalized, prefix))) {
+    return null;
+  }
   if (isModeRoute(mode, normalized)) {
     return normalized;
   }

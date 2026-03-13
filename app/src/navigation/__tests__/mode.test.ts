@@ -1,17 +1,30 @@
-import { prepareDashboardPostAuthRoute } from '../mode';
-import { writeStorage } from '../../utils/storage';
+import {
+  MODE_DEFAULT_ROUTE,
+  getModeEntryRedirect,
+  rememberModeRoute,
+} from '../mode';
+
+const mockReadStorage = jest.fn();
+const mockWriteStorage = jest.fn();
 
 jest.mock('../../utils/storage', () => ({
-  readStorage: jest.fn(),
-  writeStorage: jest.fn(() => Promise.resolve(true)),
+  readStorage: (...args: unknown[]) => mockReadStorage(...args),
+  writeStorage: (...args: unknown[]) => mockWriteStorage(...args),
 }));
 
-describe('prepareDashboardPostAuthRoute', () => {
-  it('pins post-auth routing to the finapp dashboard entry', async () => {
-    const target = await prepareDashboardPostAuthRoute();
+describe('mode routing persistence', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
-    expect(writeStorage).toHaveBeenNthCalledWith(1, 'current_mode', 'finapp');
-    expect(writeStorage).toHaveBeenNthCalledWith(2, 'last_route_finapp', '/(app)/(tabs)');
-    expect(target).toBe('/finapp');
+  it('does not persist finapp transient routes', async () => {
+    await rememberModeRoute('finapp', '/transaction-create');
+    expect(mockWriteStorage).not.toHaveBeenCalled();
+  });
+
+  it('ignores a stored transaction-create route when resolving finapp entry redirects', async () => {
+    mockReadStorage.mockResolvedValue('/transaction-create');
+
+    await expect(getModeEntryRedirect('finapp')).resolves.toBe(MODE_DEFAULT_ROUTE.finapp);
   });
 });

@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { View, Text, Pressable, RefreshControl, ScrollView, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Wallet, Calendar, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { api } from '../../../src/api';
@@ -30,6 +30,18 @@ import {
   YearlyReportView,
 } from '../../../src/components/features/Reports';
 import { buildHistoryRouteParams, createReportDateFormatter, type ReportHistoryTarget } from '../../../src/components/features/Reports/reportUX';
+
+const REPORT_PERIODS: ReportPeriod[] = ['daily', 'weekly', 'monthly', 'yearly', 'all_time'];
+
+function parseInitialReportPeriod(periodParam: string | string[] | undefined): ReportPeriod {
+  const period = Array.isArray(periodParam) ? periodParam[0] : periodParam;
+
+  if (period && REPORT_PERIODS.includes(period as ReportPeriod)) {
+    return period as ReportPeriod;
+  }
+
+  return 'monthly';
+}
 
 function ReportContextStrip({
   timeZoneLabel,
@@ -426,6 +438,7 @@ export default function ReportsScreen() {
   const theme = useTheme();
   const colors = theme.colors;
   const router = useRouter();
+  const params = useLocalSearchParams<{ period?: string | string[] }>();
   const queryClient = useQueryClient();
   const { reportTimeZone, reportTimeZoneLabel } = useReportTimeZone();
   const [refreshing, setRefreshing] = useState(false);
@@ -442,7 +455,7 @@ export default function ReportsScreen() {
   const categoryCardWidth = categoryCols === 1 ? availableWidth : (availableWidth - cardGap * (categoryCols - 1)) / categoryCols;
 
   // Report period state
-  const [period, setPeriod] = useState<ReportPeriod>('monthly');
+  const [period, setPeriod] = useState<ReportPeriod>(() => parseInitialReportPeriod(params.period));
 
   // Date range state (for monthly view)
   const reportToday = useMemo(() => getTimeZoneDateParts(new Date(), reportTimeZone), [reportTimeZone]);

@@ -376,7 +376,7 @@ export default function PlannerScreen() {
       if (task.ledger_category) params.category = task.ledger_category;
       const desc = task.ledger_description?.trim() || task.title;
       if (desc) params.description = desc;
-      router.push({ pathname: '/(app)/(tabs)/add', params } as any);
+      router.push({ pathname: '/transaction-create', params } as any);
     } catch (error) {
       Alert.alert(t('plannerTransactionError') || 'Could not open transaction flow', error instanceof Error ? error.message : 'Unknown error');
     } finally {

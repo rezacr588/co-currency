@@ -7,6 +7,9 @@ import { buildTheme } from '../../../../theme';
 import ReportsScreen from '../../../../../app/(app)/(tabs)/reports';
 import { api } from '../../../../api';
 
+const mockPush = jest.fn();
+let mockSearchParams: { period?: string | string[] } = {};
+
 jest.mock('../../../../context/LanguageContext', () => ({
   useLanguage: () => ({
     language: 'en',
@@ -46,6 +49,10 @@ jest.mock('../../../../hooks/useReportTimeZone', () => ({
   }),
 }));
 
+jest.mock('../../../navigation/AppSwitcherTrigger', () => ({
+  AppSwitcherTrigger: () => null,
+}));
+
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react');
   const { View } = require('react-native');
@@ -58,8 +65,9 @@ jest.mock('react-native-safe-area-context', () => {
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({
-    push: jest.fn(),
+    push: mockPush,
   }),
+  useLocalSearchParams: () => mockSearchParams,
 }));
 
 jest.mock('../index', () => {
@@ -123,6 +131,7 @@ function renderScreen() {
 describe('ReportsScreen', () => {
   beforeEach(() => {
     jest.useFakeTimers().setSystemTime(new Date('2026-03-06T12:00:00.000Z'));
+    mockSearchParams = {};
     jest.mocked(api.reports.networth).mockResolvedValue({
       total_balance: 1200,
       currency: 'USD',
@@ -149,6 +158,16 @@ describe('ReportsScreen', () => {
     await waitFor(() => {
       expect(screen.getByText('Monthly 2025-4')).toBeTruthy();
       expect(screen.getAllByText('April 2025').length).toBeGreaterThan(0);
+    });
+  });
+
+  it('opens the all-time view when period=all_time is provided in the route params', async () => {
+    mockSearchParams = { period: 'all_time' };
+    const screen = renderScreen();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('selected-period').props.children).toBe('all_time');
+      expect(screen.getByText('All-time mock')).toBeTruthy();
     });
   });
 });

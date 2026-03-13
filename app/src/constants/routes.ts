@@ -20,7 +20,7 @@ export const ROUTES = {
   todoHome: '/todo',
   dashboard: '/(app)/(tabs)',
   wallet: '/(app)/(tabs)/wallet',
-  walletAdd: '/(app)/(tabs)/wallet/add',
+  walletAdd: '/transaction-create',
   walletHistory: '/(app)/(tabs)/wallet/history',
   walletConvert: '/(app)/(tabs)/wallet/convert',
   walletChat: '/(app)/(tabs)/wallet/chat',
