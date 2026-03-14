@@ -217,7 +217,7 @@ export function PlannerCard({
   }, [item.subtask_total, item.subtask_done]);
 
   const cardContent = (
-    <Animated.View style={animatedStyle}>
+    <Animated.View style={[animatedStyle, { width: '100%' }]}>
       <View
         style={{
           backgroundColor: isTask ? colors.card : colors.cardElevated,

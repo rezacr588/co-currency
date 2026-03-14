@@ -589,7 +589,7 @@ export default function ReportsScreen() {
         paddingBottom: bottomPadding,
       }}
       scrollProps={{
-        stickyHeaderIndices: [stickyHeaderIndex],
+        stickyHeaderIndices: (isDesktop || isTablet) ? [stickyHeaderIndex] : undefined,
         refreshControl: <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />,
       }}
     >

@@ -124,8 +124,13 @@ export default function PlannerScreen() {
 
   const boardGap = 12;
   const boardHorizontalPadding = 32;
-  const desktopColumnWidth = 320;
-  const phonePageWidth = Math.max(width - boardHorizontalPadding, 280);
+  const desktopColumnCount = COLUMN_ORDER.length;
+  const desktopColumnWidth = Math.max(
+    Math.floor((width - boardHorizontalPadding - boardGap * (desktopColumnCount - 1)) / desktopColumnCount),
+    240,
+  );
+  // For phone, pagingEnabled requires pages to be exactly the ScrollView width (which is the screen width)
+  const phonePageWidth = width;
   const tabletColumnWidth = Math.max(
     Math.min(Math.floor((width - boardHorizontalPadding - boardGap) / 2), 420),
     300,
@@ -508,10 +513,11 @@ export default function PlannerScreen() {
       pagerRef.current?.scrollTo({ x: index * phonePageWidth, y: 0, animated: true });
       return;
     }
-
-    const columnWidth = isTablet ? tabletColumnWidth : desktopColumnWidth;
-    pagerRef.current?.scrollTo({ x: index * (columnWidth + boardGap), y: 0, animated: true });
-  }, [boardGap, desktopColumnWidth, isPhone, isTablet, phonePageWidth, tabletColumnWidth]);
+    if (isTablet) {
+      pagerRef.current?.scrollTo({ x: index * (tabletColumnWidth + boardGap), y: 0, animated: true });
+    }
+    // On desktop, all columns are visible in flex row — no scroll needed
+  }, [boardGap, isPhone, isTablet, phonePageWidth, tabletColumnWidth]);
 
   // --- Filtering ---
   const filterItems = useCallback((items: TodoItem[]) => {
@@ -537,7 +543,7 @@ export default function PlannerScreen() {
         key={status}
         entering={FadeInDown.duration(420).delay(columnIndex * 56)}
         style={{
-          width: widthOverride ?? (isDesktop ? desktopColumnWidth : phonePageWidth),
+          width: widthOverride ?? '100%',
           borderRadius: 18, borderWidth: 1, borderColor: meta.border,
           backgroundColor: colors.card, padding: 12,
           shadowColor: meta.glow, shadowOpacity: 0.46, shadowRadius: 15, shadowOffset: { width: 0, height: 2 },
@@ -588,7 +594,7 @@ export default function PlannerScreen() {
     );
   }, [
     colors, effectiveBoard, filterItems, handleCompleteTask, handleDeleteTask,
-    desktopColumnWidth, handleMoveItem, isDesktop, launchingTaskID, openAddTransactionForTask,
+    handleMoveItem, isDesktop, launchingTaskID, openAddTransactionForTask,
     phonePageWidth,
     pendingMarkers, completingTaskID, userID, columnLabel, t,
   ]);
@@ -604,56 +610,76 @@ export default function PlannerScreen() {
         {/* Header */}
         <View style={{
           paddingHorizontal: 16,
-          paddingTop: 10,
-          paddingBottom: 12,
+          paddingTop: isDesktop ? 24 : 16,
+          paddingBottom: 16,
           borderBottomWidth: 1,
           borderBottomColor: colors.border,
           flexDirection: 'row',
-          alignItems: isCompactPhone ? 'flex-start' : 'center',
+          alignItems: 'center',
           justifyContent: 'space-between',
-          flexWrap: isCompactPhone ? 'wrap' : 'nowrap',
-          rowGap: 10,
-          columnGap: 12,
         }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1 }}>
             <Pressable
               onPress={() => router.back()}
-              style={({ pressed }) => [{ width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, elevation: 2 }, pressed && { opacity: 0.72 }]}
+              style={({ pressed }) => [{ 
+                width: 40, height: 40, borderRadius: 12, 
+                alignItems: 'center', justifyContent: 'center', 
+                backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+              }, pressed && { opacity: 0.72 }]}
+              accessibilityRole="button"
+              accessibilityLabel={t('goBack') || 'Go Back'}
             >
-              <ArrowLeft size={18} color={colors.foreground} />
+              <ArrowLeft size={20} color={colors.foreground} />
             </Pressable>
-            <View style={{ flexShrink: 1 }}>
-              <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 18 }}>
-                {t('plannerTitle') || 'Todo Planner'}
-              </Text>
-              <Text style={{ color: colors.mutedForeground, fontSize: 12 }} numberOfLines={1}>
-                {t('plannerSubtitle') || 'Your tasks and goals at a glance'}
-              </Text>
+            <View style={{ flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ 
+                width: 32, height: 32, borderRadius: 8, 
+                backgroundColor: colors.accent + '1A', 
+                alignItems: 'center', justifyContent: 'center' 
+              }}>
+                <KanbanSquare size={16} color={colors.accent} />
+              </View>
+              <View style={{ flexShrink: 1 }}>
+                <Text 
+                  style={{ 
+                    color: colors.foreground, 
+                    fontFamily: 'Inter_700Bold', 
+                    fontSize: isDesktop ? 28 : 24,
+                    lineHeight: isDesktop ? 36 : 32,
+                  }}
+                  numberOfLines={1}
+                >
+                  {t('plannerTitle') || 'Todo Planner'}
+                </Text>
+                {!isCompactPhone && (
+                  <Text style={{ color: colors.mutedForeground, fontSize: 13, marginTop: 2 }} numberOfLines={1}>
+                    {t('plannerSubtitle') || 'Your tasks and goals at a glance'}
+                  </Text>
+                )}
+              </View>
             </View>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginStart: isCompactPhone ? 'auto' : 0 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginStart: 12 }}>
             <AppSwitcherTrigger variant="header_inline" />
             <Pressable
               onPress={() => router.push('/planner-create' as any)}
               style={({ pressed }) => [{
-                minWidth: 44,
-                minHeight: 44,
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
                 backgroundColor: colors.accent,
-                paddingHorizontal: isCompactPhone ? 10 : 12,
-                paddingVertical: 8,
+                paddingHorizontal: isCompactPhone ? 12 : 16,
+                paddingVertical: 10,
                 borderRadius: 999,
-                shadowColor: colors.accent, shadowOpacity: 0.38, shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
+                shadowColor: colors.accent, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
                 elevation: 4,
-              }, pressed && { opacity: 0.78 }]}
+              }, pressed && { opacity: 0.85 }]}
               accessibilityRole="button"
               accessibilityLabel={t('plannerNewTask') || 'New Task'}
             >
-              <Plus size={14} color={colors.accentForeground} />
+              <Plus size={16} color={colors.accentForeground} />
               {!isCompactPhone ? (
-                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginStart: 6 }}>
+                <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', fontSize: 14, marginStart: 6 }}>
                   {t('plannerNewTask') || 'New Task'}
                 </Text>
               ) : null}
@@ -894,14 +920,15 @@ export default function PlannerScreen() {
               pagingEnabled
               showsHorizontalScrollIndicator={false}
               onMomentumScrollEnd={(event) => {
-                const index = Math.round(event.nativeEvent.contentOffset.x / phonePageWidth);
+                const index = Math.round(event.nativeEvent.contentOffset.x / width);
                 const safeIndex = Math.max(0, Math.min(index, COLUMN_ORDER.length - 1));
                 setActiveColumn(COLUMN_ORDER[safeIndex]);
               }}
-              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: Math.max(insets.bottom + 20, 30) }}
+              // No horizontal padding on container since pagingEnabled needs accurate width measurements
+              contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 20, 30) }}
             >
               {COLUMN_ORDER.map((status, index) => (
-                <View key={status} style={{ width: phonePageWidth, paddingEnd: 10 }}>
+                <View key={status} style={{ width: width, paddingHorizontal: 16 }}>
                   <ScrollView
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ paddingBottom: 14 }}
@@ -914,7 +941,7 @@ export default function PlannerScreen() {
                       />
                     }
                   >
-                    {renderColumn(status, index, phonePageWidth - 6)}
+                    {renderColumn(status, index, undefined)}
                   </ScrollView>
                 </View>
               ))}
@@ -942,22 +969,33 @@ export default function PlannerScreen() {
                       />
                     }
                   >
-                    {renderColumn(status, index, tabletColumnWidth)}
+                    {renderColumn(status, index, undefined)}
                   </ScrollView>
                 </View>
               ))}
             </ScrollView>
           </View>
         ) : (
-          <ScrollView
-            ref={pagerRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            scrollEnabled={!isDraggingCard}
-            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: Math.max(insets.bottom + 24, 36), gap: boardGap }}
-          >
-            {COLUMN_ORDER.map((status, index) => renderColumn(status, index, desktopColumnWidth))}
-          </ScrollView>
+          <View style={{ flex: 1, flexDirection: 'row', paddingHorizontal: 16, paddingTop: 14, paddingBottom: Math.max(insets.bottom + 24, 36), gap: boardGap }}>
+            {COLUMN_ORDER.map((status, index) => (
+              <View key={status} style={{ flex: 1, minWidth: 240 }}>
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={{ paddingBottom: 14 }}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={isRefreshing}
+                      onRefresh={handleRefresh}
+                      tintColor={colors.accent}
+                      colors={[colors.accent]}
+                    />
+                  }
+                >
+                  {renderColumn(status, index, undefined)}
+                </ScrollView>
+              </View>
+            ))}
+          </View>
         )}
 
         {/* Undo bar */}

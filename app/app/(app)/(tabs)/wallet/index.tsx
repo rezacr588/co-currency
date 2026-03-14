@@ -13,6 +13,8 @@ import { StyledCategoryIcon } from '../../../../src/constants/icons';
 import { AppSwitcherTrigger } from '../../../../src/components/navigation/AppSwitcherTrigger';
 import { PageHeader, PageScaffold } from '../../../../src/components/ui';
 import { Skeleton, SkeletonList, SkeletonTransaction, SkeletonBalance } from '../../../../src/components/ui/Skeleton';
+import { CollapsibleSection } from '../../../../src/components/ui/CollapsibleSection';
+import { CurrencyConverter } from '../../../../src/components/features/CurrencyConverter';
 import { useScreenLayout } from '../../../../src/hooks/useScreenLayout';
 
 export default function WalletScreen() {
@@ -23,19 +25,11 @@ export default function WalletScreen() {
   const { width, isCompactPhone, isDesktop, isTablet } = useScreenLayout();
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
-  const containerPadding = isDesktop ? 32 : isTablet ? 24 : 16;
-  const contentWidth = Math.min(width, 1280);
-  const availableWidth = contentWidth - containerPadding * 2;
-
   // Balance cards: 3 cols on desktop, 2 cols on tablet/mobile
-  const balanceCols = isDesktop ? 3 : 2;
-  const balanceGap = 10;
-  const balanceCardWidth = (availableWidth - balanceGap * (balanceCols - 1)) / balanceCols;
+  const balanceWidthPct = isDesktop ? '32%' : '48%';
 
   // Transaction cards: 2 cols on desktop, 1 on tablet/mobile
-  const txCols = isDesktop ? 2 : 1;
-  const txGap = 12;
-  const txCardWidth = txCols === 1 ? availableWidth : (availableWidth - txGap * (txCols - 1)) / txCols;
+  const txWidthPct = isDesktop ? '48%' : '100%';
 
   const { data: summary, isPending: isLoadingSummary, refetch: refetchSummary } = useQuery({
     queryKey: ['wallet', 'summary'],
@@ -78,9 +72,7 @@ export default function WalletScreen() {
     { label: 'Planner', href: '/todo', icon: KanbanSquare },
   ];
 
-  const featureCols = isDesktop ? 6 : isCompactPhone ? 2 : 3;
-  const featureGap = 16;
-  const featureItemWidth = (availableWidth - featureGap * (featureCols - 1)) / featureCols;
+  const featureWidthPct = isDesktop ? '15%' : isCompactPhone ? '31%' : '23%';
 
   return (
     <PageScaffold
@@ -159,7 +151,8 @@ export default function WalletScreen() {
             style={{
               flexDirection: 'row',
               flexWrap: 'wrap',
-              gap: featureGap,
+              gap: 16,
+              justifyContent: 'flex-start',
             }}
           >
             {quickActions.map((action) => {
@@ -167,7 +160,7 @@ export default function WalletScreen() {
               return (
                 <Link key={action.href} href={action.href as any} asChild>
                   <Pressable
-                    style={({ pressed }) => [{ alignItems: 'center', width: featureItemWidth, minHeight: 44, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                    style={({ pressed }) => [{ alignItems: 'center', width: featureWidthPct, minWidth: 70, minHeight: 44, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
                     accessibilityLabel={action.label}
                     accessibilityRole="button"
                   >
@@ -187,6 +180,13 @@ export default function WalletScreen() {
               );
             })}
           </View>
+        </View>
+
+        {/* 3. CoAI Currency Converter */}
+        <View style={{ marginBottom: 24 }}>
+          <CollapsibleSection title={t('currencyConverter') || 'CoAI Converter'} storageKey="wallet_converter">
+            <CurrencyConverter variant="full" showQuickSelect={false} />
+          </CollapsibleSection>
         </View>
 
         {/* 4. Currency Balances - 2-Column Compact Grid */}
@@ -221,7 +221,7 @@ export default function WalletScreen() {
             </View>
           ) : (
             <>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: balanceGap }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' }}>
                 {displayedBalances.map((balance) => {
                   const display = getCurrencyDisplay(balance.currency);
                   const exposure = showRealValue && wealthOverview
@@ -237,7 +237,8 @@ export default function WalletScreen() {
                       style={{
                         backgroundColor: colors.card,
                         borderRadius: 12,
-                        width: balanceCardWidth,
+                        width: balanceWidthPct,
+                        flexGrow: 1,
                         padding: 12,
                         overflow: 'hidden',
                       }}
@@ -342,7 +343,7 @@ export default function WalletScreen() {
               <Text style={{ color: colors.mutedForeground }}>{t('noTransactions')}</Text>
             </View>
           ) : (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: txGap }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' }}>
               {transactions.slice(0, 5).map((tx) => (
                 <View
                   key={tx.id}
@@ -351,8 +352,7 @@ export default function WalletScreen() {
                     borderRadius: 12,
                     flexDirection: 'row',
                     alignItems: 'center',
-                    width: txCardWidth,
-                    minWidth: txCols === 1 ? undefined : 280,
+                    width: txWidthPct,
                     padding: 16,
                   }}
                 >
