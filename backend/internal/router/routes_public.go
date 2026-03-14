@@ -153,5 +153,6 @@ func registerPublicAPIRoutes(r chi.Router, h *Handlers) {
 	// News routes (public)
 	if h.News != nil {
 		r.Get("/news", h.News.GetNews)
+		r.Get("/news/summary", h.News.GetDailySummary)
 	}
 }

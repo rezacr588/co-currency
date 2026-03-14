@@ -141,7 +141,7 @@ func initServices(cfg *config.Config, db *databases) *services {
 	}
 
 	// Initialize news service (always available)
-	svc.news = service.NewNewsService(cfg.NewsCacheTTL)
+	svc.news = service.NewNewsService(cfg.NewsCacheTTL, svc.ai)
 	log.Info().Msg("News service initialized")
 
 	return svc

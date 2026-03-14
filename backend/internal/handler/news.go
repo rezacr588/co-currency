@@ -35,3 +35,14 @@ func (h *NewsHandler) GetNews(w http.ResponseWriter, r *http.Request) {
 
 	httputil.Success(w, items)
 }
+
+// GetDailySummary handles GET /api/v1/news/summary
+func (h *NewsHandler) GetDailySummary(w http.ResponseWriter, r *http.Request) {
+	summary, err := h.newsService.GetDailySummary(r.Context())
+	if err != nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate daily summary", err)
+		return
+	}
+
+	httputil.Success(w, summary)
+}

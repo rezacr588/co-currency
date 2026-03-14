@@ -3,7 +3,7 @@ import { View, Pressable, ActivityIndicator, RefreshControl } from 'react-native
 import { Link, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, Wallet, ArrowRight, DollarSign, PiggyBank, CreditCard, Bot, PieChart, BarChart3, Target, Shield } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Wallet, ArrowRight, DollarSign, PiggyBank, CreditCard, Bot, PieChart, BarChart3, Target, Shield, Rss } from 'lucide-react-native';
 import styled, { useTheme } from 'styled-components/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { api } from '../../../src/api';
@@ -298,6 +298,47 @@ export default function DashboardScreen() {
           subtitle={user?.name ? `${t('welcomeBack')} ${user.name}` : (t('welcomeBack') || 'Welcome back')}
           actions={!isDesktop ? <AppSwitcherTrigger variant="header_inline" /> : undefined}
         />
+
+        {/* Daily Briefing Banner */}
+        <Link href="/(app)/news" asChild>
+          <Pressable style={({ pressed }) => [
+            {
+              backgroundColor: theme.colors.primary + '15',
+              borderRadius: theme.radii.lg,
+              borderWidth: 1,
+              borderColor: theme.colors.primary + '30',
+              padding: theme.spacing.lg,
+              marginBottom: theme.spacing.lg,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            },
+            pressed && { opacity: 0.7 }
+          ]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+              <View style={{
+                backgroundColor: theme.colors.primary,
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: theme.spacing.md
+              }}>
+                <Rss size={20} color={theme.colors.primaryForeground} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <H3 style={{ color: theme.colors.primary, fontSize: 16 }}>
+                  {t('dailyBriefing') || 'The Daily Briefing'}
+                </H3>
+                <Caption style={{ color: theme.colors.secondaryForeground }}>
+                  {t('viewDailyBriefing') || 'AI-Powered news recommendations & global summary'}
+                </Caption>
+              </View>
+            </View>
+            <ArrowRight size={20} color={theme.colors.primary} />
+          </Pressable>
+        </Link>
 
         {/* Error State */}
         {(isSummaryError || isMonthlyError || isGoalsError || isBudgetsError) && (

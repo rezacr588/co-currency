@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"html"
@@ -14,6 +15,7 @@ import (
 	gocache "github.com/patrickmn/go-cache"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rs/zerolog/log"
+	"github.com/tmc/langchaingo/llms"
 )
 
 // RSS feed structures
@@ -48,25 +50,121 @@ type feedSource struct {
 }
 
 var defaultFeeds = []feedSource{
+	// Markets & Financial
 	{URL: "https://feeds.content.dowjones.io/public/rss/mw_topstories", Name: "MarketWatch", Category: "markets"},
 	{URL: "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^GSPC&region=US&lang=en-US", Name: "Yahoo Finance", Category: "finance"},
 	{URL: "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664", Name: "CNBC", Category: "finance"},
+	// Global Breaking News
+	{URL: "http://rss.cnn.com/rss/cnn_topstories.rss", Name: "CNN Top Stories", Category: "world"},
+	{URL: "http://rss.cnn.com/rss/cnn_latest.rss", Name: "CNN Latest", Category: "breaking"},
+	{URL: "http://feeds.bbci.co.uk/news/world/rss.xml", Name: "BBC World", Category: "world"},
+	{URL: "https://news.google.com/rss/search?q=source:reuters+breaking", Name: "Reuters Breaking", Category: "breaking"},
+	{URL: "https://moxie.foxnews.com/google-publisher/latest.xml", Name: "Fox News", Category: "breaking"},
 }
 
 // NewsService fetches and caches financial news from RSS feeds
 type NewsService struct {
-	cache    *gocache.Cache
-	cacheTTL time.Duration
-	client   *http.Client
+	cache     *gocache.Cache
+	cacheTTL  time.Duration
+	client    *http.Client
+	aiService *AIService
 }
 
 // NewNewsService creates a new NewsService
-func NewNewsService(cacheTTL time.Duration) *NewsService {
+func NewNewsService(cacheTTL time.Duration, aiService *AIService) *NewsService {
 	return &NewsService{
-		cache:    gocache.New(cacheTTL, 10*time.Minute),
-		cacheTTL: cacheTTL,
-		client:   &http.Client{Timeout: 10 * time.Second},
+		cache:     gocache.New(cacheTTL, 10*time.Minute),
+		cacheTTL:  cacheTTL,
+		client:    &http.Client{Timeout: 10 * time.Second},
+		aiService: aiService,
 	}
+}
+
+// GetDailySummary returns an AI-generated daily summary of worldwide and financial news
+func (s *NewsService) GetDailySummary(ctx context.Context) (*model.AINewsSummary, error) {
+	cacheKey := "news:daily_summary"
+	if cached, found := s.cache.Get(cacheKey); found {
+		if summary, ok := cached.(*model.AINewsSummary); ok {
+			return summary, nil
+		}
+	}
+
+	if s.aiService == nil {
+		return nil, fmt.Errorf("AI service not configured")
+	}
+
+	// Fetch top news items (up to 30)
+	items, err := s.GetNews(ctx, 30)
+	if err != nil {
+		return nil, fmt.Errorf("fetching news for summary: %w", err)
+	}
+
+	if len(items) == 0 {
+		return nil, fmt.Errorf("no news items available to summarize")
+	}
+
+	// Prepare data for the LLM
+	var newsText strings.Builder
+	for i, item := range items {
+		newsText.WriteString(fmt.Sprintf("%d. [%s - %s] %s\n", i+1, item.Source, item.Category, item.Title))
+		if item.Description != "" {
+			newsText.WriteString(fmt.Sprintf("   %s\n", item.Description))
+		}
+	}
+
+	llm, err := s.aiService.getLLM(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting LLM: %w", err)
+	}
+
+	prompt := fmt.Sprintf(`You are a world-class financial and global news analyst creating a "Daily Briefing". 
+Analyze the following recent news headlines and output a JSON response. 
+
+Recent News:
+%s
+
+Instructions:
+1. Provide a cohesive, 3-4 sentence summary of the major global events and market movements of the day.
+2. Provide 3-5 brief, actionable recommendations for the user based on these events (e.g., "Market volatility suggests diversifying," or "Consider reviewing tech sector exposure").
+3. Determine the overall sentiment (positive, negative, neutral, volatile).
+4. Determine if there is a highly critical breaking event (set has_breaking_news to true or false).
+5. Return ONLY a valid JSON object with the following structure:
+{
+  "summary": "The global summary text...",
+  "recommendations": ["recommendation 1", "recommendation 2", "recommendation 3"],
+  "sentiment": "positive/negative/neutral/volatile",
+  "has_breaking_news": true/false
+}
+`, newsText.String())
+
+	response, err := llm.GenerateContent(ctx, []llms.MessageContent{
+		{
+			Parts: []llms.ContentPart{llms.TextPart(prompt)},
+			Role:  llms.ChatMessageTypeHuman,
+		},
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("AI generation failed: %w", err)
+	}
+
+	if len(response.Choices) == 0 {
+		return nil, fmt.Errorf("no response from AI")
+	}
+
+	responseText := cleanAIJSON(response.Choices[0].Content)
+
+	var summary model.AINewsSummary
+	if err := json.Unmarshal([]byte(responseText), &summary); err != nil {
+		return nil, fmt.Errorf("parsing AI response: %w", err)
+	}
+
+	summary.Date = time.Now()
+
+	// Cache summary for 4 hours to avoid running the prompt continuously but keep it fresh
+	s.cache.Set(cacheKey, &summary, 4*time.Hour)
+
+	return &summary, nil
 }
 
 // GetNews returns cached or freshly fetched financial news
