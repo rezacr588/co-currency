@@ -40,7 +40,10 @@ func registerPublicRoutes(r *chi.Mux, h *Handlers, staticFS fs.FS) {
 
 			// Resolve path: try exact → .html → /index.html → fallback to index.html
 			resolved := resolveStaticPath(staticFS, path)
-			if resolved != path {
+			if resolved == "index.html" && path != "index.html" {
+				// Avoid FileServer redirecting unknown SPA paths to /index.html.
+				r.URL.Path = "/"
+			} else if resolved != path {
 				r.URL.Path = "/" + resolved
 			}
 

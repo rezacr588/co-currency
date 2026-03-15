@@ -400,6 +400,56 @@ func TestRouter_SPARouting(t *testing.T) {
 	}
 }
 
+func TestRouter_LandingPageIsPublic(t *testing.T) {
+	handlers, rateLimiter, authMiddleware := setupTestRouter()
+
+	mockFS := fstest.MapFS{
+		"index.html": &fstest.MapFile{
+			Data: []byte("<html><body>Landing</body></html>"),
+		},
+	}
+
+	r := New(handlers, rateLimiter, authMiddleware, mockFS)
+
+	req := httptest.NewRequest("GET", "/", nil)
+	rr := httptest.NewRecorder()
+
+	r.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("landing page status = %v, want %v", rr.Code, http.StatusOK)
+	}
+
+	if body := rr.Body.String(); body != "<html><body>Landing</body></html>" {
+		t.Fatalf("landing page body = %q, want %q", body, "<html><body>Landing</body></html>")
+	}
+}
+
+func TestRouter_GoogleVerificationFileIsPublic(t *testing.T) {
+	handlers, rateLimiter, authMiddleware := setupTestRouter()
+
+	mockFS := fstest.MapFS{
+		"google7bc42b08d60d96d7.html": &fstest.MapFile{
+			Data: []byte("google-site-verification: google7bc42b08d60d96d7.html"),
+		},
+	}
+
+	r := New(handlers, rateLimiter, authMiddleware, mockFS)
+
+	req := httptest.NewRequest("GET", "/google7bc42b08d60d96d7.html", nil)
+	rr := httptest.NewRecorder()
+
+	r.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("verification file status = %v, want %v", rr.Code, http.StatusOK)
+	}
+
+	if body := rr.Body.String(); body != "google-site-verification: google7bc42b08d60d96d7.html" {
+		t.Fatalf("verification file body = %q, want %q", body, "google-site-verification: google7bc42b08d60d96d7.html")
+	}
+}
+
 func TestRouter_CORSHeaders(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
 	r := New(handlers, rateLimiter, authMiddleware, nil)
