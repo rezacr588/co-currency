@@ -5,6 +5,7 @@ export default function PublicLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="converter" />
+      <Stack.Screen name="about" />
     </Stack>
   );
 }

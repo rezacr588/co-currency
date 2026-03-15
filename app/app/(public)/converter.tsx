@@ -18,6 +18,42 @@ export default function ConverterScreen() {
         title={t('seoConverterTitle') || 'Free Currency Converter - 160+ Currencies'}
         description={t('seoConverterDesc') || 'Convert between 160+ currencies with real-time ECB exchange rates. Free, fast, and accurate currency converter.'}
         canonicalPath="/converter"
+        ogImageAlt="CoAI currency converter"
+        keywords={[
+          'currency converter',
+          'exchange rates',
+          'live currency conversion',
+          'coai converter',
+          'multi-currency',
+        ]}
+        jsonLd={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'WebPage',
+            name: 'CoAI Currency Converter',
+            url: 'https://coai.koyeb.app/converter',
+            description:
+              'Convert between 160+ currencies with real-time ECB exchange rates and move into the rest of CoAI when you need more context.',
+          },
+          {
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              {
+                '@type': 'ListItem',
+                position: 1,
+                name: 'Home',
+                item: 'https://coai.koyeb.app/',
+              },
+              {
+                '@type': 'ListItem',
+                position: 2,
+                name: 'Converter',
+                item: 'https://coai.koyeb.app/converter',
+              },
+            ],
+          },
+        ]}
       />
       <SectionBlock
         title={t('converterTitle')}

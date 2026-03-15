@@ -38,6 +38,10 @@ export interface User {
   has_google_linked?: boolean;
   has_password?: boolean;
   onboarding_completed?: boolean;
+  preferred_currency?: string;
+  coai_focus_areas?: string[];
+  weekly_brief_enabled?: boolean;
+  proactive_alerts_enabled?: boolean;
   created_at: string;
   updated_at?: string;
 }

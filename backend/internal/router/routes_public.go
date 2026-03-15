@@ -12,6 +12,40 @@ import (
 
 const baseURL = "https://coai.koyeb.app"
 
+type sitemapURL struct {
+	loc        string
+	changefreq string
+	priority   string
+	imageLoc   string
+	imageTitle string
+}
+
+func publicSitemapURLs() []sitemapURL {
+	return []sitemapURL{
+		{
+			loc:        "/",
+			changefreq: "weekly",
+			priority:   "1.0",
+			imageLoc:   baseURL + "/assets/images/icon.png",
+			imageTitle: "CoAI home",
+		},
+		{
+			loc:        "/converter",
+			changefreq: "weekly",
+			priority:   "0.9",
+			imageLoc:   baseURL + "/assets/images/icon.png",
+			imageTitle: "CoAI converter",
+		},
+		{
+			loc:        "/about",
+			changefreq: "monthly",
+			priority:   "0.7",
+			imageLoc:   baseURL + "/assets/images/icon.png",
+			imageTitle: "About CoAI",
+		},
+	}
+}
+
 // registerPublicRoutes registers health endpoints, exchange rate routes,
 // news routes, swagger documentation, SEO files, and static file serving.
 func registerPublicRoutes(r *chi.Mux, h *Handlers, staticFS fs.FS) {
@@ -82,7 +116,23 @@ Disallow: /login
 Disallow: /register
 Disallow: /forgot-password
 Disallow: /reset-password
+Disallow: /finapp
+Disallow: /todo
+Disallow: /profile
+Disallow: /budgets
+Disallow: /recurring
+Disallow: /subscriptions
+Disallow: /badges
+Disallow: /historical
+Disallow: /notes
+Disallow: /note/
+Disallow: /loans
+Disallow: /notification-settings
+Disallow: /challenges
+Disallow: /onboarding
+Disallow: /transaction-create
 Disallow: /api/
+Disallow: /auth/
 Disallow: /swagger/
 Disallow: /health
 
@@ -93,30 +143,22 @@ Sitemap: %s/sitemap.xml
 func serveSitemapXML(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
-
-	type sitemapURL struct {
-		loc        string
-		changefreq string
-		priority   string
-	}
-	urls := []sitemapURL{
-		{"/", "weekly", "1.0"},
-		{"/converter", "weekly", "0.9"},
-		{"/about", "monthly", "0.7"},
-	}
-	langs := []string{"en", "fa", "ar", "tr"}
+	urls := publicSitemapURLs()
 
 	fmt.Fprint(w, `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 `)
 	for _, u := range urls {
 		fmt.Fprintf(w, "  <url>\n    <loc>%s%s</loc>\n    <changefreq>%s</changefreq>\n    <priority>%s</priority>\n",
 			baseURL, u.loc, u.changefreq, u.priority)
-		for _, lang := range langs {
-			fmt.Fprintf(w, "    <xhtml:link rel=\"alternate\" hreflang=\"%s\" href=\"%s%s\"/>\n", lang, baseURL, u.loc)
+		if u.imageLoc != "" {
+			fmt.Fprintf(w, "    <image:image>\n      <image:loc>%s</image:loc>\n", u.imageLoc)
+			if u.imageTitle != "" {
+				fmt.Fprintf(w, "      <image:title>%s</image:title>\n", u.imageTitle)
+			}
+			fmt.Fprint(w, "    </image:image>\n")
 		}
-		fmt.Fprintf(w, "    <xhtml:link rel=\"alternate\" hreflang=\"x-default\" href=\"%s%s\"/>\n", baseURL, u.loc)
 		fmt.Fprint(w, "  </url>\n")
 	}
 	fmt.Fprint(w, "</urlset>\n")

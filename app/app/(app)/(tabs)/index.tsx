@@ -1,697 +1,494 @@
 import { useCallback, useMemo, useState } from 'react';
-import { View, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
-import { Link, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActivityIndicator, Pressable, RefreshControl, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, Wallet, ArrowRight, DollarSign, PiggyBank, CreditCard, Bot, PieChart, BarChart3, Target, Shield, Rss } from 'lucide-react-native';
-import styled, { useTheme } from 'styled-components/native';
-import { LinearGradient } from 'expo-linear-gradient';
+import {
+  AlertTriangle,
+  ArrowRight,
+  Bot,
+  Briefcase,
+  Clock3,
+  Sparkles,
+  Target,
+  Wallet,
+} from 'lucide-react-native';
+import { useTheme } from 'styled-components/native';
 import { api } from '../../../src/api';
+import { AppSwitcherTrigger } from '../../../src/components/navigation/AppSwitcherTrigger';
+import { RecommendedActionCards } from '../../../src/components/features/CoAI/RecommendedActionCards';
+import { Card, PageHeader, PageScaffold, SectionBlock } from '../../../src/components/ui';
 import { useAuth } from '../../../src/context/AuthContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
-import { useReportTimeZone } from '../../../src/hooks/useReportTimeZone';
-import { formatCompactCurrency, formatDate, formatTransactionAmount } from '../../../src/utils/format';
-import { StyledCategoryIcon } from '../../../src/constants/icons';
-import { AppSwitcherTrigger } from '../../../src/components/navigation/AppSwitcherTrigger';
-import { PageHeader, PageScaffold } from '../../../src/components/ui';
-import { Skeleton } from '../../../src/components/ui/Skeleton';
-import { CurrencyConverter } from '../../../src/components/features/CurrencyConverter';
-import { WeeklyRecapCard } from '../../../src/components/features/WeeklyRecap';
-import { SpendingAnomalyCard } from '../../../src/components/features/Reports/SpendingAnomalyCard';
-import { CalendarHeatMap, useHeatMapData } from '../../../src/components/features/CalendarHeatMap';
-import { useToast } from '../../../src/components/ui/Toast';
-import { SmartAdviceCard } from '../../../src/components/features/SmartAdvice';
-import { QuickNotesCard } from '../../../src/components/features/Notes';
-import { FinancialNewsCard } from '../../../src/components/features/News';
-import { HealthScoreCard } from '../../../src/components/features/HealthScore';
-import { RealValueCard } from '../../../src/components/features/RealValue';
-import { CollapsibleSection } from '../../../src/components/ui/CollapsibleSection';
-import { H2, H3, BodyMedium, Caption } from '../../../src/components/ui/styled';
-import type { Goal, Budget } from '../../../src/types/goal';
-import { resolveResponsiveToken } from '../../../src/theme';
-import { useScreenLayout } from '../../../src/hooks/useScreenLayout';
+import { formatCompactCurrency } from '../../../src/utils/format';
+import { openRecommendedAction } from '../../../src/utils/coaiActions';
 
-// ─── Styled Components ───────────────────────────────────────
-const StatCard = styled.View`
-  background-color: ${({ theme }) => theme.colors.card};
-  border-radius: ${({ theme }) => theme.radii.xl}px;
-  padding: ${({ theme }) => theme.spacing.lg}px;
-  border-width: 1px;
-  border-color: ${({ theme }) => theme.colors.borderSubtle};
-`;
-
-const StatRow = styled.View`
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: ${({ theme }) => theme.spacing.md}px;
-`;
-
-const IconCircle = styled.View<{ $bg?: string }>`
-  width: 36px;
-  height: 36px;
-  border-radius: ${({ theme }) => theme.radii.md}px;
-  background-color: ${({ theme, $bg }) => $bg || theme.colors.secondary};
-  align-items: center;
-  justify-content: center;
-`;
-
-const AICardGradient = styled(LinearGradient)`
-  border-radius: ${({ theme }) => theme.radii.xl}px;
-  padding: ${({ theme }) => theme.spacing.lg}px;
-  margin-bottom: ${({ theme }) => theme.spacing.xxl}px;
-`;
-
-const ChipButton = styled.View`
-  background-color: rgba(0, 0, 0, 0.2);
-  padding-horizontal: ${({ theme }) => theme.spacing.md}px;
-  padding-vertical: ${({ theme }) => theme.spacing.sm - 2}px;
-  border-radius: ${({ theme }) => theme.radii.full}px;
-  flex-direction: row;
-  align-items: center;
-`;
-
-const BalanceRow = styled.View`
-  background-color: ${({ theme }) => theme.colors.card};
-  border-radius: ${({ theme }) => theme.radii.lg}px;
-  padding: ${({ theme }) => theme.spacing.lg}px;
-  border-width: 1px;
-  border-color: ${({ theme }) => theme.colors.borderSubtle};
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-`;
-
-const TransactionRow = styled.View`
-  background-color: ${({ theme }) => theme.colors.card};
-  border-radius: ${({ theme }) => theme.radii.lg}px;
-  padding: ${({ theme }) => theme.spacing.lg}px;
-  border-width: 1px;
-  border-color: ${({ theme }) => theme.colors.borderSubtle};
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-`;
-
-const EmptyCard = styled.View`
-  background-color: ${({ theme }) => theme.colors.card};
-  border-radius: ${({ theme }) => theme.radii.lg}px;
-  padding: ${({ theme }) => theme.spacing.xxl}px;
-  border-width: 1px;
-  border-color: ${({ theme }) => theme.colors.borderSubtle};
-  align-items: center;
-`;
-
-const ForecastCard = styled.View`
-  background-color: ${({ theme }) => theme.colors.card};
-  border-radius: ${({ theme }) => theme.radii.xl}px;
-  padding: ${({ theme }) => theme.spacing.lg}px;
-  border-width: 1px;
-  border-color: ${({ theme }) => theme.colors.borderSubtle};
-`;
-
-const InsightCard = styled.View`
-  background-color: ${({ theme }) => theme.colors.muted};
-  border-radius: ${({ theme }) => theme.radii.lg}px;
-  padding: ${({ theme }) => theme.spacing.lg}px;
-  border-width: 1px;
-  border-color: ${({ theme }) => theme.colors.borderSubtle};
-`;
-
-const InsightDot = styled.View<{ $tone: string }>`
-  width: 8px;
-  height: 8px;
-  border-radius: 4px;
-  margin-top: 6px;
-  margin-right: ${({ theme }) => (theme.isRTL ? 0 : theme.spacing.md)}px;
-  margin-left: ${({ theme }) => (theme.isRTL ? theme.spacing.md : 0)}px;
-  background-color: ${({ $tone, theme }) =>
-    $tone === 'warning' ? theme.colors.warning
-      : $tone === 'success' ? theme.colors.success
-        : theme.colors.accent};
-`;
-
-const SectionSpacing = styled.View`
-  margin-bottom: ${({ theme }) => theme.spacing.xxl}px;
-`;
-
-const ErrorBanner = styled.View`
-  background-color: ${({ theme }) => theme.colors.dangerMuted};
-  border-radius: ${({ theme }) => theme.radii.xl}px;
-  padding: ${({ theme }) => theme.spacing.lg}px;
-  margin-bottom: ${({ theme }) => theme.spacing.lg}px;
-  border-width: 1px;
-  border-color: ${({ theme }) => theme.colors.danger + '33'};
-`;
-
-// ─── Component ───────────────────────────────────────────────
-export default function DashboardScreen() {
-  const router = useRouter();
-  const { user } = useAuth();
-  const { t } = useLanguage();
+function SnapshotMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
   const theme = useTheme();
-  const { reportTimeZone } = useReportTimeZone();
-  const insets = useSafeAreaInsets();
-  const { showToast } = useToast();
-  const { width, isDesktop, isTablet } = useScreenLayout();
-  const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
-  const pageGutter = resolveResponsiveToken(theme.layout.pageGutter, width);
-  const contentWidth = Math.min(width, 1280);
-  const availableWidth = contentWidth - pageGutter * 2;
-  const statsGap = theme.spacing.md;
-  const statsCols = isDesktop ? 4 : isTablet ? 2 : 1;
-  const statsCardWidth =
-    statsCols === 1 ? availableWidth : (availableWidth - statsGap * (statsCols - 1)) / statsCols;
 
-  const { data: summary, isPending, isError: isSummaryError, refetch: refetchSummary } = useQuery({
-    queryKey: ['wallet', 'summary'],
-    queryFn: () => api.wallet.getSummary(),
-    staleTime: 2 * 60 * 1000,
-  });
+  return (
+    <View
+      style={{
+        flex: 1,
+        minWidth: 140,
+        borderRadius: theme.radii.lg,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        backgroundColor: theme.colors.secondary,
+        padding: 14,
+      }}
+    >
+      <Text style={{ color: theme.colors.mutedForeground, fontSize: 12 }}>{label}</Text>
+      <Text
+        style={{
+          color: theme.colors.foreground,
+          fontSize: 20,
+          marginTop: 8,
+          fontFamily: theme.typography.h2.fontFamily,
+        }}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
 
-  const { data: monthlyReport, isError: isMonthlyError, refetch: refetchMonthly } = useQuery({
-    queryKey: ['reports', 'monthly', reportTimeZone],
-    queryFn: () => api.reports.monthly(undefined, undefined, undefined, reportTimeZone),
-    staleTime: 2 * 60 * 1000,
-  });
-
-  const { data: goalsData, isError: isGoalsError, refetch: refetchGoals } = useQuery({
-    queryKey: ['goals'],
-    queryFn: () => api.goals.list(),
-    staleTime: 2 * 60 * 1000,
-  });
-  const goals: Goal[] | undefined = goalsData?.goals;
-
-  const { data: budgetsData, isError: isBudgetsError, refetch: refetchBudgets } = useQuery({
-    queryKey: ['budgets'],
-    queryFn: () => api.budgets.list(),
-    staleTime: 2 * 60 * 1000,
-  });
-  const budgets: Budget[] = budgetsData?.budgets || [];
-
-  const { data: forecast } = useQuery({
-    queryKey: ['forecast', reportTimeZone],
-    queryFn: () => api.reports.forecast(undefined, reportTimeZone),
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const heatMap = useHeatMapData(reportTimeZone);
-
-  const { data: aiStatus } = useQuery({
-    queryKey: ['ai-status'],
-    queryFn: () => api.ai.getStatus(),
-  });
-
+export default function CoAIHomeScreen() {
+  const router = useRouter();
+  const theme = useTheme();
+  const { t } = useLanguage();
+  const { user } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await Promise.all([
-      refetchSummary(),
-      refetchMonthly(),
-      refetchGoals(),
-      refetchBudgets(),
-    ]);
-    setRefreshing(false);
-  }, [refetchSummary, refetchMonthly, refetchGoals, refetchBudgets]);
 
-  const handleOpenHealthScoreDetails = useCallback(() => {
-    router.push({
-      pathname: '/(app)/(tabs)/reports',
-      params: { period: 'all_time' },
-    });
+  const {
+    data: briefData,
+    isPending,
+    isError,
+    refetch: refetchBrief,
+  } = useQuery({
+    queryKey: ['coai-brief'],
+    queryFn: () => api.coai.getBrief(),
+    staleTime: 60 * 1000,
+  });
+
+  const { data: conversationsData, refetch: refetchConversations } = useQuery({
+    queryKey: ['ai-conversations'],
+    queryFn: () => api.chat.listConversations(),
+    staleTime: 30 * 1000,
+  });
+
+  const recentConversation = conversationsData?.conversations?.[0];
+  const snapshot = briefData?.context_snapshot;
+  const hasSetupData = Boolean(
+    snapshot &&
+      (snapshot.recent_transaction_count > 0 ||
+        snapshot.active_budget_count > 0 ||
+        snapshot.active_goal_count > 0 ||
+        snapshot.total_balance > 0)
+  );
+
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return t('goodMorning') || 'Good morning';
+    if (hour < 18) return t('goodAfternoon') || 'Good afternoon';
+    return t('goodEvening') || 'Good evening';
+  }, [t]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchBrief(), refetchConversations()]);
+    setRefreshing(false);
+  }, [refetchBrief, refetchConversations]);
+
+  const handleAskCoAI = useCallback(() => {
+    router.push('/(app)/coai-chat' as any);
   }, [router]);
 
-  const totalGoals = goals?.length || 0;
-  const activeGoals = goals?.filter((g) => g.current_amount < g.target_amount).length || 0;
+  const handleResumeConversation = useCallback(() => {
+    if (!recentConversation) return;
+    router.push({
+      pathname: '/(app)/coai-chat',
+      params: { conversationId: recentConversation.id },
+    } as any);
+  }, [recentConversation, router]);
 
-  const totalBudget = budgets.reduce((acc, b) => acc + b.amount, 0);
-  const totalSpent = budgets.reduce((acc, b) => acc + (b.spent || 0), 0);
-  const budgetPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
-
-  type Insight = { title: string; detail: string; tone: 'warning' | 'success' | 'info' };
-  const insights: Insight[] = [];
-
-  if (monthlyReport?.income && monthlyReport?.expenses) {
-    const income = monthlyReport.income;
-    const expenses = monthlyReport.expenses;
-    if (expenses > income) {
-      insights.push({
-        title: t('spendingExceedsIncome') || 'Spending exceeds income',
-        detail: t('spentMoreThanEarned') || `You spent ${formatCompactCurrency(expenses - income, monthlyReport.currency)} more than you earned this month.`,
-        tone: 'warning',
-      });
-    } else if (income > 0) {
-      const savingsRate = (income - expenses) / income;
-      insights.push({
-        title: `${t('savingsRate') || 'Savings rate'}: ${Math.round(savingsRate * 100)}%`,
-        detail: savingsRate < 0.2
-          ? (t('nudgeSavings') || 'Try nudging this toward 20% by trimming one category.')
-          : (t('keepSavingsPace') || 'Nice work — keep this pace to grow your savings.'),
-        tone: savingsRate < 0.2 ? 'info' : 'success',
-      });
-    }
-  }
-
-  const topCategory = useMemo(() => {
-    if (!summary?.recent_transactions?.length) return null;
-    const categoryCounts = summary.recent_transactions
-      .filter((tx: any) => tx?.type === 'debit' && tx?.category)
-      .reduce((acc: Record<string, number>, tx: any) => {
-        acc[tx.category] = (acc[tx.category] || 0) + 1;
-        return acc;
-      }, {});
-    return Object.keys(categoryCounts).sort(
-      (a, b) => categoryCounts[b] - categoryCounts[a]
-    )[0] || null;
-  }, [summary]);
-
-  if (topCategory) {
-    const readable = topCategory.replace(/_/g, ' ');
-    insights.push({
-      title: `${t('topSpending') || 'Top spending'}: ${readable}`,
-      detail: t('considerWeeklyLimit') || 'Consider setting a small weekly limit to stay on track.',
-      tone: 'info',
-    });
-  }
-
-  if (totalGoals === 0) {
-    insights.push({
-      title: t('setFirstGoal') || 'Set your first goal',
-      detail: t('simpleTargetHelps') || 'A simple target helps you see progress faster.',
-      tone: 'info',
-    });
-  }
+  const toolLinks = [
+    {
+      title: 'Planner',
+      description: 'Keep tasks and money actions connected.',
+      href: '/planner',
+      icon: Briefcase,
+    },
+    {
+      title: 'Subscriptions',
+      description: 'Review recurring services and upcoming renewals.',
+      href: '/(app)/subscriptions',
+      icon: Clock3,
+    },
+    {
+      title: t('tools') || 'Tools',
+      description: 'Open badges, notes, challenges, and historical tools.',
+      href: '/(app)/tools',
+      icon: Sparkles,
+    },
+  ];
 
   return (
     <PageScaffold
       scroll
-      maxWidth={1280}
-      contentContainerStyle={{
-        paddingBottom: bottomPadding,
-      }}
+      maxWidth={1120}
       scrollProps={{
-        refreshControl: <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />,
+        refreshControl: <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />,
       }}
     >
-        <PageHeader
-          title={t('dashboard')}
-          subtitle={user?.name ? `${t('welcomeBack')} ${user.name}` : (t('welcomeBack') || 'Welcome back')}
-          actions={!isDesktop ? <AppSwitcherTrigger variant="header_inline" /> : undefined}
-        />
+      <PageHeader
+        title="CoAI"
+        subtitle="Your personal finance copilot. Ask questions, review what changed, and act from one place."
+        actions={<AppSwitcherTrigger variant="header_inline" />}
+      />
 
-        {/* Daily Briefing Banner */}
-        <Link href="/(app)/news" asChild>
-          <Pressable style={({ pressed }) => [
-            {
-              backgroundColor: theme.colors.primary + '15',
-              borderRadius: theme.radii.lg,
-              borderWidth: 1,
-              borderColor: theme.colors.primary + '30',
-              padding: theme.spacing.lg,
-              marginBottom: theme.spacing.lg,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            },
-            pressed && { opacity: 0.7 }
-          ]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-              <View style={{
-                backgroundColor: theme.colors.primary,
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: theme.spacing.md
-              }}>
-                <Rss size={20} color={theme.colors.primaryForeground} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <H3 style={{ color: theme.colors.primary, fontSize: 16 }}>
-                  {t('dailyBriefing') || 'The Daily Briefing'}
-                </H3>
-                <Caption style={{ color: theme.colors.secondaryForeground }}>
-                  {t('viewDailyBriefing') || 'AI-Powered news recommendations & global summary'}
-                </Caption>
-              </View>
-            </View>
-            <ArrowRight size={20} color={theme.colors.primary} />
-          </Pressable>
-        </Link>
-
-        {/* Error State */}
-        {(isSummaryError || isMonthlyError || isGoalsError || isBudgetsError) && (
-          <ErrorBanner>
-            <BodyMedium $color={theme.colors.danger}>{t('failedToLoad') || 'Failed to load data'}</BodyMedium>
-            <Caption $color={theme.colors.danger + 'B3'} style={{ marginTop: 4 }}>
-              {isSummaryError && isMonthlyError
-                ? (t('failedToLoadDashboard') || 'Could not load your dashboard data. Please check your connection.')
-                : isSummaryError
-                  ? (t('failedToLoadBalance') || 'Could not load balance information.')
-                  : isBudgetsError
-                    ? (t('failedToLoadBudgets') || 'Could not load budget data.')
-                    : (t('checkConnection') || 'Please check your connection and try again.')}
-            </Caption>
-            <Pressable
-              onPress={() => {
-                if (isSummaryError) refetchSummary();
-                if (isMonthlyError) refetchMonthly();
-                if (isGoalsError) refetchGoals();
-                if (isBudgetsError) refetchBudgets();
-              }}
+      <Card variant="gradient" style={{ marginBottom: 24 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <View style={{ flex: 1, minWidth: 260 }}>
+            <Text style={{ color: theme.colors.primaryForeground + 'CC', fontSize: 13 }}>
+              {greeting}, {user?.name || 'there'}
+            </Text>
+            <Text
               style={{
-                backgroundColor: theme.colors.danger + '33',
-                paddingHorizontal: theme.spacing.lg,
-                paddingVertical: theme.spacing.sm,
-                borderRadius: theme.radii.md,
-                marginTop: theme.spacing.md,
-                alignSelf: 'flex-start',
+                color: theme.colors.primaryForeground,
+                fontSize: 30,
+                lineHeight: 38,
+                marginTop: 8,
+                fontFamily: theme.typography.h1.fontFamily,
               }}
             >
-              <BodyMedium $color={theme.colors.danger}>{t('retry') || 'Retry'}</BodyMedium>
+              {hasSetupData ? 'CoAI Home' : 'Set up CoAI'}
+            </Text>
+            <Text
+              style={{
+                color: theme.colors.primaryForeground + 'D8',
+                fontSize: 15,
+                lineHeight: 22,
+                marginTop: 12,
+                maxWidth: 680,
+              }}
+            >
+              {briefData?.brief ||
+                'Add a balance, transaction, budget, or goal and CoAI will start turning your numbers into guidance.'}
+            </Text>
+            {briefData?.generated_at ? (
+              <Text style={{ color: theme.colors.primaryForeground + 'B8', fontSize: 12, marginTop: 12 }}>
+                Updated {new Date(briefData.generated_at).toLocaleString()}
+              </Text>
+            ) : null}
+          </View>
+
+          <View style={{ minWidth: 240, gap: 10 }}>
+            <Pressable
+              onPress={handleAskCoAI}
+              accessibilityRole="button"
+              accessibilityLabel="Ask CoAI"
+              style={({ pressed }) => [
+                {
+                  minHeight: 46,
+                  borderRadius: theme.radii.lg,
+                  backgroundColor: theme.colors.background,
+                  paddingHorizontal: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                },
+                pressed && { opacity: 0.76 },
+              ]}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Bot size={18} color={theme.colors.foreground} />
+                <Text
+                  style={{
+                    color: theme.colors.foreground,
+                    fontSize: 14,
+                    fontFamily: theme.typography.bodyMedium.fontFamily,
+                  }}
+                >
+                  Ask CoAI
+                </Text>
+              </View>
+              <ArrowRight size={16} color={theme.colors.foreground} />
             </Pressable>
-          </ErrorBanner>
-        )}
 
-        {/* Spending Anomaly Alert */}
-        <SpendingAnomalyCard compact />
-
-        {/* Spending Calendar Heat Map */}
-        <SectionSpacing>
-          <CollapsibleSection title={t('spendingCalendar') || 'Spending Calendar'} storageKey="dashboard_heatmap">
-            {heatMap.isPending ? <Skeleton width="100%" height={200} /> : (
-              <CalendarHeatMap
-                data={heatMap.data}
-                weeks={12}
-                currency={heatMap.currency}
-                onDayPress={(date, amount) => {
-                  if (amount > 0) showToast(`${date}: ${formatCompactCurrency(amount, heatMap.currency)} ${t('spentOnDate') || 'spent'}`, 'info');
-                }}
-              />
-            )}
-          </CollapsibleSection>
-        </SectionSpacing>
-
-        {/* Stats Grid */}
-        <View
-          style={{
-            flexDirection: statsCols > 1 ? 'row' : 'column',
-            flexWrap: 'wrap',
-            gap: statsGap,
-            marginBottom: theme.spacing.xxl,
-          }}
-        >
-          {/* Total Balance */}
-          <View style={{ width: statsCardWidth, minWidth: isDesktop ? 200 : undefined }}>
-            <StatCard style={theme.shadows.sm}>
-              <StatRow>
-                <Caption>{t('totalBalance')}</Caption>
-                <IconCircle>
-                  <DollarSign size={16} color={theme.colors.mutedForeground} />
-                </IconCircle>
-              </StatRow>
-              {isPending ? (
-                <Skeleton width={120} height={28} />
-              ) : (
-                <H2>{formatCompactCurrency(summary?.total_balance_usd || 0, 'USD')}</H2>
-              )}
-            </StatCard>
-          </View>
-
-          {/* Income */}
-          {monthlyReport && (
-            <View style={{ width: statsCardWidth, minWidth: isDesktop ? 200 : undefined }}>
-              <StatCard style={theme.shadows.sm}>
-                <StatRow>
-                  <Caption>{t('income')}</Caption>
-                  <IconCircle $bg={theme.colors.successMuted}>
-                    <TrendingUp size={16} color={theme.colors.success} />
-                  </IconCircle>
-                </StatRow>
-                <H2 $color={theme.colors.success}>
-                  {formatCompactCurrency(monthlyReport.income, monthlyReport.currency)}
-                </H2>
-                <Caption style={{ marginTop: 4 }}>{t('thisMonth')}</Caption>
-              </StatCard>
-            </View>
-          )}
-
-          {/* Expenses */}
-          {monthlyReport && (
-            <View style={{ width: statsCardWidth, minWidth: isDesktop ? 200 : undefined }}>
-              <StatCard style={theme.shadows.sm}>
-                <StatRow>
-                  <Caption>{t('expenses')}</Caption>
-                  <IconCircle $bg={theme.colors.dangerMuted}>
-                    <TrendingDown size={16} color={theme.colors.danger} />
-                  </IconCircle>
-                </StatRow>
-                <H2 $color={theme.colors.danger}>
-                  {formatCompactCurrency(monthlyReport.expenses, monthlyReport.currency)}
-                </H2>
-                <Caption style={{ marginTop: 4 }}>{t('thisMonth')}</Caption>
-              </StatCard>
-            </View>
-          )}
-
-          {/* Goals Progress */}
-          <View style={{ width: statsCardWidth, minWidth: isDesktop ? 200 : undefined }}>
-            <StatCard style={theme.shadows.sm}>
-              <StatRow>
-                <Caption>{t('financialGoals')}</Caption>
-                <IconCircle>
-                  <PiggyBank size={16} color={theme.colors.mutedForeground} />
-                </IconCircle>
-              </StatRow>
-              <H2>{activeGoals} / {totalGoals}</H2>
-              <Caption style={{ marginTop: 4 }}>{t('activeGoals')}</Caption>
-            </StatCard>
-          </View>
-
-          {/* Budget Status */}
-          {budgets.length > 0 && (
-            <View style={{ width: statsCardWidth, minWidth: isDesktop ? 200 : undefined }}>
-              <StatCard style={theme.shadows.sm}>
-                <StatRow>
-                  <Caption>{t('budgetStatus') || 'Budget'}</Caption>
-                  <IconCircle $bg={budgetPercentage > 90 ? theme.colors.dangerMuted : budgetPercentage > 70 ? theme.colors.warningMuted : theme.colors.successMuted}>
-                    <PieChart size={16} color={budgetPercentage > 90 ? theme.colors.danger : budgetPercentage > 70 ? theme.colors.warning : theme.colors.success} />
-                  </IconCircle>
-                </StatRow>
-                <H2 $color={budgetPercentage > 90 ? theme.colors.danger : budgetPercentage > 70 ? theme.colors.warning : theme.colors.success}>
-                  {budgetPercentage}%
-                </H2>
-                <Caption style={{ marginTop: 4 }}>
-                  {formatCompactCurrency(totalSpent, 'USD')} / {formatCompactCurrency(totalBudget, 'USD')}
-                </Caption>
-              </StatCard>
-            </View>
-          )}
-        </View>
-
-        {/* AI Financial Advisor Card */}
-        {aiStatus?.configured && (
-          <AICardGradient
-            colors={[theme.colors.primary, theme.colors.primaryHover] as [string, string]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={theme.shadows.glow(theme.colors.primary)}
-          >
-            <Link href="/(app)/(tabs)/wallet/chat" asChild>
-              <Pressable style={({ pressed }) => [pressed && { opacity: 0.85 }]} accessibilityLabel={t('aiAdvisor') || 'AI Financial Advisor'} accessibilityRole="button">
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View
+            {recentConversation ? (
+              <Pressable
+                onPress={handleResumeConversation}
+                accessibilityRole="button"
+                accessibilityLabel="Resume recent conversation"
+                style={({ pressed }) => [
+                  {
+                    minHeight: 46,
+                    borderRadius: theme.radii.lg,
+                    borderWidth: 1,
+                    borderColor: theme.colors.primaryForeground + '44',
+                    backgroundColor: 'rgba(255,255,255,0.12)',
+                    paddingHorizontal: 16,
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexDirection: 'row',
+                  },
+                  pressed && { opacity: 0.76 },
+                ]}
+              >
+                <View style={{ flex: 1, marginEnd: 12 }}>
+                  <Text style={{ color: theme.colors.primaryForeground + 'CC', fontSize: 11 }}>
+                    Recent conversation
+                  </Text>
+                  <Text
                     style={{
-                      width: 48, height: 48,
-                      borderRadius: theme.radii.lg,
-                      backgroundColor: 'rgba(0,0,0,0.15)',
-                      alignItems: 'center', justifyContent: 'center',
-                      marginEnd: theme.spacing.lg,
+                      color: theme.colors.primaryForeground,
+                      fontSize: 13,
+                      marginTop: 3,
+                      fontFamily: theme.typography.bodyMedium.fontFamily,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {recentConversation.title}
+                  </Text>
+                </View>
+                <ArrowRight size={16} color={theme.colors.primaryForeground} />
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+      </Card>
+
+      {isPending && !briefData ? (
+        <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={theme.colors.accent} />
+        </View>
+      ) : null}
+
+      {isError ? (
+        <Card style={{ marginBottom: 24 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <AlertTriangle size={18} color={theme.colors.warning} />
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  color: theme.colors.foreground,
+                  fontFamily: theme.typography.bodyMedium.fontFamily,
+                }}
+              >
+                CoAI brief is unavailable right now.
+              </Text>
+              <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginTop: 4 }}>
+                Chat and the rest of the app still work. Pull to retry.
+              </Text>
+            </View>
+          </View>
+        </Card>
+      ) : null}
+
+      <SectionBlock
+        title="Recommended actions"
+        subtitle="Guided steps CoAI thinks are worth doing next."
+      >
+        <RecommendedActionCards
+          actions={briefData?.recommended_actions ?? []}
+          onActionPress={(action) => openRecommendedAction(router, action)}
+        />
+      </SectionBlock>
+
+      <SectionBlock
+        title="Top priorities"
+        subtitle="The short list CoAI wants you to pay attention to."
+      >
+        <View style={{ gap: 12 }}>
+          {(briefData?.priorities ?? []).map((priority) => (
+            <Card key={priority.id}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      color: theme.colors.foreground,
+                      fontSize: 16,
+                      fontFamily: theme.typography.bodyMedium.fontFamily,
                     }}
                   >
-                    <Bot size={24} color={theme.colors.accentForeground} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <BodyMedium $color={theme.colors.accentForeground} style={{ fontFamily: theme.typography.h3.fontFamily, fontSize: 16 }}>
-                      {t('aiAdvisor') || 'AI Financial Advisor'}
-                    </BodyMedium>
-                    <Caption $color={theme.colors.accentForeground + 'B3'}>
-                      {t('getPersonalizedAdvice') || 'Get personalized advice'}
-                    </Caption>
-                  </View>
-                  <ArrowRight size={20} color={theme.colors.accentForeground} />
+                    {priority.title}
+                  </Text>
+                  <Text style={{ color: theme.colors.mutedForeground, fontSize: 14, lineHeight: 20, marginTop: 6 }}>
+                    {priority.description}
+                  </Text>
                 </View>
-              </Pressable>
-            </Link>
-            {/* Quick Action Chips */}
-            <View style={{ flexDirection: 'row', marginTop: theme.spacing.md, gap: theme.spacing.sm, flexWrap: 'wrap' }}>
-              <Link href={{ pathname: '/(app)/(tabs)/wallet/chat', params: { prompt: 'Analyze my spending this month' } }} asChild>
-                <Pressable style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
-                  <ChipButton>
-                    <BarChart3 size={12} color={theme.colors.accentForeground} />
-                    <Caption $color={theme.colors.accentForeground} style={{ marginStart: 4 }}>
-                      {t('analyzeSpending') || 'Analyze spending'}
-                    </Caption>
-                  </ChipButton>
-                </Pressable>
-              </Link>
-              <Link href={{ pathname: '/(app)/(tabs)/wallet/chat', params: { prompt: 'How am I doing with my budgets?' } }} asChild>
-                <Pressable style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
-                  <ChipButton>
-                    <PieChart size={12} color={theme.colors.accentForeground} />
-                    <Caption $color={theme.colors.accentForeground} style={{ marginStart: 4 }}>
-                      {t('budgetCheck') || 'Budget check'}
-                    </Caption>
-                  </ChipButton>
-                </Pressable>
-              </Link>
-              <Link href={{ pathname: '/(app)/(tabs)/wallet/chat', params: { prompt: 'Give me advice on reaching my goals faster' } }} asChild>
-                <Pressable style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
-                  <ChipButton>
-                    <Target size={12} color={theme.colors.accentForeground} />
-                    <Caption $color={theme.colors.accentForeground} style={{ marginStart: 4 }}>
-                      {t('goalAdvice') || 'Goal advice'}
-                    </Caption>
-                  </ChipButton>
-                </Pressable>
-              </Link>
-              <Link href={{ pathname: '/(app)/(tabs)/wallet/chat', params: { prompt: 'Analyze my purchasing power and suggest how to protect my wealth from inflation' } }} asChild>
-                <Pressable style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
-                  <ChipButton>
-                    <Shield size={12} color={theme.colors.accentForeground} />
-                    <Caption $color={theme.colors.accentForeground} style={{ marginStart: 4 }}>
-                      {t('wealthProtection') || 'Wealth protection'}
-                    </Caption>
-                  </ChipButton>
-                </Pressable>
-              </Link>
-            </View>
-          </AICardGradient>
-        )}
-
-        {/* Real Value - Purchasing Power (always visible) */}
-        <SectionSpacing>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
-            <H3 style={{ fontSize: 16 }}>{t('realValue') || 'Real Value'}</H3>
-            <Link href="/(app)/real-value" asChild>
-              <Pressable hitSlop={8} style={{ minHeight: 44, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }}>
-                <Caption style={{ marginEnd: 4 }}>{t('viewRealValueDetails') || 'View Details'}</Caption>
-                <ArrowRight size={14} color={theme.colors.mutedForeground} />
-              </Pressable>
-            </Link>
-          </View>
-          <RealValueCard compact />
-        </SectionSpacing>
-
-        {/* Financial Health Score */}
-        <SectionSpacing>
-          <CollapsibleSection title={t('financialHealth') || 'Financial Health'} storageKey="dashboard_health">
-            <HealthScoreCard compact onViewDetails={handleOpenHealthScoreDetails} />
-          </CollapsibleSection>
-        </SectionSpacing>
-
-        {/* Smart AI Advice */}
-        <SectionSpacing>
-          <CollapsibleSection title={t('smartAdvice') || 'AI Advisor'} storageKey="dashboard_advice">
-            <SmartAdviceCard />
-          </CollapsibleSection>
-        </SectionSpacing>
-
-        {/* Quick Notes */}
-        <SectionSpacing>
-          <CollapsibleSection title={t('quickNotes') || 'Quick Notes'} storageKey="dashboard_notes">
-            <QuickNotesCard />
-          </CollapsibleSection>
-        </SectionSpacing>
-
-        {/* Weekly Recap Card */}
-        {aiStatus?.configured && (
-          <SectionSpacing>
-            <CollapsibleSection title={t('weeklyRecap') || 'Weekly Recap'} storageKey="dashboard_recap">
-              <WeeklyRecapCard />
-            </CollapsibleSection>
-          </SectionSpacing>
-        )}
-
-        {/* Financial News */}
-        <SectionSpacing>
-          <CollapsibleSection title={t('financialNews') || 'Financial News'} storageKey="dashboard_news" defaultCollapsed>
-            <FinancialNewsCard />
-          </CollapsibleSection>
-        </SectionSpacing>
-
-        {/* Spending Forecast */}
-        {forecast && forecast.avg_daily_spend > 0 && (
-          <SectionSpacing>
-            <CollapsibleSection title={t('spendingForecast') || 'Spending Forecast'} storageKey="dashboard_forecast">
-              <ForecastCard style={theme.shadows.sm}>
-                <Caption style={{ marginBottom: theme.spacing.md }}>{t('basedOnLast30Days') || 'Based on last 30 days'}</Caption>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <View style={{ alignItems: 'center', flex: 1 }}>
-                    <Caption>{t('dailySpend') || 'Daily Spend'}</Caption>
-                    <BodyMedium $color={theme.colors.danger}>
-                      -{formatCompactCurrency(forecast.avg_daily_spend, forecast.currency)}
-                    </BodyMedium>
-                  </View>
-                  <View style={{ alignItems: 'center', flex: 1 }}>
-                    <Caption>{t('dailyIncome') || 'Daily Income'}</Caption>
-                    <BodyMedium $color={theme.colors.success}>
-                      +{formatCompactCurrency(forecast.avg_daily_income, forecast.currency)}
-                    </BodyMedium>
-                  </View>
-                  <View style={{ alignItems: 'center', flex: 1 }}>
-                    <Caption>{t('netFlow') || 'Net Flow'}</Caption>
-                    <BodyMedium $color={forecast.net_daily_flow >= 0 ? theme.colors.success : theme.colors.danger}>
-                      {`${forecast.net_daily_flow >= 0 ? '+' : '-'}${formatCompactCurrency(Math.abs(forecast.net_daily_flow), forecast.currency)}`}
-                    </BodyMedium>
-                  </View>
-                </View>
-                {forecast.net_daily_flow < 0 && forecast.days_until_zero > 0 && (
-                  <View style={{
-                    backgroundColor: theme.colors.dangerMuted,
-                    borderWidth: 1, borderColor: theme.colors.danger + '33',
-                    padding: theme.spacing.md, borderRadius: theme.radii.md,
-                    marginTop: theme.spacing.lg,
-                  }}>
-                    <Caption $color={theme.colors.danger} style={{ textAlign: 'center', fontFamily: theme.typography.bodyMedium.fontFamily }}>
-                      {t('balanceReachesZeroIn') || `At this rate, balance reaches zero in ${forecast.days_until_zero} days`}
-                    </Caption>
-                  </View>
-                )}
-              </ForecastCard>
-            </CollapsibleSection>
-          </SectionSpacing>
-        )}
-
-        {/* Insights */}
-        <SectionSpacing>
-          <CollapsibleSection title={t('insights') || 'Insights'} storageKey="dashboard_insights">
-            <ForecastCard style={theme.shadows.sm}>
-              <View style={{ gap: theme.spacing.md }}>
-                {insights.length === 0 ? (
-                  <InsightCard>
-                    <Caption>{t('addTransactionsForInsights') || 'Add a few transactions to unlock personalized insights.'}</Caption>
-                  </InsightCard>
-                ) : (
-                  insights.slice(0, 3).map((insight, idx) => (
-                    <InsightCard key={idx}>
-                      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                        <InsightDot $tone={insight.tone} />
-                        <View style={{ flex: 1 }}>
-                          <BodyMedium style={{ fontSize: 13 }}>{insight.title}</BodyMedium>
-                          <Caption style={{ marginTop: 4 }}>{insight.detail}</Caption>
-                        </View>
-                      </View>
-                    </InsightCard>
-                  ))
-                )}
+                {priority.target_route ? (
+                  <Pressable
+                    onPress={() => router.push(priority.target_route as any)}
+                    style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+                  >
+                    <ArrowRight size={18} color={theme.colors.primary} />
+                  </Pressable>
+                ) : null}
               </View>
-            </ForecastCard>
-          </CollapsibleSection>
-        </SectionSpacing>
+            </Card>
+          ))}
 
+          {(briefData?.priorities?.length ?? 0) === 0 ? (
+            <Card>
+              <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily }}>
+                CoAI has no urgent priorities yet.
+              </Text>
+              <Text style={{ color: theme.colors.mutedForeground, fontSize: 14, marginTop: 8 }}>
+                Add a few transactions or a goal and the priority stack will become more specific.
+              </Text>
+            </Card>
+          ) : null}
+        </View>
+      </SectionBlock>
 
+      <SectionBlock
+        title="Alerts"
+        subtitle="Budget risk, anomalies, and follow-ups CoAI surfaced from your data."
+      >
+        <View style={{ gap: 12 }}>
+          {(briefData?.alerts ?? []).map((alert) => (
+            <Card key={alert.id}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 999,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor:
+                      alert.severity === 'critical'
+                        ? theme.colors.danger + '18'
+                        : alert.severity === 'warning'
+                          ? theme.colors.warning + '18'
+                          : theme.colors.info + '18',
+                  }}
+                >
+                  <AlertTriangle
+                    size={16}
+                    color={
+                      alert.severity === 'critical'
+                        ? theme.colors.danger
+                        : alert.severity === 'warning'
+                          ? theme.colors.warning
+                          : theme.colors.info
+                    }
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      color: theme.colors.foreground,
+                      fontSize: 15,
+                      fontFamily: theme.typography.bodyMedium.fontFamily,
+                    }}
+                  >
+                    {alert.title}
+                  </Text>
+                  <Text style={{ color: theme.colors.mutedForeground, fontSize: 14, lineHeight: 20, marginTop: 6 }}>
+                    {alert.description}
+                  </Text>
+                </View>
+              </View>
+            </Card>
+          ))}
+
+          {(briefData?.alerts?.length ?? 0) === 0 ? (
+            <Card>
+              <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily }}>
+                No proactive alerts right now.
+              </Text>
+              <Text style={{ color: theme.colors.mutedForeground, fontSize: 14, marginTop: 8 }}>
+                CoAI will surface anomalies, budget risk, and recurring spend signals here.
+              </Text>
+            </Card>
+          ) : null}
+        </View>
+      </SectionBlock>
+
+      <SectionBlock
+        title="Context snapshot"
+        subtitle="The data footprint CoAI is using right now."
+      >
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+          <SnapshotMetric
+            label="Balance"
+            value={formatCompactCurrency(snapshot?.total_balance ?? 0, briefData?.currency || user?.preferred_currency || 'USD')}
+          />
+          <SnapshotMetric
+            label="Recent transactions"
+            value={String(snapshot?.recent_transaction_count ?? 0)}
+          />
+          <SnapshotMetric
+            label="Budgets"
+            value={String(snapshot?.active_budget_count ?? 0)}
+          />
+          <SnapshotMetric
+            label="Goals"
+            value={String(snapshot?.active_goal_count ?? 0)}
+          />
+          <SnapshotMetric
+            label="Subscriptions"
+            value={String(snapshot?.active_subscription_count ?? 0)}
+          />
+          <SnapshotMetric
+            label="Currencies"
+            value={String(snapshot?.balance_currency_count ?? 0)}
+          />
+        </View>
+      </SectionBlock>
+
+      <SectionBlock
+        title="Supporting layers"
+        subtitle="These remain available, but CoAI stays the primary experience."
+      >
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+          {toolLinks.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <View key={item.href} style={{ width: '100%', maxWidth: 340, flexGrow: 1 }}>
+                <Pressable onPress={() => router.push(item.href as any)} accessibilityRole="button">
+                  <Card>
+                    <View
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: theme.radii.lg,
+                        backgroundColor: theme.colors.secondary,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: 12,
+                      }}
+                    >
+                      <Icon size={18} color={theme.colors.secondaryForeground} />
+                    </View>
+                    <Text
+                      style={{
+                        color: theme.colors.foreground,
+                        fontSize: 16,
+                        fontFamily: theme.typography.bodyMedium.fontFamily,
+                      }}
+                    >
+                      {item.title}
+                    </Text>
+                    <Text style={{ color: theme.colors.mutedForeground, fontSize: 14, lineHeight: 20, marginTop: 8 }}>
+                      {item.description}
+                    </Text>
+                  </Card>
+                </Pressable>
+              </View>
+            );
+          })}
+        </View>
+      </SectionBlock>
     </PageScaffold>
   );
 }

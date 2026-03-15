@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -447,6 +448,68 @@ func TestRouter_GoogleVerificationFileIsPublic(t *testing.T) {
 
 	if body := rr.Body.String(); body != "google-site-verification: google7bc42b08d60d96d7.html" {
 		t.Fatalf("verification file body = %q, want %q", body, "google-site-verification: google7bc42b08d60d96d7.html")
+	}
+}
+
+func TestRouter_RobotsTxtIncludesSitemapAndPrivateDisallows(t *testing.T) {
+	handlers, rateLimiter, authMiddleware := setupTestRouter()
+	r := New(handlers, rateLimiter, authMiddleware, nil)
+
+	req := httptest.NewRequest("GET", "/robots.txt", nil)
+	rr := httptest.NewRecorder()
+
+	r.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("robots.txt status = %v, want %v", rr.Code, http.StatusOK)
+	}
+
+	body := rr.Body.String()
+	for _, expected := range []string{
+		"Sitemap: https://coai.koyeb.app/sitemap.xml",
+		"Disallow: /login",
+		"Disallow: /register",
+		"Disallow: /finapp",
+		"Disallow: /api/",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("robots.txt missing %q in body %q", expected, body)
+		}
+	}
+}
+
+func TestRouter_SitemapXMLListsPublicPages(t *testing.T) {
+	handlers, rateLimiter, authMiddleware := setupTestRouter()
+	r := New(handlers, rateLimiter, authMiddleware, nil)
+
+	req := httptest.NewRequest("GET", "/sitemap.xml", nil)
+	rr := httptest.NewRecorder()
+
+	r.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("sitemap.xml status = %v, want %v", rr.Code, http.StatusOK)
+	}
+
+	body := rr.Body.String()
+	for _, expected := range []string{
+		"<loc>https://coai.koyeb.app/</loc>",
+		"<loc>https://coai.koyeb.app/converter</loc>",
+		"<loc>https://coai.koyeb.app/about</loc>",
+		"<image:image>",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("sitemap.xml missing %q in body %q", expected, body)
+		}
+	}
+
+	for _, unexpected := range []string{
+		"https://coai.koyeb.app/login",
+		"https://coai.koyeb.app/register",
+	} {
+		if strings.Contains(body, unexpected) {
+			t.Fatalf("sitemap.xml unexpectedly contains %q", unexpected)
+		}
 	}
 }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   useWindowDimensions,
   Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRefreshableQuery } from '../../src/hooks/useRefreshableQuery';
@@ -41,11 +41,27 @@ export default function BudgetsScreen() {
   const theme = useTheme();
   const colors = theme.colors;
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    open_form?: string;
+    category?: string;
+    amount?: string;
+    currency?: string;
+    period?: string;
+  }>();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [editBudget, setEditBudget] = useState<Budget | null>(null);
   const { width } = useWindowDimensions();
+  const createPrefill = useMemo(
+    () => ({
+      category: typeof params.category === 'string' ? params.category : undefined,
+      amount: typeof params.amount === 'string' ? params.amount : undefined,
+      currency: typeof params.currency === 'string' ? params.currency : undefined,
+      period: typeof params.period === 'string' ? params.period : undefined,
+    }),
+    [params.amount, params.category, params.currency, params.period]
+  );
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
@@ -105,6 +121,16 @@ export default function BudgetsScreen() {
   };
 
   const budgets = data?.budgets || [];
+
+  useEffect(() => {
+    if (params.open_form !== '1') {
+      return;
+    }
+
+    setEditBudget(null);
+    setShowForm(true);
+    router.replace('/(app)/budgets');
+  }, [params.open_form, router]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
@@ -176,6 +202,7 @@ export default function BudgetsScreen() {
         visible={showForm}
         onClose={handleCloseForm}
         editBudget={editBudget}
+        prefill={createPrefill}
       />
     </SafeAreaView>
   );
@@ -302,7 +329,22 @@ function BudgetCard({ budget, onEdit, onDelete }: { budget: Budget; onEdit: () =
   );
 }
 
-function BudgetFormModal({ visible, onClose, editBudget }: { visible: boolean; onClose: () => void; editBudget?: Budget | null }) {
+function BudgetFormModal({
+  visible,
+  onClose,
+  editBudget,
+  prefill,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  editBudget?: Budget | null;
+  prefill?: {
+    category?: string;
+    amount?: string;
+    currency?: string;
+    period?: string;
+  };
+}) {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
@@ -317,20 +359,35 @@ function BudgetFormModal({ visible, onClose, editBudget }: { visible: boolean; o
   const [error, setError] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Populate form when editing
-  if (visible && editBudget && !isInitialized) {
-    setCategory(editBudget.category);
-    setAmount(String(editBudget.amount));
-    setCurrency(editBudget.currency);
-    setPeriod(editBudget.period);
+  useEffect(() => {
+    if (!visible || isInitialized) {
+      if (!visible && isInitialized) {
+        setIsInitialized(false);
+      }
+      return;
+    }
+
+    if (editBudget) {
+      setCategory(editBudget.category);
+      setAmount(String(editBudget.amount));
+      setCurrency(editBudget.currency);
+      setPeriod(editBudget.period);
+      setError('');
+      setIsInitialized(true);
+      return;
+    }
+
+    setCategory(
+      prefill?.category && CATEGORIES.includes(prefill.category)
+        ? prefill.category
+        : 'food'
+    );
+    setAmount(prefill?.amount ?? '');
+    setCurrency(prefill?.currency?.toUpperCase() || 'USD');
+    setPeriod(prefill?.period === 'yearly' ? 'yearly' : 'monthly');
     setError('');
     setIsInitialized(true);
-  }
-
-  // Reset initialized flag when modal closes
-  if (!visible && isInitialized) {
-    setIsInitialized(false);
-  }
+  }, [editBudget, isInitialized, prefill, visible]);
 
   const isEditing = !!editBudget;
 

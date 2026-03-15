@@ -84,13 +84,30 @@ export default function AboutScreen() {
         title={t('seoAboutTitle') || 'About CoAI'}
         description={t('seoAboutDesc') || 'CoAI is an AI-powered personal finance app built by Reza Zeraat. Track spending across 160+ currencies with smart insights.'}
         canonicalPath="/about"
-        jsonLd={{
-          '@context': 'https://schema.org',
-          '@type': 'Person',
-          name: 'Reza Zeraat',
-          jobTitle: 'Full Stack Developer & ML Engineer',
-          url: 'https://www.linkedin.com/in/reza-zeraat-6628781b3/',
-        }}
+        ogImageAlt="About CoAI"
+        keywords={[
+          'about coai',
+          'reza zeraat',
+          'personal finance app',
+          'ai finance app',
+        ]}
+        jsonLd={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'AboutPage',
+            name: 'About CoAI',
+            url: 'https://coai.koyeb.app/about',
+            description:
+              'Learn about CoAI, the product direction, and the founder behind the personal finance copilot.',
+          },
+          {
+            '@context': 'https://schema.org',
+            '@type': 'Person',
+            name: 'Reza Zeraat',
+            jobTitle: 'Full Stack Developer & ML Engineer',
+            url: 'https://www.linkedin.com/in/reza-zeraat-6628781b3/',
+          },
+        ]}
       />
       <SectionBlock
         title={t('aboutUs') || 'About Us'}

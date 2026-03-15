@@ -4,6 +4,7 @@ import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { CheckCircle, Eye, EyeOff, Lock, XCircle } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
 import { api } from '../../src/api';
+import { SEOHead } from '../../src/components/seo';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { AuthScaffold, Button, FormError, Input } from '../../src/components/ui';
 
@@ -104,89 +105,113 @@ export default function ResetPasswordScreen() {
 
   if (!token) {
     return (
-      <StatusPanel
-        icon={<XCircle size={36} color={theme.colors.danger} />}
-        iconColor={theme.colors.danger}
-        iconBackground={theme.colors.dangerMuted}
-        title={t('invalidResetLink') || 'Invalid Reset Link'}
-        description={t('resetLinkExpired') || 'The password reset link is invalid or has expired.'}
-        actionHref="/forgot-password"
-        actionLabel={t('requestNewLink') || 'Request New Link'}
-      />
+      <>
+        <SEOHead
+          title="Reset Password | CoAI"
+          description="Reset your CoAI account password with a secure one-time link."
+          canonicalPath="/reset-password"
+          noIndex
+        />
+        <StatusPanel
+          icon={<XCircle size={36} color={theme.colors.danger} />}
+          iconColor={theme.colors.danger}
+          iconBackground={theme.colors.dangerMuted}
+          title={t('invalidResetLink') || 'Invalid Reset Link'}
+          description={t('resetLinkExpired') || 'The password reset link is invalid or has expired.'}
+          actionHref="/forgot-password"
+          actionLabel={t('requestNewLink') || 'Request New Link'}
+        />
+      </>
     );
   }
 
   if (success) {
     return (
-      <StatusPanel
-        icon={<CheckCircle size={36} color={theme.colors.success} />}
-        iconColor={theme.colors.success}
-        iconBackground={theme.colors.successMuted}
-        title={t('passwordResetSuccess') || 'Password Reset Successful'}
-        description={t('redirectingToLogin') || 'Your password has been reset. Redirecting to login...'}
-        actionHref="/login"
-        actionLabel={t('goToLogin') || 'Go to Login'}
-      />
+      <>
+        <SEOHead
+          title="Reset Password | CoAI"
+          description="Reset your CoAI account password with a secure one-time link."
+          canonicalPath="/reset-password"
+          noIndex
+        />
+        <StatusPanel
+          icon={<CheckCircle size={36} color={theme.colors.success} />}
+          iconColor={theme.colors.success}
+          iconBackground={theme.colors.successMuted}
+          title={t('passwordResetSuccess') || 'Password Reset Successful'}
+          description={t('redirectingToLogin') || 'Your password has been reset. Redirecting to login...'}
+          actionHref="/login"
+          actionLabel={t('goToLogin') || 'Go to Login'}
+        />
+      </>
     );
   }
 
   return (
-    <AuthScaffold
-      title={t('resetPassword') || 'Reset Password'}
-      subtitle={t('enterNewPassword') || 'Enter your new password'}
-      footer={(
-        <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
-          <Text style={{ color: theme.colors.mutedForeground, fontSize: 14, lineHeight: 20 }}>
-            {t('rememberYourPassword') || 'Remember your password? '}
-          </Text>
-          <Link href="/login" asChild>
-            <Pressable accessibilityRole="button" accessibilityLabel={t('login')}>
-              <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily, fontSize: 14, lineHeight: 20 }}>
-                {t('login')}
-              </Text>
-            </Pressable>
-          </Link>
+    <>
+      <SEOHead
+        title="Reset Password | CoAI"
+        description="Reset your CoAI account password with a secure one-time link."
+        canonicalPath="/reset-password"
+        noIndex
+      />
+      <AuthScaffold
+        title={t('resetPassword') || 'Reset Password'}
+        subtitle={t('enterNewPassword') || 'Enter your new password'}
+        footer={(
+          <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
+            <Text style={{ color: theme.colors.mutedForeground, fontSize: 14, lineHeight: 20 }}>
+              {t('rememberYourPassword') || 'Remember your password? '}
+            </Text>
+            <Link href="/login" asChild>
+              <Pressable accessibilityRole="button" accessibilityLabel={t('login')}>
+                <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily, fontSize: 14, lineHeight: 20 }}>
+                  {t('login')}
+                </Text>
+              </Pressable>
+            </Link>
+          </View>
+        )}
+      >
+        <FormError message={error} />
+
+        <View style={{ gap: theme.spacing.lg }}>
+          <Input
+            placeholder={t('newPassword') || 'New Password'}
+            value={newPassword}
+            onChangeText={setNewPassword}
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            editable={!isLoading}
+            selectionColor={theme.colors.primary}
+            cursorColor={theme.colors.primary}
+            leftIcon={<Lock size={18} color={theme.colors.mutedForeground} />}
+            rightIcon={(
+              <Pressable onPress={() => setShowPassword((prev) => !prev)} hitSlop={6}>
+                {showPassword ? <EyeOff size={18} color={theme.colors.mutedForeground} /> : <Eye size={18} color={theme.colors.mutedForeground} />}
+              </Pressable>
+            )}
+            style={{ fontSize: 15, outlineStyle: 'none' } as any}
+          />
+
+          <Input
+            placeholder={t('confirmPassword') || 'Confirm Password'}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            editable={!isLoading}
+            selectionColor={theme.colors.primary}
+            cursorColor={theme.colors.primary}
+            leftIcon={<Lock size={18} color={theme.colors.mutedForeground} />}
+            style={{ fontSize: 15, outlineStyle: 'none' } as any}
+          />
+
+          <Button isLoading={isLoading} onPress={handleReset}>
+            {t('resetPassword') || 'Reset Password'}
+          </Button>
         </View>
-      )}
-    >
-      <FormError message={error} />
-
-      <View style={{ gap: theme.spacing.lg }}>
-        <Input
-          placeholder={t('newPassword') || 'New Password'}
-          value={newPassword}
-          onChangeText={setNewPassword}
-          secureTextEntry={!showPassword}
-          autoCapitalize="none"
-          editable={!isLoading}
-          selectionColor={theme.colors.primary}
-          cursorColor={theme.colors.primary}
-          leftIcon={<Lock size={18} color={theme.colors.mutedForeground} />}
-          rightIcon={(
-            <Pressable onPress={() => setShowPassword((prev) => !prev)} hitSlop={6}>
-              {showPassword ? <EyeOff size={18} color={theme.colors.mutedForeground} /> : <Eye size={18} color={theme.colors.mutedForeground} />}
-            </Pressable>
-          )}
-          style={{ fontSize: 15, outlineStyle: 'none' } as any}
-        />
-
-        <Input
-          placeholder={t('confirmPassword') || 'Confirm Password'}
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry={!showPassword}
-          autoCapitalize="none"
-          editable={!isLoading}
-          selectionColor={theme.colors.primary}
-          cursorColor={theme.colors.primary}
-          leftIcon={<Lock size={18} color={theme.colors.mutedForeground} />}
-          style={{ fontSize: 15, outlineStyle: 'none' } as any}
-        />
-
-        <Button isLoading={isLoading} onPress={handleReset}>
-          {t('resetPassword') || 'Reset Password'}
-        </Button>
-      </View>
-    </AuthScaffold>
+      </AuthScaffold>
+    </>
   );
 }

@@ -1,11 +1,13 @@
 import { API_BASE, fetchAPI, getAuthToken, loadTokens } from './base';
 import { Platform } from 'react-native';
+import type { RecommendedAction } from './coai';
 
 export interface ChatMessage {
   id: string;
   conversation_id: string;
   role: 'user' | 'assistant';
   content: string;
+  recommended_actions?: RecommendedAction[];
   tools_used?: Array<{
     name: string;
     count: number;
@@ -51,6 +53,7 @@ export interface ChatAttachmentRequest extends ChatRequestBase {
 export interface ChatResponse {
   conversation_id: string;
   message: ChatMessage;
+  recommended_actions?: RecommendedAction[];
   tokens_used?: number;
   provider?: string;
   model?: string;
@@ -99,6 +102,7 @@ export interface ChatStreamDoneEvent {
   type: 'done';
   conversation_id: string;
   message: ChatMessage;
+  recommended_actions?: RecommendedAction[];
   provider?: string;
   model?: string;
   thinking_mode?: string;
@@ -235,6 +239,7 @@ function normalizeDoneResponse(doneEvent: ChatStreamDoneEvent): ChatResponse {
   return {
     conversation_id: doneEvent.conversation_id,
     message: doneEvent.message,
+    recommended_actions: doneEvent.recommended_actions,
     provider: doneEvent.provider,
     model: doneEvent.model,
     thinking_mode: doneEvent.thinking_mode,

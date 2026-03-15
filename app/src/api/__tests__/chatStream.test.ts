@@ -81,6 +81,17 @@ describe('chat stream helpers', () => {
         conversation_id: 'conv-1',
         role: 'assistant',
         content: 'Hello',
+        recommended_actions: [
+          {
+            id: 'log-transaction',
+            type: 'log_transaction',
+            title: 'Log a transaction',
+            description: 'Capture your next expense.',
+            cta_label: 'Add transaction',
+            target_route: '/transaction-create',
+            requires_confirmation: true,
+          },
+        ],
         tools_used: [{ name: 'web_search', count: 1 }],
         created_at: '2026-01-01T00:00:00.000Z',
       },
@@ -103,6 +114,7 @@ describe('chat stream helpers', () => {
         provider: 'openai',
         model: 'gpt-4o-mini',
         message: payload.message,
+        recommended_actions: undefined,
         usage: payload.usage,
         estimated_cost_usd: 0.001,
         billed_cost_usd: undefined,
@@ -111,6 +123,7 @@ describe('chat stream helpers', () => {
         trace_id: 'trace-1',
       });
       expect(result.response.message.tools_used).toEqual([{ name: 'web_search', count: 1 }]);
+      expect(result.response.message.recommended_actions?.[0].type).toBe('log_transaction');
     }
 
     expect(callbacks.onDone).toHaveBeenCalledTimes(1);

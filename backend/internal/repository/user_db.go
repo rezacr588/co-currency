@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -15,6 +16,10 @@ import (
 // UserRepository handles database operations for users
 type UserRepository struct {
 	pool *pgxpool.Pool
+}
+
+type userScanner interface {
+	Scan(dest ...interface{}) error
 }
 
 // NewUserRepository creates a new UserRepository
@@ -33,6 +38,14 @@ func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
 	user.ID = uuid.New()
 	user.CreatedAt = now
 	user.UpdatedAt = now
+	if user.PreferredCurrency == "" {
+		user.PreferredCurrency = "USD"
+	}
+	if len(user.CoAIFocusAreas) == 0 {
+		user.CoAIFocusAreas = []string{"general"}
+	}
+	user.WeeklyBriefEnabled = true
+	user.ProactiveAlertsEnabled = true
 
 	_, err := r.pool.Exec(ctx, query,
 		user.ID,
@@ -53,18 +66,10 @@ func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
 	return nil
 }
 
-// GetByID retrieves a user by ID
-func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
-	query := `
-		SELECT id, email, COALESCE(password_hash, '') AS password_hash, name, failed_login_attempts, locked_until,
-		       password_reset_token, password_reset_expires, onboarding_completed,
-		       linkedin_id, google_id, avatar_url, created_at, updated_at
-		FROM users
-		WHERE id = $1
-	`
-
+func scanUser(scanner userScanner) (*model.User, error) {
 	user := &model.User{}
-	err := r.pool.QueryRow(ctx, query, id).Scan(
+	var focusAreasJSON []byte
+	err := scanner.Scan(
 		&user.ID,
 		&user.Email,
 		&user.PasswordHash,
@@ -74,13 +79,49 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.User
 		&user.PasswordResetToken,
 		&user.PasswordResetExpires,
 		&user.OnboardingCompleted,
+		&user.PreferredCurrency,
+		&focusAreasJSON,
+		&user.WeeklyBriefEnabled,
+		&user.ProactiveAlertsEnabled,
 		&user.LinkedInID,
 		&user.GoogleID,
 		&user.AvatarURL,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
+	if err != nil {
+		return nil, err
+	}
 
+	if user.PreferredCurrency == "" {
+		user.PreferredCurrency = "USD"
+	}
+	user.CoAIFocusAreas = []string{"general"}
+	if len(focusAreasJSON) > 0 {
+		var focusAreas []string
+		if err := json.Unmarshal(focusAreasJSON, &focusAreas); err == nil && len(focusAreas) > 0 {
+			user.CoAIFocusAreas = focusAreas
+		}
+	}
+
+	return user, nil
+}
+
+// GetByID retrieves a user by ID
+func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
+	query := `
+		SELECT id, email, COALESCE(password_hash, '') AS password_hash, name, failed_login_attempts, locked_until,
+		       password_reset_token, password_reset_expires, onboarding_completed,
+		       COALESCE(preferred_currency, 'USD') AS preferred_currency,
+		       COALESCE(coai_focus_areas, '["general"]'::jsonb) AS coai_focus_areas,
+		       COALESCE(coai_weekly_brief_enabled, TRUE) AS coai_weekly_brief_enabled,
+		       COALESCE(coai_proactive_alerts_enabled, TRUE) AS coai_proactive_alerts_enabled,
+		       linkedin_id, google_id, avatar_url, created_at, updated_at
+		FROM users
+		WHERE id = $1
+	`
+
+	user, err := scanUser(r.pool.QueryRow(ctx, query, id))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrUserNotFound
@@ -96,29 +137,16 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.U
 	query := `
 		SELECT id, email, COALESCE(password_hash, '') AS password_hash, name, failed_login_attempts, locked_until,
 		       password_reset_token, password_reset_expires, onboarding_completed,
+		       COALESCE(preferred_currency, 'USD') AS preferred_currency,
+		       COALESCE(coai_focus_areas, '["general"]'::jsonb) AS coai_focus_areas,
+		       COALESCE(coai_weekly_brief_enabled, TRUE) AS coai_weekly_brief_enabled,
+		       COALESCE(coai_proactive_alerts_enabled, TRUE) AS coai_proactive_alerts_enabled,
 		       linkedin_id, google_id, avatar_url, created_at, updated_at
 		FROM users
 		WHERE email = $1
 	`
 
-	user := &model.User{}
-	err := r.pool.QueryRow(ctx, query, email).Scan(
-		&user.ID,
-		&user.Email,
-		&user.PasswordHash,
-		&user.Name,
-		&user.FailedLoginAttempts,
-		&user.LockedUntil,
-		&user.PasswordResetToken,
-		&user.PasswordResetExpires,
-		&user.OnboardingCompleted,
-		&user.LinkedInID,
-		&user.GoogleID,
-		&user.AvatarURL,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
+	user, err := scanUser(r.pool.QueryRow(ctx, query, email))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrUserNotFound
@@ -292,29 +320,16 @@ func (r *UserRepository) GetByResetToken(ctx context.Context, token string) (*mo
 	query := `
 		SELECT id, email, COALESCE(password_hash, '') AS password_hash, name, failed_login_attempts, locked_until,
 		       password_reset_token, password_reset_expires, onboarding_completed,
+		       COALESCE(preferred_currency, 'USD') AS preferred_currency,
+		       COALESCE(coai_focus_areas, '["general"]'::jsonb) AS coai_focus_areas,
+		       COALESCE(coai_weekly_brief_enabled, TRUE) AS coai_weekly_brief_enabled,
+		       COALESCE(coai_proactive_alerts_enabled, TRUE) AS coai_proactive_alerts_enabled,
 		       linkedin_id, google_id, avatar_url, created_at, updated_at
 		FROM users
 		WHERE password_reset_token = $1 AND password_reset_expires > NOW()
 	`
 
-	user := &model.User{}
-	err := r.pool.QueryRow(ctx, query, token).Scan(
-		&user.ID,
-		&user.Email,
-		&user.PasswordHash,
-		&user.Name,
-		&user.FailedLoginAttempts,
-		&user.LockedUntil,
-		&user.PasswordResetToken,
-		&user.PasswordResetExpires,
-		&user.OnboardingCompleted,
-		&user.LinkedInID,
-		&user.GoogleID,
-		&user.AvatarURL,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
+	user, err := scanUser(r.pool.QueryRow(ctx, query, token))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrInvalidResetToken
@@ -358,34 +373,100 @@ func (r *UserRepository) SetOnboardingCompleted(ctx context.Context, userID uuid
 	return nil
 }
 
+func (r *UserRepository) GetCoAIPreferences(ctx context.Context, userID uuid.UUID) (*model.CoAIPreferences, error) {
+	user, err := r.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.CoAIPreferences{
+		UserID:                 user.ID.String(),
+		PreferredCurrency:      user.PreferredCurrency,
+		FocusAreas:             user.CoAIFocusAreas,
+		WeeklyBriefEnabled:     user.WeeklyBriefEnabled,
+		ProactiveAlertsEnabled: user.ProactiveAlertsEnabled,
+		UpdatedAt:              user.UpdatedAt,
+	}, nil
+}
+
+func (r *UserRepository) UpdateCoAIPreferences(ctx context.Context, userID uuid.UUID, req model.UpdateCoAIPreferencesRequest) (*model.CoAIPreferences, error) {
+	current, err := r.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	preferredCurrency := current.PreferredCurrency
+	if req.PreferredCurrency != nil && *req.PreferredCurrency != "" {
+		preferredCurrency = *req.PreferredCurrency
+	}
+
+	focusAreas := current.CoAIFocusAreas
+	if req.FocusAreas != nil {
+		focusAreas = append([]string{}, (*req.FocusAreas)...)
+	}
+	if len(focusAreas) == 0 {
+		focusAreas = []string{"general"}
+	}
+
+	weeklyBriefEnabled := current.WeeklyBriefEnabled
+	if req.WeeklyBriefEnabled != nil {
+		weeklyBriefEnabled = *req.WeeklyBriefEnabled
+	}
+
+	proactiveAlertsEnabled := current.ProactiveAlertsEnabled
+	if req.ProactiveAlertsEnabled != nil {
+		proactiveAlertsEnabled = *req.ProactiveAlertsEnabled
+	}
+
+	focusAreasJSON, err := json.Marshal(focusAreas)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling focus areas: %w", err)
+	}
+
+	query := `
+		UPDATE users
+		SET preferred_currency = $2,
+		    coai_focus_areas = $3,
+		    coai_weekly_brief_enabled = $4,
+		    coai_proactive_alerts_enabled = $5,
+		    updated_at = NOW()
+		WHERE id = $1
+		RETURNING updated_at
+	`
+
+	var updatedAt time.Time
+	if err := r.pool.QueryRow(ctx, query, userID, preferredCurrency, focusAreasJSON, weeklyBriefEnabled, proactiveAlertsEnabled).Scan(&updatedAt); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
+		return nil, fmt.Errorf("updating CoAI preferences: %w", err)
+	}
+
+	return &model.CoAIPreferences{
+		UserID:                 userID.String(),
+		PreferredCurrency:      preferredCurrency,
+		FocusAreas:             focusAreas,
+		WeeklyBriefEnabled:     weeklyBriefEnabled,
+		ProactiveAlertsEnabled: proactiveAlertsEnabled,
+		UpdatedAt:              updatedAt,
+	}, nil
+}
+
 // GetByLinkedInID retrieves a user by LinkedIn ID
 func (r *UserRepository) GetByLinkedInID(ctx context.Context, linkedinID string) (*model.User, error) {
 	query := `
 		SELECT id, email, COALESCE(password_hash, '') AS password_hash, name, failed_login_attempts, locked_until,
 		       password_reset_token, password_reset_expires, onboarding_completed,
+		       COALESCE(preferred_currency, 'USD') AS preferred_currency,
+		       COALESCE(coai_focus_areas, '["general"]'::jsonb) AS coai_focus_areas,
+		       COALESCE(coai_weekly_brief_enabled, TRUE) AS coai_weekly_brief_enabled,
+		       COALESCE(coai_proactive_alerts_enabled, TRUE) AS coai_proactive_alerts_enabled,
 		       linkedin_id, google_id, avatar_url, created_at, updated_at
 		FROM users
 		WHERE linkedin_id = $1
 	`
 
-	user := &model.User{}
-	err := r.pool.QueryRow(ctx, query, linkedinID).Scan(
-		&user.ID,
-		&user.Email,
-		&user.PasswordHash,
-		&user.Name,
-		&user.FailedLoginAttempts,
-		&user.LockedUntil,
-		&user.PasswordResetToken,
-		&user.PasswordResetExpires,
-		&user.OnboardingCompleted,
-		&user.LinkedInID,
-		&user.GoogleID,
-		&user.AvatarURL,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
+	user, err := scanUser(r.pool.QueryRow(ctx, query, linkedinID))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrUserNotFound
@@ -407,6 +488,14 @@ func (r *UserRepository) CreateFromLinkedIn(ctx context.Context, user *model.Use
 	user.ID = uuid.New()
 	user.CreatedAt = now
 	user.UpdatedAt = now
+	if user.PreferredCurrency == "" {
+		user.PreferredCurrency = "USD"
+	}
+	if len(user.CoAIFocusAreas) == 0 {
+		user.CoAIFocusAreas = []string{"general"}
+	}
+	user.WeeklyBriefEnabled = true
+	user.ProactiveAlertsEnabled = true
 
 	_, err := r.pool.Exec(ctx, query,
 		user.ID,
@@ -490,29 +579,16 @@ func (r *UserRepository) GetByGoogleID(ctx context.Context, googleID string) (*m
 	query := `
 		SELECT id, email, COALESCE(password_hash, '') AS password_hash, name, failed_login_attempts, locked_until,
 		       password_reset_token, password_reset_expires, onboarding_completed,
+		       COALESCE(preferred_currency, 'USD') AS preferred_currency,
+		       COALESCE(coai_focus_areas, '["general"]'::jsonb) AS coai_focus_areas,
+		       COALESCE(coai_weekly_brief_enabled, TRUE) AS coai_weekly_brief_enabled,
+		       COALESCE(coai_proactive_alerts_enabled, TRUE) AS coai_proactive_alerts_enabled,
 		       linkedin_id, google_id, avatar_url, created_at, updated_at
 		FROM users
 		WHERE google_id = $1
 	`
 
-	user := &model.User{}
-	err := r.pool.QueryRow(ctx, query, googleID).Scan(
-		&user.ID,
-		&user.Email,
-		&user.PasswordHash,
-		&user.Name,
-		&user.FailedLoginAttempts,
-		&user.LockedUntil,
-		&user.PasswordResetToken,
-		&user.PasswordResetExpires,
-		&user.OnboardingCompleted,
-		&user.LinkedInID,
-		&user.GoogleID,
-		&user.AvatarURL,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
+	user, err := scanUser(r.pool.QueryRow(ctx, query, googleID))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrUserNotFound
@@ -534,6 +610,14 @@ func (r *UserRepository) CreateFromGoogle(ctx context.Context, user *model.User)
 	user.ID = uuid.New()
 	user.CreatedAt = now
 	user.UpdatedAt = now
+	if user.PreferredCurrency == "" {
+		user.PreferredCurrency = "USD"
+	}
+	if len(user.CoAIFocusAreas) == 0 {
+		user.CoAIFocusAreas = []string{"general"}
+	}
+	user.WeeklyBriefEnabled = true
+	user.ProactiveAlertsEnabled = true
 
 	_, err := r.pool.Exec(ctx, query,
 		user.ID,

@@ -205,6 +205,7 @@ export default function LoginScreen() {
       title={t('seoLoginTitle') || 'Login'}
       description="Log in to your CoAI account to manage your finances."
       canonicalPath="/login"
+      keywords={['coai login', 'coai sign in']}
       noIndex
     />
     <AuthScaffold

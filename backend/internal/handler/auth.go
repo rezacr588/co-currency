@@ -295,13 +295,16 @@ func (h *AuthHandler) CompleteOnboarding(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	if err := h.authService.SetOnboardingCompleted(r.Context(), userID); err != nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to complete onboarding", err)
+		return
+	}
+
 	user, err := h.authService.GetUserByID(r.Context(), userID)
 	if err != nil {
 		httputil.NotFoundWithContext(r.Context(), w, "user not found")
 		return
 	}
 
-	// Return the user profile to confirm onboarding is complete
-	// The mobile app uses this to verify the user is set up
 	httputil.Success(w, user.ToProfile())
 }

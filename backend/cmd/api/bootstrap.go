@@ -34,6 +34,7 @@ type services struct {
 	linkedInAuth *service.LinkedInOAuthService
 	googleAuth   *service.GoogleOAuthService
 	wallet       *service.WalletService
+	coai         *service.CoAIService
 	ai           *service.AIService
 	aiChat       *service.AIChatService
 	goal         *service.GoalService
@@ -138,6 +139,20 @@ func initServices(cfg *config.Config, db *databases) *services {
 	if svc.ai != nil && db.walletRepo != nil {
 		svc.advice = service.NewAdviceService(svc.ai, db.walletRepo, db.userRepo, svc.exchange, db.goalRepo, db.budgetRepo)
 		log.Info().Msg("Advice service initialized")
+	}
+
+	if db.userRepo != nil {
+		svc.coai = service.NewCoAIService(
+			db.userRepo,
+			db.walletRepo,
+			db.goalRepo,
+			db.budgetRepo,
+			repository.NewSubscriptionRepository(db.mainDB),
+			svc.reports,
+			svc.advice,
+			svc.wealth,
+		)
+		log.Info().Msg("CoAI service initialized")
 	}
 
 	// Initialize news service (always available)
@@ -433,6 +448,10 @@ func initHandlers(cfg *config.Config, svc *services) *router.Handlers {
 	}
 	walletHandler.SetPaginationLimits(cfg.PaginationMaxAPILimit, cfg.PaginationMaxFilterLimit)
 	aiHandler := handler.NewAIHandler(svc.ai, svc.wallet)
+	var coaiHandler *handler.CoAIHandler
+	if svc.coai != nil {
+		coaiHandler = handler.NewCoAIHandler(svc.coai)
+	}
 
 	if svc.recurring != nil {
 		aiHandler.SetRecurringService(svc.recurring)
@@ -533,6 +552,7 @@ func initHandlers(cfg *config.Config, svc *services) *router.Handlers {
 		LinkedInOAuth: linkedInOAuthHandler,
 		GoogleOAuth:   googleOAuthHandler,
 		Wallet:        walletHandler,
+		CoAI:          coaiHandler,
 		AI:            aiHandler,
 		AIChat:        aiChatHandler,
 		Goal:          goalHandler,

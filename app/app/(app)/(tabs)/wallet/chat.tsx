@@ -15,7 +15,7 @@ import {
   Modal,
   Clipboard,
 } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Markdown from 'react-native-markdown-display';
@@ -40,12 +40,14 @@ import { useToast } from '../../../../src/components/ui/Toast';
 import { haptics } from '../../../../src/utils/haptics';
 import { AttachmentButton, AttachmentPreview, useAttachmentPicker } from '../../../../src/components/features/Chat';
 import { VoiceRecorder } from '../../../../src/components/features/Chat';
+import { RecommendedActionCards } from '../../../../src/components/features/CoAI/RecommendedActionCards';
 import { EmptyState } from '../../../../src/components/ui';
 import { Skeleton } from '../../../../src/components/ui/Skeleton';
 import type { ChatMessage, ChatStreamTraceEvent, Conversation, ConversationWithMessages } from '../../../../src/api/chat';
 import type { SmartParseResponse } from '../../../../src/types/wallet';
 import type { ConversionResult } from '../../../../src/types/currency';
 import type { Goal, RecurringTransaction } from '../../../../src/types/goal';
+import { openRecommendedAction } from '../../../../src/utils/coaiActions';
 import { formatNumber } from '../../../../src/utils/format';
 
 const MAX_MESSAGE_LENGTH = 5000;
@@ -222,7 +224,8 @@ export default function AIChatScreen() {
   const colors = theme.colors;
   const { showToast } = useToast();
   const queryClient = useQueryClient();
-  const { conversationId } = useLocalSearchParams<{ conversationId?: string }>();
+  const router = useRouter();
+  const { conversationId, prompt } = useLocalSearchParams<{ conversationId?: string; prompt?: string }>();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -268,6 +271,7 @@ export default function AIChatScreen() {
   const isNearBottomRef = useRef(true);
   const pendingMutationRef = useRef(false);
   const lastSentMessageRef = useRef<string>('');
+  const consumedPromptRef = useRef<string | null>(null);
   const liveTraceRef = useRef<ChatStreamTraceEvent[]>([]);
   const streamingDraftRef = useRef('');
   const streamReplayTokenRef = useRef(0);
@@ -960,6 +964,38 @@ export default function AIChatScreen() {
     return () => clearTimeout(timeout);
   }, [messages, isTyping, streamingDraft, activeConversationId, maybeAutoScroll]);
 
+  useEffect(() => {
+    if (!conversationId || conversationId === activeConversationId) {
+      return;
+    }
+
+    clearStreamingState();
+    setActiveConversationId(conversationId);
+    clearConversationTransientState();
+    isNearBottomRef.current = true;
+  }, [
+    activeConversationId,
+    clearConversationTransientState,
+    clearStreamingState,
+    conversationId,
+  ]);
+
+  useEffect(() => {
+    if (typeof prompt !== 'string') {
+      return;
+    }
+
+    const trimmed = prompt.trim();
+    if (!trimmed || consumedPromptRef.current === trimmed) {
+      return;
+    }
+
+    consumedPromptRef.current = trimmed;
+    if (!message && !activeConversationId) {
+      setMessage(trimmed);
+    }
+  }, [activeConversationId, message, prompt]);
+
 
   const handleSend = (overrideMessage?: string) => {
     const msgToSend = overrideMessage || message;
@@ -1268,10 +1304,10 @@ export default function AIChatScreen() {
           <Sparkles size={32} color={colors.primary} />
         </View>
         <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground, textAlign: 'center', marginBottom: 8 }}>
-          {t('aiWelcome') || 'How can I help with your money today?'}
+          How can CoAI help with your money today?
         </Text>
         <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginBottom: 20, maxWidth: 560, alignSelf: 'center', lineHeight: 22 }}>
-          {t('aiWelcomeDesc') || 'Ask questions, attach receipts, or let me take actions like adding transactions and conversions.'}
+          Ask questions, attach receipts, or let CoAI guide you into transactions, budgets, goals, and conversions.
         </Text>
         {quickPrompts.length > 0 && (
           <View style={{ width: '100%' }}>
@@ -1975,6 +2011,16 @@ export default function AIChatScreen() {
                           </View>
                         ) : null}
 
+                        {msg.recommended_actions && msg.recommended_actions.length > 0 ? (
+                          <View style={{ marginTop: 10 }}>
+                            <RecommendedActionCards
+                              actions={msg.recommended_actions}
+                              onActionPress={(action) => openRecommendedAction(router, action)}
+                              compact
+                            />
+                          </View>
+                        ) : null}
+
                         {hasUsageMeta ? (
                           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
                             {msg.provider || msg.model ? (
@@ -2085,7 +2131,7 @@ export default function AIChatScreen() {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View>
-                  <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>{t('aiAdvisor')}</Text>
+                  <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>CoAI</Text>
                   <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 1 }}>
                     {aiConfigured
                       ? `${t('alwaysReady') || 'Always ready'} · ${aiRateLimitPerMinute}/min`

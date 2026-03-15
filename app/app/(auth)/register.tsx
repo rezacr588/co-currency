@@ -185,6 +185,8 @@ export default function RegisterScreen() {
       title={t('seoRegisterTitle') || 'Create Your Free Account'}
       description="Create a free CoAI account. Track spending across 160+ currencies with AI-powered insights."
       canonicalPath="/register"
+      keywords={['coai register', 'create coai account']}
+      noIndex
     />
     <AuthScaffold
       title={t('createAccount')}

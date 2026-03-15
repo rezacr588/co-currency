@@ -215,10 +215,12 @@ func (s *AIChatService) CreateConversation(ctx context.Context, userID uuid.UUID
 }
 
 type preparedChatInput struct {
-	UserMessage  *model.ChatMessage
-	LLMMessages  []llms.MessageContent
-	BaseCurrency string
-	HistoryCount int
+	UserMessage            *model.ChatMessage
+	LLMMessages            []llms.MessageContent
+	BaseCurrency           string
+	HistoryCount           int
+	FinancialContext       *model.FinancialContext
+	HasActiveSubscriptions bool
 }
 
 func (s *AIChatService) resolveConversation(
@@ -288,6 +290,12 @@ func (s *AIChatService) prepareChatInput(
 
 	// Memories are optional context, so errors are ignored.
 	memories, _ := s.getUserMemories(ctx, userID, message)
+	hasActiveSubscriptions := false
+	if s.subscriptionRepo != nil {
+		if count, err := s.subscriptionRepo.CountActiveSubscriptions(ctx, userID); err == nil && count > 0 {
+			hasActiveSubscriptions = true
+		}
+	}
 
 	baseCurrency := financialContext.PreferredCurrency
 	if baseCurrency == "" {
@@ -297,10 +305,12 @@ func (s *AIChatService) prepareChatInput(
 	systemPrompt := s.buildSystemPrompt(userName, financialContext, memories, rates)
 
 	return &preparedChatInput{
-		UserMessage:  userMsg,
-		LLMMessages:  s.buildLLMMessages(systemPrompt, history, *userMsg),
-		BaseCurrency: baseCurrency,
-		HistoryCount: len(history),
+		UserMessage:            userMsg,
+		LLMMessages:            s.buildLLMMessages(systemPrompt, history, *userMsg),
+		BaseCurrency:           baseCurrency,
+		HistoryCount:           len(history),
+		FinancialContext:       financialContext,
+		HasActiveSubscriptions: hasActiveSubscriptions,
 	}, nil
 }
 
@@ -478,7 +488,9 @@ func (s *AIChatService) Chat(
 		"response_length": len(aiResponse),
 	}, nil)
 
-	aiMsg, err := s.persistAssistantResponse(ctx, userID, convID, message, aiResponse, usageTracker.toMessageMeta(toolUsageTracker.snapshot()))
+	meta := usageTracker.toMessageMeta(toolUsageTracker.snapshot())
+	meta.RecommendedActions = buildRecommendedActionsFromFinancialContext(prepared.FinancialContext, prepared.HasActiveSubscriptions)
+	aiMsg, err := s.persistAssistantResponse(ctx, userID, convID, message, aiResponse, meta)
 	if err != nil {
 		return nil, err
 	}
@@ -496,16 +508,17 @@ func (s *AIChatService) Chat(
 	usage := usageTracker.usage()
 
 	return &model.ChatResponse{
-		ConversationID:   convID.String(),
-		Message:          *aiMsg,
-		TokensUsed:       usage.TotalTokens,
-		Provider:         usageTracker.provider,
-		Model:            usageTracker.model,
-		ThinkingMode:     string(finalMode),
-		Usage:            usage,
-		EstimatedCostUSD: usageTracker.estimatedCostPtr(),
-		BilledCostUSD:    usageTracker.billedCostPtr(),
-		BillingSource:    usageTracker.billingSource(),
+		ConversationID:     convID.String(),
+		Message:            *aiMsg,
+		RecommendedActions: aiMsg.RecommendedActions,
+		TokensUsed:         usage.TotalTokens,
+		Provider:           usageTracker.provider,
+		Model:              usageTracker.model,
+		ThinkingMode:       string(finalMode),
+		Usage:              usage,
+		EstimatedCostUSD:   usageTracker.estimatedCostPtr(),
+		BilledCostUSD:      usageTracker.billedCostPtr(),
+		BillingSource:      usageTracker.billingSource(),
 	}, nil
 }
 
@@ -658,7 +671,9 @@ func (s *AIChatService) ChatStream(
 		}
 	}
 
-	aiMsg, err := s.persistAssistantResponse(ctx, userID, convID, message, aiResponse, usageTracker.toMessageMeta(toolUsageTracker.snapshot()))
+	meta := usageTracker.toMessageMeta(toolUsageTracker.snapshot())
+	meta.RecommendedActions = buildRecommendedActionsFromFinancialContext(prepared.FinancialContext, prepared.HasActiveSubscriptions)
+	aiMsg, err := s.persistAssistantResponse(ctx, userID, convID, message, aiResponse, meta)
 	if err != nil {
 		return nil, failChatWithError(ctx, userID, convID.String(), requestStartedAt, onTrace, err)
 	}
@@ -677,16 +692,17 @@ func (s *AIChatService) ChatStream(
 	usage := usageTracker.usage()
 
 	return &model.ChatResponse{
-		ConversationID:   convID.String(),
-		Message:          *aiMsg,
-		TokensUsed:       usage.TotalTokens,
-		Provider:         usageTracker.provider,
-		Model:            usageTracker.model,
-		ThinkingMode:     string(finalMode),
-		Usage:            usage,
-		EstimatedCostUSD: usageTracker.estimatedCostPtr(),
-		BilledCostUSD:    usageTracker.billedCostPtr(),
-		BillingSource:    usageTracker.billingSource(),
+		ConversationID:     convID.String(),
+		Message:            *aiMsg,
+		RecommendedActions: aiMsg.RecommendedActions,
+		TokensUsed:         usage.TotalTokens,
+		Provider:           usageTracker.provider,
+		Model:              usageTracker.model,
+		ThinkingMode:       string(finalMode),
+		Usage:              usage,
+		EstimatedCostUSD:   usageTracker.estimatedCostPtr(),
+		BilledCostUSD:      usageTracker.billedCostPtr(),
+		BillingSource:      usageTracker.billingSource(),
 	}, nil
 }
 

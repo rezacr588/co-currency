@@ -88,7 +88,7 @@ export const en = {
   // Menu
   menu: 'Menu',
   home: 'Home',
-  dashboardTabCompact: 'Home',
+  dashboardTabCompact: 'CoAI',
   walletTabCompact: 'Wallet',
   addTabCompact: 'Add',
   aiAdvisorTabCompact: 'AI',
@@ -605,8 +605,8 @@ export const en = {
   allTime: 'All Time',
 
   // Dashboard
-  dashboard: 'Dashboard',
-  dashboardSubtitle: 'Your financial overview at a glance',
+  dashboard: 'CoAI',
+  dashboardSubtitle: 'Your assistant home for money decisions',
   viewWallet: 'View Wallet',
   quickAccess: 'Quick Access',
   walletCardDesc: 'Manage balances and transactions',
@@ -718,8 +718,8 @@ export const en = {
   featureRecurringDesc: 'Automate regular income and expenses. Never miss a bill or forget a payment.',
   featureReportsTitle: 'Insights & Reports',
   featureReportsDesc: 'Visualize spending trends, net worth, and monthly summaries with beautiful charts.',
-  featureAITitle: 'AI Receipt Parsing',
-  featureAIDesc: 'Simply paste receipt text and let AI automatically extract and categorize transactions.',
+  featureAITitle: 'CoAI Copilot',
+  featureAIDesc: 'Ask questions, review briefs, and act on guided financial recommendations.',
 
   // Landing Page - Stats
   statsCurrencies: '160+',
@@ -856,10 +856,10 @@ export const en = {
 
   // AI Chat
   newConversation: 'New Chat',
-  aiAdvisor: 'Finance Advisor',
+  aiAdvisor: 'CoAI Chat',
   aiAdvisorDesc: 'Powered by AI',
-  aiWelcome: "Hi! I'm your Finance Advisor",
-  aiWelcomeDesc: 'Ask me anything about your finances. I have access to your transactions, budgets, and goals.',
+  aiWelcome: "Hi! I'm CoAI",
+  aiWelcomeDesc: 'Ask about your money, review alerts, or let CoAI guide you into the next action.',
   typeMessage: 'Ask about your finances...',
 
   // Offline Banner
@@ -1182,7 +1182,7 @@ export const en = {
   moneyProtected: 'Well protected',
 
   // SEO
-  seoHomeDescription: 'Track spending across 160+ currencies, get AI-powered financial advice, and protect your purchasing power. Free forever.',
+  seoHomeDescription: 'CoAI is your personal finance copilot for spending, budgets, goals, multi-currency tracking, and purchasing-power protection.',
   seoConverterTitle: 'Free Currency Converter - 160+ Currencies',
   seoConverterDesc: 'Convert between 160+ currencies with real-time ECB exchange rates. Free, fast, and accurate currency converter.',
   seoAboutTitle: 'About CoAI',
@@ -1191,9 +1191,9 @@ export const en = {
   seoRegisterTitle: 'Create Your Free Account',
 
   // Landing page
-  landingHeroTitle: 'See where your money really goes.',
-  landingHeroSubtitle: 'Track spending, protect purchasing power, and grow your savings with AI — across 160+ currencies. Free forever.',
-  landingHeroCta: 'Take Control — It\'s Free',
+  landingHeroTitle: 'CoAI is your personal finance copilot.',
+  landingHeroSubtitle: 'Ask CoAI what matters, understand your money across currencies, and take guided action on budgets, goals, and spending.',
+  landingHeroCta: 'Start with CoAI',
   landingHeroSecondaryCta: 'Try the Converter',
   landingTrustFree: 'Free Forever',
   landingTrustCurrencies: '160+ Currencies',
@@ -1202,14 +1202,14 @@ export const en = {
   landingFeatureWalletDesc: 'Know exactly what you have, in every currency, right now.',
   landingFeatureGoalsDesc: 'Set a target. Track progress. Hit it faster with AI.',
   landingFeatureReportsDesc: 'See your spending patterns. Spot the leaks.',
-  landingFeatureAIDesc: 'Get advice that actually helps — not generic tips.',
+  landingFeatureAIDesc: 'Get priorities, alerts, and next actions grounded in your real financial context.',
   landingFeatureBudgetsDesc: 'Know exactly what you can spend before you spend it.',
-  landingFeatureRealValue: 'Real Value Protection',
+  landingFeatureRealValue: 'Purchasing Power Protection',
   landingFeatureRealValueDesc: 'See what your money actually buys, not what the number says.',
   landingStep1Desc: '30 seconds. No credit card.',
   landingStep2Desc: 'Import transactions, set budgets, pick your currencies.',
-  landingStep3Desc: 'AI analyzes your money and shows you the truth.',
-  landingAITitle: 'An advisor that actually knows your finances',
+  landingStep3Desc: 'CoAI explains what changed and helps you act on it.',
+  landingAITitle: 'An assistant that actually knows your finances',
   landingAIChatUser: 'Where am I spending too much?',
   landingAIChatBot: 'Based on your last 30 days: dining out is 34% of spending (up 12% from last month). Switching two restaurant meals to home cooking would save ~$180/month.',
   landingAIBullet1: 'Reads receipts from photos',
@@ -1220,8 +1220,8 @@ export const en = {
   landingFaqTitle: 'Questions? Answered.',
   landingFaqQ1: 'Is CoAI really free?',
   landingFaqA1: 'Yes. No premium tiers, no ads, no hidden costs. Every feature is available to everyone.',
-  landingFaqQ2: 'How does the AI work?',
-  landingFaqA2: 'It analyzes your transactions, understands your spending patterns, and gives personalized advice based on your actual financial data.',
+  landingFaqQ2: 'How does CoAI work?',
+  landingFaqA2: 'CoAI reads your balances, transactions, budgets, goals, and subscriptions to generate priorities, alerts, and guided recommendations.',
   landingFaqQ3: 'What currencies are supported?',
   landingFaqA3: '160+ currencies with real-time exchange rates from the European Central Bank.',
   landingFaqQ4: 'Is my data safe?',

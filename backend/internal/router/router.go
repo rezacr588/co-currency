@@ -15,6 +15,7 @@ type Handlers struct {
 	LinkedInOAuth *handler.OAuthHandler
 	GoogleOAuth   *handler.OAuthHandler
 	Wallet        *handler.WalletHandler
+	CoAI          *handler.CoAIHandler
 	AI            *handler.AIHandler
 	AIChat        *handler.AIChatHandler
 	Goal          *handler.GoalHandler

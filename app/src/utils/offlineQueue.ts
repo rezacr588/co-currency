@@ -6,6 +6,8 @@ import type { TransactionRequest } from '../types/wallet';
 const QUEUE_KEY = '@offline_transaction_queue';
 const MAX_RETRIES = 3;
 const MAX_QUEUE_SIZE = 100;
+const MAX_RETRY_DELAY_MS = 30_000;
+const FAILED_RETRY_DELAY_MS = 5 * 60 * 1000;
 
 export interface QueuedTransaction {
   id: string;
@@ -13,6 +15,8 @@ export interface QueuedTransaction {
   createdAt: number;
   retryCount: number;
   lastError?: string;
+  nextRetryAt?: number;
+  failedAt?: number;
 }
 
 export interface QueueStatus {
@@ -109,13 +113,11 @@ export async function syncQueue(): Promise<{
   let failed = 0;
 
   for (const item of queue) {
-    try {
-      // Exponential backoff based on retry count
-      if (item.retryCount > 0) {
-        const delay = Math.min(1000 * Math.pow(2, item.retryCount), 30000);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
+    if (item.nextRetryAt && item.nextRetryAt > Date.now()) {
+      continue;
+    }
 
+    try {
       // Attempt to sync
       await api.wallet.addTransaction(item.data);
 
@@ -123,22 +125,26 @@ export async function syncQueue(): Promise<{
       await removeFromQueue(item.id);
       synced++;
     } catch (error) {
-      // Failed - increment retry count
       const newRetryCount = item.retryCount + 1;
+      const nextDelay =
+        newRetryCount >= MAX_RETRIES
+          ? FAILED_RETRY_DELAY_MS
+          : Math.min(1000 * Math.pow(2, Math.max(0, newRetryCount - 1)), MAX_RETRY_DELAY_MS);
 
-      if (newRetryCount >= MAX_RETRIES) {
-        // Remove from queue after max retries
-        if (__DEV__) {
-          console.warn(`[OfflineQueue] Dropping transaction after ${MAX_RETRIES} retries:`, item.data.description || item.id);
-        }
-        await removeFromQueue(item.id);
-        failed++;
-      } else {
-        await updateQueuedTransaction(item.id, {
-          retryCount: newRetryCount,
-          lastError: error instanceof Error ? error.message : 'Unknown error',
-        });
+      if (__DEV__ && newRetryCount >= MAX_RETRIES) {
+        console.warn(
+          `[OfflineQueue] Keeping failed transaction in recovery queue after ${MAX_RETRIES} retries:`,
+          item.data.description || item.id
+        );
       }
+
+      await updateQueuedTransaction(item.id, {
+        retryCount: newRetryCount,
+        lastError: error instanceof Error ? error.message : 'Unknown error',
+        nextRetryAt: Date.now() + nextDelay,
+        failedAt: newRetryCount >= MAX_RETRIES ? item.failedAt || Date.now() : undefined,
+      });
+      failed++;
     }
   }
 

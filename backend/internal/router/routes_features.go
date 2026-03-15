@@ -9,6 +9,7 @@ import (
 // AI, goals, tasks, todo, planner, tags, budgets, recurring, reports,
 // subscriptions, badges, notes, loans, notifications, challenges, and XP.
 func registerFeatureRoutes(r chi.Router, h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middleware.Auth) {
+	registerCoAIRoutes(r, h, authMiddleware)
 	registerAIRoutes(r, h, rateLimiter, authMiddleware)
 	registerGoalRoutes(r, h, authMiddleware)
 	registerTaskRoutes(r, h, authMiddleware)
@@ -26,6 +27,19 @@ func registerFeatureRoutes(r chi.Router, h *Handlers, rateLimiter *middleware.Ra
 	registerChallengeRoutes(r, h, authMiddleware)
 	registerXPRoutes(r, h, authMiddleware)
 	registerWealthRoutes(r, h, authMiddleware)
+}
+
+func registerCoAIRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.Auth) {
+	if h.CoAI == nil {
+		return
+	}
+
+	r.Route("/coai", func(r chi.Router) {
+		r.Use(authMiddleware.Middleware)
+		r.Get("/brief", h.CoAI.GetBrief)
+		r.Get("/preferences", h.CoAI.GetPreferences)
+		r.Put("/preferences", h.CoAI.UpdatePreferences)
+	})
 }
 
 func registerAIRoutes(r chi.Router, h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middleware.Auth) {

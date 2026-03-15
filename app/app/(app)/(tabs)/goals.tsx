@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRefreshableQuery } from '../../../src/hooks/useRefreshableQuery';
@@ -50,12 +51,29 @@ export default function GoalsScreen() {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
+  const router = useRouter();
+  const params = useLocalSearchParams<{
+    open_form?: string;
+    name?: string;
+    target_amount?: string;
+    currency?: string;
+    category?: string;
+  }>();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const createPrefill = useMemo(
+    () => ({
+      name: typeof params.name === 'string' ? params.name : undefined,
+      target_amount: typeof params.target_amount === 'string' ? params.target_amount : undefined,
+      currency: typeof params.currency === 'string' ? params.currency : undefined,
+      category: typeof params.category === 'string' ? params.category : undefined,
+    }),
+    [params.category, params.currency, params.name, params.target_amount]
+  );
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
@@ -104,6 +122,15 @@ export default function GoalsScreen() {
   const goals: Goal[] = data?.goals || [];
   const activeGoals = goals.filter((g) => !g.is_completed);
   const completedGoals = goals.filter((g) => g.is_completed);
+
+  useEffect(() => {
+    if (params.open_form !== '1') {
+      return;
+    }
+
+    setShowForm(true);
+    router.replace('/(app)/(tabs)/goals');
+  }, [params.open_form, router]);
 
   // Grid columns based on screen size
   const getGridColumns = () => {
@@ -232,7 +259,7 @@ export default function GoalsScreen() {
         )}
       </PageScaffold>
 
-      <GoalFormModal visible={showForm} onClose={() => setShowForm(false)} />
+      <GoalFormModal visible={showForm} onClose={() => setShowForm(false)} prefill={createPrefill} />
 
       {editingGoal && (
         <GoalEditModal
@@ -450,7 +477,20 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
   );
 }
 
-function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+function GoalFormModal({
+  visible,
+  onClose,
+  prefill,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  prefill?: {
+    name?: string;
+    target_amount?: string;
+    currency?: string;
+    category?: string;
+  };
+}) {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
@@ -464,6 +504,24 @@ function GoalFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
   const [deadline, setDeadline] = useState('');
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!visible) {
+      resetForm();
+      return;
+    }
+
+    setName(prefill?.name ?? '');
+    setTargetAmount(prefill?.target_amount ?? '');
+    setCurrency(prefill?.currency?.toUpperCase() || 'USD');
+    setCategory(
+      prefill?.category && GOAL_CATEGORIES.includes(prefill.category)
+        ? prefill.category
+        : 'savings'
+    );
+    setDeadline('');
+    setError('');
+  }, [prefill, visible]);
 
   const mutation = useMutation({
     mutationFn: (data: CreateGoalRequest) => api.goals.create(data),

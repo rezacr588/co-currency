@@ -15,13 +15,15 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="color-scheme" content="dark light" />
 
         {/* Default SEO */}
-        <title>CoAI - See Where Your Money Really Goes</title>
+        <title>CoAI - Your Personal Finance Copilot</title>
         <meta
           name="description"
-          content="Track spending across 160+ currencies, get AI-powered financial advice, and protect your purchasing power. Free forever."
+          content="CoAI helps you understand your money, track across currencies, and take guided action on budgets, goals, and spending."
         />
-        <meta name="keywords" content="personal finance, currency converter, budget tracker, AI financial advisor, multi-currency wallet, savings goals, expense tracker" />
+        <meta name="keywords" content="coai, personal finance copilot, ai finance assistant, currency converter, budget tracker, savings goals, multi-currency wallet, expense tracker" />
         <meta name="author" content="Reza Zeraat" />
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+        <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
 
         {/* Favicon & Icons */}
         <link rel="icon" href="/favicon.ico" sizes="48x48" />
@@ -38,29 +40,24 @@ export default function Root({ children }: PropsWithChildren) {
         <meta property="og:site_name" content="CoAI" />
         <meta property="og:type" content="website" />
         <meta property="og:locale" content="en_US" />
-        <meta property="og:title" content="CoAI - See Where Your Money Really Goes" />
+        <meta property="og:title" content="CoAI - Your Personal Finance Copilot" />
         <meta
           property="og:description"
-          content="Track spending across 160+ currencies, get AI-powered financial advice, and protect your purchasing power. Free forever."
+          content="CoAI helps you understand your money, track across currencies, and take guided action on budgets, goals, and spending."
         />
         <meta property="og:url" content="https://coai.koyeb.app" />
         <meta property="og:image" content="https://coai.koyeb.app/assets/images/icon.png" />
+        <meta property="og:image:alt" content="CoAI personal finance copilot" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="CoAI - See Where Your Money Really Goes" />
+        <meta name="twitter:title" content="CoAI - Your Personal Finance Copilot" />
         <meta
           name="twitter:description"
-          content="Track spending across 160+ currencies, get AI-powered financial advice, and protect your purchasing power. Free forever."
+          content="CoAI helps you understand your money, track across currencies, and take guided action on budgets, goals, and spending."
         />
         <meta name="twitter:image" content="https://coai.koyeb.app/assets/images/icon.png" />
-
-        {/* hreflang */}
-        <link rel="alternate" hrefLang="en" href="https://coai.koyeb.app/" />
-        <link rel="alternate" hrefLang="fa" href="https://coai.koyeb.app/" />
-        <link rel="alternate" hrefLang="ar" href="https://coai.koyeb.app/" />
-        <link rel="alternate" hrefLang="tr" href="https://coai.koyeb.app/" />
-        <link rel="alternate" hrefLang="x-default" href="https://coai.koyeb.app/" />
+        <meta name="twitter:image:alt" content="CoAI personal finance copilot" />
 
         {/* Preconnect */}
         <link rel="preconnect" href="https://coai.koyeb.app" />
@@ -73,7 +70,7 @@ export default function Root({ children }: PropsWithChildren) {
             __html: JSON.stringify([
               {
                 '@context': 'https://schema.org',
-                '@type': 'WebApplication',
+                '@type': 'SoftwareApplication',
                 name: 'CoAI',
                 url: 'https://coai.koyeb.app',
                 applicationCategory: 'FinanceApplication',
@@ -88,10 +85,9 @@ export default function Root({ children }: PropsWithChildren) {
                   name: 'Reza Zeraat',
                 },
                 description:
-                  'AI-powered personal finance app with multi-currency wallet, budgets, goals, and reports.',
+                  'Personal finance copilot with multi-currency wallet, budgets, goals, reports, and guided AI actions.',
                 featureList:
-                  'Multi-Currency Wallet, Currency Converter, Budgets, Savings Goals, AI Receipt Parsing, Reports & Analytics, Real Value Protection',
-                inLanguage: ['en', 'fa', 'ar', 'tr'],
+                  'CoAI Home, Multi-Currency Wallet, Currency Converter, Budgets, Savings Goals, Reports & Analytics, Purchasing Power Protection',
               },
               {
                 '@context': 'https://schema.org',
@@ -99,6 +95,15 @@ export default function Root({ children }: PropsWithChildren) {
                 name: 'CoAI',
                 url: 'https://coai.koyeb.app',
                 logo: 'https://coai.koyeb.app/assets/images/icon.png',
+                sameAs: ['https://www.linkedin.com/in/reza-zeraat-6628781b3/'],
+              },
+              {
+                '@context': 'https://schema.org',
+                '@type': 'WebSite',
+                name: 'CoAI',
+                url: 'https://coai.koyeb.app',
+                description:
+                  'CoAI helps you understand your money, track across currencies, and take guided action on budgets, goals, and spending.',
               },
             ]),
           }}

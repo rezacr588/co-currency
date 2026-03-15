@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { View, Text, Pressable, ScrollView, ActivityIndicator, useWindowDimensions } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check } from 'lucide-react-native';
@@ -15,6 +15,7 @@ import { Button } from '../../../../src/components/ui/Button';
 export default function WalletConvertScreen() {
   const { t } = useLanguage();
   const router = useRouter();
+  const params = useLocalSearchParams<{ amount?: string; from?: string; to?: string }>();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -26,12 +27,15 @@ export default function WalletConvertScreen() {
   const isTablet = width >= 768;
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
   const iconColor = colors.foreground;
+  const initialAmount = typeof params.amount === 'string' ? params.amount : '';
+  const initialFromCurrency = typeof params.from === 'string' ? params.from.toUpperCase() : 'USD';
+  const initialToCurrency = typeof params.to === 'string' ? params.to.toUpperCase() : 'EUR';
 
   const [converterState, setConverterState] = useState({
-    amount: '',
+    amount: initialAmount,
     parsedAmount: 0,
-    fromCurrency: 'USD',
-    toCurrency: 'EUR',
+    fromCurrency: initialFromCurrency,
+    toCurrency: initialToCurrency,
   });
   const [error, setError] = useState('');
   const { showToast } = useToast();
@@ -150,7 +154,9 @@ export default function WalletConvertScreen() {
           variant="full"
           showQuickSelect={false}
           allowedCurrencyCodes={availableCurrencies}
-          initialAmount=""
+          initialAmount={initialAmount}
+          initialFromCurrency={initialFromCurrency}
+          initialToCurrency={initialToCurrency}
           onStateChange={setConverterState}
         />
 

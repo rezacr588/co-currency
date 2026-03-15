@@ -14,6 +14,7 @@ import {
 import type { User, LoginRequest, RegisterRequest } from '../types/wallet';
 import { isValidJWT } from '../utils/validation';
 import { prepareDashboardPostAuthRoute, usePersistModeRoute } from '../navigation/mode';
+import { readSecureJSON, removeSecure, writeSecureJSON } from '../utils/storage';
 
 interface AuthContextType {
   user: User | null;
@@ -27,8 +28,40 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const PROFILE_CACHE_KEY = '@auth_profile_cache';
 // Query keys that are NOT user-scoped (safe to keep across sessions)
 const PUBLIC_QUERY_KEYS = new Set(['currencies', 'exchange-rates', 'news']);
+
+function isAuthErrorMessage(message?: string): boolean {
+  if (!message) return false;
+
+  return (
+    message.includes('Session expired') ||
+    message.includes('401') ||
+    message.includes('Unauthorized')
+  );
+}
+
+function isNetworkError(error: unknown): boolean {
+  if (error instanceof TypeError) {
+    return true;
+  }
+
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  return message.includes('network') || message.includes('fetch') || message.includes('timeout');
+}
+
+async function readCachedProfile(): Promise<User | null> {
+  return readSecureJSON<User>(PROFILE_CACHE_KEY);
+}
+
+async function writeCachedProfile(user: User): Promise<void> {
+  await writeSecureJSON(PROFILE_CACHE_KEY, user);
+}
+
+async function clearCachedProfile(): Promise<void> {
+  await removeSecure(PROFILE_CACHE_KEY);
+}
 
 export function isAuthScopedQueryKey(queryKey: readonly unknown[]): boolean {
   const [head] = queryKey;
@@ -86,15 +119,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Use a ref for the auth error callback to avoid stale closures
   const authErrorRef = useRef(() => {
+    void clearCachedProfile();
+    void clearAuthScopedQueries(queryClient);
     setUser(null);
     router.replace('/login');
   });
   useEffect(() => {
     authErrorRef.current = () => {
+      void clearCachedProfile();
+      void clearAuthScopedQueries(queryClient);
       setUser(null);
       router.replace('/login');
     };
-  }, [router]);
+  }, [queryClient, router]);
 
   // Handle auth errors (401) - redirect to login
   useEffect(() => {
@@ -112,10 +149,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const profile = await api.auth.getProfile();
       setUser(profile);
-    } catch {
-      // Token might be invalid, clear it
-      await clearAuthToken();
-      setUser(null);
+      await writeCachedProfile(profile);
+    } catch (error) {
+      if (isAuthErrorMessage(error instanceof Error ? error.message : String(error))) {
+        await clearCachedProfile();
+        await clearAuthToken();
+        setUser(null);
+        return;
+      }
+
+      const cachedProfile = await readCachedProfile();
+      if (cachedProfile) {
+        setUser(cachedProfile);
+      }
     }
   }, []);
 
@@ -128,6 +174,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const token = getAuthToken();
         if (token && isValidJWT(token)) {
+          const cachedProfile = await readCachedProfile();
+          if (cachedProfile) {
+            setUser(cachedProfile);
+          }
+
           // Retry profile fetch up to 3 times for transient network errors
           const maxRetries = 3;
           let lastError: Error | null = null;
@@ -136,32 +187,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             try {
               const profile = await api.auth.getProfile();
               setUser(profile);
+              await writeCachedProfile(profile);
               return;
             } catch (error) {
               lastError = error instanceof Error ? error : new Error('Unknown error');
 
-              // Check if it's a network error (worth retrying) vs auth error (don't retry)
-              const isNetworkError =
-                error instanceof TypeError || // Network failure
-                (lastError.message && lastError.message.includes('network')) ||
-                (lastError.message && lastError.message.includes('fetch'));
-
-              const isAuthError =
-                lastError.message?.includes('Session expired') ||
-                lastError.message?.includes('401') ||
-                lastError.message?.includes('Unauthorized');
-
               // Don't retry auth errors - just clear and continue
-              if (isAuthError) {
+              if (isAuthErrorMessage(lastError.message)) {
+                await clearCachedProfile();
                 await clearAuthToken();
+                setUser(null);
                 break;
               }
 
               // Only retry network errors
-              if (!isNetworkError || attempt === maxRetries - 1) {
-                // Clear token on final failure if not a network error
-                if (!isNetworkError) {
+              if (!isNetworkError(error) || attempt === maxRetries - 1) {
+                if (!isNetworkError(error)) {
+                  await clearCachedProfile();
                   await clearAuthToken();
+                  setUser(null);
                 }
                 break;
               }
@@ -170,6 +214,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
             }
           }
+          if (cachedProfile) {
+            setUser(cachedProfile);
+            return;
+          }
+        } else if (token) {
+          await clearCachedProfile();
+          await clearAuthToken();
         }
       } finally {
         setIsLoading(false);
@@ -185,6 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await setRefreshToken(response.refresh_token);
     }
     setUser(response.user);
+    await writeCachedProfile(response.user);
   };
 
   const register = async (data: RegisterRequest) => {
@@ -194,6 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await setRefreshToken(response.refresh_token);
     }
     setUser(response.user);
+    await writeCachedProfile(response.user);
   };
 
   const logout = useCallback(async () => {
@@ -202,6 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (refreshToken) {
       api.auth.logout(refreshToken).catch(() => {});
     }
+    await clearCachedProfile();
     await clearAuthToken();
     await clearAuthScopedQueries(queryClient);
     setUser(null);
@@ -214,6 +268,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Fetch the user profile with the new token
     const profile = await api.auth.getProfile();
     setUser(profile);
+    await writeCachedProfile(profile);
   }, []);
 
   const isAuthenticated = !!user;

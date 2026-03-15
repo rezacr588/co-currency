@@ -17,22 +17,23 @@ type ChatConversation struct {
 
 // ChatMessage represents a message in a conversation
 type ChatMessage struct {
-	ID               uuid.UUID       `json:"id"`
-	ConversationID   uuid.UUID       `json:"conversation_id"`
-	Role             string          `json:"role"` // "user" or "assistant"
-	Content          string          `json:"content"`
-	ToolsUsed        []ChatToolUsage `json:"tools_used,omitempty"`
-	TokensUsed       int             `json:"tokens_used,omitempty"`
-	Provider         string          `json:"provider,omitempty"`
-	Model            string          `json:"model,omitempty"`
-	ThinkingMode     string          `json:"thinking_mode,omitempty"`
-	PromptTokens     int             `json:"prompt_tokens,omitempty"`
-	CompletionTokens int             `json:"completion_tokens,omitempty"`
-	TotalTokens      int             `json:"total_tokens,omitempty"`
-	EstimatedCostUSD *float64        `json:"estimated_cost_usd,omitempty"`
-	BilledCostUSD    *float64        `json:"billed_cost_usd,omitempty"`
-	BillingSource    string          `json:"billing_source,omitempty"`
-	CreatedAt        time.Time       `json:"created_at"`
+	ID                 uuid.UUID           `json:"id"`
+	ConversationID     uuid.UUID           `json:"conversation_id"`
+	Role               string              `json:"role"` // "user" or "assistant"
+	Content            string              `json:"content"`
+	RecommendedActions []RecommendedAction `json:"recommended_actions,omitempty"`
+	ToolsUsed          []ChatToolUsage     `json:"tools_used,omitempty"`
+	TokensUsed         int                 `json:"tokens_used,omitempty"`
+	Provider           string              `json:"provider,omitempty"`
+	Model              string              `json:"model,omitempty"`
+	ThinkingMode       string              `json:"thinking_mode,omitempty"`
+	PromptTokens       int                 `json:"prompt_tokens,omitempty"`
+	CompletionTokens   int                 `json:"completion_tokens,omitempty"`
+	TotalTokens        int                 `json:"total_tokens,omitempty"`
+	EstimatedCostUSD   *float64            `json:"estimated_cost_usd,omitempty"`
+	BilledCostUSD      *float64            `json:"billed_cost_usd,omitempty"`
+	BillingSource      string              `json:"billing_source,omitempty"`
+	CreatedAt          time.Time           `json:"created_at"`
 }
 
 type ChatThinkingMode string
@@ -117,17 +118,18 @@ type ChatUsageSummary struct {
 
 // ChatResponse represents the response from the AI
 type ChatResponse struct {
-	ConversationID   string      `json:"conversation_id"`
-	Message          ChatMessage `json:"message"`
-	TokensUsed       int         `json:"tokens_used,omitempty"`
-	Provider         string      `json:"provider,omitempty"`
-	Model            string      `json:"model,omitempty"`
-	ThinkingMode     string      `json:"thinking_mode,omitempty"`
-	Usage            ChatUsage   `json:"usage,omitempty"`
-	EstimatedCostUSD *float64    `json:"estimated_cost_usd,omitempty"`
-	BilledCostUSD    *float64    `json:"billed_cost_usd,omitempty"`
-	BillingSource    string      `json:"billing_source,omitempty"`
-	TraceID          string      `json:"trace_id,omitempty"`
+	ConversationID     string              `json:"conversation_id"`
+	Message            ChatMessage         `json:"message"`
+	RecommendedActions []RecommendedAction `json:"recommended_actions,omitempty"`
+	TokensUsed         int                 `json:"tokens_used,omitempty"`
+	Provider           string              `json:"provider,omitempty"`
+	Model              string              `json:"model,omitempty"`
+	ThinkingMode       string              `json:"thinking_mode,omitempty"`
+	Usage              ChatUsage           `json:"usage,omitempty"`
+	EstimatedCostUSD   *float64            `json:"estimated_cost_usd,omitempty"`
+	BilledCostUSD      *float64            `json:"billed_cost_usd,omitempty"`
+	BillingSource      string              `json:"billing_source,omitempty"`
+	TraceID            string              `json:"trace_id,omitempty"`
 }
 
 // ConversationWithMessages represents a conversation with its messages

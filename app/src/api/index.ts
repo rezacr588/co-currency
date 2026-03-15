@@ -18,6 +18,7 @@ import { challenges } from './challenges';
 import { xp } from './xp';
 import { news } from './news';
 import { wealth } from './wealth';
+import { coai } from './coai';
 import { currencies, rates, convert } from './exchange';
 
 export const api = {
@@ -44,6 +45,7 @@ export const api = {
   xp,
   news,
   wealth,
+  coai,
 };
 
 export {

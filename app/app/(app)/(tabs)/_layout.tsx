@@ -4,16 +4,14 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   BarChart3,
-  History,
+  Bot,
   KanbanSquare,
-  LayoutDashboard,
   LogOut,
   Menu,
-  MessageCircle,
   Moon,
   Plus,
   Sun,
-  Trophy,
+  Target,
   User,
   Wallet,
 } from 'lucide-react-native';
@@ -125,26 +123,20 @@ function AppSidebar({
   const railWidth = isCollapsed ? theme.layout.navRailWidth.collapsed : theme.layout.navRailWidth.expanded;
 
   const mainItems = [
-    { href: '/(app)/(tabs)', label: t('dashboard'), icon: <LayoutDashboard size={18} color={theme.colors.secondaryForeground} /> },
+    { href: '/(app)/(tabs)', label: 'CoAI', icon: <Bot size={18} color={theme.colors.secondaryForeground} /> },
     { href: '/(app)/(tabs)/wallet', label: t('wallet'), icon: <Wallet size={18} color={theme.colors.secondaryForeground} /> },
     { href: '/(app)/(tabs)/add', label: t('addTransaction') || 'Add', icon: <Plus size={18} color={theme.colors.secondaryForeground} /> },
-    { href: '/(app)/(tabs)/chat', label: t('aiAdvisor') || 'Chat', icon: <MessageCircle size={18} color={theme.colors.secondaryForeground} /> },
     { href: '/(app)/(tabs)/reports', label: t('reports'), icon: <BarChart3 size={18} color={theme.colors.secondaryForeground} /> },
+    { href: '/(app)/(tabs)/goals', label: t('financialGoals') || 'Goals', icon: <Target size={18} color={theme.colors.secondaryForeground} /> },
   ];
 
   const utilityItems = [
-    { href: '/(app)/badges', label: t('badges') || 'Badges', icon: <Trophy size={18} color={theme.colors.secondaryForeground} /> },
-    { href: '/(app)/historical', label: t('historicalRates') || 'Historical', icon: <History size={18} color={theme.colors.secondaryForeground} /> },
-    { href: '/todo', label: t('planner') || 'Planner', icon: <KanbanSquare size={18} color={theme.colors.secondaryForeground} /> },
+    { href: '/(app)/tools', label: t('tools') || 'Tools', icon: <KanbanSquare size={18} color={theme.colors.secondaryForeground} /> },
   ];
 
   const isRouteActive = (href: string) => {
     if (href === '/(app)/(tabs)') {
       return pathname === '/' || pathname === '/(app)/(tabs)' || pathname === '/(app)/(tabs)/index' || pathname === '/index';
-    }
-
-    if (href === '/todo') {
-      return isTodoPath(pathname);
     }
 
     return pathname.includes(href.replace('/(app)', '').replace('/(tabs)', ''));
@@ -386,9 +378,9 @@ function TabScreens() {
         }}
       />
       <Tabs.Screen name="add" />
-      <Tabs.Screen name="chat" />
       <Tabs.Screen name="reports" />
-      <Tabs.Screen name="goals" options={{ href: null }} />
+      <Tabs.Screen name="goals" />
+      <Tabs.Screen name="chat" options={{ href: null }} />
     </>
   );
 }
@@ -400,11 +392,11 @@ function TabsLayoutInner() {
   const { isCompactPhone, isDesktop, isTablet } = useScreenLayout();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const compactTabLabels = {
-    index: t('dashboardTabCompact') || t('home') || 'Home',
+    index: 'CoAI',
     wallet: t('walletTabCompact') || t('wallet') || 'Wallet',
     add: t('addTabCompact') || 'Add',
-    chat: t('aiAdvisorTabCompact') || 'AI',
     reports: t('reportsTabCompact') || t('reports') || 'Reports',
+    goals: t('financialGoals') || 'Goals',
   };
 
   useEffect(() => {
@@ -469,7 +461,7 @@ function TabsLayoutInner() {
           name="index"
           options={{
             title: compactTabLabels.index,
-            tabBarIcon: ({ color, size }) => <LayoutDashboard size={size} color={color} />,
+            tabBarIcon: ({ color, size }) => <Bot size={size} color={color} />,
           }}
         />
         <Tabs.Screen
@@ -488,20 +480,20 @@ function TabsLayoutInner() {
           }}
         />
         <Tabs.Screen
-          name="chat"
-          options={{
-            title: compactTabLabels.chat,
-            tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
           name="reports"
           options={{
             title: compactTabLabels.reports,
             tabBarIcon: ({ color, size }) => <BarChart3 size={size} color={color} />,
           }}
         />
-        <Tabs.Screen name="goals" options={{ href: null }} />
+        <Tabs.Screen
+          name="goals"
+          options={{
+            title: compactTabLabels.goals,
+            tabBarIcon: ({ color, size }) => <Target size={size} color={color} />,
+          }}
+        />
+        <Tabs.Screen name="chat" options={{ href: null }} />
       </Tabs>
     </View>
   );

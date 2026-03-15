@@ -18,16 +18,17 @@ type ChatRepository struct {
 }
 
 type ChatMessageMeta struct {
-	Provider         string
-	Model            string
-	ThinkingMode     string
-	ToolsUsed        []model.ChatToolUsage
-	PromptTokens     int
-	CompletionTokens int
-	TotalTokens      int
-	EstimatedCostUSD *float64
-	BilledCostUSD    *float64
-	BillingSource    string
+	Provider           string
+	Model              string
+	ThinkingMode       string
+	ToolsUsed          []model.ChatToolUsage
+	RecommendedActions []model.RecommendedAction
+	PromptTokens       int
+	CompletionTokens   int
+	TotalTokens        int
+	EstimatedCostUSD   *float64
+	BilledCostUSD      *float64
+	BillingSource      string
 }
 
 // NewChatRepository creates a new ChatRepository
@@ -141,6 +142,7 @@ func (r *ChatRepository) AddMessageWithMeta(ctx context.Context, conversationID 
 		msg.Model = meta.Model
 		msg.ThinkingMode = meta.ThinkingMode
 		msg.ToolsUsed = meta.ToolsUsed
+		msg.RecommendedActions = meta.RecommendedActions
 		msg.PromptTokens = meta.PromptTokens
 		msg.CompletionTokens = meta.CompletionTokens
 		msg.TotalTokens = meta.TotalTokens
@@ -155,15 +157,19 @@ func (r *ChatRepository) AddMessageWithMeta(ctx context.Context, conversationID 
 	if err != nil {
 		return nil, fmt.Errorf("marshaling tools used: %w", err)
 	}
+	recommendedActionsJSON, err := marshalRecommendedActions(msg.RecommendedActions)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling recommended actions: %w", err)
+	}
 
 	query := `
 		INSERT INTO chat_messages (
 			id, conversation_id, role, content, tokens_used, provider, model, thinking_mode,
-			prompt_tokens, completion_tokens, total_tokens, estimated_cost_usd, billed_cost_usd, billing_source, tools_used, created_at
+			prompt_tokens, completion_tokens, total_tokens, estimated_cost_usd, billed_cost_usd, billing_source, tools_used, recommended_actions, created_at
 		)
 		VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8,
-			$9, $10, $11, $12, $13, $14, $15, $16
+			$9, $10, $11, $12, $13, $14, $15, $16, $17
 		)
 	`
 	_, err = r.pool.Exec(
@@ -184,6 +190,7 @@ func (r *ChatRepository) AddMessageWithMeta(ctx context.Context, conversationID 
 		msg.BilledCostUSD,
 		msg.BillingSource,
 		toolsUsedJSON,
+		recommendedActionsJSON,
 		msg.CreatedAt,
 	)
 	if err != nil {
@@ -205,7 +212,8 @@ func (r *ChatRepository) GetMessages(ctx context.Context, conversationID uuid.UU
 		SELECT
 			id, conversation_id, role, content, COALESCE(tokens_used, 0), COALESCE(provider, ''), COALESCE(model, ''),
 			COALESCE(thinking_mode, ''), COALESCE(prompt_tokens, 0), COALESCE(completion_tokens, 0), COALESCE(total_tokens, 0),
-			estimated_cost_usd, billed_cost_usd, COALESCE(billing_source, ''), COALESCE(tools_used, '[]'::jsonb), created_at
+			estimated_cost_usd, billed_cost_usd, COALESCE(billing_source, ''), COALESCE(tools_used, '[]'::jsonb),
+			COALESCE(recommended_actions, '[]'::jsonb), created_at
 		FROM chat_messages
 		WHERE conversation_id = $1
 		ORDER BY created_at ASC
@@ -220,6 +228,7 @@ func (r *ChatRepository) GetMessages(ctx context.Context, conversationID uuid.UU
 	for rows.Next() {
 		var msg model.ChatMessage
 		var toolsUsedRaw []byte
+		var recommendedActionsRaw []byte
 		if err := rows.Scan(
 			&msg.ID,
 			&msg.ConversationID,
@@ -236,12 +245,16 @@ func (r *ChatRepository) GetMessages(ctx context.Context, conversationID uuid.UU
 			&msg.BilledCostUSD,
 			&msg.BillingSource,
 			&toolsUsedRaw,
+			&recommendedActionsRaw,
 			&msg.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scanning message: %w", err)
 		}
 		if err := unmarshalChatToolsUsed(toolsUsedRaw, &msg.ToolsUsed); err != nil {
 			return nil, fmt.Errorf("scanning message tools used: %w", err)
+		}
+		if err := unmarshalRecommendedActions(recommendedActionsRaw, &msg.RecommendedActions); err != nil {
+			return nil, fmt.Errorf("scanning message recommended actions: %w", err)
 		}
 		messages = append(messages, msg)
 	}
@@ -255,7 +268,8 @@ func (r *ChatRepository) GetRecentMessages(ctx context.Context, conversationID u
 		SELECT
 			id, conversation_id, role, content, COALESCE(tokens_used, 0), COALESCE(provider, ''), COALESCE(model, ''),
 			COALESCE(thinking_mode, ''), COALESCE(prompt_tokens, 0), COALESCE(completion_tokens, 0), COALESCE(total_tokens, 0),
-			estimated_cost_usd, billed_cost_usd, COALESCE(billing_source, ''), COALESCE(tools_used, '[]'::jsonb), created_at
+			estimated_cost_usd, billed_cost_usd, COALESCE(billing_source, ''), COALESCE(tools_used, '[]'::jsonb),
+			COALESCE(recommended_actions, '[]'::jsonb), created_at
 		FROM chat_messages
 		WHERE conversation_id = $1
 		ORDER BY created_at DESC
@@ -271,6 +285,7 @@ func (r *ChatRepository) GetRecentMessages(ctx context.Context, conversationID u
 	for rows.Next() {
 		var msg model.ChatMessage
 		var toolsUsedRaw []byte
+		var recommendedActionsRaw []byte
 		if err := rows.Scan(
 			&msg.ID,
 			&msg.ConversationID,
@@ -287,12 +302,16 @@ func (r *ChatRepository) GetRecentMessages(ctx context.Context, conversationID u
 			&msg.BilledCostUSD,
 			&msg.BillingSource,
 			&toolsUsedRaw,
+			&recommendedActionsRaw,
 			&msg.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scanning message: %w", err)
 		}
 		if err := unmarshalChatToolsUsed(toolsUsedRaw, &msg.ToolsUsed); err != nil {
 			return nil, fmt.Errorf("scanning recent message tools used: %w", err)
+		}
+		if err := unmarshalRecommendedActions(recommendedActionsRaw, &msg.RecommendedActions); err != nil {
+			return nil, fmt.Errorf("scanning recent message recommended actions: %w", err)
 		}
 		messages = append(messages, msg)
 	}
@@ -493,6 +512,13 @@ func marshalChatToolsUsed(tools []model.ChatToolUsage) ([]byte, error) {
 	return json.Marshal(tools)
 }
 
+func marshalRecommendedActions(actions []model.RecommendedAction) ([]byte, error) {
+	if len(actions) == 0 {
+		return []byte("[]"), nil
+	}
+	return json.Marshal(actions)
+}
+
 func unmarshalChatToolsUsed(raw []byte, dest *[]model.ChatToolUsage) error {
 	if dest == nil {
 		return nil
@@ -506,6 +532,23 @@ func unmarshalChatToolsUsed(raw []byte, dest *[]model.ChatToolUsage) error {
 	}
 	if *dest == nil {
 		*dest = []model.ChatToolUsage{}
+	}
+	return nil
+}
+
+func unmarshalRecommendedActions(raw []byte, dest *[]model.RecommendedAction) error {
+	if dest == nil {
+		return nil
+	}
+	if len(raw) == 0 {
+		*dest = []model.RecommendedAction{}
+		return nil
+	}
+	if err := json.Unmarshal(raw, dest); err != nil {
+		return err
+	}
+	if *dest == nil {
+		*dest = []model.RecommendedAction{}
 	}
 	return nil
 }

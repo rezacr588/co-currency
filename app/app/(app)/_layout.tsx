@@ -25,16 +25,18 @@ export default function AppLayout() {
   return (
     <>
       <SEOHead
-        title="Dashboard"
-        description="Your personal finance dashboard."
-        canonicalPath="/dashboard"
+        title="CoAI"
+        description="CoAI is your personal finance copilot."
+        canonicalPath="/finapp"
         noIndex
       />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="finapp" />
         <Stack.Screen name="todo" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="coai-chat" />
         <Stack.Screen name="profile" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="tools" />
         <Stack.Screen name="change-password" />
         <Stack.Screen name="budgets" />
         <Stack.Screen name="recurring" />

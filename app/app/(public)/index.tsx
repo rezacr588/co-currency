@@ -120,7 +120,7 @@ export default function HomeScreen() {
 
   const faqData = [
     { q: t('landingFaqQ1') || 'Is CoAI really free?', a: t('landingFaqA1') || 'Yes. No premium tier, no ads, no hidden costs. Every feature is free.' },
-    { q: t('landingFaqQ2') || 'How does the AI advisor work?', a: t('landingFaqA2') || 'It analyzes your transactions, understands your spending patterns, and gives personalized financial advice. It can also parse receipts from photos.' },
+    { q: t('landingFaqQ2') || 'How does CoAI work?', a: t('landingFaqA2') || 'CoAI reads your financial context and turns it into priorities, alerts, and guided actions. It can also parse receipts and answer questions.' },
     { q: t('landingFaqQ3') || 'What currencies are supported?', a: t('landingFaqA3') || '160+ currencies with real-time exchange rates from the European Central Bank. Updated 24/7.' },
     { q: t('landingFaqQ4') || 'Is my data safe?', a: t('landingFaqA4') || 'Absolutely. Bank-level encryption, JWT authentication, and we never share your data with third parties.' },
     { q: t('landingFaqQ5') || 'Does it work offline?', a: t('landingFaqA5') || 'Yes. Your transactions are saved locally and sync automatically when you reconnect.' },
@@ -140,20 +140,39 @@ export default function HomeScreen() {
   return (
     <MarketingScaffold>
       <SEOHead
-        title={t('landingHeroTitle') || 'See Where Your Money Really Goes'}
-        description={t('seoHomeDescription') || 'Track spending across 160+ currencies, get AI-powered financial advice, and protect your purchasing power. Free forever.'}
+        title={t('landingHeroTitle') || 'CoAI is your personal finance copilot'}
+        description={t('seoHomeDescription') || 'CoAI helps you understand your money, track across currencies, and take guided action on budgets, goals, and spending.'}
         canonicalPath="/"
-        jsonLd={faqJsonLd}
+        ogImageAlt="CoAI personal finance copilot"
+        keywords={[
+          'coai',
+          'personal finance copilot',
+          'ai finance assistant',
+          'multi-currency wallet',
+          'budget tracker',
+          'savings goals',
+        ]}
+        jsonLd={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'WebPage',
+            name: 'CoAI Home',
+            url: 'https://coai.koyeb.app/',
+            description:
+              'CoAI helps you understand your money, track across currencies, and take guided action on budgets, goals, and spending.',
+          },
+          faqJsonLd,
+        ]}
       />
 
       {/* ── Section 1: Hero ── */}
       <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: theme.spacing.xxxl, alignItems: 'center', marginBottom: theme.spacing.xxxl * 1.5 }}>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: isDesktop ? 48 : 32, lineHeight: isDesktop ? 56 : 40, fontFamily: theme.typography.h1.fontFamily, color: theme.colors.foreground, letterSpacing: -1 }}>
-            {t('landingHeroTitle') || 'See where your money really goes.'}
+            {t('landingHeroTitle') || 'CoAI is your personal finance copilot.'}
           </Text>
           <Text style={{ marginTop: theme.spacing.lg, maxWidth: 540, fontSize: 16, lineHeight: 24, color: theme.colors.mutedForeground }}>
-            {t('landingHeroSubtitle') || 'Track spending, protect purchasing power, and grow your savings with AI — across 160+ currencies. Free forever.'}
+            {t('landingHeroSubtitle') || 'Ask CoAI what matters, understand your money across currencies, and take guided action on budgets, goals, and spending.'}
           </Text>
           <View style={{ flexDirection: isTablet ? 'row' : 'column', gap: theme.spacing.md, marginTop: theme.spacing.xxl, alignItems: isTablet ? 'center' : 'stretch' }}>
             <CTAButton href="/register" label={t('landingHeroCta') || 'Take Control — It\'s Free'} primary />
@@ -170,10 +189,10 @@ export default function HomeScreen() {
         {isTablet && (
           <SurfaceCard variant="elevated" style={{ flex: isDesktop ? 0.85 : undefined, padding: 20 }}>
             <Text style={{ fontSize: 16, fontFamily: theme.typography.h2.fontFamily, color: theme.colors.foreground, marginBottom: theme.spacing.lg }}>
-              {t('reportsAndStats') || 'Dashboard Preview'}
+              {t('reportsAndStats') || 'CoAI Preview'}
             </Text>
             {[
-              { label: t('wallet') || 'Wallet', value: '$42,380', note: t('landingFeatureWalletDesc') || 'Track balances across currencies' },
+              { label: 'CoAI brief', value: '3', note: 'Priorities surfaced from your latest financial data' },
               { label: t('financialGoals') || 'Goals', value: '78%', note: t('landingFeatureGoalsDesc') || 'Stay on pace with savings targets' },
               { label: t('reports') || 'Reports', value: '12', note: t('landingFeatureReportsDesc') || 'Cash flow and spending trends' },
             ].map((item) => (
@@ -199,13 +218,13 @@ export default function HomeScreen() {
 
       {/* ── Section 3: Features Grid ── */}
       <SectionBlock
-        title={t('landingFeaturesTitle') || 'Stop guessing. Start knowing.'}
-        subtitle={t('featuresSubtitle') || 'Every tool you need to take control of your money.'}
+        title={t('landingFeaturesTitle') || 'CoAI tells you what matters and helps you act.'}
+        subtitle={t('featuresSubtitle') || 'Assistant-first personal finance with the supporting layers you still need.'}
       >
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.md }}>
           {[
             { icon: <Wallet size={22} color={theme.colors.primary} />, title: t('featureWalletTitle') || 'Multi-Currency Wallet', desc: t('landingFeatureWalletDesc') || 'Know exactly what you have, in every currency, right now.' },
-            { icon: <Bot size={22} color={theme.colors.primary} />, title: t('featureAITitle') || 'AI Financial Advisor', desc: t('landingFeatureAIDesc') || 'Get advice that actually helps — not generic tips.' },
+            { icon: <Bot size={22} color={theme.colors.primary} />, title: t('featureAITitle') || 'CoAI Copilot', desc: t('landingFeatureAIDesc') || 'Get priorities, alerts, and next actions grounded in your real financial context.' },
             { icon: <PieChart size={22} color={theme.colors.primary} />, title: t('featureBudgetsTitle') || 'Smart Budgets', desc: t('landingFeatureBudgetsDesc') || 'Know exactly what you can spend before you spend it.' },
             { icon: <Target size={22} color={theme.colors.primary} />, title: t('featureGoalsTitle') || 'Savings Goals', desc: t('landingFeatureGoalsDesc') || 'Set a target. Track progress. Hit it faster with AI.' },
             { icon: <BarChart3 size={22} color={theme.colors.primary} />, title: t('featureReportsTitle') || 'Reports & Analytics', desc: t('landingFeatureReportsDesc') || 'See your spending patterns. Spot the leaks.' },
@@ -220,19 +239,19 @@ export default function HomeScreen() {
 
       {/* ── Section 4: How It Works ── */}
       <SectionBlock
-        title={t('landingHowTitle') || 'Three steps. You\'re in control.'}
-        subtitle={t('howItWorksSubtitle') || 'No complexity. No learning curve.'}
+        title={t('landingHowTitle') || 'Three steps to get CoAI working for you.'}
+        subtitle={t('howItWorksSubtitle') || 'Set up the assistant, add context, and start acting on guidance.'}
       >
         <View style={{ flexDirection: isTablet ? 'row' : 'column', gap: theme.spacing.xl }}>
           <StepCard number={1} title={t('step1Title') || 'Create your account'} description={t('landingStep1Desc') || '30 seconds. No credit card. No strings.'} />
           <StepCard number={2} title={t('step2Title') || 'Add your finances'} description={t('landingStep2Desc') || 'Import transactions, set budgets, pick your currencies.'} />
-          <StepCard number={3} title={t('step3Title') || 'Get insights'} description={t('landingStep3Desc') || 'AI analyzes your money and shows you what matters.'} />
+          <StepCard number={3} title={t('step3Title') || 'Get guidance'} description={t('landingStep3Desc') || 'CoAI explains what changed and helps you act on it.'} />
         </View>
       </SectionBlock>
 
       {/* ── Section 5: AI Showcase ── */}
       <SectionBlock
-        title={t('landingAITitle') || 'An advisor that actually knows your finances'}
+        title={t('landingAITitle') || 'An assistant that actually knows your finances'}
       >
         <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: theme.spacing.xl, alignItems: 'stretch' }}>
           <SurfaceCard variant="elevated" style={{ flex: isDesktop ? 1.2 : undefined, padding: 20 }}>
@@ -251,7 +270,7 @@ export default function HomeScreen() {
                 </View>
                 <View style={{ flex: 1, backgroundColor: theme.colors.accent + '15', borderRadius: theme.radii.md, padding: theme.spacing.md }}>
                   <Text style={{ color: theme.colors.foreground, fontSize: 14, lineHeight: 20 }}>
-                    {t('landingAIChatBot') || 'Your dining spending is 40% above your budget this month. You\'ve spent $380 vs your $270 target. Consider meal prepping 2 days a week — that could save ~$120/month.'}
+                    {t('landingAIChatBot') || 'Your dining spend is 34% of this month’s outflow and trending above last month. Moving two meals a week home would save roughly $180/month. Want me to turn that into a food budget?'}
                   </Text>
                 </View>
               </View>

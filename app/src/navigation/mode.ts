@@ -30,7 +30,7 @@ const STORAGE_CURRENT_MODE = 'current_mode';
 const STORAGE_LAST_ROUTE_FINAPP = 'last_route_finapp';
 const STORAGE_LAST_ROUTE_TODO = 'last_route_todo';
 
-const NON_APP_PREFIXES = ['/login', '/register', '/forgot-password', '/reset-password', '/about', '/converter', '/auth'];
+const NON_APP_PREFIXES = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/about', '/converter', '/auth'];
 const TODO_PATH_PREFIXES = ['/todo', '/planner', '/(app)/planner', '/planner-create', '/(app)/planner-create'] as const;
 const TODO_TRANSIENT_PATHS = ['/planner-create', '/(app)/planner-create'] as const;
 const FINAPP_TRANSIENT_PATHS = [
@@ -45,14 +45,17 @@ const FINAPP_PATH_PREFIXES = [
   '/(app)/(tabs)/wallet',
   '/(app)/(tabs)/add',
   '/(app)/(tabs)/chat',
+  '/(app)/coai-chat',
   '/(app)/(tabs)/reports',
   '/(app)/(tabs)/goals',
   '/wallet',
   '/add',
   '/chat',
+  '/coai-chat',
   '/reports',
   '/goals',
   '/profile',
+  '/tools',
   '/change-password',
   '/budgets',
   '/recurring',
@@ -74,6 +77,8 @@ const COMPATIBILITY_REDIRECTS: Record<string, string> = {
   '/(app)/todo': '/todo',
   '/index': '/(app)/(tabs)',
   '/(app)/(tabs)/index': '/(app)/(tabs)',
+  '/chat': '/(app)/coai-chat',
+  '/(app)/(tabs)/chat': '/(app)/coai-chat',
 };
 
 function normalizePath(path: string | null | undefined): string {
@@ -90,7 +95,7 @@ function matchesPrefix(path: string, prefix: string): boolean {
 function canonicalizePath(path: string | null | undefined): string {
   const normalized = normalizePath(path);
   if (normalized === '/') {
-    return MODE_DEFAULT_ROUTE.finapp;
+    return '/';
   }
   return COMPATIBILITY_REDIRECTS[normalized] ?? normalized;
 }

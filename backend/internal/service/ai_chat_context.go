@@ -303,6 +303,9 @@ func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.U
 		user, err := s.userRepo.GetByID(ctx, userID)
 		if err == nil && user != nil {
 			fctx.UserName = sanitizeForPrompt(user.Name, 100)
+			if user.PreferredCurrency != "" {
+				fctx.PreferredCurrency = normalizeCurrencyCode(user.PreferredCurrency)
+			}
 			if !user.CreatedAt.IsZero() {
 				fctx.AccountAgeDays = int(now.Sub(user.CreatedAt).Hours() / 24)
 			}
@@ -318,7 +321,9 @@ func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.U
 				Balance:  b.Balance,
 			})
 		}
-		fctx.PreferredCurrency = selectPreferredCurrencyFromBalances(ctx, balances, rateCache, convertCurrency)
+		if fctx.PreferredCurrency == "" {
+			fctx.PreferredCurrency = selectPreferredCurrencyFromBalances(ctx, balances, rateCache, convertCurrency)
+		}
 	}
 
 	if fctx.PreferredCurrency == "" {

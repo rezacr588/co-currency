@@ -19,6 +19,8 @@ export const ROUTES = {
   finappHome: '/finapp',
   todoHome: '/todo',
   dashboard: '/(app)/(tabs)',
+  coaiHome: '/(app)/(tabs)',
+  coaiChat: '/(app)/coai-chat',
   wallet: '/(app)/(tabs)/wallet',
   walletAdd: '/transaction-create',
   walletHistory: '/(app)/(tabs)/wallet/history',
@@ -26,6 +28,7 @@ export const ROUTES = {
   walletChat: '/(app)/(tabs)/wallet/chat',
   goals: '/(app)/(tabs)/goals',
   reports: '/(app)/(tabs)/reports',
+  tools: '/(app)/tools',
 
   // Authenticated routes (non-tab)
   profile: '/(app)/profile',
