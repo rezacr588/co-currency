@@ -4,10 +4,15 @@ import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import {
   AlertTriangle,
+  ArrowLeftRight,
   ArrowRight,
+  BarChart3,
   Bot,
   Briefcase,
-  Clock3,
+  History,
+  LayoutGrid,
+  MessageCircle,
+  Plus,
   Sparkles,
   Target,
   Wallet,
@@ -19,42 +24,60 @@ import { RecommendedActionCards } from '../../../src/components/features/CoAI/Re
 import { Card, PageHeader, PageScaffold, SectionBlock } from '../../../src/components/ui';
 import { useAuth } from '../../../src/context/AuthContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
-import { formatCompactCurrency } from '../../../src/utils/format';
+import { formatCompactCurrency, formatCurrency } from '../../../src/utils/format';
 import { openRecommendedAction } from '../../../src/utils/coaiActions';
+import { useScreenLayout } from '../../../src/hooks/useScreenLayout';
 
-function SnapshotMetric({
+function QuickAction({
+  icon: Icon,
   label,
-  value,
+  onPress,
+  color,
 }: {
+  icon: any;
   label: string;
-  value: string;
+  onPress: () => void;
+  color?: string;
 }) {
   const theme = useTheme();
-
   return (
-    <View
-      style={{
-        flex: 1,
-        minWidth: 140,
-        borderRadius: theme.radii.lg,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        backgroundColor: theme.colors.secondary,
-        padding: 14,
-      }}
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        {
+          flex: 1,
+          alignItems: 'center',
+          gap: 8,
+          opacity: pressed ? 0.7 : 1,
+        },
+      ]}
     >
-      <Text style={{ color: theme.colors.mutedForeground, fontSize: 12 }}>{label}</Text>
-      <Text
+      <View
         style={{
-          color: theme.colors.foreground,
-          fontSize: 20,
-          marginTop: 8,
-          fontFamily: theme.typography.h2.fontFamily,
+          width: 48,
+          height: 48,
+          borderRadius: 24,
+          backgroundColor: theme.colors.card,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
-        {value}
+        <Icon size={20} color={color || theme.colors.primary} />
+      </View>
+      <Text
+        style={{
+          fontSize: 12,
+          color: theme.colors.foreground,
+          fontFamily: theme.typography.bodyMedium.fontFamily,
+          textAlign: 'center',
+        }}
+        numberOfLines={1}
+      >
+        {label}
       </Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -63,6 +86,7 @@ export default function CoAIHomeScreen() {
   const theme = useTheme();
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { isDesktop } = useScreenLayout();
   const [refreshing, setRefreshing] = useState(false);
 
   const {
@@ -105,36 +129,30 @@ export default function CoAIHomeScreen() {
     setRefreshing(false);
   }, [refetchBrief, refetchConversations]);
 
-  const handleAskCoAI = useCallback(() => {
-    router.push('/(app)/coai-chat' as any);
-  }, [router]);
-
-  const handleResumeConversation = useCallback(() => {
-    if (!recentConversation) return;
-    router.push({
-      pathname: '/(app)/coai-chat',
-      params: { conversationId: recentConversation.id },
-    } as any);
-  }, [recentConversation, router]);
-
-  const toolLinks = [
+  const quickActions = [
     {
-      title: 'Planner',
-      description: 'Keep tasks and money actions connected.',
-      href: '/planner',
-      icon: Briefcase,
+      label: t('addTransaction') || 'Add',
+      icon: Plus,
+      onPress: () => router.push('/(app)/(tabs)/add' as any),
+      color: theme.colors.primary,
     },
     {
-      title: 'Subscriptions',
-      description: 'Review recurring services and upcoming renewals.',
-      href: '/(app)/subscriptions',
-      icon: Clock3,
+      label: t('chat') || 'Chat',
+      icon: MessageCircle,
+      onPress: () => router.push('/(app)/(tabs)/chat' as any),
+      color: theme.colors.accent,
     },
     {
-      title: t('tools') || 'Tools',
-      description: 'Open badges, notes, challenges, and historical tools.',
-      href: '/(app)/tools',
-      icon: Sparkles,
+      label: t('convert') || 'Convert',
+      icon: ArrowLeftRight,
+      onPress: () => router.push('/(app)/(tabs)/wallet/convert' as any),
+      color: theme.colors.secondaryForeground,
+    },
+    {
+      label: t('tools') || 'Tools',
+      icon: LayoutGrid,
+      onPress: () => router.push('/(app)/tools' as any),
+      color: theme.colors.secondaryForeground,
     },
   ];
 
@@ -147,122 +165,76 @@ export default function CoAIHomeScreen() {
       }}
     >
       <PageHeader
-        title="CoAI"
-        subtitle="Your personal finance copilot. Ask questions, review what changed, and act from one place."
+        title={greeting + (user?.name ? `, ${user.name}` : '')}
+        subtitle="Your financial overview and AI insights."
         actions={<AppSwitcherTrigger variant="header_inline" />}
       />
 
-      <Card variant="gradient" style={{ marginBottom: 24 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-          <View style={{ flex: 1, minWidth: 260 }}>
-            <Text style={{ color: theme.colors.primaryForeground + 'CC', fontSize: 13 }}>
-              {greeting}, {user?.name || 'there'}
+      {/* Hero Balance Card */}
+      <View
+        style={{
+          backgroundColor: theme.colors.card,
+          borderRadius: theme.radii.xl,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          padding: 20,
+          marginBottom: 24,
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View>
+            <Text style={{ color: theme.colors.mutedForeground, fontSize: 14, fontFamily: theme.typography.bodyMedium.fontFamily }}>
+              {t('totalBalance') || 'Total Balance'}
             </Text>
-            <Text
-              style={{
-                color: theme.colors.primaryForeground,
-                fontSize: 30,
-                lineHeight: 38,
-                marginTop: 8,
-                fontFamily: theme.typography.h1.fontFamily,
-              }}
-            >
-              {hasSetupData ? 'CoAI Home' : 'Set up CoAI'}
-            </Text>
-            <Text
-              style={{
-                color: theme.colors.primaryForeground + 'D8',
-                fontSize: 15,
-                lineHeight: 22,
-                marginTop: 12,
-                maxWidth: 680,
-              }}
-            >
-              {briefData?.brief ||
-                'Add a balance, transaction, budget, or goal and CoAI will start turning your numbers into guidance.'}
-            </Text>
-            {briefData?.generated_at ? (
-              <Text style={{ color: theme.colors.primaryForeground + 'B8', fontSize: 12, marginTop: 12 }}>
-                Updated {new Date(briefData.generated_at).toLocaleString()}
-              </Text>
-            ) : null}
-          </View>
-
-          <View style={{ minWidth: 240, gap: 10 }}>
-            <Pressable
-              onPress={handleAskCoAI}
-              accessibilityRole="button"
-              accessibilityLabel="Ask CoAI"
-              style={({ pressed }) => [
-                {
-                  minHeight: 46,
-                  borderRadius: theme.radii.lg,
-                  backgroundColor: theme.colors.background,
-                  paddingHorizontal: 16,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                },
-                pressed && { opacity: 0.76 },
-              ]}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Bot size={18} color={theme.colors.foreground} />
-                <Text
-                  style={{
-                    color: theme.colors.foreground,
-                    fontSize: 14,
-                    fontFamily: theme.typography.bodyMedium.fontFamily,
-                  }}
-                >
-                  Ask CoAI
-                </Text>
-              </View>
-              <ArrowRight size={16} color={theme.colors.foreground} />
-            </Pressable>
-
-            {recentConversation ? (
-              <Pressable
-                onPress={handleResumeConversation}
-                accessibilityRole="button"
-                accessibilityLabel="Resume recent conversation"
-                style={({ pressed }) => [
-                  {
-                    minHeight: 46,
-                    borderRadius: theme.radii.lg,
-                    borderWidth: 1,
-                    borderColor: theme.colors.primaryForeground + '44',
-                    backgroundColor: 'rgba(255,255,255,0.12)',
-                    paddingHorizontal: 16,
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexDirection: 'row',
-                  },
-                  pressed && { opacity: 0.76 },
-                ]}
+            {isPending && !briefData ? (
+              <ActivityIndicator size="small" color={theme.colors.mutedForeground} style={{ marginTop: 8, alignSelf: 'flex-start' }} />
+            ) : (
+              <Text
+                style={{
+                  color: theme.colors.foreground,
+                  fontSize: 32,
+                  fontFamily: theme.typography.h1.fontFamily,
+                  marginTop: 4,
+                  lineHeight: 40,
+                }}
               >
-                <View style={{ flex: 1, marginEnd: 12 }}>
-                  <Text style={{ color: theme.colors.primaryForeground + 'CC', fontSize: 11 }}>
-                    Recent conversation
-                  </Text>
-                  <Text
-                    style={{
-                      color: theme.colors.primaryForeground,
-                      fontSize: 13,
-                      marginTop: 3,
-                      fontFamily: theme.typography.bodyMedium.fontFamily,
-                    }}
-                    numberOfLines={1}
-                  >
-                    {recentConversation.title}
-                  </Text>
-                </View>
-                <ArrowRight size={16} color={theme.colors.primaryForeground} />
-              </Pressable>
-            ) : null}
+                {formatCurrency(snapshot?.total_balance ?? 0, briefData?.currency || user?.preferred_currency || 'USD')}
+              </Text>
+            )}
+          </View>
+          <View
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: theme.colors.secondary,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Wallet size={24} color={theme.colors.secondaryForeground} />
           </View>
         </View>
-      </Card>
+
+        {/* AI Brief inside Hero */}
+        {briefData?.brief ? (
+          <View style={{ marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
+             <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Bot size={16} color={theme.colors.accent} style={{ marginTop: 2 }} />
+                <Text style={{ flex: 1, color: theme.colors.mutedForeground, fontSize: 14, lineHeight: 20 }}>
+                  {briefData.brief}
+                </Text>
+             </View>
+          </View>
+        ) : null}
+      </View>
+
+      {/* Quick Actions */}
+      <View style={{ flexDirection: 'row', marginBottom: 32, paddingHorizontal: 8 }}>
+        {quickActions.map((action, index) => (
+          <QuickAction key={index} {...action} />
+        ))}
+      </View>
 
       {isPending && !briefData ? (
         <View style={{ paddingVertical: 40, alignItems: 'center' }}>
@@ -270,7 +242,7 @@ export default function CoAIHomeScreen() {
         </View>
       ) : null}
 
-      {isError ? (
+      {isError && !briefData ? (
         <Card style={{ marginBottom: 24 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <AlertTriangle size={18} color={theme.colors.warning} />
@@ -291,204 +263,85 @@ export default function CoAIHomeScreen() {
         </Card>
       ) : null}
 
-      <SectionBlock
-        title="Recommended actions"
-        subtitle="Guided steps CoAI thinks are worth doing next."
-      >
-        <RecommendedActionCards
-          actions={briefData?.recommended_actions ?? []}
-          onActionPress={(action) => openRecommendedAction(router, action)}
-        />
-      </SectionBlock>
-
-      <SectionBlock
-        title="Top priorities"
-        subtitle="The short list CoAI wants you to pay attention to."
-      >
-        <View style={{ gap: 12 }}>
-          {(briefData?.priorities ?? []).map((priority) => (
-            <Card key={priority.id}>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      color: theme.colors.foreground,
-                      fontSize: 16,
-                      fontFamily: theme.typography.bodyMedium.fontFamily,
-                    }}
-                  >
-                    {priority.title}
-                  </Text>
-                  <Text style={{ color: theme.colors.mutedForeground, fontSize: 14, lineHeight: 20, marginTop: 6 }}>
-                    {priority.description}
-                  </Text>
+      {briefData ? (
+        <>
+          {/* Priorities & Alerts */}
+          {((briefData.priorities?.length ?? 0) > 0 || (briefData.alerts?.length ?? 0) > 0) && (
+             <SectionBlock title={t('insights') || 'Insights'} subtitle="Key updates for your attention.">
+                <View style={{ gap: 12 }}>
+                  {/* Alerts first */}
+                  {(briefData.alerts ?? []).map((alert) => (
+                    <Card key={alert.id} style={{ borderColor: theme.colors.warning + '40', backgroundColor: theme.colors.warning + '05' }}>
+                      <View style={{ flexDirection: 'row', gap: 12 }}>
+                         <AlertTriangle size={18} color={theme.colors.warning} style={{ marginTop: 2 }} />
+                         <View style={{ flex: 1 }}>
+                            <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily }}>{alert.title}</Text>
+                            <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginTop: 4 }}>{alert.description}</Text>
+                         </View>
+                      </View>
+                    </Card>
+                  ))}
+                  {/* Then Priorities */}
+                  {(briefData.priorities ?? []).map((priority) => (
+                    <Card key={priority.id}>
+                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
+                          <View style={{ flex: 1 }}>
+                             <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily }}>{priority.title}</Text>
+                             <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginTop: 4 }}>{priority.description}</Text>
+                          </View>
+                          {priority.target_route && (
+                             <Pressable onPress={() => router.push(priority.target_route as any)}>
+                                <ArrowRight size={18} color={theme.colors.mutedForeground} />
+                             </Pressable>
+                          )}
+                       </View>
+                    </Card>
+                  ))}
                 </View>
-                {priority.target_route ? (
-                  <Pressable
-                    onPress={() => router.push(priority.target_route as any)}
-                    style={({ pressed }) => [pressed && { opacity: 0.7 }]}
-                  >
-                    <ArrowRight size={18} color={theme.colors.primary} />
-                  </Pressable>
-                ) : null}
-              </View>
-            </Card>
-          ))}
+             </SectionBlock>
+          )}
 
-          {(briefData?.priorities?.length ?? 0) === 0 ? (
-            <Card>
-              <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily }}>
-                CoAI has no urgent priorities yet.
-              </Text>
-              <Text style={{ color: theme.colors.mutedForeground, fontSize: 14, marginTop: 8 }}>
-                Add a few transactions or a goal and the priority stack will become more specific.
-              </Text>
-            </Card>
-          ) : null}
-        </View>
-      </SectionBlock>
+          {/* Recommended Actions */}
+          {(briefData.recommended_actions?.length ?? 0) > 0 && (
+            <SectionBlock
+              title="Recommended actions"
+              subtitle="Guided steps CoAI thinks are worth doing next."
+            >
+              <RecommendedActionCards
+                actions={briefData.recommended_actions ?? []}
+                onActionPress={(action) => openRecommendedAction(router, action)}
+              />
+            </SectionBlock>
+          )}
 
-      <SectionBlock
-        title="Alerts"
-        subtitle="Budget risk, anomalies, and follow-ups CoAI surfaced from your data."
-      >
-        <View style={{ gap: 12 }}>
-          {(briefData?.alerts ?? []).map((alert) => (
-            <Card key={alert.id}>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-                <View
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 999,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor:
-                      alert.severity === 'critical'
-                        ? theme.colors.danger + '18'
-                        : alert.severity === 'warning'
-                          ? theme.colors.warning + '18'
-                          : theme.colors.info + '18',
-                  }}
-                >
-                  <AlertTriangle
-                    size={16}
-                    color={
-                      alert.severity === 'critical'
-                        ? theme.colors.danger
-                        : alert.severity === 'warning'
-                          ? theme.colors.warning
-                          : theme.colors.info
-                    }
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      color: theme.colors.foreground,
-                      fontSize: 15,
-                      fontFamily: theme.typography.bodyMedium.fontFamily,
-                    }}
-                  >
-                    {alert.title}
-                  </Text>
-                  <Text style={{ color: theme.colors.mutedForeground, fontSize: 14, lineHeight: 20, marginTop: 6 }}>
-                    {alert.description}
-                  </Text>
-                </View>
-              </View>
-            </Card>
-          ))}
-
-          {(briefData?.alerts?.length ?? 0) === 0 ? (
-            <Card>
-              <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily }}>
-                No proactive alerts right now.
-              </Text>
-              <Text style={{ color: theme.colors.mutedForeground, fontSize: 14, marginTop: 8 }}>
-                CoAI will surface anomalies, budget risk, and recurring spend signals here.
-              </Text>
-            </Card>
-          ) : null}
-        </View>
-      </SectionBlock>
-
-      <SectionBlock
-        title="Context snapshot"
-        subtitle="The data footprint CoAI is using right now."
-      >
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-          <SnapshotMetric
-            label="Balance"
-            value={formatCompactCurrency(snapshot?.total_balance ?? 0, briefData?.currency || user?.preferred_currency || 'USD')}
-          />
-          <SnapshotMetric
-            label="Recent transactions"
-            value={String(snapshot?.recent_transaction_count ?? 0)}
-          />
-          <SnapshotMetric
-            label="Budgets"
-            value={String(snapshot?.active_budget_count ?? 0)}
-          />
-          <SnapshotMetric
-            label="Goals"
-            value={String(snapshot?.active_goal_count ?? 0)}
-          />
-          <SnapshotMetric
-            label="Subscriptions"
-            value={String(snapshot?.active_subscription_count ?? 0)}
-          />
-          <SnapshotMetric
-            label="Currencies"
-            value={String(snapshot?.balance_currency_count ?? 0)}
-          />
-        </View>
-      </SectionBlock>
-
-      <SectionBlock
-        title="Supporting layers"
-        subtitle="These remain available, but CoAI stays the primary experience."
-      >
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-          {toolLinks.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <View key={item.href} style={{ width: '100%', maxWidth: 340, flexGrow: 1 }}>
-                <Pressable onPress={() => router.push(item.href as any)} accessibilityRole="button">
-                  <Card>
-                    <View
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: theme.radii.lg,
-                        backgroundColor: theme.colors.secondary,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginBottom: 12,
-                      }}
-                    >
-                      <Icon size={18} color={theme.colors.secondaryForeground} />
+          {/* Recent Conversation - if exists */}
+          {recentConversation && (
+            <SectionBlock title="Recent Chat">
+               <Pressable
+                  onPress={() => router.push({ pathname: '/(app)/coai-chat', params: { conversationId: recentConversation.id } } as any)}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+               >
+                 <Card>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: theme.colors.secondary, alignItems: 'center', justifyContent: 'center' }}>
+                             <Bot size={20} color={theme.colors.secondaryForeground} />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                             <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily }} numberOfLines={1}>
+                                {recentConversation.title}
+                             </Text>
+                             <Text style={{ color: theme.colors.mutedForeground, fontSize: 12 }}>Resume conversation</Text>
+                          </View>
+                       </View>
+                       <ArrowRight size={16} color={theme.colors.mutedForeground} />
                     </View>
-                    <Text
-                      style={{
-                        color: theme.colors.foreground,
-                        fontSize: 16,
-                        fontFamily: theme.typography.bodyMedium.fontFamily,
-                      }}
-                    >
-                      {item.title}
-                    </Text>
-                    <Text style={{ color: theme.colors.mutedForeground, fontSize: 14, lineHeight: 20, marginTop: 8 }}>
-                      {item.description}
-                    </Text>
-                  </Card>
-                </Pressable>
-              </View>
-            );
-          })}
-        </View>
-      </SectionBlock>
+                 </Card>
+               </Pressable>
+            </SectionBlock>
+          )}
+        </>
+      ) : null}
     </PageScaffold>
   );
 }

@@ -150,10 +150,11 @@ export default function LoginScreen() {
           ? api.auth.getGoogleAuthUrl()
           : api.auth.getLinkedInAuthUrl();
 
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      if (Platform.OS === 'web') {
         window.location.assign(baseUrl);
       } else {
         // Native: use auth session so the browser closes on redirect back
+        // Important: we append ?platform=mobile so the backend knows to redirect to coai://
         const authUrl = `${baseUrl}?platform=mobile`;
         const result = await WebBrowser.openAuthSessionAsync(authUrl, 'coai://');
 
@@ -179,10 +180,8 @@ export default function LoginScreen() {
             setError(decodeURIComponent(errorParam));
             return;
           }
-
-          setError('Authentication failed');
         }
-        // result.type === 'cancel' or 'dismiss' — user closed the browser
+        // If user cancelled, just stop loading
       }
     } catch (err) {
       setError(

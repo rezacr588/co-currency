@@ -100,6 +100,8 @@ function useProtectedRoute(user: User | null, isLoading: boolean) {
         router.replace(target as any);
       })();
     }
+    // No else: if !user and in public group, or user and in public group, just stay there.
+    // Public routes (landing, about) should be accessible to everyone.
 
     return () => {
       active = false;
