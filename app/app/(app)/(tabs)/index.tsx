@@ -9,8 +9,6 @@ import {
   BarChart3,
   Bot,
   Briefcase,
-  History,
-  LayoutGrid,
   MessageCircle,
   Plus,
   Sparkles,
@@ -24,7 +22,7 @@ import { RecommendedActionCards } from '../../../src/components/features/CoAI/Re
 import { Card, PageHeader, PageScaffold, SectionBlock } from '../../../src/components/ui';
 import { useAuth } from '../../../src/context/AuthContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
-import { formatCompactCurrency, formatCurrency } from '../../../src/utils/format';
+import { formatCurrency } from '../../../src/utils/format';
 import { openRecommendedAction } from '../../../src/utils/coaiActions';
 import { useScreenLayout } from '../../../src/hooks/useScreenLayout';
 
@@ -149,12 +147,17 @@ export default function CoAIHomeScreen() {
       color: theme.colors.secondaryForeground,
     },
     {
-      label: t('tools') || 'Tools',
-      icon: LayoutGrid,
-      onPress: () => router.push('/(app)/tools' as any),
+      label: t('reports') || 'Reports',
+      icon: BarChart3,
+      onPress: () => router.push('/(app)/(tabs)/reports' as any),
       color: theme.colors.secondaryForeground,
     },
   ];
+
+  // Responsive quick actions layout (2x2 on small screens)
+  const { width } = useScreenLayout();
+  const isSmallScreen = width < 375;
+  const quickActionsPerRow = isSmallScreen ? 2 : 4;
 
   return (
     <PageScaffold
@@ -166,7 +169,7 @@ export default function CoAIHomeScreen() {
     >
       <PageHeader
         title={greeting + (user?.name ? `, ${user.name}` : '')}
-        subtitle="Your financial overview and AI insights."
+        subtitle={t('homeSubtitle') || 'Your financial overview and AI insights.'}
         actions={<AppSwitcherTrigger variant="header_inline" />}
       />
 
@@ -216,6 +219,42 @@ export default function CoAIHomeScreen() {
           </View>
         </View>
 
+        {/* Quick Stats if available */}
+        {snapshot && (snapshot.recent_transaction_count > 0 || snapshot.active_budget_count > 0 || snapshot.active_goal_count > 0) && (
+          <View style={{ marginTop: 16, flexDirection: 'row', gap: 16, flexWrap: 'wrap' }}>
+            {snapshot.balance_currency_count > 0 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={{ color: theme.colors.primary, fontSize: 18, fontFamily: theme.typography.bodyMedium.fontFamily }}>
+                  {snapshot.balance_currency_count}
+                </Text>
+                <Text style={{ color: theme.colors.mutedForeground, fontSize: 12 }}>
+                  {snapshot.balance_currency_count === 1 ? 'currency' : 'currencies'}
+                </Text>
+              </View>
+            )}
+            {snapshot.active_budget_count > 0 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={{ color: theme.colors.primary, fontSize: 18, fontFamily: theme.typography.bodyMedium.fontFamily }}>
+                  {snapshot.active_budget_count}
+                </Text>
+                <Text style={{ color: theme.colors.mutedForeground, fontSize: 12 }}>
+                  {snapshot.active_budget_count === 1 ? t('budget') || 'budget' : t('budgets') || 'budgets'}
+                </Text>
+              </View>
+            )}
+            {snapshot.active_goal_count > 0 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={{ color: theme.colors.primary, fontSize: 18, fontFamily: theme.typography.bodyMedium.fontFamily }}>
+                  {snapshot.active_goal_count}
+                </Text>
+                <Text style={{ color: theme.colors.mutedForeground, fontSize: 12 }}>
+                  {snapshot.active_goal_count === 1 ? t('goal') || 'goal' : t('goals') || 'goals'}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* AI Brief inside Hero */}
         {briefData?.brief ? (
           <View style={{ marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
@@ -230,9 +269,25 @@ export default function CoAIHomeScreen() {
       </View>
 
       {/* Quick Actions */}
-      <View style={{ flexDirection: 'row', marginBottom: 32, paddingHorizontal: 8 }}>
+      <View
+        style={{
+          marginBottom: 32,
+          paddingHorizontal: 8,
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 16,
+        }}
+      >
         {quickActions.map((action, index) => (
-          <QuickAction key={index} {...action} />
+          <View
+            key={index}
+            style={{
+              width: quickActionsPerRow === 2 ? '45%' : 'auto',
+              flex: quickActionsPerRow === 4 ? 1 : undefined,
+            }}
+          >
+            <QuickAction {...action} />
+          </View>
         ))}
       </View>
 
@@ -263,8 +318,145 @@ export default function CoAIHomeScreen() {
         </Card>
       ) : null}
 
-      {briefData ? (
+      {/* Empty State for New Users */}
+      {briefData && !hasSetupData && !isPending ? (
+        <Card style={{ marginBottom: 24, padding: 20 }}>
+          <View style={{ alignItems: 'center', gap: 16 }}>
+            <View
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 32,
+                backgroundColor: theme.colors.primary + '14',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Sparkles size={28} color={theme.colors.primary} />
+            </View>
+            <View style={{ alignItems: 'center', gap: 8 }}>
+              <Text
+                style={{
+                  fontSize: 20,
+                  fontFamily: theme.typography.h2.fontFamily,
+                  color: theme.colors.foreground,
+                  textAlign: 'center',
+                }}
+              >
+                {t('homeGetStartedWelcome') || 'Welcome to CoAI!'}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: theme.colors.mutedForeground,
+                  textAlign: 'center',
+                  lineHeight: 20,
+                  maxWidth: 400,
+                }}
+              >
+                {t('homeGetStartedDescription') || 'Start tracking your finances by adding your first transaction, setting up a budget, or creating a savings goal.'}
+              </Text>
+            </View>
+            <View style={{ width: '100%', gap: 12, marginTop: 8 }}>
+              <Pressable
+                onPress={() => router.push('/(app)/(tabs)/add' as any)}
+                style={({ pressed }) => [
+                  {
+                    backgroundColor: theme.colors.primary,
+                    borderRadius: theme.radii.lg,
+                    padding: 16,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+              >
+                <Plus size={18} color={theme.colors.primaryForeground} />
+                <Text
+                  style={{
+                    color: theme.colors.primaryForeground,
+                    fontFamily: theme.typography.bodyMedium.fontFamily,
+                    fontSize: 14,
+                  }}
+                >
+                  {t('homeAddFirstTransaction') || 'Add First Transaction'}
+                </Text>
+              </Pressable>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <Pressable
+                  onPress={() => router.push('/(app)/budgets' as any)}
+                  style={({ pressed }) => [
+                    {
+                      flex: 1,
+                      backgroundColor: theme.colors.secondary,
+                      borderRadius: theme.radii.lg,
+                      padding: 12,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}
+                >
+                  <Briefcase size={16} color={theme.colors.secondaryForeground} />
+                  <Text
+                    style={{
+                      color: theme.colors.secondaryForeground,
+                      fontFamily: theme.typography.bodyMedium.fontFamily,
+                      fontSize: 13,
+                    }}
+                  >
+                    {t('homeCreateFirstBudget') || 'Create Budget'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push('/(app)/(tabs)/goals' as any)}
+                  style={({ pressed }) => [
+                    {
+                      flex: 1,
+                      backgroundColor: theme.colors.secondary,
+                      borderRadius: theme.radii.lg,
+                      padding: 12,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}
+                >
+                  <Target size={16} color={theme.colors.secondaryForeground} />
+                  <Text
+                    style={{
+                      color: theme.colors.secondaryForeground,
+                      fontFamily: theme.typography.bodyMedium.fontFamily,
+                      fontSize: 13,
+                    }}
+                  >
+                    {t('homeSetFirstGoal') || 'Set Savings Goal'}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Card>
+      ) : null}
+
+      {briefData && hasSetupData ? (
         <>
+          {/* Separator */}
+          <View
+            style={{
+              height: 1,
+              backgroundColor: theme.colors.border,
+              marginVertical: 16,
+              marginHorizontal: -theme.spacing.lg,
+            }}
+          />
+
           {/* Priorities & Alerts */}
           {((briefData.priorities?.length ?? 0) > 0 || (briefData.alerts?.length ?? 0) > 0) && (
              <SectionBlock title={t('insights') || 'Insights'} subtitle="Key updates for your attention.">

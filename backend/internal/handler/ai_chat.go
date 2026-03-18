@@ -64,6 +64,7 @@ func (h *AIChatHandler) RegisterRoutes(r chi.Router) {
 	r.Get("/conversations", h.ListConversations)
 	r.Post("/conversations", h.CreateConversation)
 	r.Get("/conversations/{id}", h.GetConversation)
+	r.Patch("/conversations/{id}", h.UpdateConversationTitle)
 	r.Delete("/conversations/{id}", h.DeleteConversation)
 	r.Post("/chat", h.Chat)
 	r.Post("/chat/stream", h.ChatStream)
@@ -164,6 +165,44 @@ func (h *AIChatHandler) DeleteConversation(w http.ResponseWriter, r *http.Reques
 
 	httputil.JSON(w, http.StatusOK, map[string]string{
 		"message": "Conversation deleted",
+	})
+}
+
+// UpdateConversationTitle updates the title of a conversation
+func (h *AIChatHandler) UpdateConversationTitle(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	conversationID := chi.URLParam(r, "id")
+	if conversationID == "" {
+		httputil.BadRequestWithContext(r.Context(), w, "conversation ID is required", nil)
+		return
+	}
+
+	var req struct {
+		Title string `json:"title"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.BadRequestWithContext(r.Context(), w, "Invalid request body", err)
+		return
+	}
+
+	err := h.chatService.UpdateConversationTitle(r.Context(), userID, conversationID, req.Title)
+	if err != nil {
+		if strings.Contains(err.Error(), "invalid conversation ID") || strings.Contains(err.Error(), "not found") {
+			httputil.NotFoundWithContext(r.Context(), w, "Conversation not found", err)
+		} else if strings.Contains(err.Error(), "unauthorized") {
+			httputil.UnauthorizedWithContext(r.Context(), w, "Unauthorized", err)
+		} else {
+			httputil.BadRequestWithContext(r.Context(), w, err.Error(), err)
+		}
+		return
+	}
+
+	httputil.JSON(w, http.StatusOK, map[string]string{
+		"message": "Conversation title updated",
 	})
 }
 

@@ -547,6 +547,12 @@ export const chat = {
       method: 'DELETE',
     }),
 
+  updateConversationTitle: (id: string, title: string) =>
+    fetchAPI<{ conversation: Conversation }>(`/ai/conversations/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ title }),
+    }),
+
   sendMessageWithAttachment: (data: ChatAttachmentRequest) => {
     const formData = new FormData();
     formData.append('message', data.message);

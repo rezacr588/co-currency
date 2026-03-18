@@ -38,11 +38,19 @@ import { useLanguage } from '../../../../src/context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { useToast } from '../../../../src/components/ui/Toast';
 import { haptics } from '../../../../src/utils/haptics';
-import { AttachmentButton, AttachmentPreview, useAttachmentPicker } from '../../../../src/components/features/Chat';
+import { 
+  AttachmentButton, 
+  AttachmentPreview, 
+  useAttachmentPicker,
+  ChatHeader,
+  ConversationSidebar,
+  type PendingAction,
+} from '../../../../src/components/features/Chat';
 import { VoiceRecorder } from '../../../../src/components/features/Chat';
 import { RecommendedActionCards } from '../../../../src/components/features/CoAI/RecommendedActionCards';
 import { EmptyState } from '../../../../src/components/ui';
 import { Skeleton } from '../../../../src/components/ui/Skeleton';
+import { useChatKeyboardShortcuts } from '../../../../src/hooks/useKeyboardShortcuts';
 import type { ChatMessage, ChatStreamTraceEvent, Conversation, ConversationWithMessages } from '../../../../src/api/chat';
 import type { SmartParseResponse } from '../../../../src/types/wallet';
 import type { ConversionResult } from '../../../../src/types/currency';
@@ -169,54 +177,6 @@ function getMessageToolUsage(message: ChatMessage | undefined, traceEvents: Chat
   }
   return aggregateToolUsageFromTrace(traceEvents);
 }
-
-
-type PendingAction =
-  | {
-      kind: 'transaction';
-      status: 'loading' | 'ready' | 'error' | 'done';
-      original: string;
-      parsed?: SmartParseResponse;
-      error?: string;
-    }
-  | {
-      kind: 'recurring';
-      status: 'loading' | 'ready' | 'error' | 'done';
-      original: string;
-      parsed?: SmartParseResponse;
-      selectedFrequency?: string;
-      result?: RecurringTransaction;
-      error?: string;
-    }
-  | {
-      kind: 'goal_contribution';
-      status: 'loading' | 'ready' | 'error' | 'done';
-      original: string;
-      parsed?: SmartParseResponse;
-      selectedGoalId?: string;
-      goals?: Goal[];
-      result?: { goal: Goal; transaction: unknown };
-      error?: string;
-    }
-  | {
-      kind: 'convert';
-      status: 'loading' | 'ready' | 'error' | 'done';
-      original: string;
-      from: string;
-      to: string;
-      amount: number;
-      result?: ConversionResult;
-      error?: string;
-    }
-  | {
-      kind: 'rate';
-      status: 'loading' | 'ready' | 'error' | 'done';
-      original: string;
-      from: string;
-      to: string;
-      result?: ConversionResult;
-      error?: string;
-    };
 
 export default function AIChatScreen() {
   const { t } = useLanguage();
@@ -1155,7 +1115,7 @@ export default function AIChatScreen() {
           original: text,
           parsed,
           goals: goalsResponse.goals || [],
-          selectedGoalId: undefined,
+          selectedGoalID: undefined,
         });
       } else if (parsed.action_type === 'recurring') {
         setPendingAction({
@@ -1730,21 +1690,21 @@ export default function AIChatScreen() {
                               <Pressable
                                 key={goal.id}
                                 onPress={() => setPendingAction(prev =>
-                                  prev?.kind === 'goal_contribution' ? { ...prev, selectedGoalId: goal.id } : prev
+                                  prev?.kind === 'goal_contribution' ? { ...prev, selectedGoalID: goal.id } : prev
                                 )}
                                 style={({ pressed }) => [{
                                   paddingHorizontal: 12,
                                   paddingVertical: 8,
                                   borderRadius: 8,
                                   borderWidth: 1,
-                                  backgroundColor: pendingAction.selectedGoalId === goal.id ? colors.primary + '33' : colors.muted,
-                                  borderColor: pendingAction.selectedGoalId === goal.id ? colors.primary : colors.border,
+                                  backgroundColor: pendingAction.selectedGoalID === goal.id ? colors.primary + '33' : colors.muted,
+                                  borderColor: pendingAction.selectedGoalID === goal.id ? colors.primary : colors.border,
                                 }, pressed && { opacity: 0.7 }]}
                               >
                                 <Text style={{
                                   fontSize: 12,
                                   fontFamily: 'Inter_500Medium',
-                                  color: pendingAction.selectedGoalId === goal.id ? colors.accent : colors.foreground,
+                                  color: pendingAction.selectedGoalID === goal.id ? colors.accent : colors.foreground,
                                 }}>
                                   {goal.name}
                                 </Text>
@@ -1766,18 +1726,18 @@ export default function AIChatScreen() {
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                       <Pressable
                         onPress={() => {
-                          if (!pendingAction.selectedGoalId) {
+                          if (!pendingAction.selectedGoalID) {
                             Alert.alert('Select Goal', 'Please select a goal to contribute to');
                             return;
                           }
                           applyGoalContributionMutation.mutate({
                             amount: pendingAction.parsed!.amount,
-                            goalId: pendingAction.selectedGoalId,
+                            goalId: pendingAction.selectedGoalID,
                             goalName: pendingAction.parsed!.goal_name,
                           });
                         }}
-                        disabled={applyGoalContributionMutation.isPending || !pendingAction.selectedGoalId}
-                        style={({ pressed }) => [{ backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, opacity: applyGoalContributionMutation.isPending || !pendingAction.selectedGoalId ? 0.5 : pressed ? 0.7 : 1 }]}
+                        disabled={applyGoalContributionMutation.isPending || !pendingAction.selectedGoalID}
+                        style={({ pressed }) => [{ backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, opacity: applyGoalContributionMutation.isPending || !pendingAction.selectedGoalID ? 0.5 : pressed ? 0.7 : 1 }]}
                       >
                         <Text style={{ color: colors.primaryForeground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>
                           {applyGoalContributionMutation.isPending ? 'Contributing...' : 'Contribute'}
@@ -2126,94 +2086,17 @@ export default function AIChatScreen() {
           {/* Main Chat Area */}
           <View style={{ flex: 1, flexDirection: 'column' }}>
             {/* Header */}
-            <View
-              style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.background }, contentWidthStyle]}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View>
-                  <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>CoAI</Text>
-                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 1 }}>
-                    {aiConfigured
-                      ? `${t('alwaysReady') || 'Always ready'} · ${aiRateLimitPerMinute}/min`
-                      : 'Offline'}
-                  </Text>
-                </View>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Pressable
-                  onPress={() => {
-                    setSelectedActivityMessageID(liveTrace.length > 0 ? null : latestAssistantMessageID);
-                    setIsActivityModalVisible(true);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel="Open agent activity"
-                  hitSlop={6}
-                  style={({ pressed }) => [
-                    {
-                      backgroundColor: colors.secondary,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      paddingHorizontal: 10,
-                      paddingVertical: 8,
-                      minHeight: 36,
-                      borderRadius: 9999,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                    },
-                    pressed && { opacity: 0.74 },
-                  ]}
-                >
-                  <Activity size={13} color={colors.foreground} />
-                  <Text style={{ fontSize: 11, color: colors.foreground, marginStart: 5 }}>Activity</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setIsUsageModalVisible(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Open usage and billing"
-                  hitSlop={6}
-                  style={({ pressed }) => [
-                    {
-                      backgroundColor: colors.secondary,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      paddingHorizontal: 10,
-                      paddingVertical: 8,
-                      minHeight: 36,
-                      borderRadius: 9999,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                    },
-                    pressed && { opacity: 0.74 },
-                  ]}
-                >
-                  <Coins size={13} color={colors.foreground} />
-                  <Text style={{ fontSize: 11, color: colors.foreground, marginStart: 5 }}>Usage</Text>
-                </Pressable>
-                <Pressable
-                  onPress={handleNewConversation}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('newConversation') || 'New chat'}
-                  hitSlop={6}
-                  style={({ pressed }) => [
-                    {
-                      backgroundColor: colors.secondary,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      paddingHorizontal: 10,
-                      paddingVertical: 8,
-                      minHeight: 36,
-                      borderRadius: 9999,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                    },
-                    pressed && { opacity: 0.74 },
-                  ]}
-                >
-                  <Plus size={14} color={colors.foreground} />
-                  <Text style={{ fontSize: 11, color: colors.foreground, marginStart: 6 }}>{t('newChat') || 'New Chat'}</Text>
-                </Pressable>
-              </View>
-            </View>
+            <ChatHeader
+              aiConfigured={aiConfigured}
+              aiRateLimitPerMinute={aiRateLimitPerMinute}
+              onNewConversation={handleNewConversation}
+              onActivityPress={() => {
+                setSelectedActivityMessageID(liveTrace.length > 0 ? null : latestAssistantMessageID);
+                setIsActivityModalVisible(true);
+              }}
+              onUsagePress={() => setIsUsageModalVisible(true)}
+              contentWidthStyle={contentWidthStyle}
+            />
 
             {/* Mobile Conversations Carousel */}
             {!showSidebar && conversations.length > 0 && (

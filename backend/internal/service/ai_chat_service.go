@@ -767,3 +767,30 @@ func (s *AIChatService) DeleteConversation(ctx context.Context, userID uuid.UUID
 
 	return s.chatRepo.DeleteConversation(ctx, convID, userID)
 }
+
+func (s *AIChatService) UpdateConversationTitle(ctx context.Context, userID uuid.UUID, conversationID string, title string) error {
+	convID, err := uuid.Parse(conversationID)
+	if err != nil {
+		return fmt.Errorf("invalid conversation ID")
+	}
+
+	// Verify ownership
+	conv, err := s.chatRepo.GetConversation(ctx, convID)
+	if err != nil {
+		return fmt.Errorf("conversation not found")
+	}
+	if conv.UserID != userID {
+		return fmt.Errorf("unauthorized")
+	}
+
+	// Validate title
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return fmt.Errorf("title cannot be empty")
+	}
+	if len(title) > 200 {
+		return fmt.Errorf("title too long (max 200 characters)")
+	}
+
+	return s.chatRepo.UpdateConversationTitle(ctx, convID, title)
+}
