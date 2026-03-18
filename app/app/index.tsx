@@ -1,6 +1,6 @@
 import { Redirect } from 'expo-router';
 import { useAuth } from '../src/context/AuthContext';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Platform } from 'react-native';
 import { useTheme } from 'styled-components/native';
 
 export default function Index() {
@@ -20,6 +20,12 @@ export default function Index() {
     return <Redirect href="/(app)/(tabs)" />;
   }
 
-  // If not authenticated, go to the public landing page
-  return <Redirect href="/(public)" />;
+  // If not authenticated:
+  // - On web, show the public landing page
+  // - On mobile (iOS/Android), go directly to login
+  if (Platform.OS === 'web') {
+    return <Redirect href="/(public)" />;
+  }
+  
+  return <Redirect href="/(auth)/login" />;
 }
