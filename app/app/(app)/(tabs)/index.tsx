@@ -137,7 +137,7 @@ export default function CoAIHomeScreen() {
     {
       label: t('chat') || 'Chat',
       icon: MessageCircle,
-      onPress: () => router.push('/(app)/(tabs)/chat' as any),
+      onPress: () => router.push('/(app)/coai-chat' as any),
       color: theme.colors.accent,
     },
     {

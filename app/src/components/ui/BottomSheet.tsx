@@ -1,5 +1,6 @@
 import { forwardRef, useCallback, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import GorhomBottomSheet, {
   BottomSheetBackdrop,
   BottomSheetView,
@@ -29,6 +30,7 @@ export const BottomSheet = forwardRef<GorhomBottomSheet, BottomSheetProps>(
   ) => {
     const theme = useTheme();
     const colors = theme.colors;
+    const insets = useSafeAreaInsets();
     const snapPoints = useMemo(
       () => customSnapPoints || ['25%', '50%'],
       [customSnapPoints]
@@ -69,7 +71,7 @@ export const BottomSheet = forwardRef<GorhomBottomSheet, BottomSheetProps>(
           width: 40,
         }}
       >
-        <BottomSheetView style={styles.content}>
+        <BottomSheetView style={[styles.content, { paddingBottom: Math.max(24, insets.bottom) }]}>
           {title && (
             <View style={styles.header}>
               <Text
@@ -109,7 +111,6 @@ BottomSheet.displayName = 'BottomSheet';
 const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
-    paddingBottom: 24,
   },
   header: {
     flexDirection: 'row',

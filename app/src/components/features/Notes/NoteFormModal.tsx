@@ -8,7 +8,10 @@ import {
   ScrollView,
   ActivityIndicator,
   useWindowDimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Pin, Check } from 'lucide-react-native';
 import type { Note, CreateNoteRequest, UpdateNoteRequest, NoteColor } from '../../../types/note';
 import { NOTE_COLORS } from '../../../types/note';
@@ -49,6 +52,7 @@ export function NoteFormModal({
   const colors = theme.colors;
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const insets = useSafeAreaInsets();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -98,21 +102,28 @@ export function NoteFormModal({
         style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
         onPress={onClose}
       >
-        <Pressable
-          style={{
-            backgroundColor: colors.card,
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            maxHeight: '90%',
-            width: isDesktop ? 500 : '100%',
-            alignSelf: 'center',
-          }}
-          onPress={(e) => e.stopPropagation()}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ padding: 20 }}
+          <Pressable
+            style={{
+              backgroundColor: colors.card,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              maxHeight: '90%',
+              width: isDesktop ? 500 : '100%',
+              alignSelf: 'center',
+            }}
+            onPress={(e) => e.stopPropagation()}
           >
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ 
+                padding: 20,
+                paddingBottom: Math.max(insets.bottom, 20),
+              }}
+            >
             {/* Header */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
               <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
@@ -191,11 +202,12 @@ export function NoteFormModal({
                   <Pressable
                     key={c}
                     onPress={() => setColor(c)}
+                    hitSlop={4}
                     style={{
                       cursor: 'pointer',
-                      width: 40,
-                      height: 40,
-                      borderRadius: 20,
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
                       backgroundColor: COLOR_DISPLAY[c].bg,
                       borderWidth: color === c ? 3 : 1,
                       borderColor: color === c ? colors.accent : colors.borderStrong,
@@ -258,6 +270,7 @@ export function NoteFormModal({
             </View>
           </ScrollView>
         </Pressable>
+        </KeyboardAvoidingView>
       </Pressable>
     </Modal>
   );

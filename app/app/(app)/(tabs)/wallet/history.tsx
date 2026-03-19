@@ -852,7 +852,10 @@ export default function TransactionHistoryScreen() {
               </Pressable>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 24) }}
+            >
               {/* Transaction Type */}
               <View style={{ marginBottom: 20 }}>
                 <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('transactionType')}</Text>
@@ -1098,7 +1101,11 @@ export default function TransactionHistoryScreen() {
                 </Pressable>
               </View>
 
-              <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+              <ScrollView 
+                showsVerticalScrollIndicator={false} 
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) }}
+              >
                 {/* Existing Notes */}
                 {isLoadingNotes ? (
                   <View style={{ alignItems: 'center', paddingVertical: 16 }}>

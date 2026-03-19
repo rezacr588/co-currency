@@ -101,7 +101,7 @@ export const Button = forwardRef<View, ButtonProps>(
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            minHeight: size === 'sm' ? 40 : size === 'lg' ? 52 : 48,
+            minHeight: size === 'sm' ? 44 : size === 'lg' ? 52 : 48,
             borderRadius: theme.radii.md,
             backgroundColor: variantBgColors[variant],
             paddingHorizontal: sizeVal.px,
