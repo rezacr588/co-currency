@@ -64,7 +64,7 @@ func (s *AIService) defaultTextModel() string {
 		if strings.TrimSpace(s.model) != "" {
 			return strings.TrimSpace(s.model)
 		}
-		return "llama-3.3-70b"
+		return "qwen-3-235b-a22b-instruct-2507"
 	case "openai":
 		if strings.TrimSpace(s.model) != "" {
 			return strings.TrimSpace(s.model)

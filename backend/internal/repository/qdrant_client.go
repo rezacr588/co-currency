@@ -99,9 +99,31 @@ func (qc *QdrantClient) initCollections(ctx context.Context) error {
 				return fmt.Errorf("creating collection %s: %w", name, err)
 			}
 			log.Info().Str("collection", name).Msg("Created Qdrant collection")
+		} else {
+			// Collection exists, ensure user_id index exists
+			if err := qc.ensureUserIDIndex(ctx, name); err != nil {
+				log.Warn().Err(err).Str("collection", name).Msg("Failed to ensure user_id index")
+			}
 		}
 	}
 
+	return nil
+}
+
+// ensureUserIDIndex creates the user_id index if it doesn't exist
+func (qc *QdrantClient) ensureUserIDIndex(ctx context.Context, collectionName string) error {
+	_, err := qc.client.CreateFieldIndex(ctx, &qdrant.CreateFieldIndexCollection{
+		CollectionName: collectionName,
+		FieldName:      "user_id",
+		FieldType:      qdrant.FieldType_FieldTypeKeyword.Enum(),
+		Wait:           qdrant.PtrOf(true),
+	})
+	if err != nil && !strings.Contains(err.Error(), "already exists") {
+		return fmt.Errorf("creating user_id index: %w", err)
+	}
+	if err == nil {
+		log.Info().Str("collection", collectionName).Msg("Created user_id index")
+	}
 	return nil
 }
 
@@ -112,13 +134,29 @@ func (qc *QdrantClient) collectionExists(ctx context.Context, name string) (bool
 
 // createCollection creates a new collection with the specified dimensions
 func (qc *QdrantClient) createCollection(ctx context.Context, name string) error {
-	return qc.client.CreateCollection(ctx, &qdrant.CreateCollection{
+	err := qc.client.CreateCollection(ctx, &qdrant.CreateCollection{
 		CollectionName: name,
 		VectorsConfig: qdrant.NewVectorsConfig(&qdrant.VectorParams{
 			Size:     qc.config.Dimensions,
 			Distance: qdrant.Distance_Cosine,
 		}),
 	})
+	if err != nil {
+		return fmt.Errorf("creating collection: %w", err)
+	}
+
+	// Create index on user_id field for filtering
+	_, err = qc.client.CreateFieldIndex(ctx, &qdrant.CreateFieldIndexCollection{
+		CollectionName: name,
+		FieldName:      "user_id",
+		FieldType:      qdrant.FieldType_FieldTypeKeyword.Enum(),
+		Wait:           qdrant.PtrOf(true),
+	})
+	if err != nil {
+		log.Warn().Err(err).Str("collection", name).Msg("Failed to create user_id index (will be created on next restart)")
+	}
+
+	return nil
 }
 
 // IsHealthy returns whether the client connection is healthy
