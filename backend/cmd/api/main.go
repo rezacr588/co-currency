@@ -113,7 +113,7 @@ func main() {
 	// Initialize database, services, and handlers
 	db := initDatabase(cfg)
 	svc := initServices(cfg, db)
-	handlers := initHandlers(cfg, svc)
+	handlers := initHandlers(cfg, db, svc)
 
 	// Auth middleware
 	var authMiddleware *middleware.Auth

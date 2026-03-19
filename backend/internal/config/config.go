@@ -95,6 +95,9 @@ type Config struct {
 	// Memory Settings
 	ShortTermMemoryTTL time.Duration `env:"SHORT_TERM_MEMORY_TTL" envDefault:"24h"`
 	MaxMemoryResults   int           `env:"MAX_MEMORY_RESULTS" envDefault:"10"`
+
+	// ML Service Settings
+	MLServiceURL string `env:"ML_SERVICE_URL" envDefault:""` // Python ML microservice URL (e.g., http://ml-service:5001)
 }
 
 // Load parses environment variables into Config

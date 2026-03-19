@@ -35,6 +35,7 @@ type Handlers struct {
 	XP            *handler.XPHandler
 	Wealth        *handler.WealthHandler
 	News          *handler.NewsHandler
+	Forecasting   *handler.ForecastingHandler
 }
 
 // New creates a new router with all routes configured

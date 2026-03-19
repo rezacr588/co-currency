@@ -56,6 +56,8 @@ type services struct {
 	advice       *service.AdviceService
 	wealth       *service.WealthService
 	news         *service.NewsService
+	mlForecaster *service.MLForecasterService
+	mlAnomalies  *service.AnomalyDetectorService
 
 	// Shutdown handles
 	memoryService *service.MemoryService
@@ -158,6 +160,15 @@ func initServices(cfg *config.Config, db *databases) *services {
 	// Initialize news service (always available)
 	svc.news = service.NewNewsService(cfg.NewsCacheTTL, svc.ai)
 	log.Info().Msg("News service initialized")
+
+	// Initialize ML services (if ML_SERVICE_URL is configured)
+	if cfg.MLServiceURL != "" {
+		svc.mlForecaster = service.NewMLForecasterService(cfg.MLServiceURL)
+		svc.mlAnomalies = service.NewAnomalyDetectorService(cfg.MLServiceURL)
+		log.Info().Str("url", cfg.MLServiceURL).Msg("ML services initialized")
+	} else {
+		log.Info().Msg("ML services not configured (ML_SERVICE_URL not set)")
+	}
 
 	return svc
 }
@@ -439,7 +450,7 @@ func initMemoryService(cfg *config.Config, memoryRepo *repository.MemoryReposito
 	return service.NewMemoryService(memoryRepo, nil, nil, cfg.MaxMemoryResults)
 }
 
-func initHandlers(cfg *config.Config, svc *services) *router.Handlers {
+func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Handlers {
 	exchangeHandler := handler.New(svc.exchange)
 	authHandler := handler.NewAuthHandler(svc.auth)
 	walletHandler := handler.NewWalletHandler(svc.wallet)
@@ -546,6 +557,11 @@ func initHandlers(cfg *config.Config, svc *services) *router.Handlers {
 
 	newsHandler := handler.NewNewsHandler(svc.news)
 
+	var forecastingHandler *handler.ForecastingHandler
+	if svc.mlForecaster != nil && svc.mlAnomalies != nil && db.walletRepo != nil {
+		forecastingHandler = handler.NewForecastingHandler(svc.mlForecaster, svc.mlAnomalies, db.walletRepo)
+	}
+
 	return &router.Handlers{
 		Exchange:      exchangeHandler,
 		Auth:          authHandler,
@@ -572,5 +588,6 @@ func initHandlers(cfg *config.Config, svc *services) *router.Handlers {
 		XP:            xpHandler,
 		Wealth:        wealthHandler,
 		News:          newsHandler,
+		Forecasting:   forecastingHandler,
 	}
 }

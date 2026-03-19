@@ -889,3 +889,48 @@ func (r *WalletRepository) UpdateTransactionAtomic(ctx context.Context, userID, 
 	// Return the updated transaction
 	return r.GetTransaction(ctx, userID, txID)
 }
+
+// TransactionForML represents a minimal transaction for ML forecasting
+type TransactionForML struct {
+	CreatedAt time.Time
+	Type      string
+	Amount    float64
+	Category  string
+}
+
+// GetTransactionsForForecasting retrieves transactions for ML forecasting
+func (r *WalletRepository) GetTransactionsForForecasting(ctx context.Context, userID uuid.UUID, days int) ([]TransactionForML, error) {
+	if days <= 0 {
+		days = 90
+	}
+
+	startDate := time.Now().AddDate(0, 0, -days)
+
+	query := `
+		SELECT created_at, type, amount, COALESCE(category, 'uncategorized') as category
+		FROM transactions
+		WHERE user_id = $1 AND created_at >= $2
+		ORDER BY created_at ASC
+	`
+
+	rows, err := r.pool.Query(ctx, query, userID, startDate)
+	if err != nil {
+		return nil, fmt.Errorf("querying transactions for forecasting: %w", err)
+	}
+	defer rows.Close()
+
+	var transactions []TransactionForML
+	for rows.Next() {
+		var t TransactionForML
+		if err := rows.Scan(&t.CreatedAt, &t.Type, &t.Amount, &t.Category); err != nil {
+			return nil, fmt.Errorf("scanning transaction: %w", err)
+		}
+		transactions = append(transactions, t)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating transactions: %w", err)
+	}
+
+	return transactions, nil
+}

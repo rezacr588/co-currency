@@ -27,6 +27,7 @@ func registerFeatureRoutes(r chi.Router, h *Handlers, rateLimiter *middleware.Ra
 	registerChallengeRoutes(r, h, authMiddleware)
 	registerXPRoutes(r, h, authMiddleware)
 	registerWealthRoutes(r, h, authMiddleware)
+	registerForecastingRoutes(r, h, rateLimiter, authMiddleware)
 }
 
 func registerCoAIRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.Auth) {
@@ -312,4 +313,25 @@ func registerWealthRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.
 			r.Post("/alerts/{id}/read", h.Wealth.MarkAlertRead)
 		})
 	}
+}
+
+func registerForecastingRoutes(r chi.Router, h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middleware.Auth) {
+	if h.Forecasting == nil {
+		return
+	}
+
+	r.Route("/forecasting", func(r chi.Router) {
+		// Public health check endpoint
+		r.Get("/health", h.Forecasting.HealthCheck)
+
+		// Protected endpoints with AI rate limiting
+		r.Group(func(r chi.Router) {
+			r.Use(authMiddleware.Middleware)
+			if rateLimiter != nil {
+				r.Use(rateLimiter.AIMiddleware)
+			}
+			r.Get("/predict", h.Forecasting.GetForecast)
+			r.Get("/anomalies", h.Forecasting.DetectAnomalies)
+		})
+	})
 }
