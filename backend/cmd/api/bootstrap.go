@@ -60,6 +60,7 @@ type services struct {
 	mlAnomalies   *service.AnomalyDetectorService
 	planEngine    *service.PlanningEngineService
 	actionExecutor *service.ActionExecutor
+	agentRepo      *repository.AgentPlanRepository
 
 	// Shutdown handles
 	memoryService *service.MemoryService
@@ -174,13 +175,13 @@ func initServices(cfg *config.Config, db *databases) *services {
 
 	// Initialize planning engine service (autonomous agent)
 	if db.mainDB != nil {
-		agentPlanRepo := repository.NewAgentPlanRepository(db.mainDB.Pool())
-		svc.planEngine = service.NewPlanningEngineService(agentPlanRepo, svc.aiChat)
+		svc.agentRepo = repository.NewAgentPlanRepository(db.mainDB.Pool())
+		svc.planEngine = service.NewPlanningEngineService(svc.agentRepo, svc.aiChat)
 		log.Info().Msg("Planning engine service initialized")
 		
 		// Initialize action executor
 		svc.actionExecutor = service.NewActionExecutor(
-			agentPlanRepo,
+			svc.agentRepo,
 			svc.wallet,
 			svc.goal,
 			svc.budget,
@@ -416,6 +417,12 @@ func initAIServices(cfg *config.Config, db *databases, svc *services) {
 	)
 	if svc.wealth != nil {
 		svc.aiChat.SetWealthService(svc.wealth)
+	}
+	// Wire up agent tool executor if planning engine is available
+	if svc.planEngine != nil && svc.agentRepo != nil {
+		agentToolExec := service.NewAIAgentToolExecutor(svc.agentRepo, svc.planEngine, nil, svc.actionExecutor)
+		svc.aiChat.SetAgentToolExecutor(agentToolExec)
+		log.Info().Msg("Agent tools integrated with AI Chat")
 	}
 	log.Info().Msg("AI Chat service initialized with full context")
 }

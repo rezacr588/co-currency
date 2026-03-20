@@ -33,6 +33,7 @@ type AIToolExecutor struct {
 	budgetRepo       *repository.BudgetRepository
 	wealthService    *WealthService
 	tavilyAPIKey     string
+	agentExecutor    *AIAgentToolExecutor // Agent tools delegate
 }
 
 // NewAIToolExecutor creates a new tool executor
@@ -56,6 +57,11 @@ func NewAIToolExecutor(
 		budgetRepo:       budgetRepo,
 		tavilyAPIKey:     tavilyAPIKey,
 	}
+}
+
+// SetAgentExecutor sets the agent tool executor for agent-related tools
+func (e *AIToolExecutor) SetAgentExecutor(agentExec *AIAgentToolExecutor) {
+	e.agentExecutor = agentExec
 }
 
 // parseToolCall extracts a tool call from LLM output
@@ -126,6 +132,14 @@ func (e *AIToolExecutor) Execute(ctx context.Context, userID uuid.UUID, currency
 		return e.executeGetWealthOverview(ctx, userID, currency, tc.Params)
 	case "get_what_if_analysis":
 		return e.executeGetWhatIfAnalysis(ctx, userID, currency, tc.Params)
+	// Agent tools - delegate to agent executor
+	case "get_agent_plans", "create_agent_plan", "get_pending_approvals",
+		"approve_action", "get_daily_briefing", "run_financial_scan",
+		"preview_action", "get_agent_config", "update_agent_config":
+		if e.agentExecutor != nil {
+			return e.agentExecutor.Execute(ctx, userID, tc)
+		}
+		return "Agent features are not available. Please enable the autonomous agent in settings.", nil
 	default:
 		return "", fmt.Errorf("unknown tool: %s", tc.Name)
 	}
@@ -618,6 +632,10 @@ You have access to tools that let you query the user's financial data dynamicall
 11. **get_what_if_analysis** — Analyze what would have happened with a hypothetical currency conversion
     Params: from_currency (string), to_currency (string), amount (number), months_ago (int)
 
+### Autonomous Agent Tools (if enabled)
+
+` + GetAgentToolDefinitions() + `
+
 ### How to Call a Tool
 
 Output ONLY the following marker when you need to call a tool (nothing else in your response):
@@ -644,5 +662,11 @@ User: "What's my financial health?"
 
 User: "What's the latest EUR to USD exchange rate?"
 <tool_call>{"name": "web_search", "params": {"query": "EUR to USD exchange rate today"}}</tool_call>
+
+User: "Show my pending approvals"
+<tool_call>{"name": "get_pending_approvals", "params": {}}</tool_call>
+
+User: "Give me my daily briefing"
+<tool_call>{"name": "get_daily_briefing", "params": {}}</tool_call>
 `
 }

@@ -51,6 +51,13 @@ func (s *AIChatService) SetWealthService(ws *WealthService) {
 	}
 }
 
+// SetAgentToolExecutor sets the agent tool executor for agent-related AI tools
+func (s *AIChatService) SetAgentToolExecutor(agentExec *AIAgentToolExecutor) {
+	if s.toolExecutor != nil {
+		s.toolExecutor.SetAgentExecutor(agentExec)
+	}
+}
+
 var (
 	ErrConversationNotFound  = errors.New("conversation not found")
 	ErrInvalidConversationID = errors.New("invalid conversation id")
