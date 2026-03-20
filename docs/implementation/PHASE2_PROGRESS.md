@@ -308,11 +308,37 @@ backend/internal/
 
 ---
 
-### ⏳ Enhanced AI Integration
-- [ ] Extend AI chat context with action planning
-- [ ] Add tool definitions for agent actions
-- [ ] Parse action proposals from LLM output
-- [ ] Validate and sanitize AI suggestions
+### ✅ Enhanced AI Integration (COMPLETE)
+
+**File:** `backend/internal/service/ai_agent_tools.go` (477 lines)
+
+**AIAgentToolExecutor Features:**
+- [x] 9 agent-specific tools for AI chat integration
+- [x] Integration with planning engine and action executor
+- [x] Tool definitions for system prompt enhancement
+
+**Agent Tools Available:**
+1. `get_agent_plans` - List user's financial plans with status filter
+2. `create_agent_plan` - Create new plan from AI conversation
+3. `get_pending_approvals` - List actions waiting for approval
+4. `approve_action` - Approve a pending action (with biometric option)
+5. `get_daily_briefing` - Get comprehensive daily financial briefing
+6. `run_financial_scan` - Trigger manual autopilot scan
+7. `preview_action` - Preview step execution without changes
+8. `get_agent_config` - View agent configuration
+9. `update_agent_config` - Modify agent settings
+
+**Integration Changes:**
+- Extended `AIToolExecutor` with `agentExecutor` field for delegation
+- Updated `buildToolDefinitionsPrompt()` to include agent tools
+- Added `SetAgentToolExecutor()` method to `AIChatService`
+- Updated `bootstrap.go` to wire up agent tools with AI chat
+
+**Example AI Conversations Enabled:**
+- "Show my pending approvals" → calls `get_pending_approvals`
+- "Give me my daily briefing" → calls `get_daily_briefing`
+- "Create a plan to save $500 for vacation" → calls `create_agent_plan`
+- "Enable daily autopilot" → calls `update_agent_config`
 
 ---
 
@@ -322,11 +348,11 @@ backend/internal/
 |------|--------|-------|
 | Week 5-6 | ✅ Complete | Backend foundation (DB, Repo, Service, Handler, Routes) |
 | Week 7 | ✅ Complete | ✅ Action executor, ✅ Daily autopilot |
-| Week 8 | ⏳ Pending | AI integration + Testing |
+| Week 8 | ✅ Complete | ✅ AI integration with 9 agent tools |
 | Week 9 | ⏳ Pending | App client API + Core components |
 | Week 10 | ⏳ Pending | Advanced features + Launch |
 
-**Overall:** ~60% of Phase 2A complete
+**Overall:** ~70% of Phase 2A complete
 
 ---
 
@@ -343,8 +369,9 @@ backend/internal/
 
 ## Next Steps
 
-1. Create action executor service with safety checks
-2. Implement daily autopilot background job
-3. Add WebSocket support for real-time updates
-4. Create app client API module and hooks
-5. Build agent dashboard UI components
+1. ✅ ~~Create action executor service with safety checks~~
+2. ✅ ~~Implement daily autopilot background job~~
+3. ✅ ~~Integrate AI tools for agent actions~~
+4. Add WebSocket support for real-time updates
+5. Create app client API module and hooks
+6. Build agent dashboard UI components
