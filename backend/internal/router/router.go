@@ -36,6 +36,7 @@ type Handlers struct {
 	Wealth        *handler.WealthHandler
 	News          *handler.NewsHandler
 	Forecasting   *handler.ForecastingHandler
+	Agent         *handler.AgentHandler
 }
 
 // New creates a new router with all routes configured

@@ -28,6 +28,7 @@ func registerFeatureRoutes(r chi.Router, h *Handlers, rateLimiter *middleware.Ra
 	registerXPRoutes(r, h, authMiddleware)
 	registerWealthRoutes(r, h, authMiddleware)
 	registerForecastingRoutes(r, h, rateLimiter, authMiddleware)
+	registerAgentRoutes(r, h, authMiddleware)
 }
 
 func registerCoAIRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.Auth) {
@@ -333,5 +334,44 @@ func registerForecastingRoutes(r chi.Router, h *Handlers, rateLimiter *middlewar
 			r.Get("/predict", h.Forecasting.GetForecast)
 			r.Get("/anomalies", h.Forecasting.DetectAnomalies)
 		})
+	})
+}
+
+func registerAgentRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.Auth) {
+	if h.Agent == nil {
+		return
+	}
+
+	r.Route("/agent", func(r chi.Router) {
+		r.Use(authMiddleware.Middleware)
+
+		// Plans CRUD
+		r.Get("/plans", h.Agent.ListPlans)
+		r.Post("/plans", h.Agent.CreatePlan)
+		r.Post("/plans/generate", h.Agent.GenerateAIPlan)
+		r.Get("/plans/{id}", h.Agent.GetPlan)
+		r.Delete("/plans/{id}", h.Agent.CancelPlan)
+
+		// Plan actions
+		r.Post("/plans/{id}/activate", h.Agent.ActivatePlan)
+		r.Post("/plans/{id}/pause", h.Agent.PausePlan)
+		r.Post("/plans/{id}/resume", h.Agent.ResumePlan)
+
+		// Step approval
+		r.Post("/plans/{id}/steps/{stepId}/approve", h.Agent.ApproveStep)
+		r.Post("/plans/{id}/steps/{stepId}/reject", h.Agent.RejectStep)
+
+		// Approvals
+		r.Get("/approvals/pending", h.Agent.GetPendingApprovals)
+
+		// Config
+		r.Get("/config", h.Agent.GetConfig)
+		r.Post("/config", h.Agent.UpdateConfig)
+
+		// Logs
+		r.Get("/logs", h.Agent.GetActionLogs)
+
+		// Daily briefing
+		r.Get("/briefing", h.Agent.GetDailyBriefing)
 	})
 }

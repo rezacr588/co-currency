@@ -58,6 +58,7 @@ type services struct {
 	news         *service.NewsService
 	mlForecaster *service.MLForecasterService
 	mlAnomalies  *service.AnomalyDetectorService
+	planEngine   *service.PlanningEngineService
 
 	// Shutdown handles
 	memoryService *service.MemoryService
@@ -168,6 +169,13 @@ func initServices(cfg *config.Config, db *databases) *services {
 		log.Info().Str("url", cfg.MLServiceURL).Msg("ML services initialized")
 	} else {
 		log.Info().Msg("ML services not configured (ML_SERVICE_URL not set)")
+	}
+
+	// Initialize planning engine service (autonomous agent)
+	if db.mainDB != nil {
+		agentPlanRepo := repository.NewAgentPlanRepository(db.mainDB.Pool())
+		svc.planEngine = service.NewPlanningEngineService(agentPlanRepo, svc.aiChat)
+		log.Info().Msg("Planning engine service initialized")
 	}
 
 	return svc
@@ -562,6 +570,11 @@ func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Hand
 		forecastingHandler = handler.NewForecastingHandler(svc.mlForecaster, svc.mlAnomalies, db.walletRepo)
 	}
 
+	var agentHandler *handler.AgentHandler
+	if svc.planEngine != nil {
+		agentHandler = handler.NewAgentHandler(svc.planEngine)
+	}
+
 	return &router.Handlers{
 		Exchange:      exchangeHandler,
 		Auth:          authHandler,
@@ -589,5 +602,6 @@ func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Hand
 		Wealth:        wealthHandler,
 		News:          newsHandler,
 		Forecasting:   forecastingHandler,
+		Agent:         agentHandler,
 	}
 }
