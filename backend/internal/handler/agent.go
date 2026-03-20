@@ -17,12 +17,14 @@ import (
 // AgentHandler handles autonomous agent API endpoints
 type AgentHandler struct {
 	planningEngine *service.PlanningEngineService
+	actionExecutor *service.ActionExecutor
 }
 
 // NewAgentHandler creates a new agent handler
-func NewAgentHandler(planningEngine *service.PlanningEngineService) *AgentHandler {
+func NewAgentHandler(planningEngine *service.PlanningEngineService, actionExecutor *service.ActionExecutor) *AgentHandler {
 	return &AgentHandler{
 		planningEngine: planningEngine,
+		actionExecutor: actionExecutor,
 	}
 }
 

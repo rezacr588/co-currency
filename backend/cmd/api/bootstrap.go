@@ -52,13 +52,14 @@ type services struct {
 	loan         *service.LoanService
 	notification *service.NotificationService
 	challenge    *service.ChallengeService
-	xp           *service.XPService
-	advice       *service.AdviceService
-	wealth       *service.WealthService
-	news         *service.NewsService
-	mlForecaster *service.MLForecasterService
-	mlAnomalies  *service.AnomalyDetectorService
-	planEngine   *service.PlanningEngineService
+	xp            *service.XPService
+	advice        *service.AdviceService
+	wealth        *service.WealthService
+	news          *service.NewsService
+	mlForecaster  *service.MLForecasterService
+	mlAnomalies   *service.AnomalyDetectorService
+	planEngine    *service.PlanningEngineService
+	actionExecutor *service.ActionExecutor
 
 	// Shutdown handles
 	memoryService *service.MemoryService
@@ -176,6 +177,16 @@ func initServices(cfg *config.Config, db *databases) *services {
 		agentPlanRepo := repository.NewAgentPlanRepository(db.mainDB.Pool())
 		svc.planEngine = service.NewPlanningEngineService(agentPlanRepo, svc.aiChat)
 		log.Info().Msg("Planning engine service initialized")
+		
+		// Initialize action executor
+		svc.actionExecutor = service.NewActionExecutor(
+			agentPlanRepo,
+			svc.wallet,
+			svc.goal,
+			svc.budget,
+			svc.recurring,
+		)
+		log.Info().Msg("Action executor service initialized")
 	}
 
 	return svc
@@ -571,8 +582,8 @@ func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Hand
 	}
 
 	var agentHandler *handler.AgentHandler
-	if svc.planEngine != nil {
-		agentHandler = handler.NewAgentHandler(svc.planEngine)
+	if svc.planEngine != nil && svc.actionExecutor != nil {
+		agentHandler = handler.NewAgentHandler(svc.planEngine, svc.actionExecutor)
 	}
 
 	return &router.Handlers{
