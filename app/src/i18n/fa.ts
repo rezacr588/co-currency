@@ -1274,4 +1274,29 @@ export const fa = {
   viewRealValueDetails: 'مشاهده جزئیات',
   somethingWentWrong: 'مشکلی پیش آمد',
 
+  // Forecasting
+  forecastingTitle: 'پیش‌بینی جریان نقدی',
+  forecastingLoading: 'در حال تولید پیش‌بینی...',
+  forecastingUnavailable: 'پیش‌بینی در دسترس نیست',
+  forecastingInsufficientData: 'تاریخچه تراکنش بیشتری نیاز است (۱۴+ روز)',
+  forecastConfidenceScore: 'اطمینان',
+  netCashFlow: 'جریان نقدی خالص',
+  viewForecastDetails: 'مشاهده جزئیات روزانه',
+  dayForecast: ' روزه',
+
+  // Anomaly Detection
+  anomaliesTitle: 'هشدارهای هزینه',
+  anomaliesScanning: 'در حال بررسی تراکنش‌ها...',
+  anomaliesUnavailable: 'تشخیص ناهنجاری در دسترس نیست',
+  anomaliesInsufficientData: 'تراکنش بیشتری نیاز است (۱۰+)',
+  anomaliesAllGood: 'همه چیز مرتب است!',
+  anomaliesNone: 'هزینه غیرعادی یافت نشد',
+  anomaliesUnusualSpending: 'هزینه غیرعادی',
+  anomaliesDetected: 'شناسایی شده',
+  anomaliesViewAll: 'مشاهده همه',
+  anomalySeverityLow: 'کم',
+  anomalySeverityMedium: 'متوسط',
+  anomalySeverityHigh: 'زیاد',
+  anomalySeverityCritical: 'بحرانی',
+
 } as const;

@@ -1835,6 +1835,169 @@ GET /api/v1/reports/networth
 
 ---
 
+## Forecasting Endpoints
+
+ML-powered cash flow forecasting and anomaly detection. Requires authentication and is subject to AI rate limiting (20 requests/minute).
+
+### ML Service Health Check
+
+Check if the ML forecasting service is available.
+
+```
+GET /api/v1/forecasting/health
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "status": "healthy",
+  "service": "ml-forecasting"
+}
+```
+
+**Response (503 Service Unavailable):**
+
+```json
+{
+  "error": "service_unavailable",
+  "code": 503,
+  "message": "ML service unavailable"
+}
+```
+
+---
+
+### Cash Flow Forecast
+
+Get predicted income, expenses, and balance for future days based on transaction history.
+
+```
+GET /api/v1/forecasting/predict
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| days | integer | No | Days to forecast (1-90, default: 30) |
+| currency | string | No | Currency for forecast (default: USD) |
+
+**Response (200 OK):**
+
+```json
+{
+  "predictions": [
+    {
+      "date": "2024-02-01",
+      "income": 250.00,
+      "expenses": 180.50,
+      "net_cash_flow": 69.50,
+      "balance": 1569.50,
+      "confidence": {
+        "income": 37.50,
+        "expenses": 27.08
+      }
+    },
+    {
+      "date": "2024-02-02",
+      "income": 0.00,
+      "expenses": 45.20,
+      "net_cash_flow": -45.20,
+      "balance": 1524.30,
+      "confidence": {
+        "income": 0.00,
+        "expenses": 6.78
+      }
+    }
+  ],
+  "confidence_score": 0.75,
+  "currency": "USD",
+  "metadata": {
+    "total_historical_days": 90,
+    "avg_daily_income": 166.67,
+    "avg_daily_expenses": 120.50,
+    "income_volatility": 0.35,
+    "expense_volatility": 0.28,
+    "model_type": "arima"
+  }
+}
+```
+
+**Error Responses:**
+
+- `400 Bad Request`: Insufficient transaction history (need at least 14 days)
+- `401 Unauthorized`: Missing or invalid authentication
+- `429 Rate Limit Exceeded`: Too many requests
+- `503 Service Unavailable`: ML service unavailable
+
+---
+
+### Detect Anomalies
+
+Identify unusual spending patterns based on historical transaction data.
+
+```
+GET /api/v1/forecasting/anomalies
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| threshold | number | No | Z-score threshold (0.1-5.0, default: 2.5) |
+
+**Response (200 OK):**
+
+```json
+{
+  "anomalies": [
+    {
+      "date": "2024-01-28",
+      "category": "shopping",
+      "amount": 450.00,
+      "expected_range": [50.00, 150.00],
+      "z_score": 3.2,
+      "severity": "high",
+      "message": "Shopping expense of $450.00 is significantly higher than usual ($50-$150)"
+    },
+    {
+      "date": "2024-01-25",
+      "category": "food",
+      "amount": 85.00,
+      "expected_range": [20.00, 45.00],
+      "z_score": 2.8,
+      "severity": "medium",
+      "message": "Food expense of $85.00 is higher than usual ($20-$45)"
+    }
+  ],
+  "summary": {
+    "total_transactions": 150,
+    "anomaly_count": 2,
+    "categories_affected": ["shopping", "food"],
+    "threshold_used": 2.5
+  }
+}
+```
+
+**Severity Levels:**
+
+| Severity | Z-Score Range | Description |
+|----------|---------------|-------------|
+| low | < 2.5 | Slightly unusual |
+| medium | 2.5 - 3.0 | Moderately unusual |
+| high | 3.0 - 4.0 | Very unusual |
+| critical | > 4.0 | Extremely unusual |
+
+**Error Responses:**
+
+- `400 Bad Request`: Insufficient transaction history (need at least 10 transactions)
+- `401 Unauthorized`: Missing or invalid authentication
+- `429 Rate Limit Exceeded`: Too many requests
+- `503 Service Unavailable`: ML service unavailable
+
+---
+
 ## SDK Examples
 
 ### JavaScript/TypeScript

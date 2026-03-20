@@ -1276,4 +1276,29 @@ export const en = {
   viewRealValueDetails: 'View Details',
   somethingWentWrong: 'Something went wrong',
 
+  // Forecasting
+  forecastingTitle: 'Cash Flow Forecast',
+  forecastingLoading: 'Generating forecast...',
+  forecastingUnavailable: 'Forecasting unavailable',
+  forecastingInsufficientData: 'Need more transaction history (14+ days)',
+  forecastConfidenceScore: 'Confidence',
+  netCashFlow: 'Net Cash Flow',
+  viewForecastDetails: 'View Daily Breakdown',
+  dayForecast: '-day Forecast',
+
+  // Anomaly Detection
+  anomaliesTitle: 'Spending Alerts',
+  anomaliesScanning: 'Scanning transactions...',
+  anomaliesUnavailable: 'Anomaly detection unavailable',
+  anomaliesInsufficientData: 'Need more transactions (10+)',
+  anomaliesAllGood: 'All Clear!',
+  anomaliesNone: 'No unusual spending detected',
+  anomaliesUnusualSpending: 'Unusual Spending',
+  anomaliesDetected: 'detected',
+  anomaliesViewAll: 'View All',
+  anomalySeverityLow: 'Low',
+  anomalySeverityMedium: 'Medium',
+  anomalySeverityHigh: 'High',
+  anomalySeverityCritical: 'Critical',
+
 } as const;

@@ -4,7 +4,7 @@ import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { useRefreshControl } from '../../../../src/hooks/useRefreshableQuery';
-import { Plus, ArrowLeftRight, History, MessageCircle, Target, PiggyBank, BarChart3, Wallet, KanbanSquare, Shield } from 'lucide-react-native';
+import { Plus, ArrowLeftRight, History, MessageCircle, Target, PiggyBank, BarChart3, Wallet, KanbanSquare, Shield, TrendingUp } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
 import { useTheme } from 'styled-components/native';
@@ -69,6 +69,7 @@ export default function WalletScreen() {
     { label: t('budgets') || 'Budgets', href: '/(app)/budgets', icon: PiggyBank },
     { label: t('aiAdvisor') || 'AI Advisor', href: '/(app)/(tabs)/wallet/chat', icon: MessageCircle },
     { label: t('reports') || 'Reports', href: '/(app)/(tabs)/reports', icon: BarChart3 },
+    { label: t('forecastingTitle') || 'Forecast', href: '/(app)/(tabs)/wallet/forecasting', icon: TrendingUp },
     { label: 'Planner', href: '/todo', icon: KanbanSquare },
   ];
 

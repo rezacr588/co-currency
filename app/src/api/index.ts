@@ -19,6 +19,7 @@ import { xp } from './xp';
 import { news } from './news';
 import { wealth } from './wealth';
 import { coai } from './coai';
+import { forecasting } from './forecasting';
 import { currencies, rates, convert } from './exchange';
 
 export const api = {
@@ -46,6 +47,7 @@ export const api = {
   news,
   wealth,
   coai,
+  forecasting,
 };
 
 export {

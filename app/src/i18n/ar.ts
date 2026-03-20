@@ -1274,4 +1274,29 @@ export const ar = {
   viewRealValueDetails: 'عرض التفاصيل',
   somethingWentWrong: 'حدث خطأ ما',
 
+  // Forecasting
+  forecastingTitle: 'توقعات التدفق النقدي',
+  forecastingLoading: 'جاري إنشاء التوقعات...',
+  forecastingUnavailable: 'التوقعات غير متاحة',
+  forecastingInsufficientData: 'تحتاج إلى المزيد من سجل المعاملات (١٤+ يومًا)',
+  forecastConfidenceScore: 'الثقة',
+  netCashFlow: 'صافي التدفق النقدي',
+  viewForecastDetails: 'عرض التفاصيل اليومية',
+  dayForecast: ' يوم توقعات',
+
+  // Anomaly Detection
+  anomaliesTitle: 'تنبيهات الإنفاق',
+  anomaliesScanning: 'جاري فحص المعاملات...',
+  anomaliesUnavailable: 'كشف الشذوذ غير متاح',
+  anomaliesInsufficientData: 'تحتاج إلى المزيد من المعاملات (١٠+)',
+  anomaliesAllGood: 'كل شيء على ما يرام!',
+  anomaliesNone: 'لم يتم اكتشاف إنفاق غير عادي',
+  anomaliesUnusualSpending: 'إنفاق غير عادي',
+  anomaliesDetected: 'تم اكتشافه',
+  anomaliesViewAll: 'عرض الكل',
+  anomalySeverityLow: 'منخفض',
+  anomalySeverityMedium: 'متوسط',
+  anomalySeverityHigh: 'مرتفع',
+  anomalySeverityCritical: 'حرج',
+
 } as const;

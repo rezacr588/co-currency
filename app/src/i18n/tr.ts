@@ -1278,4 +1278,29 @@ export const tr = {
   viewRealValueDetails: 'Detayları Gör',
   somethingWentWrong: 'Bir şeyler yanlış gitti',
 
+  // Forecasting
+  forecastingTitle: 'Nakit Akışı Tahmini',
+  forecastingLoading: 'Tahmin oluşturuluyor...',
+  forecastingUnavailable: 'Tahmin mevcut değil',
+  forecastingInsufficientData: 'Daha fazla işlem geçmişi gerekli (14+ gün)',
+  forecastConfidenceScore: 'Güven',
+  netCashFlow: 'Net Nakit Akışı',
+  viewForecastDetails: 'Günlük Detayları Gör',
+  dayForecast: ' günlük Tahmin',
+
+  // Anomaly Detection
+  anomaliesTitle: 'Harcama Uyarıları',
+  anomaliesScanning: 'İşlemler taranıyor...',
+  anomaliesUnavailable: 'Anomali tespiti mevcut değil',
+  anomaliesInsufficientData: 'Daha fazla işlem gerekli (10+)',
+  anomaliesAllGood: 'Her Şey Yolunda!',
+  anomaliesNone: 'Olağandışı harcama tespit edilmedi',
+  anomaliesUnusualSpending: 'Olağandışı Harcama',
+  anomaliesDetected: 'tespit edildi',
+  anomaliesViewAll: 'Tümünü Gör',
+  anomalySeverityLow: 'Düşük',
+  anomalySeverityMedium: 'Orta',
+  anomalySeverityHigh: 'Yüksek',
+  anomalySeverityCritical: 'Kritik',
+
 } as const;
