@@ -349,10 +349,68 @@ backend/internal/
 | Week 5-6 | ✅ Complete | Backend foundation (DB, Repo, Service, Handler, Routes) |
 | Week 7 | ✅ Complete | ✅ Action executor, ✅ Daily autopilot |
 | Week 8 | ✅ Complete | ✅ AI integration with 9 agent tools |
-| Week 9 | ⏳ Pending | App client API + Core components |
-| Week 10 | ⏳ Pending | Advanced features + Launch |
+| Week 9 | ✅ Complete | ✅ App API client, ✅ React Query hooks, ✅ Core components |
+| Week 10 | ⏳ Pending | Agent dashboard screen + WebSocket support |
 
-**Overall:** ~70% of Phase 2A complete
+**Overall:** ~85% of Phase 2A complete
+
+---
+
+## Week 9 Summary (Complete ✅)
+
+### ✅ App API Client
+
+**File:** `app/src/api/agent.ts` (350+ lines)
+
+- Full TypeScript types for all agent entities
+- Plan CRUD operations (list, get, create, update, delete)
+- Plan lifecycle (activate, pause, resume)
+- Step approvals (approve, reject)
+- Configuration management
+- Daily briefing and autopilot endpoints
+
+### ✅ React Query Hooks
+
+**File:** `app/src/hooks/useAgent.ts` (400+ lines)
+
+- 20 custom hooks for agent features
+- Query key management with `agentKeys`
+- Automatic cache invalidation on mutations
+- Combined hooks:
+  - `useAgentDashboard` - All dashboard data in one call
+  - `useAgentStatus` - For badge notifications
+- Polling for pending approvals (every minute)
+
+### ✅ UI Components
+
+**Directory:** `app/src/components/features/Agent/`
+
+**BriefingCard.tsx** (500+ lines):
+- Daily financial briefing summary
+- Balance health status badge (healthy/warning/critical)
+- Upcoming bills list with affordability check
+- Goal contribution opportunities
+- Pending approvals count banner
+- Top recommendation highlight
+- Compact and full view modes
+
+**PlanCard.tsx** (500+ lines):
+- Financial plan display with status badge
+- Priority indicator (urgent/high/medium/low)
+- Progress bar with step count
+- Expandable step timeline with status icons
+- Quick actions (activate, pause, resume)
+- AI reasoning display section
+- Creation date footer
+
+**ApprovalCard.tsx** (350+ lines):
+- Pending action approval interface
+- Countdown timer until expiration
+- Estimated impact display
+- Biometric verification badge
+- Approve/Reject buttons with haptic feedback
+- Confirmation dialogs
+- Security note footer
 
 ---
 
