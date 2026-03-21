@@ -46,9 +46,7 @@ export default function AgentDashboardScreen() {
 
   const handleCreatePlan = () => {
     haptics.medium();
-    // TODO: Navigate to create plan screen when implemented
-    // router.push('/agent/create-plan');
-    console.log('Create plan - not implemented');
+    router.push('/agent/create-plan');
   };
 
   const handleViewConfig = () => {
