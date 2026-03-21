@@ -46,7 +46,7 @@ export default function AgentDashboardScreen() {
 
   const handleCreatePlan = () => {
     haptics.medium();
-    router.push('/agent/create-plan');
+    router.push('/agent/create-plan' as any);
   };
 
   const handleViewConfig = () => {
@@ -58,9 +58,7 @@ export default function AgentDashboardScreen() {
 
   const handleViewPlan = (planId: string) => {
     haptics.light();
-    // TODO: Navigate to plan details when implemented
-    // router.push(`/agent/plans/${planId}`);
-    console.log('View plan:', planId);
+    router.push(`/agent/plans/${planId}` as any);
   };
 
   const handleViewApprovals = () => {

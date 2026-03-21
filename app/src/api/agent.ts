@@ -174,6 +174,8 @@ export interface CreatePlanRequest {
   priority?: PlanPriority;
   target_amount?: number;
   target_currency?: string;
+  target_date?: string;
+  metadata?: Record<string, any>;
 }
 
 export interface UpdatePlanRequest {
