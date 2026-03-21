@@ -51,9 +51,7 @@ export default function AgentDashboardScreen() {
 
   const handleViewConfig = () => {
     haptics.light();
-    // TODO: Navigate to settings when implemented
-    // router.push('/agent/settings');
-    console.log('View config - not implemented');
+    router.push('/agent/settings' as any);
   };
 
   const handleViewPlan = (planId: string) => {
@@ -63,9 +61,7 @@ export default function AgentDashboardScreen() {
 
   const handleViewApprovals = () => {
     haptics.light();
-    // TODO: Navigate to approvals list when implemented
-    // router.push('/agent/approvals');
-    console.log('View approvals - not implemented');
+    router.push('/agent/approvals' as any);
   };
 
   // If agent is not enabled, show onboarding
