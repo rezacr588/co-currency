@@ -14,11 +14,11 @@ import { useRouter } from 'expo-router';
 import { Plus, Settings, TrendingUp, AlertCircle } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLanguage } from '../../context/LanguageContext';
-import { useAgentDashboard, useAgentStatus } from '../../hooks/useAgent';
-import { BriefingCard, PlanCard, ApprovalCard } from '../../components/features/Agent';
-import { LoadingSpinner, EmptyState } from '../../components/ui';
-import { haptics } from '../../utils/haptics';
+import { useLanguage } from '@/src/context/LanguageContext';
+import { useAgentDashboard, useAgentStatus } from '@/src/hooks/useAgent';
+import { BriefingCard, PlanCard, ApprovalCard } from '@/src/components/features/Agent';
+import { LoadingSpinner, EmptyState } from '@/src/components/ui';
+import { haptics } from '@/src/utils/haptics';
 
 export default function AgentDashboardScreen() {
   const theme = useTheme();
@@ -46,23 +46,30 @@ export default function AgentDashboardScreen() {
 
   const handleCreatePlan = () => {
     haptics.medium();
-    // TODO: Navigate to create plan screen
-    router.push('/agent/create-plan');
+    // TODO: Navigate to create plan screen when implemented
+    // router.push('/agent/create-plan');
+    console.log('Create plan - not implemented');
   };
 
   const handleViewConfig = () => {
     haptics.light();
-    router.push('/agent/settings');
+    // TODO: Navigate to settings when implemented
+    // router.push('/agent/settings');
+    console.log('View config - not implemented');
   };
 
   const handleViewPlan = (planId: string) => {
     haptics.light();
-    router.push(`/agent/plans/${planId}`);
+    // TODO: Navigate to plan details when implemented
+    // router.push(`/agent/plans/${planId}`);
+    console.log('View plan:', planId);
   };
 
   const handleViewApprovals = () => {
     haptics.light();
-    router.push('/agent/approvals');
+    // TODO: Navigate to approvals list when implemented
+    // router.push('/agent/approvals');
+    console.log('View approvals - not implemented');
   };
 
   // If agent is not enabled, show onboarding
@@ -173,10 +180,8 @@ export default function AgentDashboardScreen() {
             icon={AlertCircle}
             title={t('errorLoadingAgent') || 'Error Loading Agent'}
             description={error?.message || t('tryAgainLater') || 'Please try again later'}
-            action={{
-              label: t('retry') || 'Retry',
-              onPress: handleRefresh,
-            }}
+            actionLabel={t('retry') || 'Retry'}
+            onAction={handleRefresh}
           />
         </ScrollView>
       </View>
@@ -331,12 +336,11 @@ export default function AgentDashboardScreen() {
         ) : (
           <View style={{ marginBottom: 20 }}>
             <EmptyState
+              icon={TrendingUp}
               title={t('noActivePlans') || 'No Active Plans'}
               description={t('createFirstPlan') || 'Create your first financial plan to get started'}
-              action={{
-                label: t('createPlan') || 'Create Plan',
-                onPress: handleCreatePlan,
-              }}
+              actionLabel={t('createPlan') || 'Create Plan'}
+              onAction={handleCreatePlan}
             />
           </View>
         )}
