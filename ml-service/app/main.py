@@ -9,6 +9,7 @@ import os
 
 from app.forecaster import Forecaster
 from app.anomaly_detector import AnomalyDetector
+from app.behavioral_analytics import analyze_transactions
 
 # Configure logging
 logging.basicConfig(
@@ -149,6 +150,61 @@ def detect_anomalies():
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Anomaly detection error: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@app.route('/analyze-dna', methods=['POST'])
+def analyze_dna():
+    """
+    Analyze transaction patterns to determine financial DNA/personality
+    
+    Request body:
+    {
+        "transactions": [
+            {"id": "uuid", "amount": 100.0, "category": "food", "type": "debit", "created_at": "2024-01-01T12:00:00Z"},
+            ...
+        ]
+    }
+    
+    Response:
+    {
+        "archetype": {
+            "name": "conscious_spender",
+            "confidence": 0.85,
+            "description": "...",
+            "strengths": ["..."],
+            "growth_areas": ["..."]
+        },
+        "dimensions": {"impulse_control": 70, ...},
+        "features": {...},
+        "scores": {...},
+        "insights": [{...}],
+        "transaction_count": 100
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        # Validate input
+        if not data or 'transactions' not in data:
+            return jsonify({'error': 'Missing transactions data'}), 400
+        
+        transactions = data['transactions']
+        
+        if len(transactions) < 10:
+            return jsonify({'error': 'Insufficient data: need at least 10 transactions for DNA analysis'}), 400
+        
+        # Analyze behavioral patterns
+        logger.info(f"Analyzing financial DNA from {len(transactions)} transactions")
+        result = analyze_transactions(transactions)
+        
+        return jsonify(result), 200
+        
+    except ValueError as e:
+        logger.error(f"Validation error: {str(e)}")
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"DNA analysis error: {str(e)}", exc_info=True)
         return jsonify({'error': 'Internal server error'}), 500
 
 

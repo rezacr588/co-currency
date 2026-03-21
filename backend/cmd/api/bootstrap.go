@@ -597,7 +597,7 @@ func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Hand
 	var dnaHandler *handler.FinancialDNAHandler
 	if db.mainDB != nil && db.walletRepo != nil {
 		dnaRepo := repository.NewFinancialDNARepository(db.mainDB.Pool())
-		dnaService := service.NewFinancialDNAService(dnaRepo, db.walletRepo)
+		dnaService := service.NewFinancialDNAService(dnaRepo, db.walletRepo, cfg.MLServiceURL)
 		dnaHandler = handler.NewFinancialDNAHandler(dnaService)
 	}
 

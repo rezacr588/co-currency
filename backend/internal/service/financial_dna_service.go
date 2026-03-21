@@ -1,31 +1,100 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
+	"net/http"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/patrickmn/go-cache"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
+	"github.com/rs/zerolog/log"
 )
 
 // FinancialDNAService handles financial personality analysis
 type FinancialDNAService struct {
-dnaRepo     *repository.FinancialDNARepository
-walletRepo  *repository.WalletRepository
+	dnaRepo      *repository.FinancialDNARepository
+	walletRepo   *repository.WalletRepository
+	mlServiceURL string
+	httpClient   *http.Client
+	cache        *cache.Cache
+	mlEnabled    bool
+}
+
+// MLDNARequest represents a request to ML service for DNA analysis
+type MLDNARequest struct {
+	Transactions []MLTransaction `json:"transactions"`
+}
+
+// MLTransaction is a transaction for ML analysis
+type MLTransaction struct {
+	ID        string  `json:"id"`
+	Amount    float64 `json:"amount"`
+	Currency  string  `json:"currency"`
+	Category  string  `json:"category"`
+	Type      string  `json:"type"`
+	CreatedAt string  `json:"created_at"`
+}
+
+// MLDNAResponse represents the ML service response
+type MLDNAResponse struct {
+	Archetype struct {
+		Name        string   `json:"name"`
+		Confidence  float64  `json:"confidence"`
+		Description string   `json:"description"`
+		Strengths   []string `json:"strengths"`
+		GrowthAreas []string `json:"growth_areas"`
+	} `json:"archetype"`
+	Dimensions map[string]float64 `json:"dimensions"`
+	Features   map[string]any     `json:"features"`
+	Scores     struct {
+		ImpulseScore    float64 `json:"impulse_score"`
+		PlanningScore   float64 `json:"planning_score"`
+		FrugalityScore  float64 `json:"frugality_score"`
+		RiskTolerance   float64 `json:"risk_tolerance"`
+		StressIndicator float64 `json:"stress_indicator"`
+	} `json:"scores"`
+	Insights         []MLInsight `json:"insights"`
+	TransactionCount int         `json:"transaction_count"`
+}
+
+// MLInsight represents an insight from ML analysis
+type MLInsight struct {
+	Type        string  `json:"type"`
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	Category    string  `json:"category"`
+	Importance  float64 `json:"importance"`
 }
 
 // NewFinancialDNAService creates a new DNA service
 func NewFinancialDNAService(
-dnaRepo *repository.FinancialDNARepository,
-walletRepo *repository.WalletRepository,
+	dnaRepo *repository.FinancialDNARepository,
+	walletRepo *repository.WalletRepository,
+	mlServiceURL string,
 ) *FinancialDNAService {
-return &FinancialDNAService{
-dnaRepo:    dnaRepo,
-walletRepo: walletRepo,
-}
+	mlEnabled := mlServiceURL != ""
+	if mlEnabled {
+		log.Info().Str("url", mlServiceURL).Msg("Financial DNA ML service enabled")
+	} else {
+		log.Warn().Msg("Financial DNA ML service disabled (no ML_SERVICE_URL), using basic analysis")
+	}
+
+	return &FinancialDNAService{
+		dnaRepo:      dnaRepo,
+		walletRepo:   walletRepo,
+		mlServiceURL: mlServiceURL,
+		httpClient: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+		cache:     cache.New(6*time.Hour, 10*time.Minute),
+		mlEnabled: mlEnabled,
+	}
 }
 
 // GetDNA retrieves or calculates the user's financial DNA
@@ -44,57 +113,177 @@ return s.CalculateDNA(ctx, userID)
 
 // CalculateDNA analyzes transaction history to determine financial personality
 func (s *FinancialDNAService) CalculateDNA(ctx context.Context, userID uuid.UUID) (*model.FinancialDNA, error) {
-// Get last 90 days of transactions
-endDate := time.Now()
-startDate := endDate.AddDate(0, 0, -90)
+	// Get last 90 days of transactions
+	endDate := time.Now()
+	startDate := endDate.AddDate(0, 0, -90)
 
-transactions, err := s.walletRepo.GetTransactionsForPeriod(ctx, userID, startDate, endDate)
-if err != nil {
-return nil, err
+	transactions, err := s.walletRepo.GetTransactionsForPeriod(ctx, userID, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(transactions) < 10 {
+		// Not enough data for meaningful analysis
+		return s.getDefaultDNA(userID, len(transactions)), nil
+	}
+
+	// Try ML service first if enabled
+	if s.mlEnabled {
+		dna, err := s.calculateDNAWithML(ctx, userID, transactions)
+		if err != nil {
+			log.Warn().Err(err).Msg("ML DNA analysis failed, falling back to basic")
+		} else {
+			return dna, nil
+		}
+	}
+
+	// Fall back to basic analysis
+	return s.calculateDNABasic(ctx, userID, transactions)
 }
 
-if len(transactions) < 10 {
-// Not enough data for meaningful analysis
-return s.getDefaultDNA(userID, len(transactions)), nil
+// calculateDNAWithML uses the ML service for advanced behavioral analysis
+func (s *FinancialDNAService) calculateDNAWithML(ctx context.Context, userID uuid.UUID, transactions []model.Transaction) (*model.FinancialDNA, error) {
+	// Prepare request
+	mlTxns := make([]MLTransaction, len(transactions))
+	for i, tx := range transactions {
+		mlTxns[i] = MLTransaction{
+			ID:        tx.ID.String(),
+			Amount:    tx.Amount,
+			Currency:  tx.Currency,
+			Category:  tx.Category,
+			Type:      tx.Type,
+			CreatedAt: tx.CreatedAt.Format(time.RFC3339),
+		}
+	}
+
+	reqBody, err := json.Marshal(MLDNARequest{Transactions: mlTxns})
+	if err != nil {
+		return nil, fmt.Errorf("marshal request: %w", err)
+	}
+
+	// Call ML service
+	req, err := http.NewRequestWithContext(ctx, "POST", s.mlServiceURL+"/analyze-dna", bytes.NewBuffer(reqBody))
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("ml service call: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("ml service returned status %d", resp.StatusCode)
+	}
+
+	var mlResp MLDNAResponse
+	if err := json.NewDecoder(resp.Body).Decode(&mlResp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	// Map ML response to DNA model
+	dimensions := []model.DNADimension{
+		{Name: "Impulse Control", Score: mlResp.Dimensions["impulse_control"], Description: "Ability to resist spontaneous purchases"},
+		{Name: "Planning Horizon", Score: mlResp.Dimensions["planning_horizon"], Description: "Forward-thinking financial planning"},
+		{Name: "Frugality", Score: mlResp.Dimensions["frugality"], Description: "Tendency to save and avoid excess spending"},
+		{Name: "Risk Tolerance", Score: mlResp.Dimensions["risk_tolerance"], Description: "Comfort with financial uncertainty"},
+		{Name: "Financial Wellness", Score: mlResp.Dimensions["financial_stress"], Description: "Overall financial stress level"},
+	}
+
+	archetype := model.FinancialArchetype(mlResp.Archetype.Name)
+
+	dna := &model.FinancialDNA{
+		UserID:               userID,
+		Archetype:            archetype,
+		SpendingTemperament:  100 - mlResp.Scores.FrugalityScore,
+		PlanningHorizon:      mlResp.Scores.PlanningScore,
+		RiskTolerance:        mlResp.Scores.RiskTolerance,
+		FinancialStress:      mlResp.Scores.StressIndicator,
+		ImpulseControl:       100 - mlResp.Scores.ImpulseScore,
+		Dimensions:           dimensions,
+		Strengths:            mlResp.Archetype.Strengths,
+		GrowthAreas:          mlResp.Archetype.GrowthAreas,
+		TransactionsAnalyzed: mlResp.TransactionCount,
+		AnalysisPeriodDays:   90,
+		ConfidenceScore:      mlResp.Archetype.Confidence,
+		LastUpdated:          time.Now(),
+	}
+
+	dna.ArchetypeLabel, dna.ArchetypeEmoji, _ = model.GetArchetypeDetails(archetype)
+
+	// Store ML-generated insights
+	if len(mlResp.Insights) > 0 {
+		for _, insight := range mlResp.Insights {
+			severity := "medium"
+			if insight.Importance > 0.7 {
+				severity = "high"
+			} else if insight.Importance < 0.4 {
+				severity = "low"
+			}
+			bi := &model.BehavioralInsight{
+				UserID:      userID,
+				Type:        insight.Type,
+				Title:       insight.Title,
+				Description: insight.Description,
+				Category:    insight.Category,
+				Severity:    severity,
+				IsRead:      false,
+				CreatedAt:   time.Now(),
+			}
+			_ = s.dnaRepo.CreateInsight(ctx, bi)
+		}
+	}
+
+	// Save DNA to database
+	if err := s.dnaRepo.UpsertDNA(ctx, dna); err != nil {
+		return nil, err
+	}
+
+	log.Info().Str("archetype", string(dna.Archetype)).Float64("confidence", dna.ConfidenceScore).Msg("DNA calculated via ML service")
+	return dna, nil
 }
 
-// Calculate behavioral metrics
-metrics := s.calculateMetrics(transactions)
+// calculateDNABasic uses the built-in Go analysis as fallback
+func (s *FinancialDNAService) calculateDNABasic(ctx context.Context, userID uuid.UUID, transactions []model.Transaction) (*model.FinancialDNA, error) {
+	// Calculate behavioral metrics
+	metrics := s.calculateMetrics(transactions)
 
-// Determine archetype based on metrics
-archetype := s.determineArchetype(metrics)
+	// Determine archetype based on metrics
+	archetype := s.determineArchetype(metrics)
 
-// Generate strengths and growth areas
-strengths, growthAreas := s.analyzeStrengthsAndGrowth(metrics)
+	// Generate strengths and growth areas
+	strengths, growthAreas := s.analyzeStrengthsAndGrowth(metrics)
 
-// Build dimension details
-dimensions := s.buildDimensions(metrics)
+	// Build dimension details
+	dimensions := s.buildDimensions(metrics)
 
-dna := &model.FinancialDNA{
-UserID:               userID,
-Archetype:            archetype,
-SpendingTemperament:  metrics["spending_temperament"],
-PlanningHorizon:      metrics["planning_horizon"],
-RiskTolerance:        metrics["risk_tolerance"],
-FinancialStress:      metrics["financial_stress"],
-ImpulseControl:       metrics["impulse_control"],
-Dimensions:           dimensions,
-Strengths:            strengths,
-GrowthAreas:          growthAreas,
-TransactionsAnalyzed: len(transactions),
-AnalysisPeriodDays:   90,
-ConfidenceScore:      s.calculateConfidence(len(transactions)),
-LastUpdated:          time.Now(),
-}
+	dna := &model.FinancialDNA{
+		UserID:               userID,
+		Archetype:            archetype,
+		SpendingTemperament:  metrics["spending_temperament"],
+		PlanningHorizon:      metrics["planning_horizon"],
+		RiskTolerance:        metrics["risk_tolerance"],
+		FinancialStress:      metrics["financial_stress"],
+		ImpulseControl:       metrics["impulse_control"],
+		Dimensions:           dimensions,
+		Strengths:            strengths,
+		GrowthAreas:          growthAreas,
+		TransactionsAnalyzed: len(transactions),
+		AnalysisPeriodDays:   90,
+		ConfidenceScore:      s.calculateConfidence(len(transactions)),
+		LastUpdated:          time.Now(),
+	}
 
-dna.ArchetypeLabel, dna.ArchetypeEmoji, _ = model.GetArchetypeDetails(archetype)
+	dna.ArchetypeLabel, dna.ArchetypeEmoji, _ = model.GetArchetypeDetails(archetype)
 
-// Save to database
-if err := s.dnaRepo.UpsertDNA(ctx, dna); err != nil {
-return nil, err
-}
+	// Save to database
+	if err := s.dnaRepo.UpsertDNA(ctx, dna); err != nil {
+		return nil, err
+	}
 
-return dna, nil
+	return dna, nil
 }
 
 func (s *FinancialDNAService) calculateMetrics(transactions []model.Transaction) map[string]float64 {
