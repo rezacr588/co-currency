@@ -601,6 +601,14 @@ func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Hand
 		dnaHandler = handler.NewFinancialDNAHandler(dnaService)
 	}
 
+	// Social Finance handler
+	var socialHandler *handler.SocialHandler
+	if db.mainDB != nil {
+		socialRepo := repository.NewSocialRepository(db.mainDB.Pool())
+		socialService := service.NewSocialService(socialRepo)
+		socialHandler = handler.NewSocialHandler(socialService)
+	}
+
 	return &router.Handlers{
 		Exchange:      exchangeHandler,
 		Auth:          authHandler,
@@ -630,5 +638,6 @@ func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Hand
 		Forecasting:   forecastingHandler,
 		Agent:         agentHandler,
 		DNA:           dnaHandler,
+		Social:        socialHandler,
 	}
 }

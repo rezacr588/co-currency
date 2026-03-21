@@ -30,6 +30,7 @@ func registerFeatureRoutes(r chi.Router, h *Handlers, rateLimiter *middleware.Ra
 	registerForecastingRoutes(r, h, rateLimiter, authMiddleware)
 	registerAgentRoutes(r, h, authMiddleware)
 	registerDNARoutes(r, h, authMiddleware)
+	registerSocialRoutes(r, h, authMiddleware)
 }
 
 func registerCoAIRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.Auth) {
@@ -378,23 +379,84 @@ func registerAgentRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.A
 }
 
 func registerDNARoutes(r chi.Router, h *Handlers, authMiddleware *middleware.Auth) {
-if h.DNA == nil {
-return
+	if h.DNA == nil {
+		return
+	}
+
+	r.Route("/dna", func(r chi.Router) {
+		r.Use(authMiddleware.Middleware)
+
+		// Financial DNA profile
+		r.Get("/", h.DNA.GetDNA)
+		r.Post("/refresh", h.DNA.RefreshDNA)
+
+		// Behavioral insights
+		r.Get("/insights", h.DNA.GetInsights)
+		r.Post("/insights/generate", h.DNA.GenerateInsights)
+		r.Post("/insights/read", h.DNA.MarkInsightRead)
+
+		// Assessment quiz
+		r.Get("/quiz", h.DNA.GetQuizQuestions)
+	})
 }
 
-r.Route("/dna", func(r chi.Router) {
-r.Use(authMiddleware.Middleware)
+func registerSocialRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.Auth) {
+	if h.Social == nil {
+		return
+	}
 
-// Financial DNA profile
-r.Get("/", h.DNA.GetDNA)
-r.Post("/refresh", h.DNA.RefreshDNA)
+	r.Route("/spaces", func(r chi.Router) {
+		r.Use(authMiddleware.Middleware)
 
-// Behavioral insights
-r.Get("/insights", h.DNA.GetInsights)
-r.Post("/insights/generate", h.DNA.GenerateInsights)
-r.Post("/insights/read", h.DNA.MarkInsightRead)
+		// Spaces CRUD
+		r.Post("/", h.Social.CreateSpace)
+		r.Get("/", h.Social.ListSpaces)
 
-// Assessment quiz
-r.Get("/quiz", h.DNA.GetQuizQuestions)
-})
+		// Invitations
+		r.Get("/invites", h.Social.GetPendingInvites)
+		r.Post("/invites/{code}/accept", h.Social.AcceptInvite)
+
+		// Single space operations
+		r.Route("/{spaceId}", func(r chi.Router) {
+			r.Get("/", h.Social.GetSpace)
+			r.Put("/", h.Social.UpdateSpace)
+			r.Delete("/", h.Social.DeleteSpace)
+			r.Post("/leave", h.Social.LeaveSpace)
+
+			// Members
+			r.Post("/invite", h.Social.InviteMember)
+			r.Delete("/members/{memberId}", h.Social.RemoveMember)
+
+			// Expenses
+			r.Route("/expenses", func(r chi.Router) {
+				r.Post("/", h.Social.AddExpense)
+				r.Get("/", h.Social.ListExpenses)
+			})
+
+			// Settlements
+			r.Route("/settlements", func(r chi.Router) {
+				r.Post("/", h.Social.RecordSettlement)
+				r.Get("/", h.Social.ListSettlements)
+			})
+
+			// Balances
+			r.Get("/balances", h.Social.GetBalances)
+
+			// Budgets
+			r.Route("/budgets", func(r chi.Router) {
+				r.Post("/", h.Social.CreateBudget)
+				r.Get("/", h.Social.ListBudgets)
+			})
+
+			// Activities
+			r.Get("/activities", h.Social.GetActivities)
+		})
+
+		// Expense operations (outside space context)
+		r.Get("/expenses/{expenseId}", h.Social.GetExpense)
+		r.Delete("/expenses/{expenseId}", h.Social.DeleteExpense)
+
+		// Settlement confirmation
+		r.Post("/settlements/{settlementId}/confirm", h.Social.ConfirmSettlement)
+	})
 }
