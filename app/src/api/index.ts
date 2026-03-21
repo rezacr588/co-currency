@@ -21,6 +21,7 @@ import { wealth } from './wealth';
 import { coai } from './coai';
 import { forecasting } from './forecasting';
 import { agent } from './agent';
+import { social } from './social';
 import { currencies, rates, convert } from './exchange';
 
 export const api = {
@@ -50,6 +51,7 @@ export const api = {
   coai,
   forecasting,
   agent,
+  social,
 };
 
 export {
