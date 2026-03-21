@@ -934,3 +934,37 @@ func (r *WalletRepository) GetTransactionsForForecasting(ctx context.Context, us
 
 	return transactions, nil
 }
+
+// GetTransactionsForPeriod retrieves full transaction objects for a date range
+func (r *WalletRepository) GetTransactionsForPeriod(ctx context.Context, userID uuid.UUID, startDate, endDate time.Time) ([]model.Transaction, error) {
+	query := `
+		SELECT id, user_id, type, amount, currency, category, description,
+			   source, ai_extracted_data, created_at
+		FROM transactions
+		WHERE user_id = $1 AND created_at >= $2 AND created_at <= $3
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.pool.Query(ctx, query, userID, startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("querying transactions for period: %w", err)
+	}
+	defer rows.Close()
+
+	var transactions []model.Transaction
+	for rows.Next() {
+		var tx model.Transaction
+
+		if err := rows.Scan(
+			&tx.ID, &tx.UserID, &tx.Type, &tx.Amount, &tx.Currency,
+			&tx.Category, &tx.Description, &tx.Source,
+			&tx.AIExtractedData, &tx.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning transaction: %w", err)
+		}
+
+		transactions = append(transactions, tx)
+	}
+
+	return transactions, nil
+}

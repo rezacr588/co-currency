@@ -29,6 +29,7 @@ func registerFeatureRoutes(r chi.Router, h *Handlers, rateLimiter *middleware.Ra
 	registerWealthRoutes(r, h, authMiddleware)
 	registerForecastingRoutes(r, h, rateLimiter, authMiddleware)
 	registerAgentRoutes(r, h, authMiddleware)
+	registerDNARoutes(r, h, authMiddleware)
 }
 
 func registerCoAIRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.Auth) {
@@ -374,4 +375,26 @@ func registerAgentRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.A
 		// Daily briefing
 		r.Get("/briefing", h.Agent.GetDailyBriefing)
 	})
+}
+
+func registerDNARoutes(r chi.Router, h *Handlers, authMiddleware *middleware.Auth) {
+if h.DNA == nil {
+return
+}
+
+r.Route("/dna", func(r chi.Router) {
+r.Use(authMiddleware.Middleware)
+
+// Financial DNA profile
+r.Get("/", h.DNA.GetDNA)
+r.Post("/refresh", h.DNA.RefreshDNA)
+
+// Behavioral insights
+r.Get("/insights", h.DNA.GetInsights)
+r.Post("/insights/generate", h.DNA.GenerateInsights)
+r.Post("/insights/read", h.DNA.MarkInsightRead)
+
+// Assessment quiz
+r.Get("/quiz", h.DNA.GetQuizQuestions)
+})
 }
