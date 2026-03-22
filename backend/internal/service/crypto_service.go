@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"strings"
 	"time"
@@ -367,16 +368,90 @@ func (s *CryptoService) GetTokenPrice(ctx context.Context, address, network stri
 
 // GetGasPrices retrieves current gas prices for a network
 func (s *CryptoService) GetGasPrices(ctx context.Context, network model.BlockchainNetwork) (*model.GasPrice, error) {
-	// Simplified - would call network-specific RPC
+	if s.alchemyAPIKey == "" {
+		return s.getDefaultGasPrices(network), nil
+	}
+
+	alchemyURL := s.getAlchemyURL(network)
+	if alchemyURL == "" {
+		return s.getDefaultGasPrices(network), nil
+	}
+
+	// Get base fee from latest block
+	payload := `{"jsonrpc":"2.0","method":"eth_gasPrice","params":[],"id":1}`
+	req, err := http.NewRequestWithContext(ctx, "POST", alchemyURL, strings.NewReader(payload))
+	if err != nil {
+		return s.getDefaultGasPrices(network), nil
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return s.getDefaultGasPrices(network), nil
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return s.getDefaultGasPrices(network), nil
+	}
+
+	var result struct {
+		Result string `json:"result"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return s.getDefaultGasPrices(network), nil
+	}
+
+	// Convert hex to Gwei (1 Gwei = 10^9 wei)
+	baseFeeWei := s.hexToFloat(result.Result, 0)
+	baseFeeGwei := baseFeeWei / 1e9
+
+	// Calculate different speed tiers
+	return &model.GasPrice{
+		Network:   network,
+		Slow:      baseFeeGwei * 0.8,
+		Standard:  baseFeeGwei,
+		Fast:      baseFeeGwei * 1.5,
+		Instant:   baseFeeGwei * 2.0,
+		BaseFee:   baseFeeGwei,
+		UpdatedAt: time.Now(),
+	}, nil
+}
+
+func (s *CryptoService) getDefaultGasPrices(network model.BlockchainNetwork) *model.GasPrice {
+	// Default gas prices by network (approximate)
+	defaults := map[model.BlockchainNetwork]struct{ slow, standard, fast, instant float64 }{
+		model.NetworkEthereum:  {20, 30, 50, 80},
+		model.NetworkPolygon:   {30, 50, 80, 120},
+		model.NetworkArbitrum:  {0.1, 0.15, 0.2, 0.3},
+		model.NetworkOptimism:  {0.001, 0.002, 0.003, 0.005},
+		model.NetworkBase:      {0.01, 0.015, 0.02, 0.03},
+		model.NetworkBSC:       {3, 5, 8, 12},
+		model.NetworkAvalanche: {25, 30, 40, 60},
+	}
+
+	if d, ok := defaults[network]; ok {
+		return &model.GasPrice{
+			Network:   network,
+			Slow:      d.slow,
+			Standard:  d.standard,
+			Fast:      d.fast,
+			Instant:   d.instant,
+			BaseFee:   d.standard,
+			UpdatedAt: time.Now(),
+		}
+	}
+
 	return &model.GasPrice{
 		Network:   network,
 		Slow:      20,
 		Standard:  30,
 		Fast:      50,
 		Instant:   80,
-		BaseFee:   15,
+		BaseFee:   30,
 		UpdatedAt: time.Now(),
-	}, nil
+	}
 }
 
 // -------------------- Internal Sync Methods --------------------
@@ -654,10 +729,212 @@ func (s *CryptoService) syncNFTs(ctx context.Context, wallet *model.CryptoWallet
 }
 
 func (s *CryptoService) syncDeFiPositions(ctx context.Context, wallet *model.CryptoWallet) error {
-	// Would integrate with DeFi APIs like Zapper, DeBank, etc.
-	// Simplified for now
-	log.Debug().Str("wallet", wallet.Address).Msg("DeFi position sync not fully implemented")
+	// DeBank API for DeFi protocol detection (free tier: 200 calls/day)
+	// Alternative: Zapper API, but DeBank has better protocol coverage
+	
+	// Only sync for EVM chains
+	if wallet.Network == model.NetworkSolana {
+		return nil
+	}
+
+	url := fmt.Sprintf(
+		"https://pro-openapi.debank.com/v1/user/all_complex_protocol_list?id=%s",
+		wallet.Address,
+	)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		log.Debug().Err(err).Msg("Failed to create DeBank request")
+		return nil
+	}
+	req.Header.Set("Accept", "application/json")
+	// DeBank requires API key for higher rate limits, but works without for basic usage
+	
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		log.Debug().Err(err).Msg("DeBank API call failed")
+		return nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		log.Debug().Int("status", resp.StatusCode).Msg("DeBank returned non-200 status")
+		return nil
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil
+	}
+
+	var protocols []struct {
+		ID      string `json:"id"`
+		Name    string `json:"name"`
+		Chain   string `json:"chain"`
+		LogoURL string `json:"logo_url"`
+		Portfolio []struct {
+			Name  string `json:"name"`
+			Stats struct {
+				AssetUSD     float64 `json:"asset_usd_value"`
+				DebtUSD      float64 `json:"debt_usd_value"`
+				NetUSD       float64 `json:"net_usd_value"`
+			} `json:"stats"`
+			DetailTypes []string `json:"detail_types"`
+			Detail struct {
+				SupplyTokenList []struct {
+					Symbol string  `json:"symbol"`
+					Amount float64 `json:"amount"`
+					Price  float64 `json:"price"`
+				} `json:"supply_token_list"`
+				BorrowTokenList []struct {
+					Symbol string  `json:"symbol"`
+					Amount float64 `json:"amount"`
+					Price  float64 `json:"price"`
+				} `json:"borrow_token_list"`
+				RewardTokenList []struct {
+					Symbol string  `json:"symbol"`
+					Amount float64 `json:"amount"`
+					Price  float64 `json:"price"`
+				} `json:"reward_token_list"`
+				HealthRate float64 `json:"health_rate"`
+			} `json:"detail"`
+		} `json:"portfolio_item_list"`
+	}
+
+	if err := json.Unmarshal(body, &protocols); err != nil {
+		log.Debug().Err(err).Msg("Failed to parse DeBank response")
+		return nil
+	}
+
+	// Process each protocol's positions
+	for _, protocol := range protocols {
+		for _, item := range protocol.Portfolio {
+			positionType := s.inferPositionType(item.DetailTypes)
+			
+			var suppliedTokens, borrowedTokens, pendingRewards []model.DeFiToken
+			var suppliedUSD, borrowedUSD, rewardsUSD float64
+
+			for _, t := range item.Detail.SupplyTokenList {
+				suppliedTokens = append(suppliedTokens, model.DeFiToken{
+					Symbol:   t.Symbol,
+					Amount:   fmt.Sprintf("%f", t.Amount),
+					ValueUSD: t.Amount * t.Price,
+				})
+				suppliedUSD += t.Amount * t.Price
+			}
+			for _, t := range item.Detail.BorrowTokenList {
+				borrowedTokens = append(borrowedTokens, model.DeFiToken{
+					Symbol:   t.Symbol,
+					Amount:   fmt.Sprintf("%f", t.Amount),
+					ValueUSD: t.Amount * t.Price,
+				})
+				borrowedUSD += t.Amount * t.Price
+			}
+			for _, t := range item.Detail.RewardTokenList {
+				pendingRewards = append(pendingRewards, model.DeFiToken{
+					Symbol:   t.Symbol,
+					Amount:   fmt.Sprintf("%f", t.Amount),
+					ValueUSD: t.Amount * t.Price,
+				})
+				rewardsUSD += t.Amount * t.Price
+			}
+
+			position := &model.DeFiPosition{
+				WalletID:       wallet.ID,
+				Protocol:       protocol.Name,
+				PositionType:   positionType,
+				Network:        wallet.Network,
+				SuppliedTokens: suppliedTokens,
+				BorrowedTokens: borrowedTokens,
+				SuppliedUSD:    suppliedUSD,
+				BorrowedUSD:    borrowedUSD,
+				PendingRewards: pendingRewards,
+				RewardsUSD:     rewardsUSD,
+				TotalValueUSD:  item.Stats.NetUSD,
+			}
+
+			// Set health factor if available
+			if item.Detail.HealthRate > 0 {
+				hf := item.Detail.HealthRate
+				position.HealthFactor = &hf
+				
+				// Determine liquidation risk
+				if hf < 1.1 {
+					position.LiquidationRisk = "critical"
+				} else if hf < 1.25 {
+					position.LiquidationRisk = "high"
+				} else if hf < 1.5 {
+					position.LiquidationRisk = "medium"
+				} else {
+					position.LiquidationRisk = "low"
+				}
+			}
+
+			// Calculate approximate APY (would need protocol-specific logic for accurate APY)
+			position.APY = s.estimateProtocolAPY(protocol.ID, positionType)
+
+			if err := s.db.UpsertDeFiPosition(ctx, position); err != nil {
+				log.Error().Err(err).Str("protocol", protocol.Name).Msg("Failed to save DeFi position")
+			}
+		}
+	}
+
 	return nil
+}
+
+func (s *CryptoService) inferPositionType(detailTypes []string) string {
+	for _, t := range detailTypes {
+		switch t {
+		case "lending", "supply":
+			return "lending"
+		case "borrowing", "borrow":
+			return "borrowing"
+		case "liquidity", "lp":
+			return "liquidity"
+		case "staking", "stake":
+			return "staking"
+		case "farming", "farm":
+			return "farming"
+		case "vault":
+			return "vault"
+		}
+	}
+	return "other"
+}
+
+func (s *CryptoService) estimateProtocolAPY(protocolID, positionType string) float64 {
+	// Approximate APYs by protocol and position type
+	// In production, would fetch real-time APY from protocol APIs
+	apyEstimates := map[string]map[string]float64{
+		"aave":     {"lending": 3.5, "borrowing": -5.0},
+		"compound": {"lending": 2.8, "borrowing": -4.5},
+		"lido":     {"staking": 4.0},
+		"rocket":   {"staking": 4.2},
+		"uniswap":  {"liquidity": 15.0},
+		"curve":    {"liquidity": 8.0},
+		"convex":   {"farming": 12.0},
+		"yearn":    {"vault": 6.0},
+	}
+
+	if protocolAPYs, ok := apyEstimates[strings.ToLower(protocolID)]; ok {
+		if apy, ok := protocolAPYs[positionType]; ok {
+			return apy
+		}
+	}
+
+	// Default estimates by position type
+	defaults := map[string]float64{
+		"lending":   3.0,
+		"borrowing": -5.0,
+		"liquidity": 10.0,
+		"staking":   4.0,
+		"farming":   8.0,
+		"vault":     5.0,
+	}
+	if apy, ok := defaults[positionType]; ok {
+		return apy
+	}
+	return 0
 }
 
 // -------------------- Helper Methods --------------------
@@ -708,22 +985,171 @@ func (s *CryptoService) getNativeSymbol(network model.BlockchainNetwork) string 
 }
 
 func (s *CryptoService) hexToFloat(hexStr string, decimals int) float64 {
-	// Simplified hex to float conversion
-	// In production, use big.Int for precision
-	return 0
+	// Remove 0x prefix
+	cleanHex := strings.TrimPrefix(hexStr, "0x")
+	if cleanHex == "" || cleanHex == "0" {
+		return 0
+	}
+
+	// Parse hex string to big.Int
+	value := new(big.Int)
+	value.SetString(cleanHex, 16)
+	if value.Sign() == 0 {
+		return 0
+	}
+
+	// Calculate divisor: 10^decimals
+	divisor := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(decimals)), nil)
+
+	// Convert to float by dividing
+	fValue := new(big.Float).SetInt(value)
+	fDivisor := new(big.Float).SetInt(divisor)
+	result := new(big.Float).Quo(fValue, fDivisor)
+
+	f64, _ := result.Float64()
+	return f64
 }
 
 func (s *CryptoService) fetchTokenPrice(ctx context.Context, address, network string) (*model.TokenPriceResponse, error) {
-	// Would call CoinGecko, CoinMarketCap, or similar
-	// Simplified response
-	return &model.TokenPriceResponse{
-		Address:   address,
-		Symbol:    "TOKEN",
-		Name:      "Token",
-		Price:     1.0,
-		Change24h: 0,
-		UpdatedAt: time.Now(),
-	}, nil
+	// Handle native tokens
+	if address == "native" {
+		return s.fetchNativePrice(ctx, network)
+	}
+
+	// Map network to CoinGecko platform ID
+	platformID := s.getCoinGeckoPlatformID(network)
+	if platformID == "" {
+		return nil, fmt.Errorf("unsupported network for price lookup: %s", network)
+	}
+
+	// CoinGecko API - free tier allows 10-30 calls/minute
+	url := fmt.Sprintf(
+		"https://api.coingecko.com/api/v3/simple/token_price/%s?contract_addresses=%s&vs_currencies=usd&include_24hr_change=true",
+		platformID,
+		strings.ToLower(address),
+	)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == 429 {
+		log.Warn().Msg("CoinGecko rate limit hit")
+		return nil, fmt.Errorf("rate limited")
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse response: {"0x...": {"usd": 1.5, "usd_24h_change": -2.5}}
+	var result map[string]struct {
+		USD         float64 `json:"usd"`
+		USDChange24 float64 `json:"usd_24h_change"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, err
+	}
+
+	addrLower := strings.ToLower(address)
+	if data, ok := result[addrLower]; ok {
+		return &model.TokenPriceResponse{
+			Address:   address,
+			Price:     data.USD,
+			Change24h: data.USDChange24,
+			UpdatedAt: time.Now(),
+		}, nil
+	}
+
+	return nil, fmt.Errorf("token not found on CoinGecko")
+}
+
+func (s *CryptoService) fetchNativePrice(ctx context.Context, network string) (*model.TokenPriceResponse, error) {
+	// Map network to CoinGecko coin ID
+	coinID := s.getNativeCoinGeckoID(network)
+	if coinID == "" {
+		return nil, fmt.Errorf("unsupported network: %s", network)
+	}
+
+	url := fmt.Sprintf(
+		"https://api.coingecko.com/api/v3/simple/price?ids=%s&vs_currencies=usd&include_24hr_change=true",
+		coinID,
+	)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var result map[string]struct {
+		USD         float64 `json:"usd"`
+		USDChange24 float64 `json:"usd_24h_change"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, err
+	}
+
+	if data, ok := result[coinID]; ok {
+		symbol := s.getNativeSymbol(model.BlockchainNetwork(network))
+		return &model.TokenPriceResponse{
+			Address:   "native",
+			Symbol:    symbol,
+			Name:      symbol,
+			Price:     data.USD,
+			Change24h: data.USDChange24,
+			UpdatedAt: time.Now(),
+		}, nil
+	}
+
+	return nil, fmt.Errorf("native token price not found")
+}
+
+func (s *CryptoService) getCoinGeckoPlatformID(network string) string {
+	platforms := map[string]string{
+		"ethereum":  "ethereum",
+		"polygon":   "polygon-pos",
+		"arbitrum":  "arbitrum-one",
+		"optimism":  "optimistic-ethereum",
+		"base":      "base",
+		"bsc":       "binance-smart-chain",
+		"avalanche": "avalanche",
+	}
+	return platforms[network]
+}
+
+func (s *CryptoService) getNativeCoinGeckoID(network string) string {
+	coinIDs := map[string]string{
+		"ethereum":  "ethereum",
+		"polygon":   "matic-network",
+		"arbitrum":  "ethereum",
+		"optimism":  "ethereum",
+		"base":      "ethereum",
+		"bsc":       "binancecoin",
+		"avalanche": "avalanche-2",
+		"solana":    "solana",
+	}
+	return coinIDs[network]
 }
 
 type tokenMetadata struct {
@@ -734,10 +1160,55 @@ type tokenMetadata struct {
 }
 
 func (s *CryptoService) fetchTokenMetadata(ctx context.Context, address string, network model.BlockchainNetwork) (*tokenMetadata, error) {
-	// Would call Alchemy getTokenMetadata
+	if s.alchemyAPIKey == "" {
+		return &tokenMetadata{Symbol: "TOKEN", Name: "Token", Decimals: 18}, nil
+	}
+
+	alchemyURL := s.getAlchemyURL(network)
+	if alchemyURL == "" {
+		return &tokenMetadata{Symbol: "TOKEN", Name: "Token", Decimals: 18}, nil
+	}
+
+	payload := fmt.Sprintf(`{
+		"jsonrpc": "2.0",
+		"method": "alchemy_getTokenMetadata",
+		"params": ["%s"],
+		"id": 1
+	}`, address)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", alchemyURL, strings.NewReader(payload))
+	if err != nil {
+		return &tokenMetadata{Symbol: "TOKEN", Name: "Token", Decimals: 18}, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return &tokenMetadata{Symbol: "TOKEN", Name: "Token", Decimals: 18}, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return &tokenMetadata{Symbol: "TOKEN", Name: "Token", Decimals: 18}, err
+	}
+
+	var result struct {
+		Result struct {
+			Symbol   string `json:"symbol"`
+			Name     string `json:"name"`
+			Decimals int    `json:"decimals"`
+			Logo     string `json:"logo"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return &tokenMetadata{Symbol: "TOKEN", Name: "Token", Decimals: 18}, err
+	}
+
 	return &tokenMetadata{
-		Symbol:   "TOKEN",
-		Name:     "Token",
-		Decimals: 18,
+		Symbol:   result.Result.Symbol,
+		Name:     result.Result.Name,
+		Decimals: result.Result.Decimals,
+		Logo:     result.Result.Logo,
 	}, nil
 }
