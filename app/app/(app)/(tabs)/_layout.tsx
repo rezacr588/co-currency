@@ -11,6 +11,7 @@ import {
   Menu,
   Moon,
   Plus,
+  Settings,
   Sun,
   Target,
   User,
@@ -397,8 +398,7 @@ function TabsLayoutInner() {
     index: 'CoAI',
     wallet: t('walletTabCompact') || t('wallet') || 'Wallet',
     add: t('addTabCompact') || 'Add',
-    reports: t('reportsTabCompact') || t('reports') || 'Reports',
-    goals: t('financialGoals') || 'Goals',
+    settings: t('settings') || 'Settings',
   };
 
   useEffect(() => {
@@ -482,19 +482,14 @@ function TabsLayoutInner() {
           }}
         />
         <Tabs.Screen
-          name="reports"
+          name="settings"
           options={{
-            title: compactTabLabels.reports,
-            tabBarIcon: ({ color, size }) => <BarChart3 size={size} color={color} />,
+            title: compactTabLabels.settings,
+            tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
           }}
         />
-        <Tabs.Screen
-          name="goals"
-          options={{
-            title: compactTabLabels.goals,
-            tabBarIcon: ({ color, size }) => <Target size={size} color={color} />,
-          }}
-        />
+        <Tabs.Screen name="reports" options={{ href: null }} />
+        <Tabs.Screen name="goals" options={{ href: null }} />
         <Tabs.Screen name="chat" options={{ href: null }} />
       </Tabs>
     </View>
