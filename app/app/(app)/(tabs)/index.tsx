@@ -180,8 +180,8 @@ export default function CoAIHomeScreen() {
           borderRadius: theme.radii.xl,
           borderWidth: 1,
           borderColor: theme.colors.border,
-          padding: 20,
-          marginBottom: 24,
+          padding: theme.spacing.xl,
+          marginBottom: theme.spacing.xxl,
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -257,7 +257,7 @@ export default function CoAIHomeScreen() {
 
         {/* AI Brief inside Hero */}
         {briefData?.brief ? (
-          <View style={{ marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
+          <View style={{ marginTop: theme.spacing.xl, paddingTop: theme.spacing.lg, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
              <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Bot size={16} color={theme.colors.accent} style={{ marginTop: 2 }} />
                 <Text style={{ flex: 1, color: theme.colors.mutedForeground, fontSize: 14, lineHeight: 20 }}>
@@ -364,7 +364,7 @@ export default function CoAIHomeScreen() {
                   {
                     backgroundColor: theme.colors.primary,
                     borderRadius: theme.radii.lg,
-                    padding: 16,
+                    padding: theme.spacing.lg,
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'center',

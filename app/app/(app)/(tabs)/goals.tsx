@@ -183,11 +183,11 @@ export default function GoalsScreen() {
         </View>
 
         {isError ? (
-          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger + '33', padding: 24, borderRadius: 12, alignItems: 'center', maxWidth: isDesktop ? 500 : '100%', alignSelf: 'center', width: '100%' }}>
+          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger + '33', padding: theme.spacing.xxl, borderRadius: 12, alignItems: 'center', maxWidth: isDesktop ? 500 : '100%', alignSelf: 'center', width: '100%' }}>
             <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium', marginBottom: 8 }}>{t('failedToLoadGoals') || 'Failed to load goals'}</Text>
             <Pressable
               onPress={() => refetch()}
-              style={{ backgroundColor: colors.danger + '33', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, cursor: 'pointer' }}
+              style={{ backgroundColor: colors.danger + '33', paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.sm, borderRadius: 8, cursor: 'pointer' }}
             >
               <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium' }}>{t('retry') || 'Retry'}</Text>
             </Pressable>
@@ -195,15 +195,15 @@ export default function GoalsScreen() {
         ) : isPending ? (
           <SkeletonList count={3} ItemComponent={SkeletonGoalCard} />
         ) : goals.length === 0 ? (
-          <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 32, borderRadius: 12, alignItems: 'center', maxWidth: isDesktop ? 500 : '100%', alignSelf: 'center', width: '100%' }}>
+          <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: theme.spacing.xxxl, borderRadius: 12, alignItems: 'center', maxWidth: isDesktop ? 500 : '100%', alignSelf: 'center', width: '100%' }}>
             <Target size={48} color={colors.subtleForeground} />
-            <Text style={{ fontSize: 16, fontFamily: 'Inter_500Medium', color: colors.foreground, marginTop: 16 }}>{t('noGoals')}</Text>
-            <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 8, fontSize: 14 }}>
+            <Text style={{ fontSize: 16, fontFamily: 'Inter_500Medium', color: colors.foreground, marginTop: theme.spacing.lg }}>{t('noGoals')}</Text>
+            <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: theme.spacing.sm, fontSize: 14 }}>
               {t('noGoalsDescription')}
             </Text>
             <Pressable
               onPress={() => setShowForm(true)}
-              style={{ backgroundColor: colors.primary, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8, marginTop: 16, cursor: 'pointer' }}
+              style={{ backgroundColor: colors.primary, paddingHorizontal: theme.spacing.xl, paddingVertical: theme.spacing.md, borderRadius: 8, marginTop: theme.spacing.lg, cursor: 'pointer' }}
             >
               <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>{t('createGoal')}</Text>
             </Pressable>
@@ -349,7 +349,7 @@ function GoalCard({ goal, onEdit, onDelete, isDesktop }: GoalCardProps) {
   ];
 
   const cardContent = (
-    <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 8 }}>
+    <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: theme.spacing.lg, borderRadius: 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
         <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 6, marginEnd: 12 }}>
           {goal.is_completed ? (
@@ -582,7 +582,7 @@ function GoalFormModal({
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: theme.spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border }}>
           <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>{t('createGoal')}</Text>
           <Pressable onPress={onClose} hitSlop={8} style={({ pressed }) => [{ padding: 8, backgroundColor: colors.secondary, borderRadius: 9999, cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button">
             <X size={18} color={colors.secondaryForeground} />
@@ -593,7 +593,7 @@ function GoalFormModal({
           style={{ flex: 1 }}
           keyboardDismissMode="on-drag"
           contentContainerStyle={{
-            padding: isDesktop ? 32 : 16,
+            padding: isDesktop ? theme.spacing.xxxl : theme.spacing.lg,
             maxWidth: 500,
             width: '100%',
             alignSelf: 'center',
@@ -625,7 +625,7 @@ function GoalFormModal({
               />
               <Pressable
                 onPress={() => setShowCurrencyPicker(true)}
-                style={{ backgroundColor: colors.secondary, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                style={{ backgroundColor: colors.secondary, borderWidth: 1, borderColor: colors.border, paddingHorizontal: theme.spacing.lg, borderRadius: 8, alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
               >
                 <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>{currency}</Text>
               </Pressable>
@@ -765,7 +765,7 @@ function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goa
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: theme.spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border }}>
           <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>{t('editGoal') || 'Edit Goal'}</Text>
           <Pressable onPress={onClose} hitSlop={8} style={({ pressed }) => [{ padding: 8, backgroundColor: colors.secondary, borderRadius: 9999, cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button">
             <X size={18} color={colors.secondaryForeground} />
@@ -776,7 +776,7 @@ function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goa
           style={{ flex: 1 }}
           keyboardDismissMode="on-drag"
           contentContainerStyle={{
-            padding: isDesktop ? 32 : 16,
+            padding: isDesktop ? theme.spacing.xxxl : theme.spacing.lg,
             maxWidth: 500,
             width: '100%',
             alignSelf: 'center',
@@ -784,7 +784,7 @@ function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goa
         >
           <FormError message={error} />
 
-          <View style={{ marginBottom: 20 }}>
+          <View style={{ marginBottom: theme.spacing.xl }}>
             <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('goalName')}</Text>
             <TextInput
               style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 8, color: colors.foreground, outlineStyle: 'none' } as any}
@@ -795,7 +795,7 @@ function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goa
             />
           </View>
 
-          <View style={{ marginBottom: 20 }}>
+          <View style={{ marginBottom: theme.spacing.xl }}>
             <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>{t('targetAmount')}</Text>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TextInput
@@ -806,7 +806,7 @@ function GoalEditModal({ visible, goal, onClose }: { visible: boolean; goal: Goa
                 placeholder="0.00"
                 placeholderTextColor={colors.subtleForeground}
               />
-              <View style={{ backgroundColor: colors.secondary, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ backgroundColor: colors.secondary, borderWidth: 1, borderColor: colors.border, paddingHorizontal: theme.spacing.lg, borderRadius: 8, alignItems: 'center', justifyContent: 'center' }}>
                 <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_500Medium' }}>{goal.currency}</Text>
               </View>
             </View>
