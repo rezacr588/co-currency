@@ -18,7 +18,7 @@ import {
 import { useTheme } from 'styled-components/native';
 import { api } from '../../../src/api';
 import { AppSwitcherTrigger } from '../../../src/components/navigation/AppSwitcherTrigger';
-import { RecommendedActionCards } from '../../../src/components/features/CoAI/RecommendedActionCards';
+import { DashboardCharts } from '../../../src/components/features/Dashboard';
 import { Card, PageHeader, PageScaffold, SectionBlock } from '../../../src/components/ui';
 import { useAuth } from '../../../src/context/AuthContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
@@ -493,18 +493,13 @@ export default function CoAIHomeScreen() {
              </SectionBlock>
           )}
 
-          {/* Recommended Actions */}
-          {(briefData.recommended_actions?.length ?? 0) > 0 && (
-            <SectionBlock
-              title="Recommended actions"
-              subtitle="Guided steps CoAI thinks are worth doing next."
-            >
-              <RecommendedActionCards
-                actions={briefData.recommended_actions ?? []}
-                onActionPress={(action) => openRecommendedAction(router, action)}
-              />
-            </SectionBlock>
-          )}
+          {/* Financial Charts */}
+          <SectionBlock
+            title={t('financialOverview') || 'Financial Overview'}
+            subtitle={t('financialOverviewSubtitle') || 'Quick insights from your recent activity'}
+          >
+            <DashboardCharts currency={briefData.currency || user?.preferred_currency || 'USD'} />
+          </SectionBlock>
 
           {/* Recent Conversation - if exists */}
           {recentConversation && (
