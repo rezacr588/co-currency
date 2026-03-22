@@ -1379,7 +1379,7 @@ export default function AIChatScreen() {
 
         {isTyping && !streamingDraft && (
           <View style={{ flexDirection: 'row', justifyContent: 'flex-start', width: '100%', alignItems: 'flex-end' }}>
-            <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 18, borderBottomLeftRadius: 6, maxWidth: '90%' }}>
+            <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.md, borderRadius: 18, borderBottomLeftRadius: 6, maxWidth: '90%' }}>
               <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 6 }}>Thinking…</Text>
               <View style={{ flexDirection: 'row', gap: 4 }}>
                 <View style={{ width: 8, height: 8, backgroundColor: colors.mutedForeground, borderRadius: 9999 }} />
@@ -1392,7 +1392,7 @@ export default function AIChatScreen() {
 
         {pendingAction && (
           <View style={{ flexDirection: 'row', justifyContent: 'flex-start', width: '100%', alignItems: 'flex-start' }}>
-            <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 18, paddingHorizontal: 16, paddingVertical: 12, maxWidth: '92%' }}>
+            <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 18, paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.md, maxWidth: '92%' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                   <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
                     {pendingAction.kind === 'transaction'
@@ -2060,9 +2060,9 @@ export default function AIChatScreen() {
         onScroll={handleScroll}
         scrollEventThrottle={16}
         contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingTop: 20,
-          paddingBottom: Math.max(insets.bottom, 16) + 122,
+          paddingHorizontal: theme.spacing.lg,
+          paddingTop: theme.spacing.xl,
+          paddingBottom: Math.max(insets.bottom, theme.spacing.lg) + 122,
           flexGrow: messages.length === 0 ? 1 : undefined,
           justifyContent: messages.length === 0 ? 'center' : 'flex-start',
         }}
@@ -2147,7 +2147,7 @@ export default function AIChatScreen() {
 
             {/* Input */}
             <View
-              style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12), backgroundColor: colors.background }}
+              style={{ paddingHorizontal: theme.spacing.lg, paddingTop: 10, paddingBottom: Math.max(insets.bottom, theme.spacing.md), backgroundColor: colors.background }}
             >
               {sendError && (
                 <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger + '33', padding: 12, borderRadius: 8, marginBottom: 12 }}>
