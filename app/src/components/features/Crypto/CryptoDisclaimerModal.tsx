@@ -56,7 +56,9 @@ const Title = styled.Text<{ $color: string }>`
   flex: 1;
 `;
 
-const CloseButton = styled.Pressable<{ $bg: string }>`
+const CloseButton = styled.Pressable.attrs({
+  hitSlop: { top: 8, bottom: 8, left: 8, right: 8 },
+})<{ $bg: string }>`
   width: 32px;
   height: 32px;
   border-radius: 16px;

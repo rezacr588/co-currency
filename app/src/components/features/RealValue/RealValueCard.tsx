@@ -6,6 +6,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { haptics } from '../../../utils/haptics';
 import { Card } from '../../ui';
+import { HIT_SLOP_SM } from '../../../constants/hitSlop';
 import type { WealthOverview, CurrencyExposure } from '../../../types/wealth';
 
 interface RealValueCardProps {
@@ -255,7 +256,7 @@ export function RealValueCard({ compact = false }: RealValueCardProps) {
             </Text>
           </View>
         </View>
-        <Pressable onPress={handleRefresh} disabled={isRefetching} style={{ padding: 8 }}>
+        <Pressable onPress={handleRefresh} disabled={isRefetching} hitSlop={HIT_SLOP_SM} style={{ padding: 8 }}>
           <RefreshCw
             size={18}
             color={colors.mutedForeground}

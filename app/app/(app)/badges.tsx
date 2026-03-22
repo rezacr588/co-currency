@@ -10,6 +10,7 @@ import { useTheme } from 'styled-components/native';
 import { Card } from '../../src/components/ui';
 import { haptics } from '../../src/utils/haptics';
 import { useToast } from '../../src/components/ui/Toast';
+import { HIT_SLOP_SM } from '../../src/constants/hitSlop';
 
 interface Badge {
   id: string;
@@ -191,7 +192,7 @@ export default function BadgesScreen() {
               <Text style={{ color: colors.success, fontFamily: 'Inter_600SemiBold' }}>
                 🎉 {t('newBadgesEarned') || 'New Badges Earned!'}
               </Text>
-              <Pressable onPress={() => setShowNewlyEarned(false)} style={{ cursor: 'pointer', padding: 4 }}>
+              <Pressable onPress={() => setShowNewlyEarned(false)} hitSlop={HIT_SLOP_SM} style={{ cursor: 'pointer', padding: 4 }}>
                 <X size={18} color={colors.success} />
               </Pressable>
             </View>

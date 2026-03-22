@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronDown, X, Check } from 'lucide-react-native';
 import { ICON_SIZES, ICON_COLOR_MUTED } from '../../constants/icons';
 import { useTheme } from 'styled-components/native';
+import { HIT_SLOP_SM } from '../../constants/hitSlop';
 
 interface SelectOption {
   value: string;
@@ -76,7 +77,7 @@ export function Select({
             <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
               {label || 'Select'}
             </Text>
-            <Pressable onPress={() => setIsOpen(false)} style={{ padding: 8 }}>
+            <Pressable onPress={() => setIsOpen(false)} hitSlop={HIT_SLOP_SM} style={{ padding: 8 }}>
               <X size={ICON_SIZES.default} color={ICON_COLOR_MUTED} />
             </Pressable>
           </View>

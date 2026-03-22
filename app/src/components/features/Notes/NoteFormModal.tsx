@@ -19,6 +19,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { Button } from '../../ui/Button';
 import { Toggle } from '../../ui/Toggle';
+import { HIT_SLOP_SM } from '../../../constants/hitSlop';
 
 // Color display mapping
 const COLOR_DISPLAY: Record<string, { bg: string; name: string }> = {
@@ -131,6 +132,7 @@ export function NoteFormModal({
               </Text>
               <Pressable
                 onPress={onClose}
+                hitSlop={HIT_SLOP_SM}
                 style={{ cursor: 'pointer', padding: 8 }}
               >
                 <X size={24} color={colors.placeholder} />

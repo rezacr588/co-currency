@@ -202,6 +202,17 @@ const layout = {
     collapsed: 72,
   },
   headerHeight: 64,
+  tabBar: {
+    height: 56, // Consistent base height
+    padding: {
+      top: 8,
+      bottom: 8,
+    },
+    label: {
+      fontSize: 11,
+      marginTop: 2,
+    },
+  },
 } as const;
 
 // ─── AppTheme ────────────────────────────────────────────────

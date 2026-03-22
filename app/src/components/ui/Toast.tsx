@@ -3,6 +3,7 @@ import { View, Text, Pressable, Animated, Keyboard, Platform } from 'react-nativ
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react-native';
 import { ICON_SIZES } from '../../constants/icons';
 import { useTheme } from 'styled-components/native';
+import { HIT_SLOP_SM } from '../../constants/hitSlop';
 
 type ToastVariant = 'success' | 'error' | 'warning' | 'info';
 
@@ -82,7 +83,7 @@ export function Toast({
         >
           {message}
         </Text>
-        <Pressable onPress={onDismiss} style={{ padding: 4 }}>
+        <Pressable onPress={onDismiss} hitSlop={HIT_SLOP_SM} style={{ padding: 4 }}>
           <X size={ICON_SIZES.md} color={config.color} />
         </Pressable>
       </View>

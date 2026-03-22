@@ -106,7 +106,7 @@ export const Button = forwardRef<View, ButtonProps>(
             backgroundColor: variantBgColors[variant],
             paddingHorizontal: sizeVal.px,
             paddingVertical: sizeVal.py,
-            opacity: isDisabled ? 0.4 : 1,
+            opacity: isDisabled ? 0.5 : 1,
             borderWidth: variant === 'outline' ? 1 : 0,
             borderColor: variant === 'outline' ? colors.border : undefined,
             ...(variant === 'primary' ? theme.shadows.sm : {}),

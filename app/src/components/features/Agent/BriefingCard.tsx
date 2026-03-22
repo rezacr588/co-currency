@@ -27,6 +27,7 @@ import { Card } from '../../ui';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useDailyBriefing, useTriggerAutopilot } from '../../../hooks/useAgent';
 import { haptics } from '../../../utils/haptics';
+import { HIT_SLOP_SM } from '../../../constants/hitSlop';
 import type { DailyBriefing, BalanceHealth, UpcomingBill, GoalOpportunity } from '../../../api/agent';
 
 interface BriefingCardProps {
@@ -273,7 +274,7 @@ export function BriefingCard({ compact = false, onViewApprovals, onViewPlan }: B
             </View>
           </View>
           {onViewApprovals && briefing.pending_approvals > 0 && (
-            <Pressable onPress={handleViewApprovals} style={{ padding: 8 }}>
+            <Pressable onPress={handleViewApprovals} hitSlop={HIT_SLOP_SM} style={{ padding: 8 }}>
               <ChevronRight size={20} color={colors.mutedForeground} />
             </Pressable>
           )}

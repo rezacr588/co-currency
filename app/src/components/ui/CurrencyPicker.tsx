@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api';
 import { getCurrencyDisplay } from '../../utils/format';
 import { LoadingSpinner } from './LoadingSpinner';
+import { HIT_SLOP_SM } from '../../constants/hitSlop';
 import { ICON_SIZES, ICON_COLOR_MUTED } from '../../constants/icons';
 import { haptics } from '../../utils/haptics';
 import { useTheme } from 'styled-components/native';
@@ -60,7 +61,7 @@ export function CurrencyPicker({
         {/* Header */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
           <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{title}</Text>
-          <Pressable onPress={onClose} style={{ padding: 8 }}>
+          <Pressable onPress={onClose} hitSlop={HIT_SLOP_SM} style={{ padding: 8 }}>
             <X size={ICON_SIZES.default} color={ICON_COLOR_MUTED} />
           </Pressable>
         </View>
