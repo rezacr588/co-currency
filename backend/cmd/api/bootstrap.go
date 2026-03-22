@@ -609,6 +609,14 @@ func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Hand
 		socialHandler = handler.NewSocialHandler(socialService)
 	}
 
+	// Crypto Integration handler
+	var cryptoHandler *handler.CryptoHandler
+	if db.mainDB != nil {
+		cryptoRepo := repository.NewCryptoDB(db.mainDB.Pool())
+		cryptoService := service.NewCryptoService(cryptoRepo, cfg.AlchemyAPIKey, cfg.MoralisAPIKey)
+		cryptoHandler = handler.NewCryptoHandler(cryptoService)
+	}
+
 	return &router.Handlers{
 		Exchange:      exchangeHandler,
 		Auth:          authHandler,
@@ -639,5 +647,6 @@ func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Hand
 		Agent:         agentHandler,
 		DNA:           dnaHandler,
 		Social:        socialHandler,
+		Crypto:        cryptoHandler,
 	}
 }

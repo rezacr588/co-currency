@@ -31,6 +31,7 @@ func registerFeatureRoutes(r chi.Router, h *Handlers, rateLimiter *middleware.Ra
 	registerAgentRoutes(r, h, authMiddleware)
 	registerDNARoutes(r, h, authMiddleware)
 	registerSocialRoutes(r, h, authMiddleware)
+	registerCryptoRoutes(r, h, authMiddleware)
 }
 
 func registerCoAIRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.Auth) {
@@ -458,5 +459,41 @@ func registerSocialRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.
 
 		// Settlement confirmation
 		r.Post("/settlements/{settlementId}/confirm", h.Social.ConfirmSettlement)
+	})
+}
+
+func registerCryptoRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.Auth) {
+	if h.Crypto == nil {
+		return
+	}
+
+	r.Route("/crypto", func(r chi.Router) {
+		// Public endpoints
+		r.Get("/networks", h.Crypto.GetSupportedNetworks)
+		r.Get("/prices", h.Crypto.GetTokenPrice)
+		r.Get("/gas", h.Crypto.GetGasPrices)
+
+		// Protected endpoints
+		r.Group(func(r chi.Router) {
+			r.Use(authMiddleware.Middleware)
+
+			// Portfolio
+			r.Get("/portfolio", h.Crypto.GetPortfolioSummary)
+			r.Get("/defi", h.Crypto.GetDeFiOverview)
+			r.Post("/sync", h.Crypto.SyncAllWallets)
+
+			// Wallets
+			r.Get("/wallets", h.Crypto.ListWallets)
+			r.Post("/wallets", h.Crypto.AddWallet)
+			r.Get("/wallets/{id}", h.Crypto.GetWallet)
+			r.Delete("/wallets/{id}", h.Crypto.DeleteWallet)
+			r.Post("/wallets/{id}/sync", h.Crypto.SyncWallet)
+			r.Get("/wallets/{id}/transactions", h.Crypto.GetWalletTransactions)
+
+			// Alerts
+			r.Get("/alerts", h.Crypto.ListAlerts)
+			r.Post("/alerts", h.Crypto.CreateAlert)
+			r.Delete("/alerts/{id}", h.Crypto.DeleteAlert)
+		})
 	})
 }

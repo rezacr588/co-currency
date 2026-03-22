@@ -39,6 +39,7 @@ type Handlers struct {
 	Agent         *handler.AgentHandler
 	DNA           *handler.FinancialDNAHandler
 	Social        *handler.SocialHandler
+	Crypto        *handler.CryptoHandler
 }
 
 // New creates a new router with all routes configured

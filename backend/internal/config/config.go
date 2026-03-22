@@ -98,6 +98,10 @@ type Config struct {
 
 	// ML Service Settings
 	MLServiceURL string `env:"ML_SERVICE_URL" envDefault:""` // Python ML microservice URL (e.g., http://ml-service:5001)
+
+	// Crypto Integration
+	AlchemyAPIKey string `env:"ALCHEMY_API_KEY" envDefault:""` // Alchemy API key for blockchain data
+	MoralisAPIKey string `env:"MORALIS_API_KEY" envDefault:""` // Moralis API key (backup)
 }
 
 // Load parses environment variables into Config
