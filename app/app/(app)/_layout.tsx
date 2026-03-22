@@ -4,11 +4,13 @@ import { useAuth } from '../../src/context/AuthContext';
 import { useTheme } from 'styled-components/native';
 import { DailyRewardModal } from '../../src/components/features/DailyReward';
 import { SEOHead } from '../../src/components/seo';
+import { useRealtimeSync } from '../../src/hooks/useRealtimeSync';
 
 export default function AppLayout() {
   const { isAuthenticated, isLoading } = useAuth();
   const theme = useTheme();
   const colors = theme.colors;
+  useRealtimeSync({ enabled: isAuthenticated && !isLoading });
 
   if (isLoading) {
     return (

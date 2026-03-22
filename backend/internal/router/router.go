@@ -40,6 +40,7 @@ type Handlers struct {
 	DNA           *handler.FinancialDNAHandler
 	Social        *handler.SocialHandler
 	Crypto        *handler.CryptoHandler
+	WebSocket     *handler.WebSocketHandler
 }
 
 // New creates a new router with all routes configured

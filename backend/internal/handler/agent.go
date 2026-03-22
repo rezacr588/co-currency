@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -11,20 +12,37 @@ import (
 	"github.com/rezacr588/currency-converter/internal/middleware"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/service"
+	ws "github.com/rezacr588/currency-converter/internal/websocket"
 	"github.com/rezacr588/currency-converter/pkg/httputil"
+	"github.com/rs/zerolog/log"
 )
 
 // AgentHandler handles autonomous agent API endpoints
 type AgentHandler struct {
 	planningEngine *service.PlanningEngineService
 	actionExecutor *service.ActionExecutor
+	wsPublisher    *ws.Publisher
 }
 
 // NewAgentHandler creates a new agent handler
-func NewAgentHandler(planningEngine *service.PlanningEngineService, actionExecutor *service.ActionExecutor) *AgentHandler {
+func NewAgentHandler(planningEngine *service.PlanningEngineService, actionExecutor *service.ActionExecutor, wsPublisher *ws.Publisher) *AgentHandler {
 	return &AgentHandler{
 		planningEngine: planningEngine,
 		actionExecutor: actionExecutor,
+		wsPublisher:    wsPublisher,
+	}
+}
+
+func (h *AgentHandler) publishAgentUpdate(ctx context.Context, userID uuid.UUID, action string, details map[string]interface{}) {
+	if h.wsPublisher == nil {
+		return
+	}
+	payload := map[string]interface{}{
+		"action":  action,
+		"details": details,
+	}
+	if err := h.wsPublisher.PublishToUser(ctx, userID, ws.MessageTypeAgentUpdate, payload); err != nil {
+		log.Warn().Err(err).Str("action", action).Str("user_id", userID.String()).Msg("Failed to publish agent websocket update")
 	}
 }
 
@@ -121,6 +139,11 @@ func (h *AgentHandler) CreatePlan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.JSON(w, http.StatusCreated, plan)
+	h.publishAgentUpdate(ctx, userID, "plan_created", map[string]interface{}{
+		"plan_id": plan.ID.String(),
+		"title":   plan.Title,
+		"status":  plan.Status,
+	})
 }
 
 // ActivatePlan handles POST /api/v1/agent/plans/{id}/activate
@@ -153,6 +176,10 @@ func (h *AgentHandler) ActivatePlan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.JSON(w, http.StatusOK, map[string]string{"status": "activated"})
+	h.publishAgentUpdate(ctx, userID, "plan_activated", map[string]interface{}{
+		"plan_id": planID.String(),
+		"status":  "active",
+	})
 }
 
 // PausePlan handles POST /api/v1/agent/plans/{id}/pause
@@ -185,6 +212,10 @@ func (h *AgentHandler) PausePlan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.JSON(w, http.StatusOK, map[string]string{"status": "paused"})
+	h.publishAgentUpdate(ctx, userID, "plan_paused", map[string]interface{}{
+		"plan_id": planID.String(),
+		"status":  "paused",
+	})
 }
 
 // ResumePlan handles POST /api/v1/agent/plans/{id}/resume
@@ -217,6 +248,10 @@ func (h *AgentHandler) ResumePlan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.JSON(w, http.StatusOK, map[string]string{"status": "active"})
+	h.publishAgentUpdate(ctx, userID, "plan_resumed", map[string]interface{}{
+		"plan_id": planID.String(),
+		"status":  "active",
+	})
 }
 
 // CancelPlan handles DELETE /api/v1/agent/plans/{id}
@@ -249,6 +284,10 @@ func (h *AgentHandler) CancelPlan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.JSON(w, http.StatusOK, map[string]string{"status": "cancelled"})
+	h.publishAgentUpdate(ctx, userID, "plan_cancelled", map[string]interface{}{
+		"plan_id": planID.String(),
+		"status":  "cancelled",
+	})
 }
 
 // ApproveStep handles POST /api/v1/agent/plans/{id}/steps/{stepId}/approve
@@ -302,6 +341,11 @@ func (h *AgentHandler) ApproveStep(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.JSON(w, http.StatusOK, map[string]string{"status": "approved"})
+	h.publishAgentUpdate(ctx, userID, "step_approved", map[string]interface{}{
+		"plan_id": planID.String(),
+		"step_id": stepID.String(),
+		"status":  "approved",
+	})
 }
 
 // RejectStep handles POST /api/v1/agent/plans/{id}/steps/{stepId}/reject
@@ -346,6 +390,11 @@ func (h *AgentHandler) RejectStep(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.JSON(w, http.StatusOK, map[string]string{"status": "rejected"})
+	h.publishAgentUpdate(ctx, userID, "step_rejected", map[string]interface{}{
+		"plan_id": planID.String(),
+		"step_id": stepID.String(),
+		"status":  "rejected",
+	})
 }
 
 // GetPendingApprovals handles GET /api/v1/agent/approvals/pending
@@ -409,6 +458,11 @@ func (h *AgentHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.JSON(w, http.StatusOK, config)
+	h.publishAgentUpdate(ctx, userID, "config_updated", map[string]interface{}{
+		"enabled":                 config.Enabled,
+		"daily_autopilot_enabled": config.DailyAutopilotEnabled,
+		"auto_approve_threshold":  config.AutoApproveThreshold,
+	})
 }
 
 // GetActionLogs handles GET /api/v1/agent/logs
@@ -489,4 +543,9 @@ func (h *AgentHandler) GenerateAIPlan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.JSON(w, http.StatusCreated, plan)
+	h.publishAgentUpdate(ctx, userID, "plan_generated", map[string]interface{}{
+		"plan_id": plan.ID.String(),
+		"title":   plan.Title,
+		"status":  plan.Status,
+	})
 }

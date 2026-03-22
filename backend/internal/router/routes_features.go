@@ -32,6 +32,7 @@ func registerFeatureRoutes(r chi.Router, h *Handlers, rateLimiter *middleware.Ra
 	registerDNARoutes(r, h, authMiddleware)
 	registerSocialRoutes(r, h, authMiddleware)
 	registerCryptoRoutes(r, h, authMiddleware)
+	registerWebSocketRoutes(r, h, authMiddleware)
 }
 
 func registerCoAIRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.Auth) {
@@ -416,6 +417,7 @@ func registerSocialRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.
 		// Invitations
 		r.Get("/invites", h.Social.GetPendingInvites)
 		r.Post("/invites/{code}/accept", h.Social.AcceptInvite)
+		r.Post("/invites/{code}/respond", h.Social.RespondInvite)
 
 		// Single space operations
 		r.Route("/{spaceId}", func(r chi.Router) {
@@ -495,5 +497,17 @@ func registerCryptoRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.
 			r.Post("/alerts", h.Crypto.CreateAlert)
 			r.Delete("/alerts/{id}", h.Crypto.DeleteAlert)
 		})
+	})
+}
+
+// registerWebSocketRoutes registers WebSocket routes
+func registerWebSocketRoutes(r chi.Router, h *Handlers, _ *middleware.Auth) {
+	if h.WebSocket == nil {
+		return
+	}
+
+	r.Route("/ws", func(r chi.Router) {
+		r.Get("/", h.WebSocket.HandleConnection)
+		r.Get("/stats", h.WebSocket.HandleStats)
 	})
 }

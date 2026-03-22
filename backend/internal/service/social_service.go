@@ -209,9 +209,44 @@ func (s *SocialService) AcceptInvite(ctx context.Context, userID uuid.UUID, code
 	return s.GetSpace(ctx, userID, invite.SpaceID)
 }
 
+// RespondInvite accepts or rejects an invitation by code.
+func (s *SocialService) RespondInvite(ctx context.Context, userID uuid.UUID, code string, accept bool) (*model.SharedSpace, error) {
+	invite, err := s.repo.GetInviteByCode(ctx, code)
+	if err != nil {
+		return nil, err
+	}
+	if invite == nil {
+		return nil, errors.New("invite not found")
+	}
+	if invite.AcceptedAt != nil {
+		return nil, errors.New("invite already accepted")
+	}
+	if invite.RejectedAt != nil {
+		return nil, errors.New("invite already rejected")
+	}
+	if time.Now().After(invite.ExpiresAt) {
+		return nil, errors.New("invite expired")
+	}
+
+	if !accept {
+		if err := s.repo.RejectInvite(ctx, invite.ID); err != nil {
+			return nil, err
+		}
+		s.logActivity(ctx, invite.SpaceID, userID, "invite_rejected", invite.ID, "Rejected invitation", nil)
+		return nil, nil
+	}
+
+	return s.AcceptInvite(ctx, userID, code)
+}
+
 // GetPendingInvites gets pending invites for a user
 func (s *SocialService) GetPendingInvites(ctx context.Context, email string) ([]model.SpaceInvite, error) {
 	return s.repo.GetPendingInvites(ctx, email)
+}
+
+// GetSpaceMembers lists members for a space.
+func (s *SocialService) GetSpaceMembers(ctx context.Context, spaceID uuid.UUID) ([]model.SpaceMember, error) {
+	return s.repo.GetSpaceMembers(ctx, spaceID)
 }
 
 // LeaveSpace removes the user from a space
@@ -289,9 +324,9 @@ func (s *SocialService) AddExpense(ctx context.Context, userID, spaceID uuid.UUI
 		splitAmount := req.Amount / float64(len(members))
 		for _, m := range members {
 			splits = append(splits, model.ExpenseSplit{
-				UserID:  m.UserID,
-				Amount:  splitAmount,
-				IsPaid:  m.UserID == userID,
+				UserID: m.UserID,
+				Amount: splitAmount,
+				IsPaid: m.UserID == userID,
 			})
 		}
 	case "percentage", "shares", "exact":
@@ -331,7 +366,7 @@ func (s *SocialService) AddExpense(ctx context.Context, userID, spaceID uuid.UUI
 		return nil, err
 	}
 
-	s.logActivity(ctx, spaceID, userID, "expense_added", expense.ID, 
+	s.logActivity(ctx, spaceID, userID, "expense_added", expense.ID,
 		fmt.Sprintf("Added expense: %s (%.2f %s)", req.Description, req.Amount, req.Currency), nil)
 
 	return expense, nil
@@ -446,9 +481,32 @@ func (s *SocialService) RecordSettlement(ctx context.Context, userID, spaceID uu
 
 // ConfirmSettlement confirms a settlement was received
 func (s *SocialService) ConfirmSettlement(ctx context.Context, userID, settlementID uuid.UUID) error {
-	// Only the recipient can confirm
-	// (Would need to add GetSettlement method to verify)
+	settlement, err := s.repo.GetSettlement(ctx, settlementID)
+	if err != nil {
+		return err
+	}
+	if settlement == nil {
+		return errors.New("settlement not found")
+	}
+	if settlement.ToUserID != userID {
+		return errors.New("only settlement recipient can confirm")
+	}
+	if settlement.ConfirmedAt != nil {
+		return errors.New("settlement already confirmed")
+	}
 	return s.repo.ConfirmSettlement(ctx, settlementID)
+}
+
+// GetSettlementSpaceID resolves settlement -> space ID for real-time fan-out.
+func (s *SocialService) GetSettlementSpaceID(ctx context.Context, settlementID uuid.UUID) (uuid.UUID, error) {
+	settlement, err := s.repo.GetSettlement(ctx, settlementID)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if settlement == nil {
+		return uuid.Nil, errors.New("settlement not found")
+	}
+	return settlement.SpaceID, nil
 }
 
 // ListSettlements lists settlements in a space
@@ -500,7 +558,7 @@ func (s *SocialService) simplifyDebts(balances []model.MemberBalance) []model.Se
 	}
 
 	var settlements []model.Settlement
-	
+
 	// Greedy algorithm to simplify debts
 	for len(creditors) > 0 && len(debtors) > 0 {
 		c := &creditors[0]

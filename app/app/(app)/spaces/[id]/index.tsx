@@ -9,6 +9,7 @@ import * as Clipboard from 'expo-clipboard';
 
 import { api } from '@/src/api';
 import { SharedExpense, BalanceSummary, SpaceMember, SuggestedSettlement, SpaceType } from '@/src/api/social';
+import { useAuth } from '@/src/context/AuthContext';
 import { useLanguage } from '@/src/context/LanguageContext';
 import { useColors } from '@/src/context/ThemeContext';
 import { useToast } from '@/src/components/ui/Toast';
@@ -287,6 +288,7 @@ export default function SpaceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useLanguage();
   const colors = useColors();
+  const { user } = useAuth();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   
@@ -357,7 +359,7 @@ export default function SpaceDetailScreen() {
   const members = membersData?.members || [];
   const currency = space?.currency || 'USD';
   
-  const myBalance = balances.find((b) => b.member_id === space?.created_by)?.net_balance || 0;
+  const myBalance = balances.find((b) => b.user_id === user?.id)?.net_balance || 0;
   
   const handleRefresh = () => {
     refetchSpace();
@@ -400,7 +402,7 @@ export default function SpaceDetailScreen() {
       <ExpenseInfo>
         <ExpenseTitle $color={colors.foreground}>{expense.title}</ExpenseTitle>
         <ExpenseSubtitle $color={colors.mutedForeground}>
-          {t('paidBy') || 'Paid by'} {expense.paid_by_name || 'Unknown'} • {formatDate(expense.date)}
+          {t('paidBy') || 'Paid by'} {expense.paid_by_name || 'Unknown'} • {formatDate(expense.date || expense.expense_date)}
         </ExpenseSubtitle>
       </ExpenseInfo>
       <ExpenseAmount $color={colors.foreground}>

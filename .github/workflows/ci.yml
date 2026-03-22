@@ -69,16 +69,50 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+      - name: Validate deployment secrets
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          if [ -z "$JWT_SECRET" ]; then
+            echo "Missing required secret: JWT_SECRET"
+            exit 1
+          fi
+
       - name: Deploy to Koyeb
         timeout-minutes: 10
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
         run: |
           # Retry deploy to absorb transient Koyeb/API TLS/network issues.
           attempts=4
           delay=10
+
+          env_flags=(
+            --env PORT=8080
+            --env ENVIRONMENT=production
+            --env EXPOSE_ERROR_DETAILS=false
+            --env "JWT_SECRET=$JWT_SECRET"
+          )
+
+          if [ -n "$FRONTEND_URL" ]; then
+            env_flags+=(--env "FRONTEND_URL=$FRONTEND_URL")
+          fi
+          if [ -n "$DATABASE_URL" ]; then
+            env_flags+=(--env "DATABASE_URL=$DATABASE_URL")
+          fi
+          if [ -n "$REDIS_URL" ]; then
+            env_flags+=(--env "REDIS_URL=$REDIS_URL")
+            env_flags+=(--env WS_REDIS_CHANNEL=ws_events)
+          fi
+
           for i in $(seq 1 "$attempts"); do
             echo "Deploy attempt ${i}/${attempts}..."
             if koyeb service update coai/co-currency \
-              --docker ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}; then
+              --docker ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+              "${env_flags[@]}"; then
               echo "Deploy succeeded on attempt ${i}."
               exit 0
             fi

@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { api } from '@/src/api';
 import { SplitMethod, CreateExpenseRequest, SpaceMember } from '@/src/api/social';
+import { useAuth } from '@/src/context/AuthContext';
 import { useLanguage } from '@/src/context/LanguageContext';
 import { useColors } from '@/src/context/ThemeContext';
 import { useToast } from '@/src/components/ui/Toast';
@@ -152,6 +153,7 @@ export default function AddExpenseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useLanguage();
   const colors = useColors();
+  const { user } = useAuth();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   
@@ -177,14 +179,17 @@ export default function AddExpenseScreen() {
   // Select all members by default when members load
   useEffect(() => {
     if (membersData?.members) {
-      const allMemberIds = new Set(membersData.members.map((m: SpaceMember) => m.id));
+      const allMemberIds = new Set(
+        membersData.members.map((m: SpaceMember) => m.user_id).filter(Boolean)
+      );
       setSelectedMembers(allMemberIds);
-      // Set current user as payer by default (first member for now)
+      // Set current user as payer by default.
       if (membersData.members.length > 0 && !paidBy) {
-        setPaidBy(membersData.members[0].id);
+        const myMember = user ? membersData.members.find((m: SpaceMember) => m.user_id === user.id) : undefined;
+        setPaidBy((myMember?.user_id || membersData.members[0].user_id) as string);
       }
     }
-  }, [membersData?.members]);
+  }, [membersData?.members, paidBy, user]);
   
   const createMutation = useMutation({
     mutationFn: (data: CreateExpenseRequest) => api.social.createExpense(id!, data),
@@ -338,8 +343,8 @@ export default function AddExpenseScreen() {
               <MemberRow
                 key={member.id}
                 $bg={colors.card}
-                $selected={paidBy === member.id}
-                onPress={() => setPaidBy(member.id)}
+                $selected={paidBy === member.user_id}
+                onPress={() => setPaidBy(member.user_id)}
               >
                 <MemberAvatar $bg={colors.primary + '20'}>
                   <Ionicons name="person" size={18} color={colors.primary} />
@@ -349,8 +354,8 @@ export default function AddExpenseScreen() {
                     {member.nickname || member.user_name || member.user_email || 'Member'}
                   </MemberName>
                 </MemberInfo>
-                <Checkbox $checked={paidBy === member.id} $color={colors.primary}>
-                  {paidBy === member.id && <Ionicons name="checkmark" size={16} color="#fff" />}
+                <Checkbox $checked={paidBy === member.user_id} $color={colors.primary}>
+                  {paidBy === member.user_id && <Ionicons name="checkmark" size={16} color="#fff" />}
                 </Checkbox>
               </MemberRow>
             ))}
@@ -385,14 +390,14 @@ export default function AddExpenseScreen() {
               {t('splitWith') || 'Split With'}
             </SectionTitle>
             {members.map((member: SpaceMember) => {
-              const isSelected = selectedMembers.has(member.id);
-              const shareAmount = getShareAmount(member.id);
+              const isSelected = selectedMembers.has(member.user_id);
+              const shareAmount = getShareAmount(member.user_id);
               return (
                 <MemberRow
                   key={member.id}
                   $bg={colors.card}
                   $selected={isSelected}
-                  onPress={() => handleToggleMember(member.id)}
+                  onPress={() => handleToggleMember(member.user_id)}
                 >
                   <MemberAvatar $bg={colors.primary + '20'}>
                     <Ionicons name="person" size={18} color={colors.primary} />

@@ -102,6 +102,10 @@ type Config struct {
 	// Crypto Integration
 	AlchemyAPIKey string `env:"ALCHEMY_API_KEY" envDefault:""` // Alchemy API key for blockchain data
 	MoralisAPIKey string `env:"MORALIS_API_KEY" envDefault:""` // Moralis API key (backup)
+
+	// Redis / WebSocket fanout
+	RedisURL              string `env:"REDIS_URL" envDefault:""`
+	WebSocketRedisChannel string `env:"WS_REDIS_CHANNEL" envDefault:"ws_events"`
 }
 
 // Load parses environment variables into Config

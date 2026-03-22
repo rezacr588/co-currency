@@ -212,6 +212,17 @@ func main() {
 
 	// Cleanup background resources
 	log.Info().Msg("Cleaning up background resources")
+	if svc.wsFanoutCancel != nil {
+		svc.wsFanoutCancel()
+	}
+	if svc.wsHub != nil {
+		svc.wsHub.Shutdown()
+	}
+	if svc.wsRedisFanout != nil {
+		if err := svc.wsRedisFanout.Close(); err != nil {
+			log.Error().Err(err).Msg("Error closing WebSocket Redis fanout")
+		}
+	}
 	if db.inflationCrawler != nil {
 		db.inflationCrawler.Stop()
 	}

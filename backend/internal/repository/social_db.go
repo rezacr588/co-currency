@@ -248,6 +248,14 @@ func (r *SocialRepository) AcceptInvite(ctx context.Context, inviteID uuid.UUID)
 	return err
 }
 
+// RejectInvite marks an invite as rejected.
+func (r *SocialRepository) RejectInvite(ctx context.Context, inviteID uuid.UUID) error {
+	_, err := r.pool.Exec(ctx,
+		"UPDATE space_invites SET rejected_at = NOW() WHERE id = $1",
+		inviteID)
+	return err
+}
+
 // GetPendingInvites gets pending invites for a user
 func (r *SocialRepository) GetPendingInvites(ctx context.Context, email string) ([]model.SpaceInvite, error) {
 	query := `
@@ -480,6 +488,32 @@ func (r *SocialRepository) ConfirmSettlement(ctx context.Context, settlementID u
 		"UPDATE settlements SET confirmed_at = NOW() WHERE id = $1",
 		settlementID)
 	return err
+}
+
+// GetSettlement retrieves a settlement by ID.
+func (r *SocialRepository) GetSettlement(ctx context.Context, settlementID uuid.UUID) (*model.Settlement, error) {
+	query := `
+		SELECT s.id, s.space_id, s.from_user_id, s.to_user_id, s.amount, s.currency,
+			   s.method, s.notes, s.settled_at, s.confirmed_at, s.created_at,
+			   fu.name, tu.name
+		FROM settlements s
+		INNER JOIN users fu ON fu.id = s.from_user_id
+		INNER JOIN users tu ON tu.id = s.to_user_id
+		WHERE s.id = $1`
+
+	var settlement model.Settlement
+	err := r.pool.QueryRow(ctx, query, settlementID).Scan(
+		&settlement.ID, &settlement.SpaceID, &settlement.FromUserID, &settlement.ToUserID, &settlement.Amount, &settlement.Currency,
+		&settlement.Method, &settlement.Notes, &settlement.SettledAt, &settlement.ConfirmedAt, &settlement.CreatedAt,
+		&settlement.FromUserName, &settlement.ToUserName,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &settlement, nil
 }
 
 // GetBalanceSummary calculates balances for all members in a space

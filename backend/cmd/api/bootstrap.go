@@ -11,6 +11,7 @@ import (
 	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/router"
 	"github.com/rezacr588/currency-converter/internal/service"
+	"github.com/rezacr588/currency-converter/internal/websocket"
 )
 
 // databases holds database connections and related background workers.
@@ -29,42 +30,45 @@ type databases struct {
 
 // services holds all initialized services.
 type services struct {
-	exchange     *service.ExchangeService
-	auth         *service.AuthService
-	linkedInAuth *service.LinkedInOAuthService
-	googleAuth   *service.GoogleOAuthService
-	wallet       *service.WalletService
-	coai         *service.CoAIService
-	ai           *service.AIService
-	aiChat       *service.AIChatService
-	goal         *service.GoalService
-	task         *service.TaskService
-	todo         *service.TodoService
-	planner      *service.PlannerService
-	tag          *service.TagService
-	category     *service.CategoryService
-	budget       *service.BudgetService
-	recurring    *service.RecurringService
-	reports      *service.ReportsService
-	subscription *service.SubscriptionService
-	badge        *service.BadgeService
-	note         *service.NoteService
-	loan         *service.LoanService
-	notification *service.NotificationService
-	challenge    *service.ChallengeService
-	xp            *service.XPService
-	advice        *service.AdviceService
-	wealth        *service.WealthService
-	news          *service.NewsService
-	mlForecaster  *service.MLForecasterService
-	mlAnomalies   *service.AnomalyDetectorService
-	planEngine    *service.PlanningEngineService
+	exchange       *service.ExchangeService
+	auth           *service.AuthService
+	linkedInAuth   *service.LinkedInOAuthService
+	googleAuth     *service.GoogleOAuthService
+	wallet         *service.WalletService
+	coai           *service.CoAIService
+	ai             *service.AIService
+	aiChat         *service.AIChatService
+	goal           *service.GoalService
+	task           *service.TaskService
+	todo           *service.TodoService
+	planner        *service.PlannerService
+	tag            *service.TagService
+	category       *service.CategoryService
+	budget         *service.BudgetService
+	recurring      *service.RecurringService
+	reports        *service.ReportsService
+	subscription   *service.SubscriptionService
+	badge          *service.BadgeService
+	note           *service.NoteService
+	loan           *service.LoanService
+	notification   *service.NotificationService
+	challenge      *service.ChallengeService
+	xp             *service.XPService
+	advice         *service.AdviceService
+	wealth         *service.WealthService
+	news           *service.NewsService
+	mlForecaster   *service.MLForecasterService
+	mlAnomalies    *service.AnomalyDetectorService
+	planEngine     *service.PlanningEngineService
 	actionExecutor *service.ActionExecutor
 	agentRepo      *repository.AgentPlanRepository
 
 	// Shutdown handles
-	memoryService *service.MemoryService
-	qdrantClient  *repository.QdrantClient
+	memoryService  *service.MemoryService
+	qdrantClient   *repository.QdrantClient
+	wsHub          *websocket.Hub
+	wsRedisFanout  *websocket.RedisFanout
+	wsFanoutCancel context.CancelFunc
 }
 
 func initDatabase(cfg *config.Config) *databases {
@@ -178,7 +182,7 @@ func initServices(cfg *config.Config, db *databases) *services {
 		svc.agentRepo = repository.NewAgentPlanRepository(db.mainDB.Pool())
 		svc.planEngine = service.NewPlanningEngineService(svc.agentRepo, svc.aiChat)
 		log.Info().Msg("Planning engine service initialized")
-		
+
 		// Initialize action executor
 		svc.actionExecutor = service.NewActionExecutor(
 			svc.agentRepo,
@@ -477,6 +481,29 @@ func initMemoryService(cfg *config.Config, memoryRepo *repository.MemoryReposito
 }
 
 func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Handlers {
+	// Initialize WebSocket hub
+	wsHub := websocket.NewHub()
+	svc.wsHub = wsHub
+	go wsHub.Run()
+	log.Info().Msg("WebSocket hub initialized")
+	var redisFanout *websocket.RedisFanout
+	if cfg.RedisURL != "" {
+		var err error
+		redisFanout, err = websocket.NewRedisFanout(cfg.RedisURL, cfg.WebSocketRedisChannel)
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to initialize WebSocket Redis fanout, using local-only delivery")
+		} else {
+			fanoutCtx, cancel := context.WithCancel(context.Background())
+			svc.wsFanoutCancel = cancel
+			go redisFanout.Subscribe(fanoutCtx, wsHub)
+			log.Info().
+				Str("channel", cfg.WebSocketRedisChannel).
+				Msg("WebSocket Redis fanout enabled")
+		}
+	}
+	svc.wsRedisFanout = redisFanout
+	wsPublisher := websocket.NewPublisher(wsHub, redisFanout)
+
 	exchangeHandler := handler.New(svc.exchange)
 	authHandler := handler.NewAuthHandler(svc.auth)
 	walletHandler := handler.NewWalletHandler(svc.wallet)
@@ -590,7 +617,7 @@ func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Hand
 
 	var agentHandler *handler.AgentHandler
 	if svc.planEngine != nil && svc.actionExecutor != nil {
-		agentHandler = handler.NewAgentHandler(svc.planEngine, svc.actionExecutor)
+		agentHandler = handler.NewAgentHandler(svc.planEngine, svc.actionExecutor, wsPublisher)
 	}
 
 	// Financial DNA handler
@@ -606,7 +633,7 @@ func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Hand
 	if db.mainDB != nil {
 		socialRepo := repository.NewSocialRepository(db.mainDB.Pool())
 		socialService := service.NewSocialService(socialRepo)
-		socialHandler = handler.NewSocialHandler(socialService)
+		socialHandler = handler.NewSocialHandler(socialService, wsPublisher)
 	}
 
 	// Crypto Integration handler
@@ -616,6 +643,9 @@ func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Hand
 		cryptoService := service.NewCryptoService(cryptoRepo, cfg.AlchemyAPIKey, cfg.MoralisAPIKey)
 		cryptoHandler = handler.NewCryptoHandler(cryptoService)
 	}
+
+	// WebSocket handler
+	wsHandler := handler.NewWebSocketHandler(wsHub, svc.auth)
 
 	return &router.Handlers{
 		Exchange:      exchangeHandler,
@@ -648,5 +678,6 @@ func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Hand
 		DNA:           dnaHandler,
 		Social:        socialHandler,
 		Crypto:        cryptoHandler,
+		WebSocket:     wsHandler,
 	}
 }
