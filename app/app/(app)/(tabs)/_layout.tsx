@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   BarChart3,
   Bot,
+  Coins,
   KanbanSquare,
   LogOut,
   Menu,
@@ -125,6 +126,7 @@ function AppSidebar({
   const mainItems = [
     { href: '/(app)/(tabs)', label: 'CoAI', icon: <Bot size={18} color={theme.colors.secondaryForeground} /> },
     { href: '/(app)/(tabs)/wallet', label: t('wallet'), icon: <Wallet size={18} color={theme.colors.secondaryForeground} /> },
+    { href: '/(app)/crypto', label: t('crypto') || 'Crypto', icon: <Coins size={18} color={theme.colors.secondaryForeground} /> },
     { href: '/(app)/(tabs)/add', label: t('addTransaction') || 'Add', icon: <Plus size={18} color={theme.colors.secondaryForeground} /> },
     { href: '/(app)/(tabs)/reports', label: t('reports'), icon: <BarChart3 size={18} color={theme.colors.secondaryForeground} /> },
     { href: '/(app)/(tabs)/goals', label: t('financialGoals') || 'Goals', icon: <Target size={18} color={theme.colors.secondaryForeground} /> },

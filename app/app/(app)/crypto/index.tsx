@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScrollView, RefreshControl, Alert, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import styled from 'styled-components/native';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -12,6 +13,7 @@ import { useToast } from '@/src/components/ui/Toast';
 import { cryptoApi, PortfolioSummary, CryptoWallet } from '@/src/api/crypto';
 import { EmptyState } from '@/src/components/ui/EmptyState';
 import { LoadingSpinner } from '@/src/components/ui/LoadingSpinner';
+import { CryptoDisclaimerModal } from '@/src/components/features/Crypto/CryptoDisclaimerModal';
 import { formatCurrency } from '@/src/utils/format';
 
 const Container = styled.View<{ $bg: string }>`
@@ -248,6 +250,28 @@ export default function CryptoPortfolioScreen() {
   const queryClient = useQueryClient();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
+
+  // Check if user has accepted disclaimer
+  useEffect(() => {
+    const checkDisclaimer = async () => {
+      const accepted = await AsyncStorage.getItem('crypto_disclaimer_accepted');
+      if (!accepted) {
+        setShowDisclaimer(true);
+      }
+    };
+    checkDisclaimer();
+  }, []);
+
+  const handleAcceptDisclaimer = async () => {
+    await AsyncStorage.setItem('crypto_disclaimer_accepted', 'true');
+    setShowDisclaimer(false);
+  };
+
+  const handleDeclineDisclaimer = () => {
+    setShowDisclaimer(false);
+    router.back();
+  };
 
   const { data: wallets, isLoading: walletsLoading } = useQuery({
     queryKey: ['crypto-wallets'],
@@ -287,6 +311,12 @@ export default function CryptoPortfolioScreen() {
 
   return (
     <Container $bg={colors.background}>
+      <CryptoDisclaimerModal
+        visible={showDisclaimer}
+        onAccept={handleAcceptDisclaimer}
+        onDecline={handleDeclineDisclaimer}
+      />
+      
       <Header $pt={insets.top}>
         <HeaderTitle $color={colors.foreground}>{t('cryptoPortfolio') || 'Crypto Portfolio'}</HeaderTitle>
         <HeaderSubtitle $color={colors.mutedForeground}>

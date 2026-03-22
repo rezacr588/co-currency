@@ -1502,5 +1502,25 @@ export const en = {
   bsc: 'BNB Chain',
   avalanche: 'Avalanche',
   solana: 'Solana',
+  
+  // Crypto Disclaimer
+  cryptoDisclaimer: 'Crypto Disclaimer',
+  cryptoDisclaimerHighlight: 'CoAI is a read-only crypto tracker. We do not hold, custody, or have access to your assets. This is not financial advice.',
+  readOnlyTracking: 'Read-Only Tracking',
+  riskWarning: 'Risk Warning',
+  dataAccuracy: 'Data Accuracy',
+  notFinancialAdvice: 'Not Financial Advice',
+  cryptoDisclaimer1: 'CoAI only reads public blockchain data using your wallet address.',
+  cryptoDisclaimer2: 'We never ask for private keys, seed phrases, or passwords.',
+  cryptoDisclaimer3: 'We cannot access, transfer, or control your crypto assets.',
+  cryptoDisclaimer4: 'Cryptocurrency investments are highly volatile and risky.',
+  cryptoDisclaimer5: 'Past performance does not guarantee future results.',
+  cryptoDisclaimer6: 'Only invest what you can afford to lose.',
+  cryptoDisclaimer7: 'Prices and balances are fetched from third-party APIs and may have delays.',
+  cryptoDisclaimer8: 'Always verify important transactions on official blockchain explorers.',
+  cryptoDisclaimer9: 'CoAI provides information for tracking purposes only.',
+  cryptoDisclaimer10: 'Consult a qualified financial advisor before making investment decisions.',
+  decline: 'Decline',
+  iUnderstand: 'I Understand',
 
 } as const;
