@@ -37,6 +37,7 @@ import {
   Eye,
   EyeOff,
   Clock3,
+  Trash2,
 } from 'lucide-react-native';
 import { useAuth } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -75,6 +76,8 @@ export default function ProfileScreen() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showReportTimeZoneModal, setShowReportTimeZoneModal] = useState(false);
   const [editName, setEditName] = useState('');
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
   const deviceTimeZone = getDeviceTimeZone();
   const reportTimeZoneLabel =
     settings.reportTimeZonePreference === 'device'
@@ -124,6 +127,38 @@ export default function ProfileScreen() {
       Alert.alert(t('updateFailed'), err instanceof Error ? err.message : t('updateFailed'));
     },
   });
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: (password: string) => api.auth.deleteAccount(password),
+    onSuccess: async () => {
+      setShowDeleteAccountModal(false);
+      await logout();
+      Alert.alert(t('accountDeleted') || 'Account deleted successfully');
+    },
+    onError: (err) => {
+      Alert.alert(t('deleteFailed') || 'Failed to delete account', err instanceof Error ? err.message : 'Unknown error');
+    },
+  });
+
+  const handleDeleteAccount = useCallback(() => {
+    if (!deletePassword.trim()) {
+      Alert.alert(t('error') || 'Error', t('passwordRequired') || 'Password is required');
+      return;
+    }
+    
+    Alert.alert(
+      t('confirmDeleteAccount') || 'Delete Account',
+      t('confirmDeleteAccountMessage') || 'This action is permanent and cannot be undone. All your data will be deleted.',
+      [
+        { text: t('cancel') || 'Cancel', style: 'cancel' },
+        {
+          text: t('delete') || 'Delete',
+          style: 'destructive',
+          onPress: () => deleteAccountMutation.mutate(deletePassword),
+        },
+      ]
+    );
+  }, [deletePassword, t, deleteAccountMutation]);
 
   const handleSaveProfile = useCallback(() => {
     if (!editName.trim()) {
@@ -658,25 +693,47 @@ export default function ProfileScreen() {
             </View>
 
             {!isDesktop && (
-              <Pressable
-                onPress={handleLogout}
-                style={({ pressed }) => [{
-                  cursor: 'pointer',
-                  backgroundColor: colors.danger + '14',
-                  borderWidth: 1,
-                  borderColor: colors.danger + '40',
-                  padding: 16,
-                  borderRadius: 12,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginTop: sectionGap,
-                  opacity: pressed ? 0.72 : 1,
-                }]}
-              >
-                <LogOut size={20} color={colors.danger} />
-                <Text style={{ color: colors.danger, fontFamily: 'Inter_600SemiBold', marginStart: 8 }}>{t('logout')}</Text>
-              </Pressable>
+              <>
+                <Pressable
+                  onPress={handleLogout}
+                  style={({ pressed }) => [{
+                    cursor: 'pointer',
+                    backgroundColor: colors.danger + '14',
+                    borderWidth: 1,
+                    borderColor: colors.danger + '40',
+                    padding: 16,
+                    borderRadius: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginTop: sectionGap,
+                    opacity: pressed ? 0.72 : 1,
+                  }]}
+                >
+                  <LogOut size={20} color={colors.danger} />
+                  <Text style={{ color: colors.danger, fontFamily: 'Inter_600SemiBold', marginStart: 8 }}>{t('logout')}</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setShowDeleteAccountModal(true)}
+                  style={({ pressed }) => [{
+                    cursor: 'pointer',
+                    backgroundColor: colors.danger + '0A',
+                    borderWidth: 1,
+                    borderColor: colors.danger + '30',
+                    padding: 12,
+                    borderRadius: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginTop: 12,
+                    opacity: pressed ? 0.72 : 1,
+                  }]}
+                >
+                  <Trash2 size={18} color={colors.danger} />
+                  <Text style={{ color: colors.danger, fontSize: 14, marginStart: 8 }}>{t('deleteAccount') || 'Delete Account'}</Text>
+                </Pressable>
+              </>
             )}
           </View>
         </View>
@@ -833,6 +890,109 @@ export default function ProfileScreen() {
                   </Pressable>
                 );
               })}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Delete Account Modal */}
+      <Modal
+        visible={showDeleteAccountModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowDeleteAccountModal(false)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}
+          onPress={() => setShowDeleteAccountModal(false)}
+        >
+          <Pressable
+            style={{
+              backgroundColor: colors.card,
+              borderRadius: 16,
+              padding: 24,
+              width: '90%',
+              maxWidth: 400,
+            }}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <Text style={{ fontSize: 20, fontFamily: 'Inter_600SemiBold', color: colors.danger }}>
+                {t('deleteAccount') || 'Delete Account'}
+              </Text>
+              <Pressable onPress={() => setShowDeleteAccountModal(false)}>
+                <X size={24} color={colors.mutedForeground} />
+              </Pressable>
+            </View>
+
+            <Text style={{ color: colors.mutedForeground, marginBottom: 16, lineHeight: 20 }}>
+              {t('deleteAccountWarning') || 'This action is permanent and cannot be undone. All your data including transactions, budgets, goals, and chat history will be permanently deleted.'}
+            </Text>
+
+            <Text style={{ color: colors.foreground, marginBottom: 8, fontFamily: 'Inter_500Medium' }}>
+              {t('confirmPassword') || 'Confirm your password'}
+            </Text>
+
+            <View style={{ position: 'relative', marginBottom: 20 }}>
+              <TextInput
+                style={{
+                  backgroundColor: colors.muted,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: 8,
+                  padding: 12,
+                  color: colors.foreground,
+                  fontFamily: 'Inter_400Regular',
+                }}
+                placeholder={t('password') || 'Password'}
+                placeholderTextColor={colors.placeholder}
+                value={deletePassword}
+                onChangeText={setDeletePassword}
+                secureTextEntry
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <Pressable
+                onPress={() => {
+                  setShowDeleteAccountModal(false);
+                  setDeletePassword('');
+                }}
+                style={({ pressed }) => [{
+                  flex: 1,
+                  backgroundColor: colors.muted,
+                  borderRadius: 8,
+                  padding: 14,
+                  alignItems: 'center',
+                  opacity: pressed ? 0.72 : 1,
+                }]}
+              >
+                <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>
+                  {t('cancel') || 'Cancel'}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={handleDeleteAccount}
+                disabled={deleteAccountMutation.isPending}
+                style={({ pressed }) => [{
+                  flex: 1,
+                  backgroundColor: colors.danger,
+                  borderRadius: 8,
+                  padding: 14,
+                  alignItems: 'center',
+                  opacity: pressed || deleteAccountMutation.isPending ? 0.72 : 1,
+                }]}
+              >
+                {deleteAccountMutation.isPending ? (
+                  <ActivityIndicator color={colors.background} />
+                ) : (
+                  <Text style={{ color: colors.background, fontFamily: 'Inter_600SemiBold' }}>
+                    {t('deleteAccount') || 'Delete Account'}
+                  </Text>
+                )}
+              </Pressable>
             </View>
           </Pressable>
         </Pressable>

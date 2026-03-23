@@ -54,6 +54,11 @@ export const auth = {
       method: 'POST',
       body: JSON.stringify({ refresh_token: refreshToken }),
     }),
+  deleteAccount: (password: string) =>
+    fetchAPI<{ message: string }>('/auth/account', {
+      method: 'DELETE',
+      body: JSON.stringify({ password }),
+    }),
   completeOnboarding: () =>
     fetchAPI<User>('/auth/onboarding/complete', {
       method: 'POST',

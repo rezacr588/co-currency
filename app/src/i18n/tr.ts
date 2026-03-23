@@ -895,6 +895,16 @@ export const tr = {
   passwordRequirements: 'Sifre Gereksinimleri',
   passwordMinLength: 'En az 6 karakter',
 
+  // Account deletion
+  deleteAccount: 'Hesabı Sil',
+  accountDeleted: 'Hesap başarıyla silindi',
+  deleteFailed: 'Hesap silinemedi',
+  confirmDeleteAccount: 'Hesabı Sil',
+  confirmDeleteAccountMessage: 'Bu işlem kalıcıdır ve geri alınamaz. Tüm verileriniz silinecektir.',
+  deleteAccountWarning: 'Bu işlem kalıcıdır ve geri alınamaz. İşlemler, bütçeler, hedefler ve sohbet geçmişi dahil olmak üzere tüm verileriniz kalıcı olarak silinecektir.',
+  confirmPassword: 'Şifrenizi onaylayın',
+  passwordRequired: 'Şifre gereklidir',
+
   // Skeleton
   loadingSkeleton: 'Yukleniyor...',
 

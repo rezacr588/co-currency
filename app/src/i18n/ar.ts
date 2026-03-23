@@ -895,6 +895,16 @@ export const ar = {
   passwordRequirements: 'متطلبات كلمة المرور',
   passwordMinLength: '6 أحرف على الأقل',
 
+  // Account deletion
+  deleteAccount: 'حذف الحساب',
+  accountDeleted: 'تم حذف الحساب بنجاح',
+  deleteFailed: 'فشل حذف الحساب',
+  confirmDeleteAccount: 'حذف الحساب',
+  confirmDeleteAccountMessage: 'هذا الإجراء دائم ولا يمكن التراجع عنه. سيتم حذف جميع بياناتك.',
+  deleteAccountWarning: 'هذا الإجراء دائم ولا يمكن التراجع عنه. سيتم حذف جميع بياناتك بما في ذلك المعاملات والميزانيات والأهداف وسجل المحادثات بشكل دائم.',
+  confirmPassword: 'أكد كلمة المرور',
+  passwordRequired: 'كلمة المرور مطلوبة',
+
   // Skeleton
   loadingSkeleton: 'جاري التحميل...',
 
