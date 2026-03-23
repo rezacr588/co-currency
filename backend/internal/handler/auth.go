@@ -92,20 +92,17 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate reset token (always return success to not leak email existence)
-	token, err := h.authService.GeneratePasswordResetToken(r.Context(), req.Email)
+	// Generate reset token and send email (service handles email delivery via Resend)
+	// Always return success to not leak email existence
+	_, err := h.authService.GeneratePasswordResetToken(r.Context(), req.Email)
 	if err != nil {
-		// Log error but don't expose to user
+		// Log error but don't expose to user - token generation or email send failed
 		httputil.Success(w, map[string]string{
 			"message": "If an account exists with this email, a password reset link has been sent",
 		})
 		return
 	}
 
-	// TODO: The password reset token is generated but never delivered to the user.
-	// An email service (e.g., SendGrid, SES) needs to be integrated to send the
-	// reset link containing this token. Until then, password reset is non-functional.
-	_ = token // Token should be sent via email, not exposed in response
 	httputil.Success(w, map[string]string{
 		"message": "If an account exists with this email, a password reset link has been sent",
 	})
@@ -226,6 +223,34 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.Success(w, map[string]string{"message": "password updated"})
+}
+
+// DeleteAccount handles DELETE /api/v1/auth/account
+func (h *AuthHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
+	if !requireService(w, h.authService != nil, "authentication service not available - database connection failed") {
+		return
+	}
+
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	req, ok := decodeJSON[model.DeleteAccountRequest](w, r)
+	if !ok {
+		return
+	}
+
+	if err := h.authService.DeleteAccount(r.Context(), userID, req.Password); err != nil {
+		if strings.Contains(err.Error(), "invalid password") {
+			httputil.UnauthorizedWithContext(r.Context(), w, "invalid password")
+			return
+		}
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to delete account")
+		return
+	}
+
+	httputil.Success(w, map[string]string{"message": "account deleted successfully"})
 }
 
 // RefreshToken handles POST /api/v1/auth/refresh

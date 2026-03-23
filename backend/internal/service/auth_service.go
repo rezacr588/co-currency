@@ -345,6 +345,34 @@ func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword stri
 	return nil
 }
 
+// DeleteAccount permanently deletes a user account and all associated data
+func (s *AuthService) DeleteAccount(ctx context.Context, userID uuid.UUID, password string) error {
+	// Get user to verify password
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("getting user: %w", err)
+	}
+
+	// Verify password (skip if OAuth-only account with no password)
+	if user.PasswordHash != "" {
+		if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+			return errors.New("invalid password")
+		}
+	}
+
+	// Delete user (cascade will handle related data due to foreign keys)
+	if err := s.userRepo.Delete(ctx, userID); err != nil {
+		return fmt.Errorf("deleting account: %w", err)
+	}
+
+	// Revoke all refresh tokens
+	if s.refreshTokenRepo != nil {
+		_ = s.refreshTokenRepo.DeleteAllForUser(ctx, userID)
+	}
+
+	return nil
+}
+
 // SetOnboardingCompleted marks the onboarding as completed for a user
 func (s *AuthService) SetOnboardingCompleted(ctx context.Context, userID uuid.UUID) error {
 	return s.userRepo.SetOnboardingCompleted(ctx, userID)

@@ -118,3 +118,8 @@ type ChangePasswordRequest struct {
 	CurrentPassword string `json:"current_password,omitempty"`
 	NewPassword     string `json:"new_password"`
 }
+
+// DeleteAccountRequest represents an account deletion request
+type DeleteAccountRequest struct {
+	Password string `json:"password"` // Required for verification (empty if OAuth-only)
+}

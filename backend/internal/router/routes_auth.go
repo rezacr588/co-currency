@@ -41,6 +41,7 @@ func registerAuthRoutes(r chi.Router, h *Handlers, rateLimiter *middleware.RateL
 			r.Get("/profile", h.Auth.GetProfile)
 			r.Put("/profile", h.Auth.UpdateProfile)
 			r.Post("/password", h.Auth.ChangePassword)
+			r.Delete("/account", h.Auth.DeleteAccount)
 			r.Post("/onboarding/complete", h.Auth.CompleteOnboarding)
 		})
 	})

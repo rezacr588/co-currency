@@ -191,6 +191,13 @@ func initServices(cfg *config.Config, db *databases) *services {
 			svc.budget,
 			svc.recurring,
 		)
+		// Wire up optional services for action executor
+		if svc.subscription != nil {
+			svc.actionExecutor.SetSubscriptionService(svc.subscription)
+		}
+		if svc.loan != nil {
+			svc.actionExecutor.SetLoanService(svc.loan)
+		}
 		log.Info().Msg("Action executor service initialized")
 	}
 
