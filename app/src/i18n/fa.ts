@@ -898,12 +898,12 @@ export const fa = {
   // Account deletion
   deleteAccount: 'حذف حساب کاربری',
   accountDeleted: 'حساب کاربری با موفقیت حذف شد',
-  deleteFailed: 'حذف حساب کاربری ناموفق بود',
+  deleteAccountFailed: 'حذف حساب کاربری ناموفق بود',
   confirmDeleteAccount: 'حذف حساب کاربری',
   confirmDeleteAccountMessage: 'این عمل غیرقابل بازگشت است. تمام اطلاعات شما حذف خواهد شد.',
   deleteAccountWarning: 'این عمل غیرقابل بازگشت است. تمام اطلاعات شما از جمله تراکنش‌ها، بودجه‌ها، اهداف و تاریخچه چت به طور کامل حذف خواهند شد.',
-  confirmPassword: 'رمز عبور خود را تأیید کنید',
-  passwordRequired: 'رمز عبور الزامی است',
+  confirmPasswordForDeletion: 'رمز عبور خود را تأیید کنید',
+  passwordRequiredForDeletion: 'رمز عبور الزامی است',
 
   // Skeleton
   loadingSkeleton: 'در حال بارگذاری...',

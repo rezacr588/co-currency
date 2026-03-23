@@ -898,12 +898,12 @@ export const ar = {
   // Account deletion
   deleteAccount: 'حذف الحساب',
   accountDeleted: 'تم حذف الحساب بنجاح',
-  deleteFailed: 'فشل حذف الحساب',
+  deleteAccountFailed: 'فشل حذف الحساب',
   confirmDeleteAccount: 'حذف الحساب',
   confirmDeleteAccountMessage: 'هذا الإجراء دائم ولا يمكن التراجع عنه. سيتم حذف جميع بياناتك.',
   deleteAccountWarning: 'هذا الإجراء دائم ولا يمكن التراجع عنه. سيتم حذف جميع بياناتك بما في ذلك المعاملات والميزانيات والأهداف وسجل المحادثات بشكل دائم.',
-  confirmPassword: 'أكد كلمة المرور',
-  passwordRequired: 'كلمة المرور مطلوبة',
+  confirmPasswordForDeletion: 'أكد كلمة المرور',
+  passwordRequiredForDeletion: 'كلمة المرور مطلوبة',
 
   // Skeleton
   loadingSkeleton: 'جاري التحميل...',

@@ -7,6 +7,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency } from '../../../utils/format';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
+import { REPORT_QUERY_RETRY, REPORT_QUERY_STALE_TIME_MS } from './queryConfig';
 import type { CashFlowEvent } from '../../../types/goal';
 import {
   formatRelativeReportDateLabel,
@@ -80,7 +81,8 @@ export function CashFlowProjectionCard() {
   const { data: report, isPending } = useQuery({
     queryKey: ['reports', 'cashflow', reportTimeZone],
     queryFn: () => api.reports.cashflow(30, undefined, reportTimeZone),
-    staleTime: 5 * 60 * 1000,
+    staleTime: REPORT_QUERY_STALE_TIME_MS,
+    retry: REPORT_QUERY_RETRY,
   });
 
   const projections = report?.projections || [];

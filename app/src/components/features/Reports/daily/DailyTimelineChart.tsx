@@ -65,6 +65,7 @@ export function DailyTimelineChart({
               accessibilityRole="button"
               accessibilityLabel={`${t('selectedRange')}: ${bucketRangeText}. ${bucket.txCount} ${t('transactionsCount')}`}
               accessibilityState={{ selected: isSelected }}
+              accessibilityHint="Select this bar to inspect transactions"
             >
               <View style={{ height: 104, flexDirection: 'row', alignItems: 'flex-end', gap: 2 }}>
                 <View

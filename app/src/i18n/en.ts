@@ -901,12 +901,12 @@ export const en = {
   // Account deletion
   deleteAccount: 'Delete Account',
   accountDeleted: 'Account deleted successfully',
-  deleteFailed: 'Failed to delete account',
+  deleteAccountFailed: 'Failed to delete account',
   confirmDeleteAccount: 'Delete Account',
   confirmDeleteAccountMessage: 'This action is permanent and cannot be undone. All your data will be deleted.',
   deleteAccountWarning: 'This action is permanent and cannot be undone. All your data including transactions, budgets, goals, and chat history will be permanently deleted.',
-  confirmPassword: 'Confirm your password',
-  passwordRequired: 'Password is required',
+  confirmPasswordForDeletion: 'Confirm your password',
+  passwordRequiredForDeletion: 'Password is required',
 
   // Skeleton
   loadingSkeleton: 'Loading...',

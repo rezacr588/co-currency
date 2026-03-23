@@ -46,6 +46,7 @@ export function DailyReportHeader({
           style={{ padding: 12, borderRadius: 12, backgroundColor: colors.secondary }}
           accessibilityRole="button"
           accessibilityLabel={t('previousPeriod')}
+          accessibilityHint="Show previous date range"
         >
           <ChevronLeft size={20} color="#a1a1aa" />
         </Pressable>
@@ -70,6 +71,7 @@ export function DailyReportHeader({
           disabled={isCurrentWindow}
           accessibilityRole="button"
           accessibilityLabel={t('nextPeriod')}
+          accessibilityHint="Show next date range"
         >
           <ChevronRight size={20} color="#a1a1aa" />
         </Pressable>
@@ -97,6 +99,7 @@ export function DailyReportHeader({
               accessibilityRole="button"
               accessibilityLabel={t(TIMELINE_CONFIG[preset].translationKey)}
               accessibilityState={{ selected: isSelected }}
+              accessibilityHint={`Set timeline to ${t(TIMELINE_CONFIG[preset].translationKey)}`}
             >
               <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', color: isSelected ? colors.background : colors.foreground }}>
                 {t(TIMELINE_CONFIG[preset].translationKey)}
@@ -112,6 +115,7 @@ export function DailyReportHeader({
           style={{ marginTop: 12, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, backgroundColor: colors.accent + '26', borderWidth: 1, borderColor: colors.accent + '4d', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
           accessibilityRole="button"
           accessibilityLabel={t('goToCurrentPeriod')}
+          accessibilityHint="Jump back to current date range"
         >
           <RotateCcw size={14} color={colors.accent} />
           <Text style={{ color: colors.accent, fontFamily: 'Inter_500Medium', marginStart: 8 }}>{t('goToCurrentPeriod')}</Text>

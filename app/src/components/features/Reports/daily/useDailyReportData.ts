@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../../api';
 import type { Transaction } from '../../../../types/wallet';
 import { formatDateKey } from '../../../../utils/dateRange';
+import { REPORT_QUERY_RETRY, REPORT_QUERY_STALE_TIME_MS, REPORT_QUERY_STALE_TIME_SHORT_MS } from '../queryConfig';
 import {
   buildChartBuckets,
   buildDailyAggregation,
@@ -67,6 +68,7 @@ export interface UseDailyReportDataResult {
   rangeWithYearFormatter: Intl.DateTimeFormat;
   isPending: boolean;
   isError: boolean;
+  refetch: () => Promise<unknown>;
 }
 
 async function fetchTransactionsForRange(fromTimestamp: string, toTimestamp: string, targetCurrency: string): Promise<ReportFetchResult> {
@@ -164,10 +166,11 @@ export function useDailyReportData(
   const fromTimestamp = toRFC3339RangeStart(windowStart, reportTimeZone);
   const toTimestamp = toRFC3339RangeEnd(windowEnd, reportTimeZone);
 
-  const { data: reportData, isPending, isError } = useQuery({
+  const { data: reportData, isPending, isError, refetch } = useQuery({
     queryKey: ['transactions', 'daily-history', timelinePreset, fromTimestamp, toTimestamp, reportCurrency, reportTimeZone],
     queryFn: () => fetchTransactionsForRange(fromTimestamp, toTimestamp, reportCurrency),
-    staleTime: 2 * 60 * 1000,
+    staleTime: REPORT_QUERY_STALE_TIME_SHORT_MS,
+    retry: REPORT_QUERY_RETRY,
   });
 
   const rangeFormatter = useMemo(
@@ -239,7 +242,8 @@ export function useDailyReportData(
   const { data: prevReportData } = useQuery({
     queryKey: ['transactions', 'daily-history', timelinePreset, prevFromTimestamp, prevToTimestamp, reportCurrency, reportTimeZone],
     queryFn: () => fetchTransactionsForRange(prevFromTimestamp, prevToTimestamp, reportCurrency),
-    staleTime: 5 * 60 * 1000,
+    staleTime: REPORT_QUERY_STALE_TIME_MS,
+    retry: REPORT_QUERY_RETRY,
   });
 
   const prevAggregation = useMemo(
@@ -328,5 +332,6 @@ export function useDailyReportData(
     rangeWithYearFormatter,
     isPending,
     isError,
+    refetch,
   };
 }

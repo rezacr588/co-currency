@@ -44,6 +44,7 @@ export function ReportPeriodTabs({ selected, onSelect }: ReportPeriodTabsProps) 
             accessibilityRole="tab"
             accessibilityLabel={tab.label}
             accessibilityState={{ selected: selected === tab.key }}
+            accessibilityHint={`Switch to ${tab.label} report view`}
           >
             <Text
               style={{

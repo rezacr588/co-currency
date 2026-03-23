@@ -1,15 +1,18 @@
 import { useMemo } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from 'styled-components/native';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 import { getDateRangeFromPreset, getTimeZoneDateParts } from '../../../utils/dateRange';
+import { SkeletonCard, SkeletonList } from '../../ui/Skeleton';
+import { ReportErrorCard } from '../../ui';
 import { HealthScoreCard } from '../HealthScore/HealthScoreCard';
 import { WeeklyRecapCard } from '../WeeklyRecap/WeeklyRecapCard';
 import { MonthlyReportView } from './MonthlyReportView';
 import { ReportHeadlineCard } from './ReportHeadlineCard';
+import { REPORT_QUERY_RETRY, REPORT_QUERY_STALE_TIME_MS } from './queryConfig';
 import { createReportDateFormatter, type ReportHistoryTarget } from './reportUX';
 
 interface AllTimeReportViewProps {
@@ -33,10 +36,11 @@ export function AllTimeReportView({
   const today = useMemo(() => getTimeZoneDateParts(new Date(), reportTimeZone), [reportTimeZone]);
   const fallbackRange = useMemo(() => getDateRangeFromPreset('all_time', reportTimeZone), [reportTimeZone]);
 
-  const { data: coverage, isPending: isLoadingCoverage } = useQuery({
+  const { data: coverage, isPending: isLoadingCoverage, isError: isCoverageError, refetch: refetchCoverage } = useQuery({
     queryKey: ['reports', 'coverage', reportTimeZone],
     queryFn: () => api.reports.coverage(reportTimeZone),
-    staleTime: 5 * 60 * 1000,
+    staleTime: REPORT_QUERY_STALE_TIME_MS,
+    retry: REPORT_QUERY_RETRY,
   });
 
   const allTimeRange = useMemo(() => {
@@ -73,6 +77,19 @@ export function AllTimeReportView({
     return formatter.format(new Date(Date.UTC(year, month - 1, day, 12)));
   }, [coverage?.first_transaction_date, language, reportTimeZone]);
 
+  if (isCoverageError) {
+    return (
+      <ReportErrorCard
+        title={t('failedToLoadReport')}
+        message={t('checkConnection')}
+        retryLabel={t('retry') || 'Retry'}
+        onRetry={() => {
+          void refetchCoverage();
+        }}
+      />
+    );
+  }
+
   return (
     <View style={{ gap: 24 }}>
       <ReportHeadlineCard
@@ -103,8 +120,9 @@ export function AllTimeReportView({
       </View>
 
       {isLoadingCoverage ? (
-        <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 32 }}>
-          <ActivityIndicator size="large" color={colors.accent} />
+        <View style={{ gap: 12 }}>
+          <SkeletonCard />
+          <SkeletonList count={1} />
         </View>
       ) : (
         <MonthlyReportView

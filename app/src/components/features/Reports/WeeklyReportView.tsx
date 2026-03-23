@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { View, Text, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, TrendingUp, TrendingDown, Lightbulb, CheckCircle, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { Calendar, TrendingUp, TrendingDown, Lightbulb, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
@@ -10,7 +10,10 @@ import { formatCompactCurrency, formatNumber } from '../../../utils/format';
 import { CATEGORY_COLORS, StyledCategoryIcon } from '../../../constants/icons';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 import { Card } from '../../ui';
+import { ReportErrorCard } from '../../ui';
+import { SkeletonCard, SkeletonList } from '../../ui/Skeleton';
 import { ReportHeadlineCard } from './ReportHeadlineCard';
+import { REPORT_QUERY_RETRY, REPORT_QUERY_STALE_TIME_MS } from './queryConfig';
 import { formatReportDateRange, type ReportHistoryTarget } from './reportUX';
 
 interface WeeklyReportViewProps {
@@ -32,28 +35,32 @@ export function WeeklyReportView({ isTablet = false, onOpenHistory }: WeeklyRepo
     return buildDateKey(target.year, target.month, target.day);
   }, [reportTimeZone, weekOffset]);
 
-  const { data: weeklyRecap, isPending, isError } = useQuery({
+  const { data: weeklyRecap, isPending, isError, refetch } = useQuery({
     queryKey: ['reports', 'weekly-recap', weekOffset, reportTimeZone],
     queryFn: () => api.reports.weeklyRecap(undefined, referenceDate, reportTimeZone),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1,
+    staleTime: REPORT_QUERY_STALE_TIME_MS,
+    retry: REPORT_QUERY_RETRY,
   });
 
   if (isPending) {
     return (
-      <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 32 }}>
-        <ActivityIndicator size="large" color={colors.accent} />
+      <View style={{ gap: 12 }}>
+        <SkeletonCard />
+        <SkeletonList count={2} />
       </View>
     );
   }
 
   if (isError) {
     return (
-      <Card style={{ padding: 24, alignItems: 'center' }}>
-        <AlertCircle size={48} color={colors.danger} />
-        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginTop: 16, fontSize: 18 }}>{t('failedToLoadReport')}</Text>
-        <Text style={{ color: colors.mutedForeground, marginTop: 8, textAlign: 'center' }}>{t('checkConnection')}</Text>
-      </Card>
+      <ReportErrorCard
+        title={t('failedToLoadReport')}
+        message={t('checkConnection')}
+        retryLabel={t('retry') || 'Retry'}
+        onRetry={() => {
+          void refetch();
+        }}
+      />
     );
   }
 
@@ -103,7 +110,9 @@ export function WeeklyReportView({ isTablet = false, onOpenHistory }: WeeklyRepo
         <Pressable
           onPress={() => setWeekOffset(weekOffset + 1)}
           style={{ padding: 8, borderRadius: 8, backgroundColor: colors.secondary }}
+          accessibilityRole="button"
           accessibilityLabel={t('previousWeek')}
+          accessibilityHint="Show previous weekly report"
         >
           <ChevronLeft size={20} color="#a1a1aa" />
         </Pressable>
@@ -121,7 +130,9 @@ export function WeeklyReportView({ isTablet = false, onOpenHistory }: WeeklyRepo
           onPress={() => weekOffset > 0 && setWeekOffset(weekOffset - 1)}
           style={{ padding: 8, borderRadius: 8, backgroundColor: weekOffset === 0 ? colors.secondary + '4d' : colors.secondary, opacity: weekOffset === 0 ? 0.3 : 1 }}
           disabled={weekOffset === 0}
+          accessibilityRole="button"
           accessibilityLabel={t('nextWeek')}
+          accessibilityHint="Show next weekly report"
         >
           <ChevronRight size={20} color="#a1a1aa" />
         </Pressable>

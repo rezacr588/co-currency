@@ -9,6 +9,7 @@ import { formatCompactCurrency } from '../../../utils/format';
 import { StyledCategoryIcon } from '../../../constants/icons';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 import { Card } from '../../ui';
+import { REPORT_QUERY_RETRY, REPORT_QUERY_STALE_TIME_MS } from './queryConfig';
 
 interface SpendingAnomalyCardProps {
   compact?: boolean;
@@ -24,7 +25,8 @@ export function SpendingAnomalyCard({ compact = false }: SpendingAnomalyCardProp
   const { data: report } = useQuery({
     queryKey: ['reports', 'anomalies', reportTimeZone],
     queryFn: () => api.reports.anomalies(undefined, reportTimeZone),
-    staleTime: 5 * 60 * 1000,
+    staleTime: REPORT_QUERY_STALE_TIME_MS,
+    retry: REPORT_QUERY_RETRY,
   });
 
   if (!report || !report.anomalies || report.anomalies.length === 0) return null;
@@ -111,7 +113,10 @@ export function SpendingAnomalyCard({ compact = false }: SpendingAnomalyCardProp
       {hasMore && !compact && (
         <Pressable
           onPress={() => setExpanded(!expanded)}
-          style={{ cursor: 'pointer', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12, paddingVertical: 8 }}
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12, paddingVertical: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel={expanded ? (t('showLess') || 'Show less') : `${t('showMore') || 'Show more'} (${anomalies.length - 3})`}
+          accessibilityHint={expanded ? (t('showLess') || 'Show less') : (t('showMore') || 'Show more')}
         >
           {expanded ? (
             <ChevronUp size={16} color={colors.mutedForeground} />

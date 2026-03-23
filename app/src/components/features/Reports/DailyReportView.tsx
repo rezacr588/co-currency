@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, TrendingDown, TrendingUp, PieChart } from 'lucide-react-native';
+import { TrendingDown, TrendingUp, PieChart } from 'lucide-react-native';
 import { api } from '../../../api';
 import { StyledCategoryIcon } from '../../../constants/icons';
 import { useLanguage } from '../../../context/LanguageContext';
@@ -9,11 +9,14 @@ import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency, formatNumber } from '../../../utils/format';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 import { formatDateKey } from '../../../utils/dateRange';
+import { ReportErrorCard } from '../../ui';
+import { SkeletonCard, SkeletonList } from '../../ui/Skeleton';
 import { ReportHeadlineCard } from './ReportHeadlineCard';
 import { DailyReportHeader } from './daily/DailyReportHeader';
 import { DailySelectedRangeCard } from './daily/DailySelectedRangeCard';
 import { DailyTimelineChart } from './daily/DailyTimelineChart';
 import { useDailyReportData } from './daily/useDailyReportData';
+import { REPORT_QUERY_RETRY, REPORT_QUERY_STALE_TIME_MS } from './queryConfig';
 import type { ReportHistoryTarget } from './reportUX';
 import type { ChartBucket } from './daily/types';
 
@@ -40,7 +43,8 @@ export function DailyReportView({ isTablet = false, onOpenHistory }: DailyReport
   const { data: networthData } = useQuery({
     queryKey: ['reports', 'networth'],
     queryFn: () => api.reports.networth(),
-    staleTime: 5 * 60 * 1000,
+    staleTime: REPORT_QUERY_STALE_TIME_MS,
+    retry: REPORT_QUERY_RETRY,
   });
 
   const primaryCurrency = useMemo(() => {
@@ -87,19 +91,23 @@ export function DailyReportView({ isTablet = false, onOpenHistory }: DailyReport
 
   if (report.isPending) {
     return (
-      <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 32 }}>
-        <ActivityIndicator size="large" color={colors.accent} />
+      <View style={{ gap: 12 }}>
+        <SkeletonCard />
+        <SkeletonList count={2} />
       </View>
     );
   }
 
   if (report.isError) {
     return (
-      <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, alignItems: 'center' }}>
-        <AlertCircle size={48} color={colors.danger} />
-        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginTop: 16, fontSize: 18 }}>{t('failedToLoadReport')}</Text>
-        <Text style={{ color: colors.mutedForeground, marginTop: 8, textAlign: 'center' }}>{t('checkConnection')}</Text>
-      </View>
+      <ReportErrorCard
+        title={t('failedToLoadReport')}
+        message={t('checkConnection')}
+        retryLabel={t('retry') || 'Retry'}
+        onRetry={() => {
+          void report.refetch();
+        }}
+      />
     );
   }
 

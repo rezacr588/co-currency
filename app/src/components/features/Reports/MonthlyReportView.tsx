@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { View, Text, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, BarChart3, PieChart, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react-native';
 import { api } from '../../../api';
@@ -9,186 +9,31 @@ import { formatCompactCurrency, formatNumber } from '../../../utils/format';
 import { buildDateKey, getDaysInMonth, safeMax } from '../../../utils/dateRange';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 import { CATEGORY_COLORS, StyledCategoryIcon } from '../../../constants/icons';
+import { SkeletonCard, SkeletonList } from '../../ui/Skeleton';
+import { ReportErrorCard } from '../../ui';
 import { CashFlowProjectionCard } from './CashFlowProjectionCard';
 import { SpendingAnomalyCard } from './SpendingAnomalyCard';
 import { ReportHeadlineCard } from './ReportHeadlineCard';
+import { ComparisonBarChart, HorizontalBarChart, TrendsChart } from './charts';
+import { REPORT_LAYOUT } from './reportConstants';
+import { REPORT_QUERY_RETRY, REPORT_QUERY_STALE_TIME_MS } from './queryConfig';
 import type { ReportHistoryTarget } from './reportUX';
 import type { MonthlyReport, DateRangeReport } from '../../../types/goal';
 
-// Shared chart components
-export function ComparisonBarChart({
-  income,
-  expenses,
-  currency,
-  t,
-}: {
-  income: number;
-  expenses: number;
-  currency: string;
-  t: (key: string) => string;
-}) {
-  const theme = useTheme();
-  const colors = theme.colors;
-  const maxValue = Math.max(income, expenses);
-  const incomePercent = maxValue > 0 ? (income / maxValue) * 100 : 0;
-  const expensePercent = maxValue > 0 ? (expenses / maxValue) * 100 : 0;
-
-  return (
-    <View style={{ gap: 16 }}>
-      <View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TrendingUp size={14} color={colors.success} />
-            <Text style={{ color: colors.foreground, fontSize: 14, marginStart: 4 }}>{t('income')}</Text>
-          </View>
-          <Text style={{ color: colors.success, fontSize: 14, fontFamily: 'Inter_500Medium' }}>
-            {formatCompactCurrency(income, currency)}
-          </Text>
-        </View>
-        <View style={{ height: 16, backgroundColor: colors.secondary, borderRadius: 9999, overflow: 'hidden' }}>
-          <View
-            style={{ height: '100%', borderRadius: 9999, backgroundColor: colors.success, width: `${incomePercent}%` }}
-          />
-        </View>
-      </View>
-      <View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TrendingUp size={14} color={colors.danger} style={{ transform: [{ rotate: '180deg' }] }} />
-            <Text style={{ color: colors.foreground, fontSize: 14, marginStart: 4 }}>{t('expenses')}</Text>
-          </View>
-          <Text style={{ color: colors.danger, fontSize: 14, fontFamily: 'Inter_500Medium' }}>
-            {formatCompactCurrency(expenses, currency)}
-          </Text>
-        </View>
-        <View style={{ height: 16, backgroundColor: colors.secondary, borderRadius: 9999, overflow: 'hidden' }}>
-          <View
-            style={{ height: '100%', borderRadius: 9999, backgroundColor: colors.danger, width: `${expensePercent}%` }}
-          />
-        </View>
-      </View>
-    </View>
-  );
+interface MonthlyReportState {
+  mode: 'monthly' | 'date_range';
+  data?: MonthlyReport | DateRangeReport;
 }
 
-export function HorizontalBarChart({
-  data,
-  maxValue,
-  labelKey,
-  valueKey,
-  formatValue,
-  onPressItem,
-  getItemAccessibilityLabel,
-}: {
-  data: any[];
-  maxValue: number;
-  labelKey: string;
-  valueKey: string;
-  formatValue?: (value: number) => string;
-  onPressItem?: (item: any) => void;
-  getItemAccessibilityLabel?: (item: any) => string;
-}) {
-  const theme = useTheme();
-  const colors = theme.colors;
-  return (
-    <View style={{ gap: 12 }}>
-      {data.map((item, index) => {
-        const value = item[valueKey];
-        const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
-        const color = CATEGORY_COLORS[item[labelKey]?.toLowerCase()] || colors.accent;
-
-        const content = (
-          <>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <Text style={{ color: colors.foreground, fontSize: 14, textTransform: 'capitalize' }}>{item[labelKey]}</Text>
-              <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
-                {formatValue ? formatValue(value) : value}
-              </Text>
-            </View>
-            <View style={{ height: 12, backgroundColor: colors.secondary, borderRadius: 9999, overflow: 'hidden' }}>
-              <View
-                style={{
-                  height: '100%',
-                  borderRadius: 9999,
-                  width: `${Math.min(percentage, 100)}%`,
-                  backgroundColor: color,
-                }}
-              />
-            </View>
-          </>
-        );
-
-        if (!onPressItem) {
-          return <View key={index}>{content}</View>;
-        }
-
-        return (
-          <Pressable
-            key={index}
-            onPress={() => onPressItem(item)}
-            style={({ pressed }) => ({
-              opacity: pressed ? 0.82 : 1,
-            })}
-            accessibilityRole="button"
-            accessibilityLabel={getItemAccessibilityLabel?.(item)}
-          >
-            {content}
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
-export function TrendsChart({
-  data,
-  t,
-}: {
-  data: { period: string; income: number; expenses: number; net: number }[];
-  t: (key: string) => string;
-}) {
-  const theme = useTheme();
-  const colors = theme.colors;
-
-  if (!data || data.length === 0) return null;
-  const maxValue = data.length > 0 ? Math.max(...data.map((d) => Math.max(d.income, d.expenses))) : 0;
-
-  return (
-    <View>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, height: 100 }}>
-        {data.slice(-6).map((item, index) => {
-          const incomeHeight = maxValue > 0 ? (item.income / maxValue) * 80 : 0;
-          const expenseHeight = maxValue > 0 ? (item.expenses / maxValue) * 80 : 0;
-
-          return (
-            <View key={index} style={{ flex: 1, alignItems: 'center' }}>
-              <View style={{ flexDirection: 'row', gap: 4, alignItems: 'flex-end', height: 80 }}>
-                <View
-                  style={{ width: 8, borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: colors.success, height: Math.max(incomeHeight, 2) }}
-                />
-                <View
-                  style={{ width: 8, borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: colors.danger, height: Math.max(expenseHeight, 2) }}
-                />
-              </View>
-              <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 4 }}>
-                {item.period.split('-')[1] || item.period}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
-      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 12 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.success, marginEnd: 4 }} />
-          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('income')}</Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.danger, marginEnd: 4 }} />
-          <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('expenses')}</Text>
-        </View>
-      </View>
-    </View>
-  );
+function buildMonthlyState(
+  isDateRangeMode: boolean,
+  monthlyData?: MonthlyReport,
+  dateRangeData?: DateRangeReport
+): MonthlyReportState {
+  if (isDateRangeMode) {
+    return { mode: 'date_range', data: dateRangeData };
+  }
+  return { mode: 'monthly', data: monthlyData };
 }
 
 interface MonthlyReportViewProps {
@@ -230,30 +75,34 @@ export function MonthlyReportView({
   }, [year, month]);
 
   // Date range report (used when fromDate & toDate are provided)
-  const { data: dateRangeReport, isPending: isLoadingDateRange, isError: isDateRangeError } = useQuery({
+  const { data: dateRangeReport, isPending: isLoadingDateRange, isError: isDateRangeError, refetch: refetchDateRange } = useQuery({
     queryKey: ['reports', 'date-range', fromDate, toDate, reportTimeZone],
     queryFn: () => api.reports.dateRange(fromDate!, toDate!, undefined, reportTimeZone),
     enabled: isDateRangeMode,
-    staleTime: 5 * 60 * 1000,
+    staleTime: REPORT_QUERY_STALE_TIME_MS,
+    retry: REPORT_QUERY_RETRY,
   });
 
   // Monthly report (used in single-month mode)
-  const { data: monthlyReportRaw, isPending: isLoadingMonthly, isError: isMonthlyError } = useQuery({
+  const { data: monthlyReportRaw, isPending: isLoadingMonthly, isError: isMonthlyError, refetch: refetchMonthly } = useQuery({
     queryKey: ['reports', 'monthly', year, month, reportTimeZone],
     queryFn: () => api.reports.monthly(year, month, undefined, reportTimeZone),
     enabled: !isDateRangeMode,
-    staleTime: 5 * 60 * 1000,
+    staleTime: REPORT_QUERY_STALE_TIME_MS,
+    retry: REPORT_QUERY_RETRY,
   });
 
   // Unified report data
-  const monthlyReport: MonthlyReport | DateRangeReport | undefined = isDateRangeMode ? dateRangeReport : monthlyReportRaw;
-  const isReportError = isDateRangeMode ? isDateRangeError : isMonthlyError;
+  const reportState = buildMonthlyState(isDateRangeMode, monthlyReportRaw, dateRangeReport);
+  const monthlyReport = reportState.data;
+  const isReportError = reportState.mode === 'date_range' ? isDateRangeError : isMonthlyError;
 
   const { data: prevMonthReport } = useQuery({
     queryKey: ['reports', 'monthly', prevMonth.year, prevMonth.month, reportTimeZone],
     queryFn: () => api.reports.monthly(prevMonth.year, prevMonth.month, undefined, reportTimeZone),
     enabled: !isDateRangeMode,
-    staleTime: 5 * 60 * 1000,
+    staleTime: REPORT_QUERY_STALE_TIME_MS,
+    retry: REPORT_QUERY_RETRY,
   });
 
   // Month-over-month expense comparison (only in single-month mode)
@@ -264,7 +113,7 @@ export function MonthlyReportView({
   }, [monthlyReport, prevMonthReport, isDateRangeMode]);
 
   // Category data from date-range report or separate query
-  const { data: categoryReportSeparate, isPending: isLoadingCategory, isError: isCategoryError } = useQuery({
+  const { data: categoryReportSeparate, isPending: isLoadingCategory, isError: isCategoryError, refetch: refetchCategory } = useQuery({
     queryKey: ['reports', 'category', fromDate, toDate, year, month, reportTimeZone],
     queryFn: () => {
       if (fromDate && toDate) {
@@ -278,7 +127,8 @@ export function MonthlyReportView({
       );
     },
     enabled: !isDateRangeMode,
-    staleTime: 5 * 60 * 1000,
+    staleTime: REPORT_QUERY_STALE_TIME_MS,
+    retry: REPORT_QUERY_RETRY,
   });
 
   // Use categories from date-range report when available, otherwise from separate query
@@ -289,16 +139,19 @@ export function MonthlyReportView({
   const { data: trendsReport, isPending: isLoadingTrends } = useQuery({
     queryKey: ['reports', 'trends', 6, reportTimeZone],
     queryFn: () => api.reports.trends(6, undefined, reportTimeZone),
-    staleTime: 5 * 60 * 1000,
+    staleTime: REPORT_QUERY_STALE_TIME_MS,
+    retry: REPORT_QUERY_RETRY,
   });
 
   const { data: forecast, isPending: isLoadingForecast } = useQuery({
     queryKey: ['reports', 'forecast', reportTimeZone],
     queryFn: () => api.reports.forecast(undefined, reportTimeZone),
-    staleTime: 5 * 60 * 1000,
+    staleTime: REPORT_QUERY_STALE_TIME_MS,
+    retry: REPORT_QUERY_RETRY,
   });
 
-  const isPending = (isDateRangeMode ? isLoadingDateRange : (isLoadingMonthly || isLoadingCategory)) || isLoadingTrends || isLoadingForecast;
+  const isSummaryLoading = isDateRangeMode ? isLoadingDateRange : isLoadingMonthly;
+  const isPending = isSummaryLoading || isLoadingCategory || isLoadingTrends || isLoadingForecast;
   const effectiveSummaryTitle = summaryTitle || (isDateRangeMode ? (t('selectedRangeSummary') || 'Selected Range Summary') : t('monthlySummary'));
   const rangeTarget = useMemo(() => {
     if (categoryReport?.from_date && categoryReport?.to_date) {
@@ -335,19 +188,27 @@ export function MonthlyReportView({
 
   if (isPending) {
     return (
-      <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 32 }}>
-        <ActivityIndicator size="large" color={colors.accent} />
+      <View style={{ gap: 12 }}>
+        <SkeletonCard />
+        <SkeletonList count={2} />
       </View>
     );
   }
 
   if (isReportError) {
     return (
-      <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, alignItems: 'center' }}>
-        <AlertCircle size={48} color={colors.danger} />
-        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginTop: 16, fontSize: 18 }}>{t('failedToLoadReport')}</Text>
-        <Text style={{ color: colors.mutedForeground, marginTop: 8, textAlign: 'center' }}>{t('checkConnection')}</Text>
-      </View>
+      <ReportErrorCard
+        title={t('failedToLoadReport')}
+        message={t('checkConnection')}
+        retryLabel={t('retry') || 'Retry'}
+        onRetry={() => {
+          if (isDateRangeMode) {
+            void refetchDateRange();
+            return;
+          }
+          void refetchMonthly();
+        }}
+      />
     );
   }
 
@@ -362,7 +223,7 @@ export function MonthlyReportView({
 
       {/* Monthly Summary Card */}
       {monthlyReport && (
-        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+        <View style={{ backgroundColor: colors.card, padding: REPORT_LAYOUT.cardPadding, borderRadius: REPORT_LAYOUT.cardRadius, marginBottom: REPORT_LAYOUT.sectionSpacing }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
             <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginEnd: 12 }}>
               <Calendar size={20} color={colors.placeholder} />
@@ -442,12 +303,17 @@ export function MonthlyReportView({
 
       {/* Category Breakdown */}
       {isCategoryError && (
-        <View style={{ backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', padding: 16, borderRadius: 12, marginBottom: 24 }}>
-          <Text style={{ color: colors.danger, fontSize: 14 }}>{t('failedToLoadCategories') || 'Failed to load category breakdown'}</Text>
-        </View>
+        <ReportErrorCard
+          title={t('failedToLoadCategories') || 'Failed to load category breakdown'}
+          message={t('checkConnection')}
+          retryLabel={t('retry') || 'Retry'}
+          onRetry={() => {
+            void refetchCategory();
+          }}
+        />
       )}
       {categoryReport && categoryReport.categories.length > 0 && (
-        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+        <View style={{ backgroundColor: colors.card, padding: REPORT_LAYOUT.cardPadding, borderRadius: REPORT_LAYOUT.cardRadius, marginBottom: REPORT_LAYOUT.sectionSpacing }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
             <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginEnd: 12 }}>
               <PieChart size={20} color={colors.placeholder} />
@@ -528,7 +394,7 @@ export function MonthlyReportView({
                       borderWidth: 1,
                       borderColor: colors.border,
                       padding: 16,
-                      borderRadius: 12,
+                      borderRadius: REPORT_LAYOUT.cardRadius,
                       width: categoryCardWidth,
                       minWidth: categoryCols === 1 ? undefined : 200,
                     }}
@@ -547,7 +413,7 @@ export function MonthlyReportView({
                     borderWidth: 1,
                     borderColor: colors.border,
                     padding: 16,
-                    borderRadius: 12,
+                    borderRadius: REPORT_LAYOUT.cardRadius,
                     width: categoryCardWidth,
                     minWidth: categoryCols === 1 ? undefined : 200,
                     opacity: pressed ? 0.84 : 1,
@@ -565,7 +431,7 @@ export function MonthlyReportView({
 
       {/* Trends Chart */}
       {trendsReport && trendsReport.trends && trendsReport.trends.length > 0 && (
-        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+        <View style={{ backgroundColor: colors.card, padding: REPORT_LAYOUT.cardPadding, borderRadius: REPORT_LAYOUT.cardRadius, marginBottom: REPORT_LAYOUT.sectionSpacing }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
             <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginEnd: 12 }}>
               <BarChart3 size={20} color={colors.placeholder} />
@@ -584,7 +450,7 @@ export function MonthlyReportView({
 
       {/* Forecast Card */}
       {forecast && (
-        <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+        <View style={{ backgroundColor: colors.card, padding: REPORT_LAYOUT.cardPadding, borderRadius: REPORT_LAYOUT.cardRadius, marginBottom: REPORT_LAYOUT.sectionSpacing }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
             <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginEnd: 12 }}>
               <TrendingUp size={20} color={colors.accent} />
@@ -632,7 +498,7 @@ export function MonthlyReportView({
 
       {/* Empty State */}
       {!monthlyReport && !categoryReport && (
-        <View style={{ backgroundColor: colors.card, padding: 32, borderRadius: 12, alignItems: 'center' }}>
+        <View style={{ backgroundColor: colors.card, padding: 32, borderRadius: REPORT_LAYOUT.cardRadius, alignItems: 'center' }}>
           <BarChart3 size={48} color={colors.mutedForeground} />
           <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginTop: 16, fontSize: 18 }}>{t('noDataAvailable')}</Text>
           <Text style={{ color: colors.mutedForeground, marginTop: 8, textAlign: 'center' }}>

@@ -90,6 +90,7 @@ jest.mock('../index', () => {
     MonthlyReportView: ({ year, month }: { year: number; month: number }) => (
       <Text>{`Monthly ${year}-${month}`}</Text>
     ),
+    DateRangeSelector: () => <Text>Date range selector mock</Text>,
     YearlyReportView: ({ onSelectMonth }: { onSelectMonth?: (selection: { year: number; month: number }) => void }) => (
       <Pressable onPress={() => onSelectMonth?.({ year: 2025, month: 4 })}>
         <Text>Open April 2025</Text>

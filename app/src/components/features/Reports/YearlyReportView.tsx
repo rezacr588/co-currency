@@ -1,15 +1,19 @@
-import { useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { memo, useEffect, useMemo, useState } from 'react';
+import { View, Text, Pressable } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, AlertCircle, PieChart } from 'lucide-react-native';
+import { Calendar, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, PieChart } from 'lucide-react-native';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency, formatNumber } from '../../../utils/format';
 import { buildDateKey, getMonthLabelAnchor, getTimeZoneDateParts, safeMax } from '../../../utils/dateRange';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
-import { HorizontalBarChart } from './MonthlyReportView';
+import { HorizontalBarChart } from './charts';
 import { ReportHeadlineCard } from './ReportHeadlineCard';
+import { ReportErrorCard } from '../../ui';
+import { SkeletonCard, SkeletonList } from '../../ui/Skeleton';
+import { REPORT_LAYOUT } from './reportConstants';
+import { REPORT_QUERY_RETRY, REPORT_QUERY_STALE_TIME_MS } from './queryConfig';
 import type { ReportHistoryTarget } from './reportUX';
 
 const LANGUAGE_LOCALES: Record<string, string> = {
@@ -24,6 +28,53 @@ interface YearlyReportViewProps {
   onOpenHistory?: (target: ReportHistoryTarget) => void;
   onSelectMonth?: (selection: { year: number; month: number }) => void;
 }
+
+const YearSelector = memo(function YearSelector({
+  selectedYear,
+  currentYear,
+  onPreviousYear,
+  onNextYear,
+  previousLabel,
+  nextLabel,
+}: {
+  selectedYear: number;
+  currentYear: number;
+  onPreviousYear: () => void;
+  onNextYear: () => void;
+  previousLabel: string;
+  nextLabel: string;
+}) {
+  const theme = useTheme();
+  const colors = theme.colors;
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 24, gap: 16 }}>
+      <Pressable
+        onPress={onPreviousYear}
+        style={{ padding: 12, borderRadius: 12, backgroundColor: colors.secondary }}
+        accessibilityRole="button"
+        accessibilityLabel={previousLabel}
+        accessibilityHint="Show previous year report"
+      >
+        <ChevronLeft size={20} color="#a1a1aa" />
+      </Pressable>
+      <View style={{ backgroundColor: colors.card, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center' }}>
+        <Calendar size={18} color={colors.accent} />
+        <Text style={{ color: colors.foreground, fontSize: 20, fontFamily: 'Inter_700Bold', marginStart: 8 }}>{selectedYear}</Text>
+      </View>
+      <Pressable
+        onPress={onNextYear}
+        style={{ padding: 12, borderRadius: 12, backgroundColor: selectedYear >= currentYear ? colors.secondary + '4d' : colors.secondary, opacity: selectedYear >= currentYear ? 0.5 : 1 }}
+        disabled={selectedYear >= currentYear}
+        accessibilityRole="button"
+        accessibilityLabel={nextLabel}
+        accessibilityHint="Show next year report"
+      >
+        <ChevronRight size={20} color="#a1a1aa" />
+      </Pressable>
+    </View>
+  );
+});
 
 export function YearlyReportView({
   isTablet = false,
@@ -46,10 +97,11 @@ export function YearlyReportView({
     }
   }, [currentYear, selectedYear]);
 
-  const { data: yearlyReport, isPending, isError } = useQuery({
+  const { data: yearlyReport, isPending, isError, refetch } = useQuery({
     queryKey: ['reports', 'yearly', selectedYear, reportTimeZone],
     queryFn: () => api.reports.yearly(selectedYear, undefined, reportTimeZone),
-    staleTime: 5 * 60 * 1000,
+    staleTime: REPORT_QUERY_STALE_TIME_MS,
+    retry: REPORT_QUERY_RETRY,
   });
 
   const yearRange = useMemo(() => {
@@ -61,10 +113,11 @@ export function YearlyReportView({
     return { fromDate, toDate };
   }, [currentDateKey, currentYear, selectedYear]);
 
-  const { data: categoryReport, isError: isCategoryError } = useQuery({
+  const { data: categoryReport, isError: isCategoryError, refetch: refetchCategoryReport } = useQuery({
     queryKey: ['reports', 'category', yearRange.fromDate, yearRange.toDate, reportTimeZone],
     queryFn: () => api.reports.category(yearRange.fromDate, yearRange.toDate, undefined, reportTimeZone),
-    staleTime: 5 * 60 * 1000,
+    staleTime: REPORT_QUERY_STALE_TIME_MS,
+    retry: REPORT_QUERY_RETRY,
   });
 
   const monthLabels = useMemo(() => {
@@ -131,19 +184,23 @@ export function YearlyReportView({
 
   if (isPending) {
     return (
-      <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 32 }}>
-        <ActivityIndicator size="large" color={colors.accent} />
+      <View style={{ gap: 12 }}>
+        <SkeletonCard />
+        <SkeletonList count={2} />
       </View>
     );
   }
 
   if (isError) {
     return (
-      <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, alignItems: 'center' }}>
-        <AlertCircle size={48} color={colors.danger} />
-        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginTop: 16, fontSize: 18 }}>{t('failedToLoadReport')}</Text>
-        <Text style={{ color: colors.mutedForeground, marginTop: 8, textAlign: 'center' }}>{t('checkConnection')}</Text>
-      </View>
+      <ReportErrorCard
+        title={t('failedToLoadReport')}
+        message={t('checkConnection')}
+        retryLabel={t('retry') || 'Retry'}
+        onRetry={() => {
+          void refetch();
+        }}
+      />
     );
   }
 
@@ -154,35 +211,19 @@ export function YearlyReportView({
         caption={`${selectedYear} • ${yearFrameLabel}`}
       />
 
-      {/* Year Navigation */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 24, gap: 16 }}>
-        <Pressable
-          onPress={() => setSelectedYear((y) => y - 1)}
-          style={{ padding: 12, borderRadius: 12, backgroundColor: colors.secondary }}
-          accessibilityRole="button"
-          accessibilityLabel="Previous year"
-        >
-          <ChevronLeft size={20} color="#a1a1aa" />
-        </Pressable>
-        <View style={{ backgroundColor: colors.card, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center' }}>
-          <Calendar size={18} color={colors.accent} />
-          <Text style={{ color: colors.foreground, fontSize: 20, fontFamily: 'Inter_700Bold', marginStart: 8 }}>{selectedYear}</Text>
-        </View>
-        <Pressable
-          onPress={() => selectedYear < currentYear && setSelectedYear((y) => y + 1)}
-          style={{ padding: 12, borderRadius: 12, backgroundColor: selectedYear >= currentYear ? colors.secondary + '4d' : colors.secondary, opacity: selectedYear >= currentYear ? 0.5 : 1 }}
-          disabled={selectedYear >= currentYear}
-          accessibilityRole="button"
-          accessibilityLabel="Next year"
-        >
-          <ChevronRight size={20} color="#a1a1aa" />
-        </Pressable>
-      </View>
+      <YearSelector
+        selectedYear={selectedYear}
+        currentYear={currentYear}
+        onPreviousYear={() => setSelectedYear((y) => y - 1)}
+        onNextYear={() => selectedYear < currentYear && setSelectedYear((y) => y + 1)}
+        previousLabel={t('previousYear')}
+        nextLabel={t('nextYear')}
+      />
 
       {yearlyReport ? (
         <>
           {/* Annual Summary Card */}
-          <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+          <View style={{ backgroundColor: colors.card, padding: REPORT_LAYOUT.cardPadding, borderRadius: REPORT_LAYOUT.cardRadius, marginBottom: REPORT_LAYOUT.sectionSpacing }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginEnd: 12 }}>
                 <Calendar size={20} color={colors.accent} />
@@ -249,7 +290,7 @@ export function YearlyReportView({
             </View>
 
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
-              <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
+              <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: colors.secondary + '80', padding: REPORT_LAYOUT.tilePadding, borderRadius: 8 }}>
                 <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
                   {t('avgMonthlyIncome') || 'Avg Monthly Income'}
                 </Text>
@@ -257,7 +298,7 @@ export function YearlyReportView({
                   {formatCompactCurrency(averageMonthlyIncome, yearlyReport.currency)}
                 </Text>
               </View>
-              <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
+              <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: colors.secondary + '80', padding: REPORT_LAYOUT.tilePadding, borderRadius: 8 }}>
                 <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
                   {t('avgMonthlyExpenses') || 'Avg Monthly Expenses'}
                 </Text>
@@ -266,7 +307,7 @@ export function YearlyReportView({
                 </Text>
               </View>
               {bestNetMonth && (
-                <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
+                <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: colors.secondary + '80', padding: REPORT_LAYOUT.tilePadding, borderRadius: 8 }}>
                   <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
                     {t('bestMonth') || 'Best Month'}
                   </Text>
@@ -279,7 +320,7 @@ export function YearlyReportView({
                 </View>
               )}
               {highestExpenseMonth && (
-                <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
+                <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: colors.secondary + '80', padding: REPORT_LAYOUT.tilePadding, borderRadius: 8 }}>
                   <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
                     {t('highestSpendingMonth') || 'Highest Spending Month'}
                   </Text>
@@ -296,7 +337,7 @@ export function YearlyReportView({
 
           {/* 12-Month Bar Chart */}
           {monthsInScope.length > 0 && (
-            <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+            <View style={{ backgroundColor: colors.card, padding: REPORT_LAYOUT.cardPadding, borderRadius: REPORT_LAYOUT.cardRadius, marginBottom: REPORT_LAYOUT.sectionSpacing }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
                 <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginEnd: 12 }}>
                   <Calendar size={20} color={colors.mutedForeground} />
@@ -304,7 +345,7 @@ export function YearlyReportView({
                 <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('incomeVsExpenses')}</Text>
               </View>
 
-              <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 4, height: 140 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 4, height: REPORT_LAYOUT.chartHeightLarge }}>
                 {monthLabels.map((monthLabel, index) => {
                   const monthData = monthsInScope.find((m) => m.month === index + 1);
                   const incomeHeight = maxMonthlyValue > 0 && monthData
@@ -316,12 +357,12 @@ export function YearlyReportView({
 
                   const chartBar = (
                     <View style={{ flex: 1, alignItems: 'center' }}>
-                      <View style={{ flexDirection: 'row', gap: 2, alignItems: 'flex-end', height: 100 }}>
+                       <View style={{ flexDirection: 'row', gap: 2, alignItems: 'flex-end', height: REPORT_LAYOUT.chartHeightMedium }}>
                         <View
-                          style={{ width: 6, borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: colors.success, height: Math.max(incomeHeight, 2) }}
+                          style={{ width: REPORT_LAYOUT.barWidthSmall, borderTopLeftRadius: REPORT_LAYOUT.barRadius, borderTopRightRadius: REPORT_LAYOUT.barRadius, backgroundColor: colors.success, height: Math.max(incomeHeight, 2) }}
                         />
                         <View
-                          style={{ width: 6, borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: colors.danger, height: Math.max(expenseHeight, 2) }}
+                          style={{ width: REPORT_LAYOUT.barWidthSmall, borderTopLeftRadius: REPORT_LAYOUT.barRadius, borderTopRightRadius: REPORT_LAYOUT.barRadius, backgroundColor: colors.danger, height: Math.max(expenseHeight, 2) }}
                         />
                       </View>
                       <Text style={{ color: colors.mutedForeground, fontSize: 10, marginTop: 4 }}>
@@ -348,6 +389,7 @@ export function YearlyReportView({
                       })}
                       accessibilityRole="button"
                       accessibilityLabel={`${monthLabel} ${selectedYear}`}
+                      accessibilityHint="Open monthly report for this month"
                     >
                       {chartBar}
                     </Pressable>
@@ -370,15 +412,18 @@ export function YearlyReportView({
           )}
 
           {isCategoryError && (
-            <View style={{ backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', padding: 16, borderRadius: 12, marginBottom: 24 }}>
-              <Text style={{ color: colors.danger, fontSize: 14 }}>
-                {t('failedToLoadCategories') || 'Failed to load category breakdown'}
-              </Text>
-            </View>
+            <ReportErrorCard
+              title={t('failedToLoadCategories') || 'Failed to load category breakdown'}
+              message={t('checkConnection')}
+              retryLabel={t('retry') || 'Retry'}
+              onRetry={() => {
+                void refetchCategoryReport();
+              }}
+            />
           )}
 
           {categoryReport && categoryReport.categories.length > 0 && (
-            <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
+            <View style={{ backgroundColor: colors.card, padding: REPORT_LAYOUT.cardPadding, borderRadius: REPORT_LAYOUT.cardRadius, marginBottom: REPORT_LAYOUT.sectionSpacing }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
                 <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginEnd: 12 }}>
                   <PieChart size={20} color={colors.mutedForeground} />
@@ -411,7 +456,7 @@ export function YearlyReportView({
 
           {/* Monthly Breakdown List */}
           {monthsInScope.length > 0 && (
-            <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12 }}>
+            <View style={{ backgroundColor: colors.card, padding: REPORT_LAYOUT.cardPadding, borderRadius: REPORT_LAYOUT.cardRadius }}>
               <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginBottom: 16 }}>{t('monthlySummary')}</Text>
               <View style={{ gap: 12 }}>
                 {monthsInScope.map((month) => {
@@ -421,7 +466,7 @@ export function YearlyReportView({
                         {monthLabels[month.month - 1]}
                       </Text>
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-                        <View style={{ width: isTablet ? '31%' : '48%', backgroundColor: colors.success + '14', padding: 10, borderRadius: 8 }}>
+                        <View style={{ width: isTablet ? '31%' : '48%', backgroundColor: colors.success + '14', padding: REPORT_LAYOUT.tilePadding, borderRadius: 8 }}>
                           <Text style={{ color: colors.mutedForeground, fontSize: 11, marginBottom: 4 }}>
                             {t('income')}
                           </Text>
@@ -429,7 +474,7 @@ export function YearlyReportView({
                             +{formatCompactCurrency(month.income, month.currency)}
                           </Text>
                         </View>
-                        <View style={{ width: isTablet ? '31%' : '48%', backgroundColor: colors.danger + '14', padding: 10, borderRadius: 8 }}>
+                        <View style={{ width: isTablet ? '31%' : '48%', backgroundColor: colors.danger + '14', padding: REPORT_LAYOUT.tilePadding, borderRadius: 8 }}>
                           <Text style={{ color: colors.mutedForeground, fontSize: 11, marginBottom: 4 }}>
                             {t('expenses')}
                           </Text>
@@ -437,7 +482,7 @@ export function YearlyReportView({
                             -{formatCompactCurrency(month.expenses, month.currency)}
                           </Text>
                         </View>
-                        <View style={{ width: isTablet ? '31%' : '48%', backgroundColor: colors.secondary + '80', padding: 10, borderRadius: 8 }}>
+                        <View style={{ width: isTablet ? '31%' : '48%', backgroundColor: colors.secondary + '80', padding: REPORT_LAYOUT.tilePadding, borderRadius: 8 }}>
                           <Text style={{ color: colors.mutedForeground, fontSize: 11, marginBottom: 4 }}>
                             {t('net')}
                           </Text>
@@ -459,7 +504,7 @@ export function YearlyReportView({
                     return (
                       <View
                         key={month.month}
-                        style={{ backgroundColor: colors.secondary + '4d', padding: 12, borderRadius: 8 }}
+                        style={{ backgroundColor: colors.secondary + '4d', padding: REPORT_LAYOUT.tilePadding, borderRadius: 8 }}
                       >
                         {rowContent}
                       </View>
@@ -472,7 +517,7 @@ export function YearlyReportView({
                       onPress={() => onSelectMonth({ year: selectedYear, month: month.month })}
                       style={({ pressed }) => ({
                         backgroundColor: colors.secondary + '4d',
-                        padding: 12,
+                        padding: REPORT_LAYOUT.tilePadding,
                         borderRadius: 8,
                         opacity: pressed ? 0.84 : 1,
                       })}

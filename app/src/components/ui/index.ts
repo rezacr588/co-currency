@@ -3,6 +3,7 @@ export { Card, CardHeader, CardTitle, CardContent, CardFooter } from './Card';
 export { Input } from './Input';
 export { FormError } from './FormError';
 export { LoadingSpinner } from './LoadingSpinner';
+export { ReportErrorCard } from './ReportErrorCard';
 export { Badge } from './Badge';
 export { CurrencyBadge } from './CurrencyBadge';
 export { EmptyState } from './EmptyState';

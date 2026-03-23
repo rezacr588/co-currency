@@ -132,6 +132,7 @@ export function DailySelectedRangeCard({
               })}
               accessibilityRole="button"
               accessibilityLabel={t('viewTransactions') || 'View transactions'}
+              accessibilityHint="Open filtered transaction history"
             >
               <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold' }}>
                 {t('viewTransactions') || 'View transactions'}

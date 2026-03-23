@@ -136,13 +136,13 @@ export default function ProfileScreen() {
       Alert.alert(t('accountDeleted') || 'Account deleted successfully');
     },
     onError: (err) => {
-      Alert.alert(t('deleteFailed') || 'Failed to delete account', err instanceof Error ? err.message : 'Unknown error');
+      Alert.alert(t('deleteAccountFailed') || 'Failed to delete account', err instanceof Error ? err.message : 'Unknown error');
     },
   });
 
   const handleDeleteAccount = useCallback(() => {
     if (!deletePassword.trim()) {
-      Alert.alert(t('error') || 'Error', t('passwordRequired') || 'Password is required');
+      Alert.alert(t('error') || 'Error', t('passwordRequiredForDeletion') || 'Password is required');
       return;
     }
     
@@ -930,7 +930,7 @@ export default function ProfileScreen() {
             </Text>
 
             <Text style={{ color: colors.foreground, marginBottom: 8, fontFamily: 'Inter_500Medium' }}>
-              {t('confirmPassword') || 'Confirm your password'}
+              {t('confirmPasswordForDeletion') || 'Confirm your password'}
             </Text>
 
             <View style={{ position: 'relative', marginBottom: 20 }}>
