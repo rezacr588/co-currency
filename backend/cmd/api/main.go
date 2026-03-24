@@ -123,6 +123,9 @@ func main() {
 
 	// Rate limiter
 	rateLimiter := middleware.NewRateLimiter(cfg.RateLimitPerMin)
+	if handlers.Exchange != nil {
+		handlers.Exchange.SetRateLimiter(rateLimiter)
+	}
 	if handlers.AI != nil {
 		aiLimitPerMin, aiBurst := rateLimiter.AISettings()
 		handlers.AI.SetRateLimitInfo(aiLimitPerMin, aiBurst)

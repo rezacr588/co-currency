@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"github.com/patrickmn/go-cache"
 	"github.com/rezacr588/currency-converter/internal/middleware"
 	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/service"
@@ -11,7 +10,7 @@ import (
 type Handler struct {
 	exchangeService *service.ExchangeService
 	db              *repository.Database
-	cache           *cache.Cache
+	cache           repository.Cache
 	rateLimiter     *middleware.RateLimiter
 }
 
@@ -22,3 +21,17 @@ func New(exchange *service.ExchangeService) *Handler {
 	}
 }
 
+// SetDatabase injects the main database dependency used by detailed health checks.
+func (h *Handler) SetDatabase(db *repository.Database) {
+	h.db = db
+}
+
+// SetCache injects cache dependency used by detailed health checks.
+func (h *Handler) SetCache(cache repository.Cache) {
+	h.cache = cache
+}
+
+// SetRateLimiter injects rate limiter dependency used by detailed health checks.
+func (h *Handler) SetRateLimiter(rateLimiter *middleware.RateLimiter) {
+	h.rateLimiter = rateLimiter
+}

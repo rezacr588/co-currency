@@ -512,6 +512,11 @@ func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Hand
 	wsPublisher := websocket.NewPublisher(wsHub, redisFanout)
 
 	exchangeHandler := handler.New(svc.exchange)
+	if db.mainDB != nil {
+		exchangeHandler.SetDatabase(db.mainDB)
+	}
+	// Health checks only need to verify cache wiring, not share exchange internals.
+	exchangeHandler.SetCache(repository.NewInMemoryCache(cfg.CacheTTL))
 	authHandler := handler.NewAuthHandler(svc.auth)
 	walletHandler := handler.NewWalletHandler(svc.wallet)
 	if svc.category != nil {
