@@ -518,6 +518,10 @@ func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Hand
 		walletHandler = handler.NewWalletHandlerWithCategories(svc.wallet, svc.category)
 	}
 	walletHandler.SetPaginationLimits(cfg.PaginationMaxAPILimit, cfg.PaginationMaxFilterLimit)
+	// Set walletRepo for streaming exports (generator pattern)
+	if db.walletRepo != nil {
+		walletHandler.SetWalletRepo(db.walletRepo)
+	}
 	aiHandler := handler.NewAIHandler(svc.ai, svc.wallet)
 	var coaiHandler *handler.CoAIHandler
 	if svc.coai != nil {

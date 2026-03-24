@@ -107,45 +107,95 @@ type worldBankResponse struct {
 	Value *float64 `json:"value"`
 }
 
-// fetchAndStore fetches inflation rates from World Bank and stores them
+// fetchJob represents a single currency fetch task
+type fetchJob struct {
+	currencyCode string
+	countryCode  string
+}
+
+// fetchResult represents the result of a fetch job
+type fetchResult struct {
+	currencyCode string
+	countryCode  string
+	rate         float64
+	isFallback   bool
+	skipped      bool
+	err          error
+}
+
+// fetchAndStore fetches inflation rates from World Bank using a worker pool pattern
 func (c *InflationCrawler) fetchAndStore() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
+	// Create job and result channels
+	jobs := make(chan fetchJob, len(model.CurrencyCountryMap))
+	results := make(chan fetchResult, len(model.CurrencyCountryMap))
+
+	// Start worker pool (3 concurrent workers to avoid rate limiting)
+	const numWorkers = 3
+	var wg sync.WaitGroup
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for job := range jobs {
+				select {
+				case <-ctx.Done():
+					results <- fetchResult{currencyCode: job.currencyCode, skipped: true}
+					continue
+				default:
+				}
+
+				rate, err := c.fetchFromWorldBank(ctx, job.countryCode)
+				result := fetchResult{
+					currencyCode: job.currencyCode,
+					countryCode:  job.countryCode,
+				}
+
+				if err != nil {
+					// Use fallback rate
+					if defaultRate, ok := model.DefaultInflationRates[job.currencyCode]; ok {
+						result.rate = defaultRate
+						result.isFallback = true
+					} else {
+						result.skipped = true
+					}
+				} else {
+					result.rate = rate
+				}
+				results <- result
+
+				// Small delay per worker to avoid rate limiting
+				time.Sleep(100 * time.Millisecond)
+			}
+		}()
+	}
+
+	// Send all jobs
+	for currencyCode, countryCode := range model.CurrencyCountryMap {
+		jobs <- fetchJob{currencyCode: currencyCode, countryCode: countryCode}
+	}
+	close(jobs)
+
+	// Wait for workers and close results
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// Process results
 	successCount := 0
 	failCount := 0
 	skippedCount := 0
 
-	for currencyCode, countryCode := range model.CurrencyCountryMap {
-		select {
-		case <-ctx.Done():
-			log.Warn().
-				Int("success", successCount).
-				Int("fallback", failCount).
-				Int("skipped", skippedCount).
-				Msg("Inflation crawler context cancelled, stopping fetch")
-			return
-		default:
+	for result := range results {
+		if result.skipped {
+			skippedCount++
+			continue
 		}
 
-		isFallback := false
-		rate, err := c.fetchFromWorldBank(ctx, countryCode)
-		if err != nil {
-			log.Debug().
-				Err(err).
-				Str("country", countryCode).
-				Str("currency", currencyCode).
-				Msg("Failed to fetch inflation from World Bank, using fallback")
-
-			// Use default rate as fallback
-			if defaultRate, ok := model.DefaultInflationRates[currencyCode]; ok {
-				rate = defaultRate
-			} else {
-				log.Warn().Str("currency", currencyCode).Msg("No fallback rate available, skipping")
-				skippedCount++
-				continue
-			}
-			isFallback = true
+		if result.isFallback {
 			failCount++
 		} else {
 			successCount++
@@ -153,40 +203,37 @@ func (c *InflationCrawler) fetchAndStore() {
 
 		// Determine source label
 		source := "worldbank"
-		if isFallback {
+		if result.isFallback {
 			source = "fallback"
 		}
 
 		// Save historical rate
 		now := time.Now()
 		inflationRate := model.InflationRate{
-			CountryCode:  countryCode,
-			CurrencyCode: currencyCode,
+			CountryCode:  result.countryCode,
+			CurrencyCode: result.currencyCode,
 			Year:         now.Year(),
 			Month:        int(now.Month()),
-			AnnualRate:   rate,
+			AnnualRate:   result.rate,
 			Source:       source,
 		}
 		if err := c.repo.SaveRate(ctx, inflationRate); err != nil {
-			log.Warn().Err(err).Str("currency", currencyCode).Msg("Failed to save inflation rate")
+			log.Warn().Err(err).Str("currency", result.currencyCode).Msg("Failed to save inflation rate")
 		}
 
 		// Update latest
-		monthlyRate := rate / 12.0
+		monthlyRate := result.rate / 12.0
 		latest := model.InflationLatest{
-			CurrencyCode: currencyCode,
-			CountryCode:  countryCode,
-			AnnualRate:   rate,
+			CurrencyCode: result.currencyCode,
+			CountryCode:  result.countryCode,
+			AnnualRate:   result.rate,
 			MonthlyRate:  &monthlyRate,
 			Source:       source,
 			DataDate:     now,
 		}
 		if err := c.repo.UpsertLatest(ctx, latest); err != nil {
-			log.Warn().Err(err).Str("currency", currencyCode).Msg("Failed to upsert latest inflation")
+			log.Warn().Err(err).Str("currency", result.currencyCode).Msg("Failed to upsert latest inflation")
 		}
-
-		// Small delay to avoid rate limiting
-		time.Sleep(200 * time.Millisecond)
 	}
 
 	log.Info().

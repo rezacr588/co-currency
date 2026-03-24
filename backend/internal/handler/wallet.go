@@ -44,14 +44,20 @@ var _ CategoryServiceAPI = (*service.CategoryService)(nil)
 type WalletHandler struct {
 	walletService   WalletServiceAPI
 	categoryService CategoryServiceAPI
-	maxAPILimit     int // max pagination limit for unfiltered requests (default 500)
-	maxFilterLimit  int // max pagination limit for filtered requests (default 2000)
+	walletRepo      *repository.WalletRepository // Direct repo access for streaming exports
+	maxAPILimit     int                          // max pagination limit for unfiltered requests (default 500)
+	maxFilterLimit  int                          // max pagination limit for filtered requests (default 2000)
 }
 
 // SetPaginationLimits overrides the default API and filtered pagination limits.
 func (h *WalletHandler) SetPaginationLimits(apiLimit, filterLimit int) {
 	h.maxAPILimit = apiLimit
 	h.maxFilterLimit = filterLimit
+}
+
+// SetWalletRepo sets the wallet repository for streaming exports.
+func (h *WalletHandler) SetWalletRepo(repo *repository.WalletRepository) {
+	h.walletRepo = repo
 }
 
 // NewWalletHandler creates a new WalletHandler.

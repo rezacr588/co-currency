@@ -173,19 +173,118 @@ func (s *ReportsService) GetReportCoverage(ctx context.Context, userID uuid.UUID
 }
 
 // GetYearlyReport generates a yearly financial summary
+// Uses aggregated queries instead of 12 separate monthly calls for better performance
 func (s *ReportsService) GetYearlyReport(ctx context.Context, userID uuid.UUID, year int, currency string) (*YearlyReport, error) {
+	loc := ReportLocation(ctx)
+	tz := ReportTimeZone(ctx)
+	
+	// Calculate year boundaries
+	yearStart := time.Date(year, 1, 1, 0, 0, 0, 0, loc)
+	yearEnd := time.Date(year+1, 1, 1, 0, 0, 0, 0, loc).Add(-time.Nanosecond)
+
+	// Single query for all monthly income/expense totals
+	monthlyTypeTotals, err := s.walletRepo.GetMonthlyTypeTotalsByCurrency(ctx, userID, yearStart.UTC(), yearEnd.UTC(), tz)
+	if err != nil {
+		return nil, fmt.Errorf("getting monthly type totals: %w", err)
+	}
+
+	// Single query for all monthly category breakdowns
+	monthlyCategoryTotals, err := s.walletRepo.GetMonthlyCategoryTotalsByCurrency(ctx, userID, yearStart.UTC(), yearEnd.UTC(), tz)
+	if err != nil {
+		return nil, fmt.Errorf("getting monthly category totals: %w", err)
+	}
+
+	rateCache := make(map[string]float64)
+
+	// Build monthly income/expense maps
+	type monthData struct {
+		income   float64
+		expenses float64
+	}
+	monthlyData := make(map[int]*monthData)
+	for m := 1; m <= 12; m++ {
+		monthlyData[m] = &monthData{}
+	}
+
+	for _, row := range monthlyTypeTotals {
+		month := int(row.Period.Month())
+		if month < 1 || month > 12 {
+			continue
+		}
+		amount := s.convertAmountWithRateCache(ctx, row.Total, row.Currency, currency, rateCache)
+		switch row.Type {
+		case model.TransactionTypeCredit:
+			monthlyData[month].income += amount
+		case model.TransactionTypeDebit:
+			monthlyData[month].expenses += amount
+		}
+	}
+
+	// Build monthly category maps
+	type categoryEntry struct {
+		amount float64
+		count  int
+	}
+	monthlyCategories := make(map[int]map[string]*categoryEntry)
+	for m := 1; m <= 12; m++ {
+		monthlyCategories[m] = make(map[string]*categoryEntry)
+	}
+
+	for _, row := range monthlyCategoryTotals {
+		month := int(row.Period.Month())
+		if month < 1 || month > 12 {
+			continue
+		}
+		amount := s.convertAmountWithRateCache(ctx, row.Total, row.Currency, currency, rateCache)
+		if monthlyCategories[month][row.Category] == nil {
+			monthlyCategories[month][row.Category] = &categoryEntry{}
+		}
+		monthlyCategories[month][row.Category].amount += amount
+		monthlyCategories[month][row.Category].count += row.Count
+	}
+
+	// Assemble monthly reports
 	var totalIncome, totalExpenses float64
-	var monthlyReports []MonthlyReport
+	monthlyReports := make([]MonthlyReport, 12)
 
 	for month := 1; month <= 12; month++ {
-		report, err := s.GetMonthlyReport(ctx, userID, year, month, currency)
-		if err != nil {
-			return nil, err
+		data := monthlyData[month]
+		income := data.income
+		expenses := data.expenses
+		net := income - expenses
+		savingsRate := 0.0
+		if income > 0 {
+			savingsRate = (net / income) * 100
 		}
 
-		totalIncome += report.Income
-		totalExpenses += report.Expenses
-		monthlyReports = append(monthlyReports, *report)
+		// Build categories slice
+		categories := make([]CategoryBreakdown, 0)
+		for cat, entry := range monthlyCategories[month] {
+			percentage := 0.0
+			if expenses > 0 {
+				percentage = (entry.amount / expenses) * 100
+			}
+			categories = append(categories, CategoryBreakdown{
+				Category:   cat,
+				Amount:     entry.amount,
+				Count:      entry.count,
+				Percentage: percentage,
+			})
+		}
+
+		monthlyReports[month-1] = MonthlyReport{
+			Year:       year,
+			Month:      month,
+			Currency:   currency,
+			Income:     income,
+			Expenses:   expenses,
+			Net:        net,
+			Savings:    savingsRate,
+			Categories: categories,
+		}
+
+		totalIncome += income
+		totalExpenses += expenses
 	}
 
 	net := totalIncome - totalExpenses

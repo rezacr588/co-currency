@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -68,6 +67,7 @@ func (h *WalletHandler) GetTransactions(w http.ResponseWriter, r *http.Request) 
 }
 
 // ExportTransactions handles GET /api/v1/wallet/transactions/export.
+// Uses streaming to efficiently export large datasets without loading all into memory.
 func (h *WalletHandler) ExportTransactions(w http.ResponseWriter, r *http.Request) {
 	if !requireService(w, h.walletService != nil, "wallet service not available - database connection failed") {
 		return
@@ -93,35 +93,70 @@ func (h *WalletHandler) ExportTransactions(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Set headers for streaming CSV response
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", "attachment; filename=transactions.csv")
+
+	// Write CSV header
+	if _, err := w.Write([]byte("Date,Type,Amount,Currency,Category,Description\n")); err != nil {
+		log.Error().Err(err).Msg("Failed to write CSV header")
+		return
+	}
+
+	// Use streaming if walletRepo is available (generator pattern)
+	if h.walletRepo != nil {
+		txCh, errCh := h.walletRepo.StreamTransactionsForExport(r.Context(), userID, filter, 10000)
+
+		for tx := range txCh {
+			// Build CSV line directly to response writer (no buffering)
+			line := fmt.Sprintf("%s,%s,%.2f,%s,%s,%s\n",
+				tx.CreatedAt.Format("2006-01-02 15:04:05"),
+				escapeCSVField(tx.Type),
+				tx.Amount,
+				escapeCSVField(tx.Currency),
+				escapeCSVField(tx.Category),
+				escapeCSVField(tx.Description),
+			)
+
+			if _, err := w.Write([]byte(line)); err != nil {
+				log.Error().Err(err).Msg("Failed to write CSV line")
+				return
+			}
+
+			// Flush periodically for large exports (if ResponseWriter supports it)
+			if flusher, ok := w.(http.Flusher); ok {
+				flusher.Flush()
+			}
+		}
+
+		// Check for any errors from the streaming goroutine
+		if err := <-errCh; err != nil {
+			log.Error().Err(err).Msg("Error during transaction export streaming")
+		}
+		return
+	}
+
+	// Fallback to non-streaming if walletRepo not set
 	transactions, _, err := h.walletService.GetTransactionsFiltered(r.Context(), userID, filter, 10000, 0)
 	if err != nil {
 		httputil.InternalServerError(w, "failed to get transactions")
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/csv")
-	w.Header().Set("Content-Disposition", "attachment; filename=transactions.csv")
-
-	var csvBuilder strings.Builder
-	csvBuilder.WriteString("Date,Type,Amount,Currency,Category,Description\n")
-
 	for _, tx := range transactions {
-		csvBuilder.WriteString(tx.CreatedAt.Format("2006-01-02 15:04:05"))
-		csvBuilder.WriteString(",")
-		csvBuilder.WriteString(escapeCSVField(tx.Type))
-		csvBuilder.WriteString(",")
-		csvBuilder.WriteString(strconv.FormatFloat(tx.Amount, 'f', 2, 64))
-		csvBuilder.WriteString(",")
-		csvBuilder.WriteString(escapeCSVField(tx.Currency))
-		csvBuilder.WriteString(",")
-		csvBuilder.WriteString(escapeCSVField(tx.Category))
-		csvBuilder.WriteString(",")
-		csvBuilder.WriteString(escapeCSVField(tx.Description))
-		csvBuilder.WriteString("\n")
-	}
+		line := fmt.Sprintf("%s,%s,%.2f,%s,%s,%s\n",
+			tx.CreatedAt.Format("2006-01-02 15:04:05"),
+			escapeCSVField(tx.Type),
+			tx.Amount,
+			escapeCSVField(tx.Currency),
+			escapeCSVField(tx.Category),
+			escapeCSVField(tx.Description),
+		)
 
-	if _, err := w.Write([]byte(csvBuilder.String())); err != nil {
-		log.Error().Err(err).Msg("Failed to write CSV export response")
+		if _, err := w.Write([]byte(line)); err != nil {
+			log.Error().Err(err).Msg("Failed to write CSV line")
+			return
+		}
 	}
 }
 

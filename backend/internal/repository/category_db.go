@@ -22,11 +22,16 @@ func NewCategoryRepository(db *Database) *CategoryRepository {
 }
 
 // GetCategories retrieves all categories for a user (including defaults)
+// Uses UNION ALL instead of OR for better index utilization
 func (r *CategoryRepository) GetCategories(ctx context.Context, userID uuid.UUID) ([]model.Category, error) {
 	query := `
 		SELECT id, user_id, name, icon, color, is_default
 		FROM categories
-		WHERE user_id = $1 OR is_default = TRUE
+		WHERE user_id = $1
+		UNION ALL
+		SELECT id, user_id, name, icon, color, is_default
+		FROM categories
+		WHERE is_default = TRUE
 		ORDER BY is_default DESC, name
 	`
 

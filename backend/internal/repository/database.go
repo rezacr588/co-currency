@@ -27,8 +27,8 @@ type DBPoolConfig struct {
 // DefaultDBPoolConfig returns production-safe defaults.
 func DefaultDBPoolConfig() DBPoolConfig {
 	return DBPoolConfig{
-		MaxConns:          10,
-		MinConns:          2,
+		MaxConns:          50,
+		MinConns:          10,
 		MaxConnLifetime:   30 * time.Minute,
 		MaxConnIdleTime:   5 * time.Minute,
 		HealthCheckPeriod: 30 * time.Second,

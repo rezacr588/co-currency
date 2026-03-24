@@ -283,46 +283,154 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 }
 
 // fetchFinancialContext performs the actual queries to gather financial data
+// Uses parallel fetching via goroutines to reduce latency
 func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.UUID) (*model.FinancialContext, error) {
-	// Log context retrieval without exposing sensitive data
 	log.Debug().
 		Str("user_id", userID.String()).
 		Msg("Retrieved financial context for AI chat")
 
 	fctx := &model.FinancialContext{}
 	now := time.Now()
-	rateCache := make(map[string]float64)
 	convertCurrency := s.contextCurrencyConverter()
 
 	// Set date context
 	fctx.TodayDate = now.Format("January 2, 2006")
 	fctx.DaysUntilMonthEnd = daysUntilEndOfMonth(now)
 
-	// Get user info (with nil check for both error and user)
-	if s.userRepo != nil {
-		user, err := s.userRepo.GetByID(ctx, userID)
-		if err == nil && user != nil {
-			fctx.UserName = sanitizeForPrompt(user.Name, 100)
-			if user.PreferredCurrency != "" {
-				fctx.PreferredCurrency = normalizeCurrencyCode(user.PreferredCurrency)
-			}
-			if !user.CreatedAt.IsZero() {
-				fctx.AccountAgeDays = int(now.Sub(user.CreatedAt).Hours() / 24)
-			}
+	// Channel types for parallel fetching results
+	type userResult struct {
+		user *model.User
+		err  error
+	}
+	type balancesResult struct {
+		balances []model.WalletBalance
+		err      error
+	}
+	type transactionsResult struct {
+		transactions []model.Transaction
+		err          error
+	}
+	type budgetsResult struct {
+		budgets []model.Budget
+		err     error
+	}
+	type goalsResult struct {
+		goals []model.Goal
+		err   error
+	}
+	type recurringResult struct {
+		recurring []model.RecurringTransaction
+		err       error
+	}
+	type categoriesResult struct {
+		categories []model.Category
+		err        error
+	}
+	type loansResult struct {
+		loans []model.Loan
+		err   error
+	}
+
+	// Create channels for results
+	userCh := make(chan userResult, 1)
+	balancesCh := make(chan balancesResult, 1)
+	transactionsCh := make(chan transactionsResult, 1)
+	budgetsCh := make(chan budgetsResult, 1)
+	goalsCh := make(chan goalsResult, 1)
+	recurringCh := make(chan recurringResult, 1)
+	categoriesCh := make(chan categoriesResult, 1)
+	loansCh := make(chan loansResult, 1)
+
+	// Launch parallel fetches
+	go func() {
+		if s.userRepo != nil {
+			user, err := s.userRepo.GetByID(ctx, userID)
+			userCh <- userResult{user, err}
+		} else {
+			userCh <- userResult{nil, nil}
+		}
+	}()
+
+	go func() {
+		balances, err := s.walletRepo.GetBalances(ctx, userID)
+		balancesCh <- balancesResult{balances, err}
+	}()
+
+	go func() {
+		transactions, err := s.walletRepo.GetTransactions(ctx, userID, 100, 0)
+		transactionsCh <- transactionsResult{transactions, err}
+	}()
+
+	go func() {
+		budgets, err := s.budgetRepo.GetByUser(ctx, userID)
+		budgetsCh <- budgetsResult{budgets, err}
+	}()
+
+	go func() {
+		goals, err := s.goalRepo.GetByUser(ctx, userID)
+		goalsCh <- goalsResult{goals, err}
+	}()
+
+	go func() {
+		if s.recurringRepo != nil {
+			recurring, err := s.recurringRepo.GetByUser(ctx, userID)
+			recurringCh <- recurringResult{recurring, err}
+		} else {
+			recurringCh <- recurringResult{nil, nil}
+		}
+	}()
+
+	go func() {
+		if s.categoryRepo != nil {
+			categories, err := s.categoryRepo.GetCategories(ctx, userID)
+			categoriesCh <- categoriesResult{categories, err}
+		} else {
+			categoriesCh <- categoriesResult{nil, nil}
+		}
+	}()
+
+	go func() {
+		if s.loanRepo != nil {
+			loans, err := s.loanRepo.GetAllByUser(ctx, userID.String(), "active", "")
+			loansCh <- loansResult{loans, err}
+		} else {
+			loansCh <- loansResult{nil, nil}
+		}
+	}()
+
+	// Collect results (all run in parallel, wait for all to complete)
+	userRes := <-userCh
+	balancesRes := <-balancesCh
+	transactionsRes := <-transactionsCh
+	budgetsRes := <-budgetsCh
+	goalsRes := <-goalsCh
+	recurringRes := <-recurringCh
+	categoriesRes := <-categoriesCh
+	loansRes := <-loansCh
+
+	rateCache := make(map[string]float64)
+
+	// Process user info
+	if userRes.err == nil && userRes.user != nil {
+		fctx.UserName = sanitizeForPrompt(userRes.user.Name, 100)
+		if userRes.user.PreferredCurrency != "" {
+			fctx.PreferredCurrency = normalizeCurrencyCode(userRes.user.PreferredCurrency)
+		}
+		if !userRes.user.CreatedAt.IsZero() {
+			fctx.AccountAgeDays = int(now.Sub(userRes.user.CreatedAt).Hours() / 24)
 		}
 	}
 
-	// Get balances by currency
-	balances, err := s.walletRepo.GetBalances(ctx, userID)
-	if err == nil {
-		for _, b := range balances {
+	// Process balances
+	if balancesRes.err == nil {
+		for _, b := range balancesRes.balances {
 			fctx.Balances = append(fctx.Balances, model.CurrencyBalance{
 				Currency: b.Currency,
 				Balance:  b.Balance,
 			})
 		}
 		if fctx.PreferredCurrency == "" {
-			fctx.PreferredCurrency = selectPreferredCurrencyFromBalances(ctx, balances, rateCache, convertCurrency)
+			fctx.PreferredCurrency = selectPreferredCurrencyFromBalances(ctx, balancesRes.balances, rateCache, convertCurrency)
 		}
 	}
 
@@ -330,7 +438,7 @@ func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.U
 		fctx.PreferredCurrency = "USD"
 	}
 
-	// Convert aggregate balance to preferred currency to avoid mixed-currency math.
+	// Convert aggregate balance to preferred currency
 	for _, b := range fctx.Balances {
 		converted, _ := convertAmountWithRateCache(
 			ctx,
@@ -343,12 +451,12 @@ func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.U
 		fctx.TotalBalance += converted
 	}
 
-	// Get transactions and calculate monthly stats
+	// Process transactions and calculate monthly stats
 	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	startOfLastMonth := startOfMonth.AddDate(0, -1, 0)
 
-	transactions, err := s.walletRepo.GetTransactions(ctx, userID, 100, 0)
-	if err == nil {
+	if transactionsRes.err == nil {
+		transactions := transactionsRes.transactions
 		if len(fctx.Balances) == 0 && len(transactions) > 0 {
 			currency := normalizeCurrencyCode(transactions[0].Currency)
 			if currency != "" {
@@ -401,7 +509,7 @@ func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.U
 			}
 		}
 
-		// Calculate spending trend (guard against division by zero)
+		// Calculate spending trend
 		if fctx.LastMonthExpenses > 0 {
 			change := ((fctx.MonthlyExpenses - fctx.LastMonthExpenses) / fctx.LastMonthExpenses) * 100
 			if change > 10 {
@@ -430,16 +538,14 @@ func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.U
 				}
 			}
 		}
-		// Truncate to top 5 categories (with length guard)
 		if len(fctx.TopCategories) > 5 {
 			fctx.TopCategories = fctx.TopCategories[:5]
 		}
 	}
 
-	// Get budgets (limit to 10 for prompt efficiency)
-	budgets, err := s.budgetRepo.GetByUser(ctx, userID)
-	if err == nil {
-		for i, b := range budgets {
+	// Process budgets
+	if budgetsRes.err == nil {
+		for i, b := range budgetsRes.budgets {
 			if i >= 10 {
 				break
 			}
@@ -451,10 +557,9 @@ func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.U
 		}
 	}
 
-	// Get goals (limit to 10 for prompt efficiency)
-	goals, err := s.goalRepo.GetByUser(ctx, userID)
-	if err == nil {
-		for i, g := range goals {
+	// Process goals
+	if goalsRes.err == nil {
+		for i, g := range goalsRes.goals {
 			if i >= 10 {
 				break
 			}
@@ -471,83 +576,74 @@ func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.U
 		}
 	}
 
-	// Get recurring transactions
-	if s.recurringRepo != nil {
-		recurring, err := s.recurringRepo.GetByUser(ctx, userID)
-		if err == nil {
-			for _, r := range recurring {
-				if r.IsActive {
-					recType := "expense"
-					if r.Type == "credit" {
-						recType = "income"
-					}
-					fctx.RecurringItems = append(fctx.RecurringItems, model.RecurringSummary{
-						Description: sanitizeForPrompt(r.Description, 500),
-						Amount:      r.Amount,
-						Currency:    r.Currency,
-						Frequency:   r.Frequency,
-						NextDate:    r.NextExecution.Format("Jan 2"),
-						Type:        recType,
-					})
+	// Process recurring transactions
+	if recurringRes.err == nil {
+		for _, r := range recurringRes.recurring {
+			if r.IsActive {
+				recType := "expense"
+				if r.Type == "credit" {
+					recType = "income"
 				}
-			}
-		}
-	}
-
-	// Get categories (limit to top 10 for prompt efficiency)
-	if s.categoryRepo != nil {
-		categories, err := s.categoryRepo.GetCategories(ctx, userID)
-		if err == nil {
-			for i, cat := range categories {
-				if i >= 10 {
-					break
-				}
-				fctx.Categories = append(fctx.Categories, model.CategoryInfo{
-					Name:      sanitizeForPrompt(cat.Name, 100),
-					Icon:      cat.Icon,
-					IsDefault: cat.IsDefault,
+				fctx.RecurringItems = append(fctx.RecurringItems, model.RecurringSummary{
+					Description: sanitizeForPrompt(r.Description, 500),
+					Amount:      r.Amount,
+					Currency:    r.Currency,
+					Frequency:   r.Frequency,
+					NextDate:    r.NextExecution.Format("Jan 2"),
+					Type:        recType,
 				})
 			}
 		}
 	}
 
-	// Get loans and debts
-	if s.loanRepo != nil {
-		loans, err := s.loanRepo.GetAllByUser(ctx, userID.String(), "active", "")
-		if err == nil {
-			for _, loan := range loans {
-				loanSummary := model.LoanSummaryForAI{
-					Name:            sanitizeForPrompt(loan.Name, 100),
-					Type:            string(loan.Type),
-					RemainingAmount: loan.RemainingAmount,
-					Currency:        loan.Currency,
-					Counterparty:    sanitizeForPrompt(loan.Counterparty, 100),
-				}
-				if loan.DueDate != nil {
-					loanSummary.DueDate = loan.DueDate.Format("Jan 2, 2006")
-				}
-				fctx.ActiveLoans = append(fctx.ActiveLoans, loanSummary)
-
-				convertedRemaining, _ := convertAmountWithRateCache(
-					ctx,
-					loan.RemainingAmount,
-					loan.Currency,
-					fctx.PreferredCurrency,
-					rateCache,
-					convertCurrency,
-				)
-
-				if loan.Type == model.LoanTypeBorrowed {
-					fctx.TotalDebt += convertedRemaining
-				} else {
-					fctx.TotalReceivable += convertedRemaining
-				}
+	// Process categories
+	if categoriesRes.err == nil {
+		for i, cat := range categoriesRes.categories {
+			if i >= 10 {
+				break
 			}
-			fctx.NetDebtPosition = fctx.TotalDebt - fctx.TotalReceivable
+			fctx.Categories = append(fctx.Categories, model.CategoryInfo{
+				Name:      sanitizeForPrompt(cat.Name, 100),
+				Icon:      cat.Icon,
+				IsDefault: cat.IsDefault,
+			})
 		}
 	}
 
-	// Get purchasing power data
+	// Process loans
+	if loansRes.err == nil {
+		for _, loan := range loansRes.loans {
+			loanSummary := model.LoanSummaryForAI{
+				Name:            sanitizeForPrompt(loan.Name, 100),
+				Type:            string(loan.Type),
+				RemainingAmount: loan.RemainingAmount,
+				Currency:        loan.Currency,
+				Counterparty:    sanitizeForPrompt(loan.Counterparty, 100),
+			}
+			if loan.DueDate != nil {
+				loanSummary.DueDate = loan.DueDate.Format("Jan 2, 2006")
+			}
+			fctx.ActiveLoans = append(fctx.ActiveLoans, loanSummary)
+
+			convertedRemaining, _ := convertAmountWithRateCache(
+				ctx,
+				loan.RemainingAmount,
+				loan.Currency,
+				fctx.PreferredCurrency,
+				rateCache,
+				convertCurrency,
+			)
+
+			if loan.Type == model.LoanTypeBorrowed {
+				fctx.TotalDebt += convertedRemaining
+			} else {
+				fctx.TotalReceivable += convertedRemaining
+			}
+		}
+		fctx.NetDebtPosition = fctx.TotalDebt - fctx.TotalReceivable
+	}
+
+	// Get purchasing power data (sequential as it depends on preferred currency)
 	if s.wealthService != nil {
 		wealthOverview, err := s.wealthService.GetOverview(ctx, userID, fctx.PreferredCurrency)
 		if err == nil && wealthOverview != nil {

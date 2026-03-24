@@ -188,7 +188,7 @@ func NewAIChatService(cfg AIChatServiceConfig) *AIChatService {
 		subscriptionRepo: cfg.SubscriptionRepo,
 		noteRepo:         cfg.NoteRepo,
 		toolExecutor:     toolExecutor,
-		contextCache:     gocache.New(60*time.Second, 2*time.Minute),
+		contextCache:     gocache.New(5*time.Minute, 10*time.Minute),
 		fastModel:        cfg.AIService.GetDefaultModel(),
 		thinkingModel:    cfg.AIService.GetDefaultModel(),
 		defaultMode:      model.ChatThinkingModeAuto,

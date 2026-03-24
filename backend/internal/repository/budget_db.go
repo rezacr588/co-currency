@@ -130,20 +130,63 @@ func (r *BudgetRepository) GetByUser(ctx context.Context, userID uuid.UUID) ([]m
 }
 
 // GetByUserWithSpent retrieves all budgets for a user with calculated spent amounts
+// Uses a single aggregated query instead of N+1 queries for better performance
 func (r *BudgetRepository) GetByUserWithSpent(ctx context.Context, userID uuid.UUID) ([]model.Budget, error) {
-	// First get all budgets
-	budgets, err := r.GetByUser(ctx, userID)
+	now := time.Now()
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	yearStart := time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
+
+	// Single query: JOIN budgets with aggregated transaction spending
+	// Uses CASE to select correct period start based on budget.period
+	query := `
+		SELECT 
+			b.id, b.user_id, b.category, b.amount, b.currency, b.period, 
+			COALESCE(s.spent, 0) as spent,
+			b.created_at, b.updated_at
+		FROM budgets b
+		LEFT JOIN LATERAL (
+			SELECT SUM(t.amount) as spent
+			FROM transactions t
+			WHERE t.user_id = b.user_id
+				AND t.category = b.category
+				AND t.currency = b.currency
+				AND t.type = 'debit'
+				AND t.created_at >= CASE 
+					WHEN b.period = 'yearly' THEN $2
+					ELSE $3
+				END
+		) s ON true
+		WHERE b.user_id = $1
+		ORDER BY b.category
+	`
+
+	rows, err := r.pool.Query(ctx, query, userID, yearStart, monthStart)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying budgets with spent: %w", err)
+	}
+	defer rows.Close()
+
+	var budgets []model.Budget
+	for rows.Next() {
+		var b model.Budget
+		if err := rows.Scan(
+			&b.ID,
+			&b.UserID,
+			&b.Category,
+			&b.Amount,
+			&b.Currency,
+			&b.Period,
+			&b.Spent,
+			&b.CreatedAt,
+			&b.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning budget with spent: %w", err)
+		}
+		budgets = append(budgets, b)
 	}
 
-	// For each budget, calculate spent amount based on period
-	for i := range budgets {
-		spent, err := r.CalculateSpent(ctx, userID, budgets[i].Category, budgets[i].Currency, budgets[i].Period)
-		if err != nil {
-			return nil, fmt.Errorf("calculating spent for %s: %w", budgets[i].Category, err)
-		}
-		budgets[i].Spent = spent
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating budgets: %w", err)
 	}
 
 	return budgets, nil

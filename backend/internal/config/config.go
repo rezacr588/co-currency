@@ -27,8 +27,8 @@ type Config struct {
 
 	// Database pool settings
 	DatabaseURL         string        `env:"DATABASE_URL" envDefault:""`
-	DBMaxConns          int32         `env:"DB_MAX_CONNS" envDefault:"10"`
-	DBMinConns          int32         `env:"DB_MIN_CONNS" envDefault:"2"`
+	DBMaxConns          int32         `env:"DB_MAX_CONNS" envDefault:"50"`
+	DBMinConns          int32         `env:"DB_MIN_CONNS" envDefault:"10"`
 	DBMaxConnLifetime   time.Duration `env:"DB_MAX_CONN_LIFETIME" envDefault:"30m"`
 	DBMaxConnIdleTime   time.Duration `env:"DB_MAX_CONN_IDLE_TIME" envDefault:"5m"`
 	DBHealthCheckPeriod time.Duration `env:"DB_HEALTH_CHECK_PERIOD" envDefault:"30s"`

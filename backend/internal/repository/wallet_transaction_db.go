@@ -38,6 +38,15 @@ type AggregatedMonthlyTypeTotal struct {
 	Total    float64
 }
 
+// AggregatedMonthlyCategoryTotal holds monthly aggregated debit totals by category and currency.
+type AggregatedMonthlyCategoryTotal struct {
+	Period   time.Time
+	Category string
+	Currency string
+	Total    float64
+	Count    int
+}
+
 func signedTransactionBalanceDelta(txType string, amount float64) float64 {
 	switch txType {
 	case model.TransactionTypeCredit:
@@ -417,6 +426,44 @@ func (r *WalletRepository) GetMonthlyTypeTotalsByCurrency(ctx context.Context, u
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterating monthly type totals: %w", err)
+	}
+	return totals, nil
+}
+
+// GetMonthlyCategoryTotalsByCurrency returns monthly aggregated debit totals by category and currency for a date range.
+func (r *WalletRepository) GetMonthlyCategoryTotalsByCurrency(ctx context.Context, userID uuid.UUID, from, to time.Time, timeZone string) ([]AggregatedMonthlyCategoryTotal, error) {
+	rows, err := r.pool.Query(ctx, `
+			SELECT
+				DATE_TRUNC('month', created_at AT TIME ZONE $4)::date AS period,
+				COALESCE(NULLIF(BTRIM(category), ''), 'other') AS category,
+				UPPER(TRIM(currency)) AS currency,
+				COALESCE(SUM(amount), 0)::float8 AS total,
+				COUNT(*)::int AS count
+			FROM transactions
+			WHERE user_id = $1
+				AND type = 'debit'
+				AND created_at >= $2
+				AND created_at <= $3
+			GROUP BY DATE_TRUNC('month', created_at AT TIME ZONE $4)::date, 
+				COALESCE(NULLIF(BTRIM(category), ''), 'other'), 
+				UPPER(TRIM(currency))
+			ORDER BY period ASC
+		`, userID, from, to, timeZone)
+	if err != nil {
+		return nil, fmt.Errorf("querying monthly category totals: %w", err)
+	}
+	defer rows.Close()
+
+	totals := make([]AggregatedMonthlyCategoryTotal, 0)
+	for rows.Next() {
+		var row AggregatedMonthlyCategoryTotal
+		if err := rows.Scan(&row.Period, &row.Category, &row.Currency, &row.Total, &row.Count); err != nil {
+			return nil, fmt.Errorf("scanning monthly category total: %w", err)
+		}
+		totals = append(totals, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating monthly category totals: %w", err)
 	}
 	return totals, nil
 }
@@ -911,6 +958,7 @@ func (r *WalletRepository) GetTransactionsForForecasting(ctx context.Context, us
 		FROM transactions
 		WHERE user_id = $1 AND created_at >= $2
 		ORDER BY created_at ASC
+		LIMIT 2000
 	`
 
 	rows, err := r.pool.Query(ctx, query, userID, startDate)
@@ -967,4 +1015,95 @@ func (r *WalletRepository) GetTransactionsForPeriod(ctx context.Context, userID 
 	}
 
 	return transactions, nil
+}
+
+// StreamTransactionsForExport returns a channel that yields transactions one at a time.
+// This enables memory-efficient streaming exports without loading all data into memory.
+// The channel is closed when all transactions are sent or on error.
+// Check the error channel for any errors that occurred during streaming.
+func (r *WalletRepository) StreamTransactionsForExport(ctx context.Context, userID uuid.UUID, filter *model.TransactionFilter, maxRows int) (<-chan model.Transaction, <-chan error) {
+	txCh := make(chan model.Transaction, 100) // Buffered for performance
+	errCh := make(chan error, 1)
+
+	go func() {
+		defer close(txCh)
+		defer close(errCh)
+
+		// Build query with filters
+		query := `
+			SELECT id, user_id, type, amount, currency, category, description,
+				   source, ai_extracted_data, created_at
+			FROM transactions
+			WHERE user_id = $1
+		`
+		args := []interface{}{userID}
+		argIdx := 2
+
+		if filter != nil {
+			if filter.Type != "" {
+				query += fmt.Sprintf(" AND type = $%d", argIdx)
+				args = append(args, filter.Type)
+				argIdx++
+			}
+			if filter.Category != "" {
+				query += fmt.Sprintf(" AND category = $%d", argIdx)
+				args = append(args, filter.Category)
+				argIdx++
+			}
+			if filter.Currency != "" {
+				query += fmt.Sprintf(" AND currency = $%d", argIdx)
+				args = append(args, filter.Currency)
+				argIdx++
+			}
+			if filter.FromDate != "" {
+				query += fmt.Sprintf(" AND created_at >= $%d", argIdx)
+				args = append(args, filter.FromDate)
+				argIdx++
+			}
+			if filter.ToDate != "" {
+				query += fmt.Sprintf(" AND created_at <= $%d", argIdx)
+				args = append(args, filter.ToDate)
+				argIdx++
+			}
+		}
+
+		query += " ORDER BY created_at DESC"
+
+		if maxRows > 0 {
+			query += fmt.Sprintf(" LIMIT %d", maxRows)
+		}
+
+		rows, err := r.pool.Query(ctx, query, args...)
+		if err != nil {
+			errCh <- fmt.Errorf("querying transactions for export: %w", err)
+			return
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var tx model.Transaction
+
+			if err := rows.Scan(
+				&tx.ID, &tx.UserID, &tx.Type, &tx.Amount, &tx.Currency,
+				&tx.Category, &tx.Description, &tx.Source,
+				&tx.AIExtractedData, &tx.CreatedAt,
+			); err != nil {
+				errCh <- fmt.Errorf("scanning transaction: %w", err)
+				return
+			}
+
+			select {
+			case txCh <- tx:
+			case <-ctx.Done():
+				errCh <- ctx.Err()
+				return
+			}
+		}
+
+		if err := rows.Err(); err != nil {
+			errCh <- fmt.Errorf("iterating transactions: %w", err)
+		}
+	}()
+
+	return txCh, errCh
 }
