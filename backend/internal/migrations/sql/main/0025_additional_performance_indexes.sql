@@ -31,10 +31,10 @@ CREATE INDEX IF NOT EXISTS idx_transaction_tags_tag_id
 
 -- Subscriptions: user + active status for upcoming bills
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user_active_next
-    ON subscriptions(user_id, is_active, next_billing_date)
-    WHERE is_active = TRUE;
+    ON subscriptions(user_id, status, next_billing_date)
+    WHERE status = 'active';
 
 -- Loans: user + active status for payment tracking
 CREATE INDEX IF NOT EXISTS idx_loans_user_active
-    ON loans(user_id, is_active)
-    WHERE is_active = TRUE;
+    ON loans(user_id, status)
+    WHERE status = 'active';
