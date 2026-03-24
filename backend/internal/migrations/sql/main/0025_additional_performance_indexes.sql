@@ -29,10 +29,6 @@ CREATE INDEX IF NOT EXISTS idx_transaction_tags_transaction_id
 CREATE INDEX IF NOT EXISTS idx_transaction_tags_tag_id
     ON transaction_tags(tag_id);
 
--- User memories: semantic search support
-CREATE INDEX IF NOT EXISTS idx_user_memories_user_type_created
-    ON user_memories(user_id, memory_type, created_at DESC);
-
 -- Subscriptions: user + active status for upcoming bills
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user_active_next
     ON subscriptions(user_id, is_active, next_billing_date)
