@@ -56,36 +56,25 @@ func (s *ReportsService) GetCashFlowProjection(ctx context.Context, userID uuid.
 	loc := ReportLocation(ctx)
 	now := ReportNowForContext(ctx)
 	histStart := now.AddDate(0, 0, -90)
-	filter := &model.TransactionFilter{
-		FromTimestamp: histStart.UTC().Format(time.RFC3339),
-		ToTimestamp:   now.UTC().Format(time.RFC3339),
-	}
-	transactions, _, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, filter, 10000, 0)
+	weekdayRows, err := s.walletRepo.GetWeekdayTypeTotalsByCurrency(ctx, userID, histStart.UTC(), now.UTC(), ReportTimeZone(ctx))
 	if err != nil {
-		return nil, fmt.Errorf("getting transactions: %w", err)
+		return nil, fmt.Errorf("getting weekday transaction totals: %w", err)
 	}
 
 	// Calculate daily averages by day-of-week (0=Sunday..6=Saturday)
-	// Only count non-recurring/non-subscription transactions for the baseline
-	// to avoid double-counting known scheduled amounts
 	dayIncome := [7]float64{}
 	dayExpense := [7]float64{}
-
-	// Pre-compute which transactions are from recurring/subscription sources
-	// (source field is "manual" or "ai_receipt" for user-created, recurring executions have specific descriptions)
-	for _, tx := range transactions {
-		amount := tx.Amount
-		if tx.Currency != currency {
-			conversion, convErr := s.exchangeService.Convert(ctx, tx.Currency, currency, tx.Amount)
-			if convErr == nil {
-				amount = conversion.Result
-			}
+	rateCache := make(map[string]float64)
+	for _, row := range weekdayRows {
+		if row.Weekday < 0 || row.Weekday > 6 {
+			continue
 		}
-		wd := int(reportWeekdayInLocation(tx.CreatedAt, loc))
-		if tx.Type == "credit" {
-			dayIncome[wd] += amount
-		} else if tx.Type == "debit" {
-			dayExpense[wd] += amount
+		amount := s.convertAmountWithRateCache(ctx, row.Total, row.Currency, currency, rateCache)
+		switch row.Type {
+		case model.TransactionTypeCredit:
+			dayIncome[row.Weekday] += amount
+		case model.TransactionTypeDebit:
+			dayExpense[row.Weekday] += amount
 		}
 	}
 
@@ -106,13 +95,7 @@ func (s *ReportsService) GetCashFlowProjection(ctx context.Context, userID uuid.
 		if !rec.IsActive {
 			continue
 		}
-		recAmount := rec.Amount
-		if rec.Currency != currency {
-			conversion, convErr := s.exchangeService.Convert(ctx, rec.Currency, currency, rec.Amount)
-			if convErr == nil {
-				recAmount = conversion.Result
-			}
-		}
+		recAmount := s.convertAmountWithRateCache(ctx, rec.Amount, rec.Currency, currency, rateCache)
 		switch rec.Frequency {
 		case "daily":
 			// Daily recurring contributes to every weekday
@@ -143,13 +126,7 @@ func (s *ReportsService) GetCashFlowProjection(ctx context.Context, userID uuid.
 		}
 	}
 	for _, sub := range activeSubs {
-		subAmount := sub.Amount
-		if sub.Currency != currency {
-			conversion, convErr := s.exchangeService.Convert(ctx, sub.Currency, currency, sub.Amount)
-			if convErr == nil {
-				subAmount = conversion.Result
-			}
-		}
+		subAmount := s.convertAmountWithRateCache(ctx, sub.Amount, sub.Currency, currency, rateCache)
 		// Spread subscription cost across weekdays based on billing frequency
 		var dailyEquivalent float64
 		switch sub.BillingCycle {
@@ -196,13 +173,7 @@ func (s *ReportsService) GetCashFlowProjection(ctx context.Context, userID uuid.
 			if !rec.IsActive {
 				continue
 			}
-			recAmount := rec.Amount
-			if rec.Currency != currency {
-				conversion, convErr := s.exchangeService.Convert(ctx, rec.Currency, currency, rec.Amount)
-				if convErr == nil {
-					recAmount = conversion.Result
-				}
-			}
+			recAmount := s.convertAmountWithRateCache(ctx, rec.Amount, rec.Currency, currency, rateCache)
 
 			if matchesRecurringDate(rec, day, loc) {
 				desc := rec.Description
@@ -231,13 +202,7 @@ func (s *ReportsService) GetCashFlowProjection(ctx context.Context, userID uuid.
 
 		// Check subscriptions for this day
 		for _, sub := range activeSubs {
-			subAmount := sub.Amount
-			if sub.Currency != currency {
-				conversion, convErr := s.exchangeService.Convert(ctx, sub.Currency, currency, sub.Amount)
-				if convErr == nil {
-					subAmount = conversion.Result
-				}
-			}
+			subAmount := s.convertAmountWithRateCache(ctx, sub.Amount, sub.Currency, currency, rateCache)
 
 			if matchesSubscriptionDate(sub, day, loc) {
 				events = append(events, CashFlowEvent{
@@ -371,53 +336,36 @@ func matchesDayOfMonth(targetDay int, day time.Time) bool {
 func (s *ReportsService) GetSpendingAnomalies(ctx context.Context, userID uuid.UUID, currency string) (*AnomalyReport, error) {
 	loc := ReportLocation(ctx)
 	now := ReportNowForContext(ctx)
-	startDate := now.AddDate(0, 0, -90)
+	baselineStart := now.AddDate(0, 0, -90)
+	recentStart := now.AddDate(0, 0, -7)
 
-	filter := &model.TransactionFilter{
-		FromTimestamp: startDate.UTC().Format(time.RFC3339),
-		ToTimestamp:   now.UTC().Format(time.RFC3339),
-		Type:          "debit",
-	}
-	transactions, _, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, filter, 10000, 0)
+	statsRows, err := s.walletRepo.GetCategorySpendingStatsByCurrency(ctx, userID, baselineStart.UTC(), now.UTC())
 	if err != nil {
-		return nil, fmt.Errorf("getting transactions: %w", err)
+		return nil, fmt.Errorf("getting category spending stats: %w", err)
 	}
 
-	// Group by category and calculate stats
-	// Convert all amounts once and cache them
-	type convertedTx struct {
-		tx       model.Transaction
-		amount   float64
-		category string
-	}
-	convertedTxs := make([]convertedTx, 0, len(transactions))
-	for _, tx := range transactions {
-		amount := tx.Amount
-		if tx.Currency != currency {
-			conversion, convErr := s.exchangeService.Convert(ctx, tx.Currency, currency, tx.Amount)
-			if convErr == nil {
-				amount = conversion.Result
-			}
-		}
-		cat := tx.Category
-		if cat == "" {
-			cat = "other"
-		}
-		convertedTxs = append(convertedTxs, convertedTx{tx: tx, amount: amount, category: cat})
+	recentTransactions, err := s.walletRepo.GetRecentDebitTransactions(ctx, userID, recentStart.UTC(), now.UTC())
+	if err != nil {
+		return nil, fmt.Errorf("getting recent debit transactions: %w", err)
 	}
 
-	// Group by category and calculate stats
 	type categoryStats struct {
-		amounts []float64
-		sum     float64
+		count      int
+		sum        float64
+		sumSquares float64
 	}
+	rateCache := make(map[string]float64)
 	categoryData := make(map[string]*categoryStats)
-	for _, ct := range convertedTxs {
-		if categoryData[ct.category] == nil {
-			categoryData[ct.category] = &categoryStats{}
+	for _, row := range statsRows {
+		entry := categoryData[row.Category]
+		if entry == nil {
+			entry = &categoryStats{}
+			categoryData[row.Category] = entry
 		}
-		categoryData[ct.category].amounts = append(categoryData[ct.category].amounts, ct.amount)
-		categoryData[ct.category].sum += ct.amount
+		factor := s.convertAmountWithRateCache(ctx, 1, row.Currency, currency, rateCache)
+		entry.count += row.Count
+		entry.sum += s.convertAmountWithRateCache(ctx, row.Sum, row.Currency, currency, rateCache)
+		entry.sumSquares += row.SumSquares * factor * factor
 	}
 
 	// Calculate mean and stddev per category
@@ -427,56 +375,48 @@ func (s *ReportsService) GetSpendingAnomalies(ctx context.Context, userID uuid.U
 	}
 	analyses := make(map[string]catAnalysis)
 	for cat, stats := range categoryData {
-		n := float64(len(stats.amounts))
+		n := float64(stats.count)
 		if n < 3 {
 			continue // Need at least 3 data points
 		}
 		mean := stats.sum / n
-
-		var variance float64
-		for _, a := range stats.amounts {
-			diff := a - mean
-			variance += diff * diff
+		varianceNumerator := stats.sumSquares - ((stats.sum * stats.sum) / n)
+		if varianceNumerator < 0 {
+			varianceNumerator = 0
 		}
-		variance /= (n - 1) // sample variance (Bessel's correction)
+		variance := varianceNumerator / (n - 1) // sample variance (Bessel's correction)
 		stddev := math.Sqrt(variance)
 
 		analyses[cat] = catAnalysis{mean: mean, stddev: stddev}
 	}
 
-	// Check transactions from last 7 days for anomalies
-	sevenDaysAgo := now.AddDate(0, 0, -7)
 	anomalies := make([]SpendingAnomaly, 0)
 
-	for _, ct := range convertedTxs {
-		txTime := ct.tx.CreatedAt.In(loc)
-		if txTime.Before(sevenDaysAgo) {
-			continue
-		}
-
-		analysis, ok := analyses[ct.category]
+	for _, tx := range recentTransactions {
+		analysis, ok := analyses[tx.Category]
 		if !ok || analysis.stddev == 0 {
 			continue
 		}
 
+		amount := s.convertAmountWithRateCache(ctx, tx.Amount, tx.Currency, currency, rateCache)
 		threshold := analysis.mean + 2*analysis.stddev
-		if ct.amount > threshold {
-			deviation := ct.amount / analysis.mean
-			desc := ct.tx.Description
+		if amount > threshold {
+			deviation := amount / analysis.mean
+			desc := tx.Description
 			if desc == "" {
-				desc = ct.category
+				desc = tx.Category
 			}
 
 			anomalies = append(anomalies, SpendingAnomaly{
-				TransactionID: ct.tx.ID.String(),
+				TransactionID: tx.ID.String(),
 				Description:   desc,
-				Amount:        math.Round(ct.amount*100) / 100,
+				Amount:        math.Round(amount*100) / 100,
 				Currency:      currency,
-				Category:      ct.category,
-				Date:          reportDateStringInLocation(ct.tx.CreatedAt, loc),
+				Category:      tx.Category,
+				Date:          reportDateStringInLocation(tx.CreatedAt, loc),
 				AverageAmount: math.Round(analysis.mean*100) / 100,
 				Deviation:     math.Round(deviation*10) / 10,
-				Message:       fmt.Sprintf("Your %s spend of %.2f is %.1fx your average", ct.category, ct.amount, deviation),
+				Message:       fmt.Sprintf("Your %s spend of %.2f is %.1fx your average", tx.Category, amount, deviation),
 			})
 		}
 	}

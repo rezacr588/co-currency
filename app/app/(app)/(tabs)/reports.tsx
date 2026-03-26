@@ -30,7 +30,11 @@ import {
   DateRangeSelector,
 } from '../../../src/components/features/Reports';
 import { RingChart } from '../../../src/components/features/Reports/charts';
-import { REPORT_QUERY_RETRY, REPORT_QUERY_STALE_TIME_MS } from '../../../src/components/features/Reports/queryConfig';
+import {
+  buildReportsOverviewQueryKey,
+  REPORT_QUERY_RETRY,
+  REPORT_QUERY_STALE_TIME_MS,
+} from '../../../src/components/features/Reports/queryConfig';
 import { buildHistoryRouteParams, createReportDateFormatter, type ReportHistoryTarget } from '../../../src/components/features/Reports/reportUX';
 
 const REPORT_PERIODS: ReportPeriod[] = ['daily', 'weekly', 'monthly', 'yearly', 'all_time'];
@@ -211,13 +215,40 @@ export default function ReportsScreen() {
     setSelectedPreset('custom');
   };
 
-  // Fetch networth for all views (shown above tabs)
-  const { data: networth, isError: networthError } = useQuery({
-    queryKey: ['reports', 'networth'],
-    queryFn: () => api.reports.networth(),
+  const monthlyOverviewQueryKey = buildReportsOverviewQueryKey({
+    year: dateRange.year || selectedYear,
+    month: dateRange.month || selectedMonth,
+    fromDate: dateRange.fromDate,
+    toDate: dateRange.toDate,
+    reportTimeZone,
+  });
+
+  const { data: monthlyOverview, isError: monthlyOverviewError } = useQuery({
+    queryKey: monthlyOverviewQueryKey,
+    queryFn: () =>
+      api.reports.overview({
+        year: dateRange.year || selectedYear,
+        month: dateRange.month || selectedMonth,
+        fromDate: dateRange.fromDate,
+        toDate: dateRange.toDate,
+        timeZone: reportTimeZone,
+      }),
+    enabled: period === 'monthly',
     staleTime: REPORT_QUERY_STALE_TIME_MS,
     retry: REPORT_QUERY_RETRY,
   });
+
+  // Fetch networth for non-monthly views (monthly uses the overview payload)
+  const { data: networth, isError: networthError } = useQuery({
+    queryKey: ['reports', 'networth'],
+    queryFn: () => api.reports.networth(),
+    enabled: period !== 'monthly',
+    staleTime: REPORT_QUERY_STALE_TIME_MS,
+    retry: REPORT_QUERY_RETRY,
+  });
+
+  const displayNetworth = period === 'monthly' ? monthlyOverview?.networth : networth;
+  const displayNetworthError = period === 'monthly' ? monthlyOverviewError : networthError;
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -243,7 +274,7 @@ export default function ReportsScreen() {
     }
   }, [dateRange.label, period, t]);
 
-  const stickyHeaderIndex = networth && !networthError ? 2 : 1;
+  const stickyHeaderIndex = displayNetworth && !displayNetworthError ? 2 : 1;
 
   return (
     <PageScaffold
@@ -264,7 +295,7 @@ export default function ReportsScreen() {
         />
 
         {/* Net Worth Card (always visible) */}
-        {networth && !networthError && (
+        {displayNetworth && !displayNetworthError && (
           <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 12, marginBottom: 24 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <View style={{ backgroundColor: colors.primary + '18', padding: 8, borderRadius: 8, marginEnd: 12 }}>
@@ -273,20 +304,20 @@ export default function ReportsScreen() {
               <Text style={{ color: colors.mutedForeground }}>{t('netWorth')}</Text>
             </View>
             <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 16 }}>
-              {formatCompactCurrency(networth.total_balance, networth.currency)}
+              {formatCompactCurrency(displayNetworth.total_balance, displayNetworth.currency)}
             </Text>
 
-            {networth.balances && networth.balances.length > 0 && (
+            {displayNetworth.balances && displayNetworth.balances.length > 0 && (
               <View style={{ marginTop: 8 }}>
                 <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 12 }}>{t('balanceDistribution')}</Text>
                 <RingChart
-                  segments={networth.balances.slice(0, 5).map((b) => ({
+                  segments={displayNetworth.balances.slice(0, 5).map((b) => ({
                     value: b.balance_in_base,
                     color: CATEGORY_COLORS[b.currency.toLowerCase()] || colors.primary,
                     label: b.currency,
                   }))}
                   centerLabel={t('total')}
-                  centerValue={formatCompactCurrency(networth.total_balance, networth.currency)}
+                  centerValue={formatCompactCurrency(displayNetworth.total_balance, displayNetworth.currency)}
                 />
               </View>
             )}

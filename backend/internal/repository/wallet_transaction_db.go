@@ -47,6 +47,33 @@ type AggregatedMonthlyCategoryTotal struct {
 	Count    int
 }
 
+// AggregatedWeekdayTypeTotal holds weekday totals by transaction type and currency.
+type AggregatedWeekdayTypeTotal struct {
+	Weekday  int
+	Type     string
+	Currency string
+	Total    float64
+}
+
+// CategorySpendingStat holds per-category debit moments for anomaly detection.
+type CategorySpendingStat struct {
+	Category   string
+	Currency   string
+	Count      int
+	Sum        float64
+	SumSquares float64
+}
+
+// RecentDebitTransaction is a lightweight row for anomaly detection.
+type RecentDebitTransaction struct {
+	ID          uuid.UUID
+	Amount      float64
+	Currency    string
+	Category    string
+	Description string
+	CreatedAt   time.Time
+}
+
 func signedTransactionBalanceDelta(txType string, amount float64) float64 {
 	switch txType {
 	case model.TransactionTypeCredit:
@@ -481,6 +508,113 @@ func (r *WalletRepository) CountActiveTransactionDays(ctx context.Context, userI
 		return 0, fmt.Errorf("counting active transaction days: %w", err)
 	}
 	return dayCount, nil
+}
+
+// GetWeekdayTypeTotalsByCurrency returns weekday totals by transaction type and currency for a date range.
+func (r *WalletRepository) GetWeekdayTypeTotalsByCurrency(ctx context.Context, userID uuid.UUID, from, to time.Time, timeZone string) ([]AggregatedWeekdayTypeTotal, error) {
+	rows, err := r.pool.Query(ctx, `
+			SELECT
+				EXTRACT(DOW FROM created_at AT TIME ZONE $4)::int AS weekday,
+				type,
+				UPPER(TRIM(currency)) AS currency,
+				COALESCE(SUM(amount), 0)::float8 AS total
+			FROM transactions
+			WHERE user_id = $1
+				AND created_at >= $2
+				AND created_at <= $3
+			GROUP BY EXTRACT(DOW FROM created_at AT TIME ZONE $4)::int, type, UPPER(TRIM(currency))
+	`, userID, from, to, timeZone)
+	if err != nil {
+		return nil, fmt.Errorf("querying weekday type totals: %w", err)
+	}
+	defer rows.Close()
+
+	totals := make([]AggregatedWeekdayTypeTotal, 0)
+	for rows.Next() {
+		var row AggregatedWeekdayTypeTotal
+		if err := rows.Scan(&row.Weekday, &row.Type, &row.Currency, &row.Total); err != nil {
+			return nil, fmt.Errorf("scanning weekday type total: %w", err)
+		}
+		totals = append(totals, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating weekday type totals: %w", err)
+	}
+
+	return totals, nil
+}
+
+// GetCategorySpendingStatsByCurrency returns per-category debit moments for anomaly detection.
+func (r *WalletRepository) GetCategorySpendingStatsByCurrency(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]CategorySpendingStat, error) {
+	rows, err := r.pool.Query(ctx, `
+			SELECT
+				COALESCE(NULLIF(BTRIM(category), ''), 'other') AS category,
+				UPPER(TRIM(currency)) AS currency,
+				COUNT(*)::int AS count,
+				COALESCE(SUM(amount), 0)::float8 AS total,
+				COALESCE(SUM((amount * amount)::numeric), 0)::float8 AS total_squares
+			FROM transactions
+			WHERE user_id = $1
+				AND type = 'debit'
+				AND created_at >= $2
+				AND created_at <= $3
+			GROUP BY COALESCE(NULLIF(BTRIM(category), ''), 'other'), UPPER(TRIM(currency))
+	`, userID, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("querying category spending stats: %w", err)
+	}
+	defer rows.Close()
+
+	stats := make([]CategorySpendingStat, 0)
+	for rows.Next() {
+		var row CategorySpendingStat
+		if err := rows.Scan(&row.Category, &row.Currency, &row.Count, &row.Sum, &row.SumSquares); err != nil {
+			return nil, fmt.Errorf("scanning category spending stat: %w", err)
+		}
+		stats = append(stats, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating category spending stats: %w", err)
+	}
+
+	return stats, nil
+}
+
+// GetRecentDebitTransactions returns lightweight debit rows for anomaly detection.
+func (r *WalletRepository) GetRecentDebitTransactions(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]RecentDebitTransaction, error) {
+	rows, err := r.pool.Query(ctx, `
+			SELECT
+				id,
+				amount,
+				UPPER(TRIM(currency)) AS currency,
+				COALESCE(NULLIF(BTRIM(category), ''), 'other') AS category,
+				COALESCE(description, '') AS description,
+				created_at
+			FROM transactions
+			WHERE user_id = $1
+				AND type = 'debit'
+				AND created_at >= $2
+				AND created_at <= $3
+			ORDER BY created_at DESC
+	`, userID, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("querying recent debit transactions: %w", err)
+	}
+	defer rows.Close()
+
+	transactions := make([]RecentDebitTransaction, 0)
+	for rows.Next() {
+		var row RecentDebitTransaction
+		if err := rows.Scan(&row.ID, &row.Amount, &row.Currency, &row.Category, &row.Description, &row.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scanning recent debit transaction: %w", err)
+		}
+		transactions = append(transactions, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating recent debit transactions: %w", err)
+	}
+
+	return transactions, nil
 }
 
 // GetTransaction retrieves a single transaction by ID

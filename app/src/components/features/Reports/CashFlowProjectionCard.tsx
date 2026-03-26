@@ -8,7 +8,7 @@ import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency } from '../../../utils/format';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 import { REPORT_QUERY_RETRY, REPORT_QUERY_STALE_TIME_MS } from './queryConfig';
-import type { CashFlowEvent } from '../../../types/goal';
+import type { CashFlowEvent, CashFlowReport } from '../../../types/goal';
 import {
   formatRelativeReportDateLabel,
   formatReportDateKey,
@@ -72,18 +72,26 @@ function groupEventsByDate(
     }));
 }
 
-export function CashFlowProjectionCard() {
+interface CashFlowProjectionCardProps {
+  report?: CashFlowReport | null;
+}
+
+export function CashFlowProjectionCard({ report: providedReport = null }: CashFlowProjectionCardProps) {
   const { t, language } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
   const { reportTimeZone } = useReportTimeZone();
 
-  const { data: report, isPending } = useQuery({
+  const { data: queriedReport, isPending: isQueryPending } = useQuery({
     queryKey: ['reports', 'cashflow', reportTimeZone],
     queryFn: () => api.reports.cashflow(30, undefined, reportTimeZone),
+    enabled: providedReport == null,
     staleTime: REPORT_QUERY_STALE_TIME_MS,
     retry: REPORT_QUERY_RETRY,
   });
+
+  const report = providedReport ?? queriedReport;
+  const isPending = providedReport == null && isQueryPending;
 
   const projections = report?.projections || [];
 

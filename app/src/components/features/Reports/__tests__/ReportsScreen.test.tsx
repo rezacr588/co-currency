@@ -103,6 +103,7 @@ jest.mock('../index', () => {
 jest.mock('../../../../api', () => ({
   api: {
     reports: {
+      overview: jest.fn(),
       networth: jest.fn(),
     },
   },
@@ -133,6 +134,14 @@ describe('ReportsScreen', () => {
   beforeEach(() => {
     jest.useFakeTimers().setSystemTime(new Date('2026-03-06T12:00:00.000Z'));
     mockSearchParams = {};
+    jest.mocked(api.reports.overview).mockResolvedValue({
+      mode: 'monthly',
+      networth: {
+        total_balance: 2400,
+        currency: 'USD',
+        balances: [],
+      },
+    } as any);
     jest.mocked(api.reports.networth).mockResolvedValue({
       total_balance: 1200,
       currency: 'USD',
@@ -143,6 +152,24 @@ describe('ReportsScreen', () => {
   afterEach(() => {
     jest.useRealTimers();
     jest.clearAllMocks();
+  });
+
+  it('uses the overview payload for the default monthly net worth card', async () => {
+    const screen = renderScreen();
+
+    await waitFor(() => {
+      expect(api.reports.overview).toHaveBeenCalledTimes(1);
+      expect(screen.getAllByText('Net Worth').length).toBeGreaterThan(0);
+    });
+
+    expect(api.reports.overview).toHaveBeenCalledWith({
+      year: 2026,
+      month: 3,
+      fromDate: undefined,
+      toDate: undefined,
+      timeZone: 'Europe/Istanbul',
+    });
+    expect(api.reports.networth).not.toHaveBeenCalled();
   });
 
   it('shows the timezone context and switches yearly drill-down into monthly state', async () => {

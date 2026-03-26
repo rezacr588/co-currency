@@ -16,7 +16,7 @@ import { SpendingAnomalyCard } from './SpendingAnomalyCard';
 import { ReportHeadlineCard } from './ReportHeadlineCard';
 import { ComparisonBarChart, HorizontalBarChart, TrendsChart } from './charts';
 import { REPORT_LAYOUT } from './reportConstants';
-import { REPORT_QUERY_RETRY, REPORT_QUERY_STALE_TIME_MS } from './queryConfig';
+import { buildReportsOverviewQueryKey, REPORT_QUERY_RETRY, REPORT_QUERY_STALE_TIME_MS } from './queryConfig';
 import type { ReportHistoryTarget } from './reportUX';
 import type { MonthlyReport, DateRangeReport } from '../../../types/goal';
 
@@ -68,42 +68,35 @@ export function MonthlyReportView({
 
   const isDateRangeMode = !!(fromDate && toDate);
 
-  // Previous month for comparison (only used in single-month mode)
-  const prevMonth = useMemo(() => {
-    if (month === 1) return { year: year - 1, month: 12 };
-    return { year, month: month - 1 };
-  }, [year, month]);
+  const overviewQueryKey = buildReportsOverviewQueryKey({
+    year,
+    month,
+    fromDate,
+    toDate,
+    reportTimeZone,
+  });
 
-  // Date range report (used when fromDate & toDate are provided)
-  const { data: dateRangeReport, isPending: isLoadingDateRange, isError: isDateRangeError, refetch: refetchDateRange } = useQuery({
-    queryKey: ['reports', 'date-range', fromDate, toDate, reportTimeZone],
-    queryFn: () => api.reports.dateRange(fromDate!, toDate!, undefined, reportTimeZone),
-    enabled: isDateRangeMode,
+  const { data: overview, isPending, isError, refetch } = useQuery({
+    queryKey: overviewQueryKey,
+    queryFn: () =>
+      api.reports.overview({
+        year,
+        month,
+        fromDate,
+        toDate,
+        timeZone: reportTimeZone,
+      }),
     staleTime: REPORT_QUERY_STALE_TIME_MS,
     retry: REPORT_QUERY_RETRY,
   });
 
-  // Monthly report (used in single-month mode)
-  const { data: monthlyReportRaw, isPending: isLoadingMonthly, isError: isMonthlyError, refetch: refetchMonthly } = useQuery({
-    queryKey: ['reports', 'monthly', year, month, reportTimeZone],
-    queryFn: () => api.reports.monthly(year, month, undefined, reportTimeZone),
-    enabled: !isDateRangeMode,
-    staleTime: REPORT_QUERY_STALE_TIME_MS,
-    retry: REPORT_QUERY_RETRY,
-  });
+  const monthlyReportRaw = overview?.monthly ?? undefined;
+  const dateRangeReport = overview?.date_range ?? undefined;
 
   // Unified report data
   const reportState = buildMonthlyState(isDateRangeMode, monthlyReportRaw, dateRangeReport);
   const monthlyReport = reportState.data;
-  const isReportError = reportState.mode === 'date_range' ? isDateRangeError : isMonthlyError;
-
-  const { data: prevMonthReport } = useQuery({
-    queryKey: ['reports', 'monthly', prevMonth.year, prevMonth.month, reportTimeZone],
-    queryFn: () => api.reports.monthly(prevMonth.year, prevMonth.month, undefined, reportTimeZone),
-    enabled: !isDateRangeMode,
-    staleTime: REPORT_QUERY_STALE_TIME_MS,
-    retry: REPORT_QUERY_RETRY,
-  });
+  const prevMonthReport = overview?.previous_month ?? undefined;
 
   // Month-over-month expense comparison (only in single-month mode)
   const expenseChange = useMemo(() => {
@@ -112,46 +105,11 @@ export function MonthlyReportView({
     return ((monthlyReport.expenses - prevMonthReport.expenses) / prevMonthReport.expenses) * 100;
   }, [monthlyReport, prevMonthReport, isDateRangeMode]);
 
-  // Category data from date-range report or separate query
-  const { data: categoryReportSeparate, isPending: isLoadingCategory, isError: isCategoryError, refetch: refetchCategory } = useQuery({
-    queryKey: ['reports', 'category', fromDate, toDate, year, month, reportTimeZone],
-    queryFn: () => {
-      if (fromDate && toDate) {
-        return api.reports.category(fromDate, toDate, undefined, reportTimeZone);
-      }
-      return api.reports.category(
-        buildDateKey(year, month, 1),
-        buildDateKey(year, month, getDaysInMonth(year, month)),
-        undefined,
-        reportTimeZone
-      );
-    },
-    enabled: !isDateRangeMode,
-    staleTime: REPORT_QUERY_STALE_TIME_MS,
-    retry: REPORT_QUERY_RETRY,
-  });
-
-  // Use categories from date-range report when available, otherwise from separate query
-  const categoryReport = isDateRangeMode && dateRangeReport
-    ? { categories: dateRangeReport.categories, currency: dateRangeReport.currency, from_date: dateRangeReport.from_date, to_date: dateRangeReport.to_date, total: dateRangeReport.expenses }
-    : categoryReportSeparate;
-
-  const { data: trendsReport, isPending: isLoadingTrends } = useQuery({
-    queryKey: ['reports', 'trends', 6, reportTimeZone],
-    queryFn: () => api.reports.trends(6, undefined, reportTimeZone),
-    staleTime: REPORT_QUERY_STALE_TIME_MS,
-    retry: REPORT_QUERY_RETRY,
-  });
-
-  const { data: forecast, isPending: isLoadingForecast } = useQuery({
-    queryKey: ['reports', 'forecast', reportTimeZone],
-    queryFn: () => api.reports.forecast(undefined, reportTimeZone),
-    staleTime: REPORT_QUERY_STALE_TIME_MS,
-    retry: REPORT_QUERY_RETRY,
-  });
-
-  const isSummaryLoading = isDateRangeMode ? isLoadingDateRange : isLoadingMonthly;
-  const isPending = isSummaryLoading || isLoadingCategory || isLoadingTrends || isLoadingForecast;
+  const categoryReport = overview?.category;
+  const trendsReport = overview?.trends;
+  const forecast = overview?.forecast;
+  const anomalyReport = overview?.anomalies;
+  const cashFlowReport = overview?.cashflow;
   const effectiveSummaryTitle = summaryTitle || (isDateRangeMode ? (t('selectedRangeSummary') || 'Selected Range Summary') : t('monthlySummary'));
   const rangeTarget = useMemo(() => {
     if (categoryReport?.from_date && categoryReport?.to_date) {
@@ -195,18 +153,14 @@ export function MonthlyReportView({
     );
   }
 
-  if (isReportError) {
+  if (isError) {
     return (
       <ReportErrorCard
         title={t('failedToLoadReport')}
         message={t('checkConnection')}
         retryLabel={t('retry') || 'Retry'}
         onRetry={() => {
-          if (isDateRangeMode) {
-            void refetchDateRange();
-            return;
-          }
-          void refetchMonthly();
+          void refetch();
         }}
       />
     );
@@ -301,17 +255,6 @@ export function MonthlyReportView({
         </View>
       )}
 
-      {/* Category Breakdown */}
-      {isCategoryError && (
-        <ReportErrorCard
-          title={t('failedToLoadCategories') || 'Failed to load category breakdown'}
-          message={t('checkConnection')}
-          retryLabel={t('retry') || 'Retry'}
-          onRetry={() => {
-            void refetchCategory();
-          }}
-        />
-      )}
       {categoryReport && categoryReport.categories.length > 0 && (
         <View style={{ backgroundColor: colors.card, padding: REPORT_LAYOUT.cardPadding, borderRadius: REPORT_LAYOUT.cardRadius, marginBottom: REPORT_LAYOUT.sectionSpacing }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
@@ -446,7 +389,7 @@ export function MonthlyReportView({
       )}
 
       {/* Spending Anomalies */}
-      <SpendingAnomalyCard />
+      <SpendingAnomalyCard report={anomalyReport} />
 
       {/* Forecast Card */}
       {forecast && (
@@ -494,7 +437,7 @@ export function MonthlyReportView({
       )}
 
       {/* Cash Flow Projection */}
-      <CashFlowProjectionCard />
+      <CashFlowProjectionCard report={cashFlowReport} />
 
       {/* Empty State */}
       {!monthlyReport && !categoryReport && (

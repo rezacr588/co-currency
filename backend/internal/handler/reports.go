@@ -6,22 +6,87 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/service"
 	"github.com/rezacr588/currency-converter/pkg/httputil"
 )
 
+type ReportsServiceAPI interface {
+	GetOverview(ctx context.Context, userID uuid.UUID, year, month int, fromDate, toDate, currency string) (*service.ReportsOverview, error)
+	GetMonthlyReport(ctx context.Context, userID uuid.UUID, year, month int, currency string) (*service.MonthlyReport, error)
+	GetYearlyReport(ctx context.Context, userID uuid.UUID, year int, currency string) (*service.YearlyReport, error)
+	GetDateRangeReport(ctx context.Context, userID uuid.UUID, fromDate, toDate, currency string) (*service.DateRangeReport, error)
+	GetReportCoverage(ctx context.Context, userID uuid.UUID) (*service.ReportCoverage, error)
+	GetCategoryReport(ctx context.Context, userID uuid.UUID, fromDate, toDate, currency string) (*service.CategoryReport, error)
+	GetTrendsReport(ctx context.Context, userID uuid.UUID, months int, currency string) (*service.TrendsReport, error)
+	GetNetWorthReport(ctx context.Context, userID uuid.UUID, currency string) (*service.NetWorthReport, error)
+	GetForecast(ctx context.Context, userID uuid.UUID, currency string) (*service.ForecastReport, error)
+	GetInsights(ctx context.Context, userID uuid.UUID, currency string) (*model.InsightResponse, error)
+	GetHealthScore(ctx context.Context, userID uuid.UUID, currency string) (*service.HealthScoreReport, error)
+	GetCashFlowProjection(ctx context.Context, userID uuid.UUID, currency string, days int) (*service.CashFlowReport, error)
+	GetSpendingAnomalies(ctx context.Context, userID uuid.UUID, currency string) (*service.AnomalyReport, error)
+	GetWeeklyRecap(ctx context.Context, userID uuid.UUID, currency string, referenceDate *time.Time) (*service.WeeklyRecapReport, error)
+}
+
+var _ ReportsServiceAPI = (*service.ReportsService)(nil)
+
 // ReportsHandler handles report endpoints
 type ReportsHandler struct {
-	reportsService *service.ReportsService
+	reportsService ReportsServiceAPI
 }
 
 // NewReportsHandler creates a new ReportsHandler
 func NewReportsHandler(reportsService *service.ReportsService) *ReportsHandler {
-	return &ReportsHandler{reportsService: reportsService}
+	var serviceAPI ReportsServiceAPI
+	if reportsService != nil {
+		serviceAPI = reportsService
+	}
+	return &ReportsHandler{reportsService: serviceAPI}
 }
 
 func reportContext(r *http.Request) context.Context {
 	return service.WithReportTimeZone(r.Context(), r.URL.Query().Get("timezone"))
+}
+
+// GetOverview handles GET /api/v1/reports/overview.
+func (h *ReportsHandler) GetOverview(w http.ResponseWriter, r *http.Request) {
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	ctx := reportContext(r)
+	now := service.ReportNowForContext(ctx)
+	year := now.Year()
+	month := int(now.Month())
+
+	if y := r.URL.Query().Get("year"); y != "" {
+		if parsed, err := strconv.Atoi(y); err == nil {
+			year = parsed
+		}
+	}
+	if m := r.URL.Query().Get("month"); m != "" {
+		if parsed, err := strconv.Atoi(m); err == nil && parsed >= 1 && parsed <= 12 {
+			month = parsed
+		}
+	}
+
+	fromDate := r.URL.Query().Get("from_date")
+	toDate := r.URL.Query().Get("to_date")
+
+	currency := r.URL.Query().Get("currency")
+	if currency == "" {
+		currency = "USD"
+	}
+
+	overview, err := h.reportsService.GetOverview(ctx, userID, year, month, fromDate, toDate, currency)
+	if err != nil {
+		httputil.InternalServerErrorWithContext(r.Context(), w, "failed to generate reports overview")
+		return
+	}
+
+	httputil.Success(w, overview)
 }
 
 // GetMonthlyReport handles GET /api/v1/reports/monthly

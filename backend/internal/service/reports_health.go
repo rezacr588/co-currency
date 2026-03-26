@@ -184,67 +184,46 @@ func (s *ReportsService) GetWeeklyRecap(ctx context.Context, userID uuid.UUID, c
 	prevWeekStart := weekStart.AddDate(0, 0, -7)
 	prevWeekEnd := weekStart.Add(-time.Nanosecond)
 
-	// Get transactions for both weeks
-	filter := &model.TransactionFilter{
-		FromTimestamp: prevWeekStart.UTC().Format(time.RFC3339),
-		ToTimestamp:   weekEnd.UTC().Format(time.RFC3339),
-	}
-	transactions, _, err := s.walletRepo.GetTransactionsFiltered(ctx, userID, filter, 10000, 0)
+	currentTypeTotals, err := s.walletRepo.GetTypeTotalsByCurrency(ctx, userID, weekStart.UTC(), weekEnd.UTC())
 	if err != nil {
 		return nil, err
 	}
 
-	// Calculate this week's totals
 	var thisWeekIncome, thisWeekExpenses float64
-	categoryTotals := make(map[string]float64)
-	categoryCounts := make(map[string]int)
-
-	for _, tx := range transactions {
-		txTime := tx.CreatedAt.In(loc)
-		if txTime.Before(weekStart) || txTime.After(weekEnd) {
-			continue
-		}
-
-		amount := tx.Amount
-		if tx.Currency != currency {
-			conversion, err := s.exchangeService.Convert(ctx, tx.Currency, currency, tx.Amount)
-			if err == nil {
-				amount = conversion.Result
-			}
-		}
-
-		if tx.Type == "credit" {
+	rateCache := make(map[string]float64)
+	for _, row := range currentTypeTotals {
+		amount := s.convertAmountWithRateCache(ctx, row.Total, row.Currency, currency, rateCache)
+		switch row.Type {
+		case model.TransactionTypeCredit:
 			thisWeekIncome += amount
-		} else if tx.Type == "debit" {
+		case model.TransactionTypeDebit:
 			thisWeekExpenses += amount
-			category := tx.Category
-			if category == "" {
-				category = "other"
-			}
-			categoryTotals[category] += amount
-			categoryCounts[category]++
 		}
 	}
 
-	// Calculate last week's totals for comparison
+	categoryRows, err := s.walletRepo.GetCategoryTotalsByCurrency(ctx, userID, weekStart.UTC(), weekEnd.UTC())
+	if err != nil {
+		return nil, err
+	}
+
+	categoryTotals := make(map[string]float64)
+	categoryCounts := make(map[string]int)
+	for _, row := range categoryRows {
+		amount := s.convertAmountWithRateCache(ctx, row.Total, row.Currency, currency, rateCache)
+		categoryTotals[row.Category] += amount
+		categoryCounts[row.Category] += row.Count
+	}
+
 	var lastWeekExpenses float64
-	for _, tx := range transactions {
-		txTime := tx.CreatedAt.In(loc)
-		if txTime.Before(prevWeekStart) || txTime.After(prevWeekEnd) {
+	previousTypeTotals, err := s.walletRepo.GetTypeTotalsByCurrency(ctx, userID, prevWeekStart.UTC(), prevWeekEnd.UTC())
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range previousTypeTotals {
+		if row.Type != model.TransactionTypeDebit {
 			continue
 		}
-
-		amount := tx.Amount
-		if tx.Currency != currency {
-			conversion, err := s.exchangeService.Convert(ctx, tx.Currency, currency, tx.Amount)
-			if err == nil {
-				amount = conversion.Result
-			}
-		}
-
-		if tx.Type == "debit" {
-			lastWeekExpenses += amount
-		}
+		lastWeekExpenses += s.convertAmountWithRateCache(ctx, row.Total, row.Currency, currency, rateCache)
 	}
 
 	// Calculate percentage change

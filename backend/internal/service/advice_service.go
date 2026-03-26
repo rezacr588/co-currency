@@ -83,14 +83,12 @@ Rules:
 
 // GetAdvice returns personalized financial advice for a user
 func (s *AdviceService) GetAdvice(ctx context.Context, userID uuid.UUID, lang string, forceRefresh bool) (*model.PersonalizedAdvice, error) {
-	cacheKey := fmt.Sprintf("advice:%s:%s", userID.String(), lang)
+	cacheKey := s.cacheKey(userID, lang)
 
 	// Check cache
 	if !forceRefresh {
-		if cached, found := s.cache.Get(cacheKey); found {
-			if advice, ok := cached.(*model.PersonalizedAdvice); ok {
-				return advice, nil
-			}
+		if advice, ok := s.cachedAdvice(cacheKey); ok {
+			return advice, nil
 		}
 	}
 
@@ -108,6 +106,40 @@ func (s *AdviceService) GetAdvice(ctx context.Context, userID uuid.UUID, lang st
 	// Fallback to static tip
 	tip := staticTips[time.Now().Day()%len(staticTips)]
 	return &tip, nil
+}
+
+// GetCachedOrStaticAdvice returns cached advice if available, otherwise a local fallback.
+// It deliberately avoids generating new AI advice on the caller's request path.
+func (s *AdviceService) GetCachedOrStaticAdvice(userID uuid.UUID, lang string) *model.PersonalizedAdvice {
+	if s == nil {
+		tip := staticTips[time.Now().Day()%len(staticTips)]
+		return &tip
+	}
+
+	if advice, ok := s.cachedAdvice(s.cacheKey(userID, lang)); ok {
+		return advice
+	}
+
+	tip := staticTips[time.Now().Day()%len(staticTips)]
+	return &tip
+}
+
+func (s *AdviceService) cacheKey(userID uuid.UUID, lang string) string {
+	return fmt.Sprintf("advice:%s:%s", userID.String(), lang)
+}
+
+func (s *AdviceService) cachedAdvice(cacheKey string) (*model.PersonalizedAdvice, bool) {
+	if s == nil || s.cache == nil {
+		return nil, false
+	}
+
+	if cached, found := s.cache.Get(cacheKey); found {
+		if advice, ok := cached.(*model.PersonalizedAdvice); ok {
+			return advice, true
+		}
+	}
+
+	return nil, false
 }
 
 func (s *AdviceService) generateAIAdvice(ctx context.Context, userID uuid.UUID, lang string) (*model.PersonalizedAdvice, error) {

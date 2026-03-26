@@ -173,6 +173,7 @@ func registerReportRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.
 	if h.Reports != nil {
 		r.Route("/reports", func(r chi.Router) {
 			r.Use(authMiddleware.Middleware)
+			r.Get("/overview", h.Reports.GetOverview)
 			r.Get("/monthly", h.Reports.GetMonthlyReport)
 			r.Get("/yearly", h.Reports.GetYearlyReport)
 			r.Get("/coverage", h.Reports.GetReportCoverage)

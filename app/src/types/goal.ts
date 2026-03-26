@@ -300,6 +300,19 @@ export interface AnomalyReport {
   currency: string;
 }
 
+export interface ReportsOverviewResponse {
+  mode: 'monthly' | 'date_range';
+  networth: NetWorthReport;
+  monthly?: MonthlyReport | null;
+  date_range?: DateRangeReport | null;
+  previous_month?: MonthlyReport | null;
+  category: CategoryReport;
+  trends: TrendsReport;
+  forecast: ForecastReport;
+  anomalies: AnomalyReport;
+  cashflow: CashFlowReport;
+}
+
 // Subscription types
 export interface Subscription {
   id: string;

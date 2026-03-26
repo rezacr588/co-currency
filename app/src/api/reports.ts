@@ -6,6 +6,7 @@ import type {
   ReportCoverage,
   TrendsReport,
   NetWorthReport,
+  ReportsOverviewResponse,
   InsightResponse,
   CashFlowReport,
   AnomalyReport,
@@ -14,6 +15,24 @@ import { fetchAPI } from './base';
 import { buildQuery } from './utils';
 
 export const reports = {
+  overview: (params: {
+    year?: number;
+    month?: number;
+    fromDate?: string;
+    toDate?: string;
+    currency?: string;
+    timeZone?: string;
+  }) =>
+    fetchAPI<ReportsOverviewResponse>(
+      `/reports/overview${buildQuery({
+        year: params.year || undefined,
+        month: params.month || undefined,
+        from_date: params.fromDate,
+        to_date: params.toDate,
+        currency: params.currency,
+        timezone: params.timeZone,
+      })}`
+    ),
   monthly: (year?: number, month?: number, currency?: string, timeZone?: string) =>
     fetchAPI<MonthlyReport>(
       `/reports/monthly${buildQuery({

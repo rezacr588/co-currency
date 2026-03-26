@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -100,43 +101,95 @@ func (s *CoAIService) GetBrief(ctx context.Context, userID uuid.UUID) (*model.Co
 	}
 
 	var (
-		balances       []model.WalletBalance
-		budgets        []model.Budget
-		goals          []model.Goal
-		subscriptions  []model.Subscription
-		monthlyReport  *MonthlyReport
-		netWorthReport *NetWorthReport
-		weeklyRecap    *WeeklyRecapReport
-		anomalyReport  *AnomalyReport
-		wealthOverview *model.WealthOverview
+		balances          []model.WalletBalance
+		budgets           []model.Budget
+		goals             []model.Goal
+		subscriptions     []model.Subscription
+		monthlyReport     *MonthlyReport
+		netWorthReport    *NetWorthReport
+		weeklyRecap       *WeeklyRecapReport
+		anomalyReport     *AnomalyReport
+		wealthOverview    *model.WealthOverview
+		balanceCount      int
+		recentTxCount     int
+		budgetCount       int
+		goalCount         int
+		subscriptionCount int
 	)
 
+	var wg sync.WaitGroup
+
 	if s.walletRepo != nil {
-		balances, _ = s.walletRepo.GetBalances(ctx, userID)
-		response.ContextSnapshot.BalanceCurrencyCount = len(balances)
-		response.ContextSnapshot.RecentTransactionCount = s.countRecentTransactions(ctx, userID)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			balances, _ = s.walletRepo.GetBalances(ctx, userID)
+			balanceCount = len(balances)
+			recentTxCount = s.countRecentTransactions(ctx, userID)
+		}()
 	}
 	if s.budgetRepo != nil {
-		budgets, _ = s.budgetRepo.GetByUser(ctx, userID)
-		response.ContextSnapshot.ActiveBudgetCount = len(budgets)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			budgets, _ = s.budgetRepo.GetByUser(ctx, userID)
+			budgetCount = len(budgets)
+		}()
 	}
 	if s.goalRepo != nil {
-		goals, _ = s.goalRepo.GetByUser(ctx, userID)
-		response.ContextSnapshot.ActiveGoalCount = len(goals)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			goals, _ = s.goalRepo.GetByUser(ctx, userID)
+			goalCount = len(goals)
+		}()
 	}
 	if s.subscriptionRepo != nil {
-		subscriptions, _ = s.subscriptionRepo.GetSubscriptions(ctx, userID)
-		response.ContextSnapshot.ActiveSubscriptionCount = countActiveSubscriptions(subscriptions)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			subscriptions, _ = s.subscriptionRepo.GetSubscriptions(ctx, userID)
+			subscriptionCount = countActiveSubscriptions(subscriptions)
+		}()
 	}
 	if s.reportsService != nil {
-		monthlyReport, _ = s.reportsService.GetMonthlyReport(ctx, userID, ReportNowForContext(ctx).Year(), int(ReportNowForContext(ctx).Month()), currency)
-		netWorthReport, _ = s.reportsService.GetNetWorthReport(ctx, userID, currency)
-		weeklyRecap, _ = s.reportsService.GetWeeklyRecap(ctx, userID, currency, nil)
-		anomalyReport, _ = s.reportsService.GetSpendingAnomalies(ctx, userID, currency)
+		now := ReportNowForContext(ctx)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			monthlyReport, _ = s.reportsService.GetMonthlyReport(ctx, userID, now.Year(), int(now.Month()), currency)
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			netWorthReport, _ = s.reportsService.GetNetWorthReport(ctx, userID, currency)
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			weeklyRecap, _ = s.reportsService.GetWeeklyRecap(ctx, userID, currency, nil)
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			anomalyReport, _ = s.reportsService.GetSpendingAnomalies(ctx, userID, currency)
+		}()
 	}
 	if s.wealthService != nil {
-		wealthOverview, _ = s.wealthService.GetOverview(ctx, userID, currency)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			wealthOverview, _ = s.wealthService.GetOverview(ctx, userID, currency)
+		}()
 	}
+
+	wg.Wait()
+
+	response.ContextSnapshot.BalanceCurrencyCount = balanceCount
+	response.ContextSnapshot.RecentTransactionCount = recentTxCount
+	response.ContextSnapshot.ActiveBudgetCount = budgetCount
+	response.ContextSnapshot.ActiveGoalCount = goalCount
+	response.ContextSnapshot.ActiveSubscriptionCount = subscriptionCount
 
 	if netWorthReport != nil {
 		response.ContextSnapshot.TotalBalance = netWorthReport.TotalBalance
@@ -212,7 +265,7 @@ func (s *CoAIService) buildBrief(
 	}
 
 	if s.adviceService != nil {
-		if advice, err := s.adviceService.GetAdvice(ctx, userID, focusAreaLanguageHint(prefs), false); err == nil && advice != nil && advice.Detail != "" {
+		if advice := s.adviceService.GetCachedOrStaticAdvice(userID, focusAreaLanguageHint(prefs)); advice != nil && advice.Detail != "" {
 			parts = append(parts, advice.Detail)
 		}
 	}

@@ -8,26 +8,31 @@ import { useTheme } from 'styled-components/native';
 import { formatCompactCurrency } from '../../../utils/format';
 import { StyledCategoryIcon } from '../../../constants/icons';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
+import type { AnomalyReport } from '../../../types/goal';
 import { Card } from '../../ui';
 import { REPORT_QUERY_RETRY, REPORT_QUERY_STALE_TIME_MS } from './queryConfig';
 
 interface SpendingAnomalyCardProps {
   compact?: boolean;
+  report?: AnomalyReport | null;
 }
 
-export function SpendingAnomalyCard({ compact = false }: SpendingAnomalyCardProps) {
+export function SpendingAnomalyCard({ compact = false, report: providedReport = null }: SpendingAnomalyCardProps) {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
   const [expanded, setExpanded] = useState(false);
   const { reportTimeZone } = useReportTimeZone();
 
-  const { data: report } = useQuery({
+  const { data: queriedReport } = useQuery({
     queryKey: ['reports', 'anomalies', reportTimeZone],
     queryFn: () => api.reports.anomalies(undefined, reportTimeZone),
+    enabled: providedReport == null,
     staleTime: REPORT_QUERY_STALE_TIME_MS,
     retry: REPORT_QUERY_RETRY,
   });
+
+  const report = providedReport ?? queriedReport;
 
   if (!report || !report.anomalies || report.anomalies.length === 0) return null;
 

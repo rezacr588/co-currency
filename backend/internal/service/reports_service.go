@@ -5,26 +5,89 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
 )
 
 // ReportsService handles business logic for financial reports
 type ReportsService struct {
-	walletRepo       *repository.WalletRepository
-	exchangeService  *ExchangeService
-	aiService        *AIService
-	recurringRepo    *repository.RecurringRepository
-	subscriptionRepo *repository.SubscriptionRepository
+	walletRepo       reportsWalletRepository
+	exchangeService  reportsExchangeService
+	aiService        reportsAIService
+	recurringRepo    reportsRecurringRepository
+	subscriptionRepo reportsSubscriptionRepository
 }
+
+type reportsWalletRepository interface {
+	GetBalances(ctx context.Context, userID uuid.UUID) ([]model.WalletBalance, error)
+	GetTransactionBounds(ctx context.Context, userID uuid.UUID) (*time.Time, *time.Time, error)
+	GetTypeTotalsByCurrency(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]repository.AggregatedTypeTotal, error)
+	GetCategoryTotalsByCurrency(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]repository.AggregatedCategoryTotal, error)
+	GetMonthlyTypeTotalsByCurrency(ctx context.Context, userID uuid.UUID, from, to time.Time, timeZone string) ([]repository.AggregatedMonthlyTypeTotal, error)
+	GetMonthlyCategoryTotalsByCurrency(ctx context.Context, userID uuid.UUID, from, to time.Time, timeZone string) ([]repository.AggregatedMonthlyCategoryTotal, error)
+	CountActiveTransactionDays(ctx context.Context, userID uuid.UUID, from, to time.Time, timeZone string) (int, error)
+	GetWeekdayTypeTotalsByCurrency(ctx context.Context, userID uuid.UUID, from, to time.Time, timeZone string) ([]repository.AggregatedWeekdayTypeTotal, error)
+	GetCategorySpendingStatsByCurrency(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]repository.CategorySpendingStat, error)
+	GetRecentDebitTransactions(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]repository.RecentDebitTransaction, error)
+}
+
+type reportsExchangeService interface {
+	Convert(ctx context.Context, from, to string, amount float64) (*model.ConversionResult, error)
+}
+
+type reportsAIService interface {
+	IsConfigured() bool
+	GetInsights(ctx context.Context, report *ForecastReport) (*model.InsightResponse, error)
+}
+
+type reportsRecurringRepository interface {
+	GetByUser(ctx context.Context, userID uuid.UUID) ([]model.RecurringTransaction, error)
+}
+
+type reportsSubscriptionRepository interface {
+	GetSubscriptions(ctx context.Context, userID uuid.UUID) ([]model.Subscription, error)
+}
+
+var _ reportsWalletRepository = (*repository.WalletRepository)(nil)
+var _ reportsExchangeService = (*ExchangeService)(nil)
+var _ reportsAIService = (*AIService)(nil)
+var _ reportsRecurringRepository = (*repository.RecurringRepository)(nil)
+var _ reportsSubscriptionRepository = (*repository.SubscriptionRepository)(nil)
 
 // NewReportsService creates a new ReportsService
 func NewReportsService(walletRepo *repository.WalletRepository, exchangeService *ExchangeService, aiService *AIService, recurringRepo *repository.RecurringRepository, subscriptionRepo *repository.SubscriptionRepository) *ReportsService {
+	var walletRepoAPI reportsWalletRepository
+	if walletRepo != nil {
+		walletRepoAPI = walletRepo
+	}
+
+	var exchangeServiceAPI reportsExchangeService
+	if exchangeService != nil {
+		exchangeServiceAPI = exchangeService
+	}
+
+	var aiServiceAPI reportsAIService
+	if aiService != nil {
+		aiServiceAPI = aiService
+	}
+
+	var recurringRepoAPI reportsRecurringRepository
+	if recurringRepo != nil {
+		recurringRepoAPI = recurringRepo
+	}
+
+	var subscriptionRepoAPI reportsSubscriptionRepository
+	if subscriptionRepo != nil {
+		subscriptionRepoAPI = subscriptionRepo
+	}
+
 	return &ReportsService{
-		walletRepo:       walletRepo,
-		exchangeService:  exchangeService,
-		aiService:        aiService,
-		recurringRepo:    recurringRepo,
-		subscriptionRepo: subscriptionRepo,
+		walletRepo:       walletRepoAPI,
+		exchangeService:  exchangeServiceAPI,
+		aiService:        aiServiceAPI,
+		recurringRepo:    recurringRepoAPI,
+		subscriptionRepo: subscriptionRepoAPI,
 	}
 }
 
@@ -168,6 +231,20 @@ type ReportCoverage struct {
 	HasTransactions      bool    `json:"has_transactions"`
 	FirstTransactionDate *string `json:"first_transaction_date,omitempty"`
 	LastTransactionDate  *string `json:"last_transaction_date,omitempty"`
+}
+
+// ReportsOverview bundles the default monthly/date-range report payloads for the app.
+type ReportsOverview struct {
+	Mode          string           `json:"mode"`
+	NetWorth      *NetWorthReport  `json:"networth"`
+	Monthly       *MonthlyReport   `json:"monthly,omitempty"`
+	DateRange     *DateRangeReport `json:"date_range,omitempty"`
+	PreviousMonth *MonthlyReport   `json:"previous_month,omitempty"`
+	Category      *CategoryReport  `json:"category"`
+	Trends        *TrendsReport    `json:"trends"`
+	Forecast      *ForecastReport  `json:"forecast"`
+	Anomalies     *AnomalyReport   `json:"anomalies"`
+	CashFlow      *CashFlowReport  `json:"cashflow"`
 }
 
 // CashFlowProjection represents a single day's projected cash flow
