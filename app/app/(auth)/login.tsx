@@ -11,6 +11,7 @@ import { LinkedInIcon, GoogleIcon } from '../../src/constants/icons';
 import { prepareDashboardPostAuthRoute } from '../../src/navigation/mode';
 import { AuthScaffold, Button, FormError, Input } from '../../src/components/ui';
 import { SEOHead } from '../../src/components/seo';
+import { getOAuthCallbackParamsFromUrl } from '../../src/utils/oauth';
 
 function AuthDivider() {
   const { t } = useLanguage();
@@ -49,6 +50,7 @@ export default function LoginScreen() {
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const [error, setError] = useState('');
   const isMountedRef = useRef(true);
+  const lastHandledOAuthUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (params.error) {
@@ -57,38 +59,48 @@ export default function LoginScreen() {
   }, [params.error]);
 
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      return;
+    }
+
     isMountedRef.current = true;
 
     const handleDeepLink = async (event: { url: string }) => {
-      if (!event.url.includes('/auth/callback')) {
-        return;
-      }
-
       if (!isMountedRef.current) {
         return;
       }
 
+      const callback = getOAuthCallbackParamsFromUrl(event.url);
+      if (!callback) {
+        return;
+      }
+
+      if (lastHandledOAuthUrlRef.current === event.url) {
+        return;
+      }
+      lastHandledOAuthUrlRef.current = event.url;
+
       setIsOAuthLoading(true);
 
       try {
-        const urlParams = new URL(event.url).searchParams;
-        const token = urlParams.get('token');
-        const refreshToken = urlParams.get('refresh_token');
-        const errorParam = urlParams.get('error');
-
-        if (errorParam) {
+        if (callback.error) {
           if (isMountedRef.current) {
-            setError(errorParam);
+            setError(callback.error);
           }
           return;
         }
 
-        if (token && refreshToken) {
-          await handleOAuthCallback(token, refreshToken);
+        if (callback.token && callback.refreshToken) {
+          await handleOAuthCallback(callback.token, callback.refreshToken);
           if (isMountedRef.current) {
             const target = await prepareDashboardPostAuthRoute();
             router.replace(target as any);
           }
+          return;
+        }
+
+        if (isMountedRef.current) {
+          setError('Invalid callback parameters');
         }
       } catch (err) {
         if (isMountedRef.current) {
@@ -143,6 +155,7 @@ export default function LoginScreen() {
   const handleOAuthLogin = async (provider: 'google' | 'linkedin') => {
     setIsOAuthLoading(true);
     setError('');
+    lastHandledOAuthUrlRef.current = null;
 
     try {
       const baseUrl =
@@ -159,25 +172,28 @@ export default function LoginScreen() {
         const result = await WebBrowser.openAuthSessionAsync(authUrl, 'coai://');
 
         if (result.type === 'success' && result.url) {
-          // Parse tokens from hash fragment (#token=...&refresh_token=...)
-          const hashIndex = result.url.indexOf('#');
-          if (hashIndex !== -1) {
-            const hashParams = new URLSearchParams(result.url.substring(hashIndex + 1));
-            const token = hashParams.get('token');
-            const refreshToken = hashParams.get('refresh_token');
-
-            if (token && refreshToken) {
-              await handleOAuthCallback(token, refreshToken);
-              const target = await prepareDashboardPostAuthRoute();
-              router.replace(target as any);
-              return;
-            }
+          if (lastHandledOAuthUrlRef.current === result.url) {
+            return;
           }
 
-          // Check for error in query params (error redirect)
-          const errorParam = new URL(result.url).searchParams.get('error');
-          if (errorParam) {
-            setError(decodeURIComponent(errorParam));
+          const callback = getOAuthCallbackParamsFromUrl(result.url);
+          if (callback?.error) {
+            lastHandledOAuthUrlRef.current = result.url;
+            setError(callback.error);
+            return;
+          }
+
+          if (callback?.token && callback.refreshToken) {
+            lastHandledOAuthUrlRef.current = result.url;
+            await handleOAuthCallback(callback.token, callback.refreshToken);
+            const target = await prepareDashboardPostAuthRoute();
+            router.replace(target as any);
+            return;
+          }
+
+          if (callback) {
+            lastHandledOAuthUrlRef.current = result.url;
+            setError('Invalid callback parameters');
             return;
           }
         }
