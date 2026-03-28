@@ -1,7 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import { InteractionManager } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   useFonts,
@@ -31,6 +32,7 @@ import { useAppUpdates } from '../src/hooks/useAppUpdates';
 import { useAndroidNavigationBar } from '../src/hooks/useAndroidNavigationBar';
 import { usePushNotifications } from '../src/hooks/usePushNotifications';
 import { buildTheme } from '../src/theme';
+import { markStartup } from '../src/utils/startupPerf';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -48,7 +50,7 @@ const queryClient = new QueryClient({
 function StyledThemeWrapper({ children }: { children: ReactNode }) {
   const { isDark, colors } = useTheme();
   const { isRTL } = useLanguage();
-  const theme = buildTheme(colors, isDark, isRTL);
+  const theme = useMemo(() => buildTheme(colors, isDark, isRTL), [colors, isDark, isRTL]);
   return <SCThemeProvider theme={theme}>{children}</SCThemeProvider>;
 }
 
@@ -57,6 +59,7 @@ function RootLayoutNav() {
   const styledTheme = useStyledTheme();
   const colors = styledTheme.colors;
   const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
+  const [backgroundStartupEnabled, setBackgroundStartupEnabled] = useState(false);
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -68,17 +71,33 @@ function RootLayoutNav() {
     Vazirmatn_700Bold,
   });
 
-  // Check for OTA updates on app launch
-  useAppUpdates();
+  useEffect(() => {
+    markStartup('root_layout_mount');
+  }, []);
+
+  useAppUpdates(backgroundStartupEnabled);
   useAndroidNavigationBar();
-  // Initialize push notifications on app launch (requests permission when authenticated)
-  usePushNotifications();
+  usePushNotifications(backgroundStartupEnabled);
 
   useEffect(() => {
     if (fontsLoaded) {
-      SplashScreen.hideAsync();
+      void SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
+
+  useEffect(() => {
+    if (!fontsLoaded || showAnimatedSplash) {
+      return;
+    }
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      setBackgroundStartupEnabled(true);
+    });
+
+    return () => {
+      task.cancel();
+    };
+  }, [fontsLoaded, showAnimatedSplash]);
 
   // Don't render until fonts are loaded
   if (!fontsLoaded) {
@@ -104,7 +123,12 @@ function RootLayoutNav() {
         <Stack.Screen name="+not-found" />
       </Stack>
       {showAnimatedSplash && (
-        <AnimatedSplash onAnimationComplete={() => setShowAnimatedSplash(false)} />
+        <AnimatedSplash
+          onAnimationComplete={() => {
+            markStartup('splash_complete');
+            setShowAnimatedSplash(false);
+          }}
+        />
       )}
     </>
   );

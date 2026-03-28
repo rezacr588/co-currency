@@ -75,7 +75,7 @@ export interface PushNotificationState {
   error: string | null;
 }
 
-export function usePushNotifications() {
+export function usePushNotifications(enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
   const [notification, setNotification] = useState<unknown | null>(null);
@@ -177,7 +177,7 @@ export function usePushNotifications() {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated || !Notifications) {
+    if (!enabled || !isAuthenticated || !Notifications) {
       setIsLoading(false);
       return;
     }
@@ -223,7 +223,7 @@ export function usePushNotifications() {
         responseListener.current.remove();
       }
     };
-  }, [isAuthenticated, registerForPushNotifications, registerTokenWithBackend]);
+  }, [enabled, isAuthenticated, registerForPushNotifications, registerTokenWithBackend]);
 
   return {
     expoPushToken,

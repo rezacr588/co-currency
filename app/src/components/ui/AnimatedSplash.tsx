@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -16,7 +16,6 @@ interface AnimatedSplashProps {
 }
 
 export function AnimatedSplash({ onAnimationComplete }: AnimatedSplashProps) {
-  const [showTagline, setShowTagline] = useState(false);
   const onCompleteRef = useRef(onAnimationComplete);
   onCompleteRef.current = onAnimationComplete;
 
@@ -33,33 +32,22 @@ export function AnimatedSplash({ onAnimationComplete }: AnimatedSplashProps) {
   const containerOpacity = useSharedValue(1);
 
   useEffect(() => {
-    // Logo appears with spring animation
-    logoOpacity.value = withTiming(1, { duration: 400 });
+    logoOpacity.value = withTiming(1, { duration: 220 });
     logoScale.value = withSequence(
-      withSpring(1.1, { damping: 8, stiffness: 100 }),
-      withSpring(1, { damping: 12, stiffness: 100 })
+      withSpring(1.04, { damping: 12, stiffness: 140 }),
+      withSpring(1, { damping: 16, stiffness: 140 })
     );
 
-    // App name fades in
-    textOpacity.value = withDelay(400, withTiming(1, { duration: 400 }));
-
-    // Tagline fades in
-    taglineOpacity.value = withDelay(800, withTiming(1, { duration: 400 }));
-
-    // Show tagline state
-    const taglineTimer = setTimeout(() => setShowTagline(true), 800);
-
-    // Fade out everything and call completion
+    textOpacity.value = withDelay(120, withTiming(1, { duration: 180 }));
+    taglineOpacity.value = withDelay(220, withTiming(1, { duration: 180 }));
     containerOpacity.value = withDelay(
-      2200,
-      withTiming(0, { duration: 400, easing: Easing.ease }, (finished) => {
+      850,
+      withTiming(0, { duration: 180, easing: Easing.out(Easing.quad) }, (finished) => {
         if (finished) {
           runOnJS(handleComplete)();
         }
       })
     );
-
-    return () => clearTimeout(taglineTimer);
   }, [handleComplete]);
 
   const logoAnimatedStyle = useAnimatedStyle(() => ({

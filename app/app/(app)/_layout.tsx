@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Redirect, Stack } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../../src/context/AuthContext';
@@ -5,12 +6,19 @@ import { useTheme } from 'styled-components/native';
 import { DailyRewardModal } from '../../src/components/features/DailyReward';
 import { SEOHead } from '../../src/components/seo';
 import { useRealtimeSync } from '../../src/hooks/useRealtimeSync';
+import { markStartup } from '../../src/utils/startupPerf';
 
 export default function AppLayout() {
   const { isAuthenticated, isLoading } = useAuth();
   const theme = useTheme();
   const colors = theme.colors;
   useRealtimeSync({ enabled: isAuthenticated && !isLoading });
+
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      markStartup('first_authenticated_screen_paint');
+    }
+  }, [isAuthenticated, isLoading]);
 
   if (isLoading) {
     return (

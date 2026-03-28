@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { memo, useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -49,6 +49,173 @@ import { haptics } from '../../../../src/utils/haptics';
 
 const CATEGORIES = Object.keys(CATEGORY_ICONS);
 const CURRENCIES = [...COMMON_CURRENCIES];
+
+type HistoryColors = {
+  accent: string;
+  border: string;
+  card: string;
+  danger: string;
+  foreground: string;
+  info: string;
+  mutedForeground: string;
+  primaryForeground: string;
+  success: string;
+};
+type TranslationFn = (key: string) => string | undefined;
+
+interface TransactionRowProps {
+  colors: HistoryColors;
+  isDeletePending: boolean;
+  isDesktop: boolean;
+  onDelete: (tx: Transaction) => void;
+  onEdit: (tx: Transaction) => void;
+  onOpenNotes: (tx: Transaction) => void;
+  t: TranslationFn;
+  transaction: Transaction;
+}
+
+const TransactionRow = memo(function TransactionRow({
+  colors,
+  isDeletePending,
+  isDesktop,
+  onDelete,
+  onEdit,
+  onOpenNotes,
+  t,
+  transaction,
+}: TransactionRowProps) {
+  const isConversion =
+    transaction.type === 'convert' ||
+    transaction.type === 'convert_from' ||
+    transaction.type === 'convert_to';
+
+  const rightActions = useMemo(() => {
+    const actions: SwipeAction[] = [
+      {
+        icon: 'delete',
+        color: colors.foreground,
+        backgroundColor: colors.danger,
+        onPress: () => onDelete(transaction),
+      },
+    ];
+
+    if (!isConversion) {
+      actions.unshift({
+        icon: 'edit',
+        color: colors.foreground,
+        backgroundColor: colors.info,
+        onPress: () => onEdit(transaction),
+      });
+    }
+
+    return actions;
+  }, [colors.danger, colors.foreground, colors.info, isConversion, onDelete, onEdit, transaction]);
+
+  const leftActions = useMemo(
+    () => [
+      {
+        icon: 'note' as const,
+        color: colors.primaryForeground,
+        backgroundColor: colors.accent,
+        onPress: () => onOpenNotes(transaction),
+      },
+    ],
+    [colors.accent, colors.primaryForeground, onOpenNotes, transaction]
+  );
+
+  return (
+    <SwipeableRow
+      rightActions={rightActions}
+      leftActions={leftActions}
+      enabled={Platform.OS !== 'web'}
+    >
+      <View
+        style={{
+          backgroundColor: colors.card,
+          borderWidth: 1,
+          borderColor: colors.border,
+          padding: 16,
+          borderRadius: 12,
+          flexDirection: 'row',
+          alignItems: 'center',
+          width: isDesktop ? '48%' : '100%',
+          minWidth: 300,
+        }}
+      >
+        <View style={{ marginEnd: 12 }}>
+          <StyledCategoryIcon
+            category={transaction.category || 'other'}
+            size={20}
+            backgroundOpacity={0.15}
+            borderRadius={10}
+            padding={10}
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground }} numberOfLines={1}>
+            {transaction.description || transaction.category || 'Transaction'}
+          </Text>
+          <Text style={{ color: colors.mutedForeground, fontSize: 14 }} numberOfLines={1}>
+            {formatDate(transaction.created_at)} - {transaction.category || t('uncategorized')}
+          </Text>
+        </View>
+        <Text
+          style={{
+            fontSize: 18,
+            fontFamily: 'Inter_600SemiBold',
+            color: transaction.type === 'credit' ? colors.success : colors.danger,
+          }}
+          numberOfLines={1}
+        >
+          {formatTransactionAmount(transaction)}
+        </Text>
+        {isDesktop ? (
+          <>
+            <Pressable
+              onPress={() => onOpenNotes(transaction)}
+              hitSlop={10}
+              style={({ pressed }) => [
+                { marginStart: 8, padding: 8, cursor: 'pointer' },
+                pressed && { opacity: 0.7 },
+              ]}
+              accessibilityLabel={t('transactionNotes') || 'Notes'}
+              accessibilityRole="button"
+            >
+              <StickyNote size={18} color={colors.accent} />
+            </Pressable>
+            {!isConversion ? (
+              <Pressable
+                onPress={() => onEdit(transaction)}
+                hitSlop={10}
+                style={({ pressed }) => [
+                  { marginStart: 4, padding: 8, cursor: 'pointer' },
+                  pressed && { opacity: 0.7 },
+                ]}
+                accessibilityLabel={t('editTransaction') || 'Edit'}
+                accessibilityRole="button"
+              >
+                <Pencil size={18} color={colors.mutedForeground} />
+              </Pressable>
+            ) : null}
+            <Pressable
+              onPress={() => onDelete(transaction)}
+              hitSlop={10}
+              style={({ pressed }) => [
+                { marginStart: 4, padding: 8, cursor: 'pointer' },
+                pressed && { opacity: 0.7 },
+              ]}
+              disabled={isDeletePending}
+              accessibilityLabel={t('deleteTransaction') || 'Delete'}
+              accessibilityRole="button"
+            >
+              <Trash2 size={18} color={colors.mutedForeground} />
+            </Pressable>
+          </>
+        ) : null}
+      </View>
+    </SwipeableRow>
+  );
+});
 
 export default function TransactionHistoryScreen() {
   const { t } = useLanguage();
@@ -356,6 +523,35 @@ export default function TransactionHistoryScreen() {
   const listData: TransactionListItem[] = isPending
     ? Array.from({ length: 5 }, (_, index) => ({ id: `s-${index}`, __skeleton: true }))
     : transactions;
+  const renderTransactionItem = useCallback(
+    ({ item }: { item: TransactionListItem }) => {
+      if ('__skeleton' in item) {
+        return <SkeletonTransaction />;
+      }
+
+      return (
+        <TransactionRow
+          colors={colors}
+          isDeletePending={deleteMutation.isPending}
+          isDesktop={isDesktop}
+          onDelete={handleDelete}
+          onEdit={handleEdit}
+          onOpenNotes={handleOpenNotes}
+          t={t}
+          transaction={item}
+        />
+      );
+    },
+    [
+      colors,
+      deleteMutation.isPending,
+      handleDelete,
+      handleEdit,
+      handleOpenNotes,
+      isDesktop,
+      t,
+    ]
+  );
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
@@ -453,130 +649,11 @@ export default function TransactionHistoryScreen() {
         data={listData}
         keyExtractor={(item) => item.id}
         keyboardDismissMode="on-drag"
-        renderItem={({ item }) => {
-          if ('__skeleton' in item) {
-            return <SkeletonTransaction />;
-          }
-
-          const tx = item as Transaction;
-          const isConversion = tx.type === 'convert' || tx.type === 'convert_from' || tx.type === 'convert_to';
-
-          // Swipe actions
-          const rightActions: SwipeAction[] = [
-            {
-              icon: 'delete',
-              color: colors.foreground,
-              backgroundColor: colors.danger,
-              onPress: () => handleDelete(tx),
-            },
-          ];
-
-          // Add edit action for non-conversions
-          if (!isConversion) {
-            rightActions.unshift({
-              icon: 'edit',
-              color: colors.foreground,
-              backgroundColor: colors.info,
-              onPress: () => handleEdit(tx),
-            });
-          }
-
-          const leftActions: SwipeAction[] = [
-            {
-              icon: 'note',
-              color: colors.primaryForeground,
-              backgroundColor: colors.accent,
-              onPress: () => handleOpenNotes(tx),
-            },
-          ];
-
-          return (
-            <SwipeableRow
-              rightActions={rightActions}
-              leftActions={leftActions}
-              enabled={Platform.OS !== 'web'}
-            >
-              <View
-                style={{
-                  backgroundColor: colors.card,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  padding: 16,
-                  borderRadius: 12,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  width: isDesktop ? '48%' : '100%',
-                  minWidth: 300,
-                }}
-              >
-                <View style={{ marginEnd: 12 }}>
-                  <StyledCategoryIcon
-                    category={tx.category || 'other'}
-                    size={20}
-                    backgroundOpacity={0.15}
-                    borderRadius={10}
-                    padding={10}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground }} numberOfLines={1}>
-                    {tx.description || tx.category || 'Transaction'}
-                  </Text>
-                  <Text style={{ color: colors.mutedForeground, fontSize: 14 }} numberOfLines={1}>
-                    {formatDate(tx.created_at)} - {tx.category || t('uncategorized')}
-                  </Text>
-                </View>
-                <Text
-                  style={{
-                    fontSize: 18,
-                    fontFamily: 'Inter_600SemiBold',
-                    color: tx.type === 'credit' ? colors.success : colors.danger,
-                  }}
-                  numberOfLines={1}
-                >
-                  {formatTransactionAmount(tx)}
-                </Text>
-                {/* Desktop: Show buttons inline */}
-                {isDesktop && (
-                  <>
-                    {/* Notes Button */}
-                    <Pressable
-                      onPress={() => handleOpenNotes(tx)}
-                      hitSlop={10}
-                      style={({ pressed }) => [{ marginStart: 8, padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
-                      accessibilityLabel={t('transactionNotes') || 'Notes'}
-                      accessibilityRole="button"
-                    >
-                      <StickyNote size={18} color={colors.accent} />
-                    </Pressable>
-                    {/* Edit Button */}
-                    {!isConversion && (
-                      <Pressable
-                        onPress={() => handleEdit(tx)}
-                        hitSlop={10}
-                        style={({ pressed }) => [{ marginStart: 4, padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
-                        accessibilityLabel={t('editTransaction') || 'Edit'}
-                        accessibilityRole="button"
-                      >
-                        <Pencil size={18} color={colors.mutedForeground} />
-                      </Pressable>
-                    )}
-                    <Pressable
-                      onPress={() => handleDelete(tx)}
-                      hitSlop={10}
-                      style={({ pressed }) => [{ marginStart: 4, padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
-                      disabled={deleteMutation.isPending}
-                      accessibilityLabel={t('deleteTransaction') || 'Delete'}
-                      accessibilityRole="button"
-                    >
-                      <Trash2 size={18} color={colors.mutedForeground} />
-                    </Pressable>
-                  </>
-                )}
-              </View>
-            </SwipeableRow>
-          );
-        }}
+        renderItem={renderTransactionItem}
+        initialNumToRender={12}
+        maxToRenderPerBatch={8}
+        windowSize={8}
+        removeClippedSubviews={Platform.OS === 'android'}
         contentContainerStyle={{
           padding: isDesktop ? 32 : 16,
           maxWidth: 1400,

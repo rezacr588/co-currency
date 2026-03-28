@@ -15,6 +15,11 @@ import type { User, LoginRequest, RegisterRequest } from '../types/wallet';
 import { isValidJWT } from '../utils/validation';
 import { prepareDashboardPostAuthRoute, usePersistModeRoute } from '../navigation/mode';
 import { readSecureJSON, removeSecure, writeSecureJSON } from '../utils/storage';
+import { markStartup } from '../utils/startupPerf';
+import {
+  isAuthErrorMessage,
+  resolveAuthBootstrapFailure,
+} from './authBootstrap';
 
 interface AuthContextType {
   user: User | null;
@@ -31,25 +36,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const PROFILE_CACHE_KEY = '@auth_profile_cache';
 // Query keys that are NOT user-scoped (safe to keep across sessions)
 const PUBLIC_QUERY_KEYS = new Set(['currencies', 'exchange-rates', 'news']);
-
-function isAuthErrorMessage(message?: string): boolean {
-  if (!message) return false;
-
-  return (
-    message.includes('Session expired') ||
-    message.includes('401') ||
-    message.includes('Unauthorized')
-  );
-}
-
-function isNetworkError(error: unknown): boolean {
-  if (error instanceof TypeError) {
-    return true;
-  }
-
-  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
-  return message.includes('network') || message.includes('fetch') || message.includes('timeout');
-}
 
 async function readCachedProfile(): Promise<User | null> {
   return readSecureJSON<User>(PROFILE_CACHE_KEY);
@@ -119,21 +105,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useProtectedRoute(user, isLoading);
   usePersistModeRoute(!!user && !isLoading);
 
+  const clearSessionState = useCallback(async () => {
+    await clearCachedProfile();
+    await clearAuthToken();
+    await clearAuthScopedQueries(queryClient);
+    setUser(null);
+  }, [queryClient]);
+
   // Use a ref for the auth error callback to avoid stale closures
   const authErrorRef = useRef(() => {
-    void clearCachedProfile();
-    void clearAuthScopedQueries(queryClient);
-    setUser(null);
+    void clearSessionState();
     router.replace('/login');
   });
   useEffect(() => {
     authErrorRef.current = () => {
-      void clearCachedProfile();
-      void clearAuthScopedQueries(queryClient);
-      setUser(null);
+      void clearSessionState();
       router.replace('/login');
     };
-  }, [queryClient, router]);
+  }, [clearSessionState, router]);
 
   // Handle auth errors (401) - redirect to login
   useEffect(() => {
@@ -154,9 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await writeCachedProfile(profile);
     } catch (error) {
       if (isAuthErrorMessage(error instanceof Error ? error.message : String(error))) {
-        await clearCachedProfile();
-        await clearAuthToken();
-        setUser(null);
+        await clearSessionState();
         return;
       }
 
@@ -165,71 +152,93 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(cachedProfile);
       }
     }
-  }, []);
+  }, [clearSessionState]);
 
-  // Load tokens and user on mount with retry logic
+  // Bootstrap auth with cached profile first, then refresh in the background.
   useEffect(() => {
+    let active = true;
+    let didFinishBootstrap = false;
+
+    const finishBootstrap = () => {
+      if (!active || didFinishBootstrap) return;
+      didFinishBootstrap = true;
+      setIsLoading(false);
+      markStartup('auth_bootstrap_complete');
+    };
+
+    const clearBootstrapSession = async () => {
+      await clearCachedProfile();
+      await clearAuthToken();
+      await clearAuthScopedQueries(queryClient);
+      if (active) {
+        setUser(null);
+      }
+    };
+
+    const refreshProfileInBackground = async () => {
+      try {
+        const profile = await api.auth.getProfile();
+        if (!active) return;
+        setUser(profile);
+        await writeCachedProfile(profile);
+      } catch (error) {
+        const action = resolveAuthBootstrapFailure(error, true);
+        if (action === 'clear_session') {
+          await clearBootstrapSession();
+        }
+      }
+    };
+
     async function loadUser() {
       try {
-        // First, load tokens from secure storage into memory
         await loadTokens();
 
         const token = getAuthToken();
-        if (token && isValidJWT(token)) {
-          const cachedProfile = await readCachedProfile();
-          if (cachedProfile) {
+        if (!token) {
+          return;
+        }
+
+        if (!isValidJWT(token)) {
+          await clearBootstrapSession();
+          return;
+        }
+
+        const cachedProfile = await readCachedProfile();
+        if (cachedProfile) {
+          if (active) {
             setUser(cachedProfile);
           }
+          finishBootstrap();
+          void refreshProfileInBackground();
+          return;
+        }
 
-          // Retry profile fetch up to 3 times for transient network errors
-          const maxRetries = 3;
-          let lastError: Error | null = null;
-
-          for (let attempt = 0; attempt < maxRetries; attempt++) {
-            try {
-              const profile = await api.auth.getProfile();
-              setUser(profile);
-              await writeCachedProfile(profile);
-              return;
-            } catch (error) {
-              lastError = error instanceof Error ? error : new Error('Unknown error');
-
-              // Don't retry auth errors - just clear and continue
-              if (isAuthErrorMessage(lastError.message)) {
-                await clearCachedProfile();
-                await clearAuthToken();
-                setUser(null);
-                break;
-              }
-
-              // Only retry network errors
-              if (!isNetworkError(error) || attempt === maxRetries - 1) {
-                if (!isNetworkError(error)) {
-                  await clearCachedProfile();
-                  await clearAuthToken();
-                  setUser(null);
-                }
-                break;
-              }
-
-              // Wait before retry with exponential backoff
-              await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
-            }
-          }
-          if (cachedProfile) {
-            setUser(cachedProfile);
+        try {
+          const profile = await api.auth.getProfile();
+          if (!active) return;
+          setUser(profile);
+          await writeCachedProfile(profile);
+        } catch (error) {
+          const action = resolveAuthBootstrapFailure(error, false);
+          if (action === 'clear_session') {
+            await clearBootstrapSession();
             return;
           }
-        } else if (token) {
-          await clearCachedProfile();
-          await clearAuthToken();
+
+          if (active) {
+            setUser(null);
+          }
         }
       } finally {
-        setIsLoading(false);
+        finishBootstrap();
       }
     }
-    loadUser();
-  }, []);
+    void loadUser();
+
+    return () => {
+      active = false;
+    };
+  }, [queryClient]);
 
   const login = async (data: LoginRequest) => {
     const response = await api.auth.login(data);
@@ -257,12 +266,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (refreshToken) {
       api.auth.logout(refreshToken).catch(() => {});
     }
-    await clearCachedProfile();
-    await clearAuthToken();
-    await clearAuthScopedQueries(queryClient);
-    setUser(null);
+    await clearSessionState();
     router.replace('/login');
-  }, [queryClient, router]);
+  }, [clearSessionState, router]);
 
   const handleOAuthCallback = useCallback(async (token: string, refreshToken: string) => {
     await setAuthToken(token);

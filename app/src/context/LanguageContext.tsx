@@ -69,32 +69,19 @@ function detectDeviceLanguage(): Language | null {
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('en');
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [language, setLanguageState] = useState<Language>(() => detectDeviceLanguage() || 'en');
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     async function initLanguage() {
-      // Priority 1: Check storage for saved preference
       const savedLanguage = await readStorage(STORAGE_KEY);
       if (isValidLanguage(savedLanguage)) {
         setLanguageState(savedLanguage);
-        setIsInitialized(true);
-        return;
       }
-
-      // Priority 2: Detect from device locale
-      const deviceLang = detectDeviceLanguage();
-      if (deviceLang) {
-        setLanguageState(deviceLang);
-        setIsInitialized(true);
-        return;
-      }
-
-      // Default to English
-      setIsInitialized(true);
+      setIsHydrated(true);
     }
 
-    initLanguage();
+    void initLanguage();
   }, []);
 
   const setLanguage = async (lang: Language) => {
@@ -123,7 +110,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   // Update RTL on initial load
   useEffect(() => {
-    if (!isInitialized) return;
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
       document.documentElement.lang = language;
@@ -131,11 +117,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     if (I18nManager.isRTL !== isRTL) {
       I18nManager.forceRTL(isRTL);
     }
-  }, [isInitialized, isRTL, language]);
-
-  if (!isInitialized) {
-    return null;
-  }
+  }, [isHydrated, isRTL, language]);
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t, isRTL }}>

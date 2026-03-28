@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { memo, useState, useRef, useEffect, useCallback, useMemo, type ComponentProps } from 'react';
 import {
   View,
   Text,
@@ -114,6 +114,24 @@ type ToolUsageItem = {
   count: number;
 };
 
+type MarkdownStyles = NonNullable<ComponentProps<typeof Markdown>['style']>;
+type ChatRecommendedAction = NonNullable<ChatMessage['recommended_actions']>[number];
+type TranslationFn = (key: string) => string | undefined;
+type ToastFn = ReturnType<typeof useToast>['showToast'];
+type ChatColors = {
+  primary: string;
+  card: string;
+  border: string;
+  primaryForeground: string;
+  foreground: string;
+  accent: string;
+  muted: string;
+  mutedForeground: string;
+  secondary: string;
+};
+
+const EMPTY_TRACE_EVENTS: ChatStreamTraceEvent[] = [];
+
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
   search_transactions: 'Transactions API',
   get_monthly_report: 'Monthly Report API',
@@ -177,6 +195,326 @@ function getMessageToolUsage(message: ChatMessage | undefined, traceEvents: Chat
   }
   return aggregateToolUsageFromTrace(traceEvents);
 }
+
+function formatMessageTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  if (isToday) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  return (
+    date.toLocaleDateString([], { month: 'short', day: 'numeric' }) +
+    ' ' +
+    date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  );
+}
+
+interface ChatMessageBubbleProps {
+  colors: ChatColors;
+  groupedWithNext: boolean;
+  groupedWithPrev: boolean;
+  index: number;
+  markdownStyles: MarkdownStyles;
+  message: ChatMessage;
+  messageMaxWidth: number;
+  messageTrace: ChatStreamTraceEvent[];
+  onOpenActivity: (messageId: string) => void;
+  onOpenRecommendedAction: (action: ChatRecommendedAction) => void;
+  onOpenTable: (markdown: string) => void;
+  showToast: ToastFn;
+  t: TranslationFn;
+}
+
+const ChatMessageBubble = memo(function ChatMessageBubble({
+  colors,
+  groupedWithNext,
+  groupedWithPrev,
+  index,
+  markdownStyles,
+  message,
+  messageMaxWidth,
+  messageTrace,
+  onOpenActivity,
+  onOpenRecommendedAction,
+  onOpenTable,
+  showToast,
+  t,
+}: ChatMessageBubbleProps) {
+  const isUser = message.role === 'user';
+  const isTempId = message.id.startsWith('temp-');
+  const baseRadius = 18;
+  const chainRadius = 12;
+  const tailRadius = 6;
+  const a11yPrefix = isUser ? t('yourMessage') || 'Your message' : t('aiResponse') || 'AI response';
+  const a11yContent =
+    message.content.length > 200 ? `${message.content.slice(0, 200)}...` : message.content;
+  const { body, table } = useMemo(
+    () => (isUser ? { body: message.content, table: null } : extractFirstMarkdownTable(message.content)),
+    [isUser, message.content]
+  );
+  const messageToolUsage = useMemo(
+    () => getMessageToolUsage(message, messageTrace),
+    [message, messageTrace]
+  );
+  const activityLabel = useMemo(() => {
+    if (messageToolUsage.length > 0) {
+      return `${messageToolUsage.length} tool${messageToolUsage.length === 1 ? '' : 's'}`;
+    }
+    if (messageTrace.length > 0) {
+      return `${messageTrace.length} step${messageTrace.length === 1 ? '' : 's'}`;
+    }
+    return '';
+  }, [messageToolUsage, messageTrace.length]);
+  const tokenCount = message.total_tokens || message.tokens_used;
+  const hasUsageMeta = Boolean(
+    message.provider ||
+      message.model ||
+      message.thinking_mode ||
+      tokenCount ||
+      message.estimated_cost_usd ||
+      message.billed_cost_usd
+  );
+
+  const handleCopyMessage = useCallback(() => {
+    Clipboard.setString(message.content);
+    haptics.light();
+    showToast(t('copied') || 'Copied!', 'success');
+  }, [message.content, showToast, t]);
+
+  return (
+    <View
+      accessible
+      accessibilityLabel={`${a11yPrefix}: ${a11yContent}`}
+      style={{
+        flexDirection: 'column',
+        alignItems: isUser ? 'flex-end' : 'flex-start',
+        width: '100%',
+        marginTop: index === 0 ? 0 : groupedWithPrev ? 4 : 12,
+      }}
+    >
+      <Pressable
+        onLongPress={!isUser ? handleCopyMessage : undefined}
+        style={{
+          paddingHorizontal: 13,
+          paddingVertical: 9,
+          borderRadius: baseRadius,
+          backgroundColor: isUser ? colors.primary : colors.card,
+          borderWidth: isUser ? 0 : 1,
+          borderColor: isUser ? 'transparent' : colors.border,
+          borderTopLeftRadius: groupedWithPrev ? chainRadius : baseRadius,
+          borderTopRightRadius: groupedWithPrev ? chainRadius : baseRadius,
+          borderBottomRightRadius: isUser
+            ? groupedWithNext
+              ? chainRadius
+              : tailRadius
+            : groupedWithNext
+              ? chainRadius
+              : baseRadius,
+          borderBottomLeftRadius: isUser
+            ? groupedWithNext
+              ? chainRadius
+              : baseRadius
+            : groupedWithNext
+              ? chainRadius
+              : tailRadius,
+          maxWidth: isUser
+            ? Math.min(messageMaxWidth, 500)
+            : Math.min(messageMaxWidth + 28, 560),
+        }}
+      >
+        {isUser ? (
+          <Text style={{ color: colors.primaryForeground, fontSize: 15, lineHeight: 21 }}>
+            {message.content}
+          </Text>
+        ) : (
+          <View>
+            {body ? <Markdown style={markdownStyles}>{body}</Markdown> : null}
+
+            {table ? (
+              <Pressable
+                onPress={() => onOpenTable(table)}
+                accessibilityRole="button"
+                accessibilityLabel="Open AI response table"
+                style={({ pressed }) => [
+                  {
+                    marginTop: 6,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    borderRadius: 10,
+                    paddingVertical: 8,
+                    paddingHorizontal: 10,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: colors.muted,
+                  },
+                  pressed && { opacity: 0.75 },
+                ]}
+              >
+                <Table2 size={13} color={colors.accent} />
+                <Text
+                  style={{
+                    color: colors.foreground,
+                    marginStart: 6,
+                    fontSize: 12,
+                    fontFamily: 'Inter_500Medium',
+                  }}
+                >
+                  Open Table
+                </Text>
+              </Pressable>
+            ) : null}
+
+            {messageToolUsage.length > 0 ? (
+              <View style={{ marginTop: 8 }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 10, marginBottom: 5 }}>
+                  Tools used
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {messageToolUsage.map((tool) => (
+                    <View
+                      key={`${message.id}-${tool.name}`}
+                      style={{
+                        paddingHorizontal: 7,
+                        paddingVertical: 4,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        backgroundColor: colors.secondary,
+                      }}
+                    >
+                      <Text style={{ color: colors.foreground, fontSize: 10 }}>
+                        {getToolDisplayName(tool.name)}
+                        {tool.count > 1 ? ` ×${tool.count}` : ''}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
+            {message.recommended_actions && message.recommended_actions.length > 0 ? (
+              <View style={{ marginTop: 10 }}>
+                <RecommendedActionCards
+                  actions={message.recommended_actions}
+                  onActionPress={onOpenRecommendedAction}
+                  compact
+                />
+              </View>
+            ) : null}
+
+            {hasUsageMeta ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                {message.provider || message.model ? (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 7,
+                      paddingVertical: 4,
+                      borderRadius: 999,
+                      backgroundColor: colors.secondary,
+                    }}
+                  >
+                    <Cpu size={11} color={colors.mutedForeground} />
+                    <Text
+                      style={{ color: colors.mutedForeground, fontSize: 10, marginStart: 4 }}
+                      numberOfLines={1}
+                    >
+                      {[message.provider, message.model].filter(Boolean).join(' · ')}
+                    </Text>
+                  </View>
+                ) : null}
+                {message.thinking_mode ? (
+                  <View
+                    style={{
+                      paddingHorizontal: 7,
+                      paddingVertical: 4,
+                      borderRadius: 999,
+                      backgroundColor: colors.secondary,
+                    }}
+                  >
+                    <Text style={{ color: colors.mutedForeground, fontSize: 10 }}>
+                      {message.thinking_mode}
+                    </Text>
+                  </View>
+                ) : null}
+                {tokenCount ? (
+                  <View
+                    style={{
+                      paddingHorizontal: 7,
+                      paddingVertical: 4,
+                      borderRadius: 999,
+                      backgroundColor: colors.secondary,
+                    }}
+                  >
+                    <Text style={{ color: colors.mutedForeground, fontSize: 10 }}>{tokenCount} tok</Text>
+                  </View>
+                ) : null}
+                {message.estimated_cost_usd || message.billed_cost_usd ? (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 7,
+                      paddingVertical: 4,
+                      borderRadius: 999,
+                      backgroundColor: colors.secondary,
+                    }}
+                  >
+                    <Coins size={11} color={colors.mutedForeground} />
+                    <Text style={{ color: colors.mutedForeground, fontSize: 10, marginStart: 4 }}>
+                      {formatUsd(message.billed_cost_usd ?? message.estimated_cost_usd)}{' '}
+                      {message.billing_source ? `(${message.billing_source})` : ''}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+
+            <Pressable
+              onPress={() => onOpenActivity(message.id)}
+              style={({ pressed }) => [
+                {
+                  marginTop: 8,
+                  alignSelf: 'flex-start',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 8,
+                  paddingVertical: 5,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.secondary,
+                },
+                pressed && { opacity: 0.75 },
+              ]}
+            >
+              <Activity size={11} color={colors.mutedForeground} />
+              <Text style={{ color: colors.mutedForeground, fontSize: 10, marginStart: 4 }}>
+                Agent Activity {activityLabel ? `(${activityLabel})` : ''}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+      </Pressable>
+      {!groupedWithNext && !isTempId ? (
+        <Text
+          style={{
+            fontSize: 10,
+            color: colors.mutedForeground,
+            marginTop: 2,
+            alignSelf: isUser ? 'flex-end' : 'flex-start',
+            marginHorizontal: 4,
+          }}
+        >
+          {formatMessageTime(message.created_at)}
+        </Text>
+      ) : null}
+    </View>
+  );
+});
 
 export default function AIChatScreen() {
   const { t } = useLanguage();
@@ -900,6 +1238,19 @@ export default function AIChatScreen() {
       ].filter((item): item is string => Boolean(item)),
     [t]
   );
+  const handleOpenTable = useCallback((markdown: string) => {
+    setTableModalContent({ title: 'AI Table', markdown });
+  }, []);
+  const handleOpenActivity = useCallback((messageId: string) => {
+    setSelectedActivityMessageID(messageId);
+    setIsActivityModalVisible(true);
+  }, []);
+  const handleOpenRecommendedAction = useCallback(
+    (action: ChatRecommendedAction) => {
+      openRecommendedAction(router, action);
+    },
+    [router]
+  );
 
   // Scroll to bottom on new messages
   const scrollToBottom = useCallback(() => {
@@ -923,6 +1274,43 @@ export default function AIChatScreen() {
     const timeout = setTimeout(maybeAutoScroll, 80);
     return () => clearTimeout(timeout);
   }, [messages, isTyping, streamingDraft, activeConversationId, maybeAutoScroll]);
+
+  const renderMessageItem = useCallback(
+    ({ item: msg, index }: { item: ChatMessage; index: number }) => {
+      const previousMessage = index > 0 ? messages[index - 1] : null;
+      const nextMessage = index < messages.length - 1 ? messages[index + 1] : null;
+
+      return (
+        <ChatMessageBubble
+          colors={colors}
+          groupedWithNext={nextMessage?.role === msg.role}
+          groupedWithPrev={previousMessage?.role === msg.role}
+          index={index}
+          markdownStyles={markdownStyles}
+          message={msg}
+          messageMaxWidth={messageMaxWidth}
+          messageTrace={traceByMessageID[msg.id] || EMPTY_TRACE_EVENTS}
+          onOpenActivity={handleOpenActivity}
+          onOpenRecommendedAction={handleOpenRecommendedAction}
+          onOpenTable={handleOpenTable}
+          showToast={showToast}
+          t={t}
+        />
+      );
+    },
+    [
+      colors,
+      handleOpenActivity,
+      handleOpenRecommendedAction,
+      handleOpenTable,
+      markdownStyles,
+      messageMaxWidth,
+      messages,
+      showToast,
+      t,
+      traceByMessageID,
+    ]
+  );
 
   useEffect(() => {
     if (!conversationId || conversationId === activeConversationId) {
@@ -1827,233 +2215,11 @@ export default function AIChatScreen() {
         ref={scrollViewRef}
         data={messages}
         keyExtractor={(item) => item.id}
-        renderItem={({ item: msg, index }) => {
-          const isUser = msg.role === 'user';
-          const previousMessage = index > 0 ? messages[index - 1] : null;
-          const nextMessage = index < messages.length - 1 ? messages[index + 1] : null;
-          const groupedWithPrev = previousMessage?.role === msg.role;
-          const groupedWithNext = nextMessage?.role === msg.role;
-          const baseRadius = 18;
-          const chainRadius = 12;
-          const tailRadius = 6;
-          const isTempId = msg.id.startsWith('temp-');
-          const a11yPrefix = isUser
-            ? (t('yourMessage') || 'Your message')
-            : (t('aiResponse') || 'AI response');
-          const a11yContent = msg.content.length > 200 ? msg.content.slice(0, 200) + '...' : msg.content;
-
-          const formatMessageTime = (dateStr: string) => {
-            const date = new Date(dateStr);
-            const now = new Date();
-            const isToday = date.toDateString() === now.toDateString();
-            if (isToday) {
-              return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            }
-            return date.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          };
-
-          const handleCopyMessage = () => {
-            Clipboard.setString(msg.content);
-            haptics.light();
-            showToast(t('copied') || 'Copied!', 'success');
-          };
-
-          return (
-            <View
-              accessible={true}
-              accessibilityLabel={`${a11yPrefix}: ${a11yContent}`}
-              style={{
-                flexDirection: 'column',
-                alignItems: isUser ? 'flex-end' : 'flex-start',
-                width: '100%',
-                marginTop: index === 0 ? 0 : groupedWithPrev ? 4 : 12,
-              }}
-            >
-              <Pressable
-                onLongPress={!isUser ? handleCopyMessage : undefined}
-                style={{
-                  paddingHorizontal: 13,
-                  paddingVertical: 9,
-                  borderRadius: baseRadius,
-                  backgroundColor: isUser ? colors.primary : colors.card,
-                  borderWidth: isUser ? 0 : 1,
-                  borderColor: isUser ? 'transparent' : colors.border,
-                  borderTopLeftRadius: isUser
-                    ? (groupedWithPrev ? chainRadius : baseRadius)
-                    : (groupedWithPrev ? chainRadius : baseRadius),
-                  borderTopRightRadius: isUser
-                    ? (groupedWithPrev ? chainRadius : baseRadius)
-                    : (groupedWithPrev ? chainRadius : baseRadius),
-                  borderBottomRightRadius: isUser
-                    ? (groupedWithNext ? chainRadius : tailRadius)
-                    : (groupedWithNext ? chainRadius : baseRadius),
-                  borderBottomLeftRadius: isUser
-                    ? (groupedWithNext ? chainRadius : baseRadius)
-                    : (groupedWithNext ? chainRadius : tailRadius),
-                  maxWidth: isUser
-                    ? Math.min(messageMaxWidth, 500)
-                    : Math.min(messageMaxWidth + 28, 560),
-                }}
-              >
-                {isUser ? (
-                  <Text style={{ color: colors.primaryForeground, fontSize: 15, lineHeight: 21 }}>
-                    {msg.content}
-                  </Text>
-                ) : (
-                  (() => {
-                    const { body, table } = extractFirstMarkdownTable(msg.content);
-                    const messageTrace = traceByMessageID[msg.id] || [];
-                    const messageToolUsage = getMessageToolUsage(msg, messageTrace);
-                    const activityLabel = messageToolUsage.length > 0
-                      ? `${messageToolUsage.length} tool${messageToolUsage.length === 1 ? '' : 's'}`
-                      : messageTrace.length > 0
-                        ? `${messageTrace.length} step${messageTrace.length === 1 ? '' : 's'}`
-                        : '';
-                    const tokenCount = msg.total_tokens || msg.tokens_used;
-                    const hasUsageMeta = Boolean(msg.provider || msg.model || msg.thinking_mode || tokenCount || msg.estimated_cost_usd || msg.billed_cost_usd);
-                    return (
-                      <View>
-                        {body ? (
-                          <Markdown style={markdownStyles}>
-                            {body}
-                          </Markdown>
-                        ) : null}
-
-                        {table ? (
-                          <Pressable
-                            onPress={() => setTableModalContent({ title: 'AI Table', markdown: table })}
-                            accessibilityRole="button"
-                            accessibilityLabel="Open AI response table"
-                            style={({ pressed }) => [{
-                              marginTop: 6,
-                              borderWidth: 1,
-                              borderColor: colors.border,
-                              borderRadius: 10,
-                              paddingVertical: 8,
-                              paddingHorizontal: 10,
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              backgroundColor: colors.muted,
-                            }, pressed && { opacity: 0.75 }]}
-                          >
-                            <Table2 size={13} color={colors.accent} />
-                            <Text style={{ color: colors.foreground, marginStart: 6, fontSize: 12, fontFamily: 'Inter_500Medium' }}>
-                              Open Table
-                            </Text>
-                          </Pressable>
-                        ) : null}
-
-                        {messageToolUsage.length > 0 ? (
-                          <View style={{ marginTop: 8 }}>
-                            <Text style={{ color: colors.mutedForeground, fontSize: 10, marginBottom: 5 }}>
-                              Tools used
-                            </Text>
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                              {messageToolUsage.map((tool) => (
-                                <View
-                                  key={`${msg.id}-${tool.name}`}
-                                  style={{
-                                    paddingHorizontal: 7,
-                                    paddingVertical: 4,
-                                    borderRadius: 999,
-                                    borderWidth: 1,
-                                    borderColor: colors.border,
-                                    backgroundColor: colors.secondary,
-                                  }}
-                                >
-                                  <Text style={{ color: colors.foreground, fontSize: 10 }}>
-                                    {getToolDisplayName(tool.name)}
-                                    {tool.count > 1 ? ` ×${tool.count}` : ''}
-                                  </Text>
-                                </View>
-                              ))}
-                            </View>
-                          </View>
-                        ) : null}
-
-                        {msg.recommended_actions && msg.recommended_actions.length > 0 ? (
-                          <View style={{ marginTop: 10 }}>
-                            <RecommendedActionCards
-                              actions={msg.recommended_actions}
-                              onActionPress={(action) => openRecommendedAction(router, action)}
-                              compact
-                            />
-                          </View>
-                        ) : null}
-
-                        {hasUsageMeta ? (
-                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                            {msg.provider || msg.model ? (
-                              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 7, paddingVertical: 4, borderRadius: 999, backgroundColor: colors.secondary }}>
-                                <Cpu size={11} color={colors.mutedForeground} />
-                                <Text style={{ color: colors.mutedForeground, fontSize: 10, marginStart: 4 }} numberOfLines={1}>
-                                  {[msg.provider, msg.model].filter(Boolean).join(' · ')}
-                                </Text>
-                              </View>
-                            ) : null}
-                            {msg.thinking_mode ? (
-                              <View style={{ paddingHorizontal: 7, paddingVertical: 4, borderRadius: 999, backgroundColor: colors.secondary }}>
-                                <Text style={{ color: colors.mutedForeground, fontSize: 10 }}>{msg.thinking_mode}</Text>
-                              </View>
-                            ) : null}
-                            {tokenCount ? (
-                              <View style={{ paddingHorizontal: 7, paddingVertical: 4, borderRadius: 999, backgroundColor: colors.secondary }}>
-                                <Text style={{ color: colors.mutedForeground, fontSize: 10 }}>{tokenCount} tok</Text>
-                              </View>
-                            ) : null}
-                            {(msg.estimated_cost_usd || msg.billed_cost_usd) ? (
-                              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 7, paddingVertical: 4, borderRadius: 999, backgroundColor: colors.secondary }}>
-                                <Coins size={11} color={colors.mutedForeground} />
-                                <Text style={{ color: colors.mutedForeground, fontSize: 10, marginStart: 4 }}>
-                                  {formatUsd(msg.billed_cost_usd ?? msg.estimated_cost_usd)} {msg.billing_source ? `(${msg.billing_source})` : ''}
-                                </Text>
-                              </View>
-                            ) : null}
-                          </View>
-                        ) : null}
-
-                        <Pressable
-                          onPress={() => {
-                            setSelectedActivityMessageID(msg.id);
-                            setIsActivityModalVisible(true);
-                          }}
-                          style={({ pressed }) => [{
-                            marginTop: 8,
-                            alignSelf: 'flex-start',
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            paddingHorizontal: 8,
-                            paddingVertical: 5,
-                            borderRadius: 999,
-                            borderWidth: 1,
-                            borderColor: colors.border,
-                            backgroundColor: colors.secondary,
-                          }, pressed && { opacity: 0.75 }]}
-                        >
-                          <Activity size={11} color={colors.mutedForeground} />
-                          <Text style={{ color: colors.mutedForeground, fontSize: 10, marginStart: 4 }}>
-                            Agent Activity {activityLabel ? `(${activityLabel})` : ''}
-                          </Text>
-                        </Pressable>
-                      </View>
-                    );
-                  })()
-                )}
-              </Pressable>
-              {!groupedWithNext && !isTempId && (
-                <Text style={{
-                  fontSize: 10,
-                  color: colors.mutedForeground,
-                  marginTop: 2,
-                  alignSelf: isUser ? 'flex-end' : 'flex-start',
-                  marginHorizontal: 4,
-                }}>
-                  {formatMessageTime(msg.created_at)}
-                </Text>
-              )}
-            </View>
-          );
-        }}
+        renderItem={renderMessageItem}
+        initialNumToRender={10}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews={Platform.OS === 'android'}
         style={contentWidthStyle}
         keyboardShouldPersistTaps="handled"
         onContentSizeChange={maybeAutoScroll}

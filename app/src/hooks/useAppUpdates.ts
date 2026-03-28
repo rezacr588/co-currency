@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Alert, Platform } from 'react-native';
 import * as Updates from 'expo-updates';
 
-export function useAppUpdates() {
+export function useAppUpdates(enabled: boolean = true) {
   const [isChecking, setIsChecking] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -80,8 +80,12 @@ export function useAppUpdates() {
 
   // Check for updates on mount
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     checkForUpdates();
-  }, [checkForUpdates]);
+  }, [checkForUpdates, enabled]);
 
   return {
     isChecking,

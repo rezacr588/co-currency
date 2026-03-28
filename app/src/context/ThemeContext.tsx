@@ -19,7 +19,7 @@ const THEME_STORAGE_KEY = 'coai-theme';
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const systemColorScheme = useColorScheme();
-  const [theme, setThemeState] = useState<Theme>('dark');
+  const [theme, setThemeState] = useState<Theme>(systemColorScheme === 'light' ? 'light' : 'dark');
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Load theme from storage on mount, follow system if no stored preference
