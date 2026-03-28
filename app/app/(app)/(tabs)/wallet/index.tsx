@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, Pressable, RefreshControl } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, Redirect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { useRefreshControl } from '../../../../src/hooks/useRefreshableQuery';
@@ -17,7 +17,7 @@ import { CollapsibleSection } from '../../../../src/components/ui/CollapsibleSec
 import { CurrencyConverter } from '../../../../src/components/features/CurrencyConverter';
 import { useScreenLayout } from '../../../../src/hooks/useScreenLayout';
 
-export default function WalletScreen() {
+function WalletDetailsScreen() {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
@@ -388,4 +388,14 @@ export default function WalletScreen() {
         </View>
     </PageScaffold>
   );
+}
+
+export default function WalletScreen() {
+  const { isDesktop, isTablet } = useScreenLayout();
+
+  if (!isDesktop && !isTablet) {
+    return <Redirect href="/(app)/(tabs)" />;
+  }
+
+  return <WalletDetailsScreen />;
 }

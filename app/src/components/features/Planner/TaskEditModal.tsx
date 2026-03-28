@@ -6,12 +6,13 @@ import { useTheme } from 'styled-components/native';
 import { DatePickerModal } from './DatePickerModal';
 import { useLanguage } from '../../../context/LanguageContext';
 import { haptics } from '../../../utils/haptics';
+import { normalizePlannerDueDate } from '../../../utils/plannerDate';
 import { COLUMN_ORDER, PRIORITY_COLORS, getStatusLabel } from '../../../utils/plannerConstants';
-import type { PlannerStatus, TodoItem, UpdateTaskRequest } from '../../../types/planner';
+import type { PlannerStatus, Task, UpdateTaskRequest } from '../../../types/planner';
 
 interface TaskEditModalProps {
   visible: boolean;
-  task: TodoItem | null;
+  task: Task | null;
   onClose: () => void;
   onSave: (taskId: string, updates: UpdateTaskRequest) => Promise<void>;
   onAddTransaction?: (taskId: string) => void;
@@ -40,18 +41,18 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
     if (task && visible) {
       setTitle(task.title);
       setDescription(task.description || '');
-      setDueDate(task.due_date || '');
+      setDueDate(normalizePlannerDueDate(task.due_date));
       setPriority((task.priority as 'low' | 'medium' | 'high') || 'medium');
       setStatus(task.status);
-      setReminderMode('off');
+      setReminderMode(task.reminder_mode || 'off');
       setIsSaving(false);
       initialValuesRef.current = {
         title: task.title,
         description: task.description || '',
-        dueDate: task.due_date || '',
+        dueDate: normalizePlannerDueDate(task.due_date),
         priority: (task.priority as string) || 'medium',
         status: task.status,
-        reminderMode: 'off',
+        reminderMode: task.reminder_mode || 'off',
       };
     }
   }, [task, visible]);
@@ -88,8 +89,8 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
 
     const updates: UpdateTaskRequest = {
       title: cleanTitle,
-      description: description.trim() || undefined,
-      due_date: dueDate.trim() || undefined,
+      description: description.trim(),
+      due_date: dueDate.trim(),
       priority,
       status,
       reminder_mode: reminderMode,
@@ -327,7 +328,7 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
                 </View>
               </View>
 
-              {task.type === 'task' && onAddTransaction && (
+              {onAddTransaction && (
                 <Pressable
                   onPress={() => {
                     onClose();

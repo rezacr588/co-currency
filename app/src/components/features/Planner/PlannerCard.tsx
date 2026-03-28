@@ -9,13 +9,14 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { Calendar, Check, ChevronLeft, ChevronRight, GripHorizontal, KanbanSquare, Pencil, Target } from 'lucide-react-native';
+import { Calendar, Check, ChevronRight, GripHorizontal, KanbanSquare, Pencil, Target } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
 import { SwipeableRow } from '../../ui/SwipeableRow';
 import { useLanguage } from '../../../context/LanguageContext';
 import { haptics } from '../../../utils/haptics';
+import { normalizePlannerDueDate } from '../../../utils/plannerDate';
 import { readStorage, writeStorage } from '../../../utils/storage';
-import { COLUMN_ORDER, PRIORITY_COLORS, getStatusLabel } from '../../../utils/plannerConstants';
+import { COLUMN_ORDER, PRIORITY_COLORS } from '../../../utils/plannerConstants';
 import type { PlannerPendingMarker, PlannerStatus, TodoItem } from '../../../types/planner';
 
 type DragDirection = 'left' | 'right' | null;
@@ -40,6 +41,7 @@ interface PlannerCardProps {
   onCompleteTask: (taskID: string) => void;
   onDeleteTask: (taskID: string) => void;
   onEdit?: (item: TodoItem) => void;
+  onRequestMove?: (item: TodoItem) => void;
   onAddTransaction?: (taskID: string) => void;
   isLaunchingTransaction?: boolean;
   onDragStateChange: (dragging: boolean) => void;
@@ -58,6 +60,7 @@ export function PlannerCard({
   onCompleteTask,
   onDeleteTask,
   onEdit,
+  onRequestMove,
   onAddTransaction,
   isLaunchingTransaction,
   onDragStateChange,
@@ -79,7 +82,8 @@ export function PlannerCard({
 
   const isTask = item.type === 'task';
   const canCompleteTask = isTask && item.status !== 'done' && item.status !== 'archived';
-  const overdue = isOverdue(item.due_date);
+  const normalizedDueDate = normalizePlannerDueDate(item.due_date);
+  const overdue = isOverdue(normalizedDueDate);
   const priorityInfo = item.priority ? PRIORITY_COLORS[item.priority] : undefined;
   const allowGestures = interactionMode === 'gesture';
   const previousStatus = columnIndex > 0 ? COLUMN_ORDER[columnIndex - 1] : null;
@@ -158,10 +162,6 @@ export function PlannerCard({
       runOnJS(onDragStateChange)(false);
       runOnJS(onDragDirectionChange)(null);
     });
-
-  const statusLabel = useCallback((s: PlannerStatus) => {
-    return getStatusLabel(s, t as (key: string) => string | undefined);
-  }, [t]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -307,7 +307,7 @@ export function PlannerCard({
             </View>
           )}
 
-          {item.due_date && (
+          {normalizedDueDate && (
             <View
               style={{
                 flexDirection: 'row',
@@ -321,7 +321,7 @@ export function PlannerCard({
             >
               <Calendar size={10} color={overdue ? colors.danger : colors.mutedForeground} />
               <Text style={{ color: overdue ? colors.danger : colors.mutedForeground, fontSize: 10, fontFamily: 'Inter_500Medium' }}>
-                {item.due_date}
+                {normalizedDueDate}
               </Text>
             </View>
           )}
@@ -343,64 +343,34 @@ export function PlannerCard({
           ))}
         </View>
 
-        {!allowGestures && (previousStatus || nextStatus) ? (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
-            {previousStatus ? (
-              <Pressable
-                onPress={() => {
-                  void haptics.selection();
-                  onMove(item, previousStatus);
-                }}
-                style={({ pressed }) => [{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  backgroundColor: colors.card,
-                  borderRadius: 999,
-                  paddingHorizontal: 10,
-                  paddingVertical: 8,
-                  flexShrink: 1,
-                }, pressed && { opacity: 0.72 }]}
+        {!allowGestures && onRequestMove && (previousStatus || nextStatus) ? (
+          <View style={{ marginTop: 10 }}>
+            <Pressable
+              onPress={() => {
+                void haptics.selection();
+                onRequestMove(item);
+              }}
+              style={({ pressed }) => [{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                borderWidth: 1,
+                borderColor: colors.accent + '44',
+                backgroundColor: colors.accent + '12',
+                borderRadius: 999,
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+              }, pressed && { opacity: 0.72 }]}
+            >
+              <Text
+                style={{ color: colors.accent, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}
+                numberOfLines={1}
               >
-                <ChevronLeft size={14} color={colors.mutedForeground} />
-                <Text
-                  style={{ color: colors.foreground, fontSize: 12, fontFamily: 'Inter_600SemiBold', flexShrink: 1 }}
-                  numberOfLines={1}
-                >
-                  {(t('plannerMoveTo') || 'Move to') + ' ' + statusLabel(previousStatus)}
-                </Text>
-              </Pressable>
-            ) : null}
-            {nextStatus ? (
-              <Pressable
-                onPress={() => {
-                  void haptics.selection();
-                  onMove(item, nextStatus);
-                }}
-                style={({ pressed }) => [{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  borderWidth: 1,
-                  borderColor: colors.accent + '44',
-                  backgroundColor: colors.accent + '12',
-                  borderRadius: 999,
-                  paddingHorizontal: 10,
-                  paddingVertical: 8,
-                  flexShrink: 1,
-                }, pressed && { opacity: 0.72 }]}
-              >
-                <Text
-                  style={{ color: colors.accent, fontSize: 12, fontFamily: 'Inter_600SemiBold', flexShrink: 1 }}
-                  numberOfLines={1}
-                >
-                  {(t('plannerMoveTo') || 'Move to') + ' ' + statusLabel(nextStatus)}
-                </Text>
-                <ChevronRight size={14} color={colors.accent} />
-              </Pressable>
-            ) : null}
+                {t('plannerMoveTo') || 'Move to'}
+              </Text>
+              <ChevronRight size={14} color={colors.accent} />
+            </Pressable>
           </View>
         ) : null}
 

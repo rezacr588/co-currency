@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { Plus, Tag, Trash2 } from 'lucide-react-native';
+import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { Plus, Tag, Trash2, X } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
 import { DatePickerModal } from './DatePickerModal';
+import { PlannerSelectionSheet } from './PlannerSelectionSheet';
 import { CurrencyPicker } from '../../ui/CurrencyPicker';
 import {
   MultiStepWizardScreen,
@@ -13,13 +14,13 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { useScreenLayout } from '../../../hooks/useScreenLayout';
 import { haptics } from '../../../utils/haptics';
 import { readJSON, removeStorage, writeJSON } from '../../../utils/storage';
-import { isValidPlannerDueDate } from '../../../utils/plannerDate';
+import { isValidPlannerDueDate, normalizePlannerDueDate } from '../../../utils/plannerDate';
 import type { Goal } from '../../../types/goal';
 import { COLUMN_ORDER, PRIORITY_COLORS, getStatusLabel } from '../../../utils/plannerConstants';
 import type {
-  CreateTaskRequest,
-  PlannerBoardResponse,
   PlannerStatus,
+  Task,
+  TaskEditorValues,
   TaskSubtask,
   TaskWizardDraft,
   TaskWizardStep,
@@ -32,35 +33,74 @@ function draftStorageKey(userID: string): string {
   return `@task_wizard_draft:${userID}`;
 }
 
-function nextSortOrder(board: PlannerBoardResponse, status: PlannerStatus): number {
-  const column = board.columns.find((c) => c.status === status);
-  const items = (column?.items ?? []).slice().sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-  if (items.length === 0) return 1;
-  const tail = items[items.length - 1];
-  return (tail.sort_order ?? items.length) + 1;
+function emptyEditorValues(): TaskEditorValues {
+  return {
+    title: '',
+    description: '',
+    due_date: '',
+    status: 'todo',
+    priority: 'medium',
+    reminder_mode: 'off',
+    selected_tag_ids: [],
+    subtasks: [],
+    goal_id: undefined,
+    auto_ledger_enabled: false,
+    ledger_type: 'debit',
+    ledger_amount: '',
+    ledger_currency: 'USD',
+    ledger_wallet_currency: 'USD',
+    ledger_category: '',
+    ledger_description: '',
+  };
+}
+
+function taskToEditorValues(task: Task, tagIDs: string[]): TaskEditorValues {
+  return {
+    title: task.title,
+    description: task.description || '',
+    due_date: normalizePlannerDueDate(task.due_date),
+    status: task.status,
+    priority: task.priority,
+    reminder_mode: task.reminder_mode || 'off',
+    selected_tag_ids: tagIDs,
+    subtasks: task.subtasks ?? [],
+    goal_id: task.goal_id,
+    auto_ledger_enabled: task.auto_ledger_enabled ?? false,
+    ledger_type: task.ledger_type === 'credit' ? 'credit' : 'debit',
+    ledger_amount: typeof task.ledger_amount === 'number' ? String(task.ledger_amount) : '',
+    ledger_currency: task.ledger_currency || 'USD',
+    ledger_wallet_currency: task.ledger_wallet_currency || 'USD',
+    ledger_category: task.ledger_category || '',
+    ledger_description: task.ledger_description || '',
+  };
 }
 
 interface TaskWizardModalProps {
   onClose: () => void;
-  onSubmit: (payload: CreateTaskRequest, tagIds: string[]) => Promise<void>;
+  onSubmit: (values: TaskEditorValues) => Promise<void>;
   userId: string;
-  effectiveBoard: PlannerBoardResponse;
   tags: Array<{ id: string; name: string }>;
   goals: Goal[];
+  mode?: 'create' | 'edit';
+  initialTask?: Task | null;
+  initialTagIDs?: string[];
 }
 
 export function TaskWizardModal({
   onClose,
   onSubmit,
   userId,
-  effectiveBoard,
   tags,
   goals,
+  mode = 'create',
+  initialTask,
+  initialTagIDs = [],
 }: TaskWizardModalProps) {
   const theme = useTheme();
   const colors = theme.colors;
   const { t } = useLanguage();
   const { isCompactPhone, isPhone } = useScreenLayout();
+  const isEditMode = mode === 'edit';
 
   const [step, setStep] = useState<TaskWizardStep>('basics');
   const [title, setTitle] = useState('');
@@ -84,50 +124,49 @@ export function TaskWizardModal({
   const [showSourceCurrencyPicker, setShowSourceCurrencyPicker] = useState(false);
   const [showWalletCurrencyPicker, setShowWalletCurrencyPicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [storedDraft, setStoredDraft] = useState<TaskWizardDraft | null>(null);
+  const [showTagSheet, setShowTagSheet] = useState(false);
+  const [showGoalSheet, setShowGoalSheet] = useState(false);
 
-  const resetWizard = useCallback(() => {
-    setStep('basics');
-    setTitle('');
-    setDescription('');
-    setDueDate('');
-    setSelectedStatus('todo');
-    setSelectedPriority('medium');
-    setReminderMode('off');
-    setSelectedTagIDs([]);
-    setSelectedGoalID(undefined);
-    setAutoLedgerEnabled(false);
-    setLedgerType('debit');
-    setLedgerAmount('');
-    setLedgerCurrency('USD');
-    setLedgerWalletCurrency('USD');
-    setLedgerCategory('');
-    setLedgerDescription('');
-    setSubtasks([]);
+  const applyValues = useCallback((values: TaskEditorValues, nextStep: TaskWizardStep = 'basics') => {
+    setStep(nextStep);
+    setTitle(values.title);
+    setDescription(values.description);
+    setDueDate(normalizePlannerDueDate(values.due_date));
+    setSelectedStatus(values.status);
+    setSelectedPriority(values.priority);
+    setReminderMode(values.reminder_mode);
+    setSelectedTagIDs(values.selected_tag_ids);
+    setSelectedGoalID(values.goal_id);
+    setAutoLedgerEnabled(values.auto_ledger_enabled);
+    setLedgerType(values.ledger_type);
+    setLedgerAmount(values.ledger_amount);
+    setLedgerCurrency(values.ledger_currency || 'USD');
+    setLedgerWalletCurrency(values.ledger_wallet_currency || 'USD');
+    setLedgerCategory(values.ledger_category);
+    setLedgerDescription(values.ledger_description);
+    setSubtasks(values.subtasks);
     setSubtaskDraft('');
   }, []);
 
+  const resetWizard = useCallback(() => {
+    applyValues(emptyEditorValues(), 'basics');
+  }, [applyValues]);
+
   const applyDraft = useCallback((draft: TaskWizardDraft) => {
-    setStep(draft.step);
-    setTitle(draft.title);
-    setDescription(draft.description);
-    setDueDate(draft.due_date);
-    setSelectedStatus(draft.status);
-    setSelectedPriority(draft.priority);
-    setReminderMode(draft.reminder_mode);
-    setSelectedTagIDs(draft.selected_tag_ids);
-    setSelectedGoalID(draft.goal_id);
-    setAutoLedgerEnabled(draft.auto_ledger_enabled);
-    setLedgerType(draft.ledger_type);
-    setLedgerAmount(draft.ledger_amount);
-    setLedgerCurrency(draft.ledger_currency || 'USD');
-    setLedgerWalletCurrency(draft.ledger_wallet_currency || 'USD');
-    setLedgerCategory(draft.ledger_category);
-    setLedgerDescription(draft.ledger_description);
-    setSubtasks(draft.subtasks);
-  }, []);
+    applyValues(draft, draft.step);
+    setStoredDraft(null);
+  }, [applyValues]);
 
   useEffect(() => {
-    // Always start with a clean slate immediately
+    if (isEditMode) {
+      if (initialTask) {
+        applyValues(taskToEditorValues(initialTask, initialTagIDs));
+      }
+      setStoredDraft(null);
+      return;
+    }
+
     resetWizard();
 
     if (!userId) return;
@@ -135,29 +174,12 @@ export function TaskWizardModal({
     void (async () => {
       const stored = await readJSON<TaskWizardDraft>(draftStorageKey(userId));
       if (!stored) return;
-
-      Alert.alert(
-        t('plannerResumeDraft') || 'Resume task draft?',
-        t('plannerResumeDraftMessage') || 'Continue where you left off in the task setup wizard?',
-        [
-          {
-            text: t('plannerDiscardDraft') || 'Discard',
-            style: 'destructive',
-            onPress: () => {
-              void removeStorage(draftStorageKey(userId));
-            },
-          },
-          {
-            text: t('plannerResume') || 'Resume',
-            onPress: () => applyDraft(stored),
-          },
-        ],
-      );
+      setStoredDraft(stored);
     })();
-  }, [userId, resetWizard, applyDraft, t]);
+  }, [applyValues, initialTagIDs, initialTask, isEditMode, resetWizard, userId]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (isEditMode || !userId) return;
 
     const draft: TaskWizardDraft = {
       version: TASK_WIZARD_DRAFT_VERSION,
@@ -187,10 +209,25 @@ export function TaskWizardModal({
 
     return () => clearTimeout(timeout);
   }, [
-    userId, step, title, description, dueDate, selectedStatus,
-    selectedPriority, reminderMode, selectedTagIDs, subtasks, selectedGoalID,
-    autoLedgerEnabled, ledgerType, ledgerAmount, ledgerCurrency,
-    ledgerWalletCurrency, ledgerCategory, ledgerDescription,
+    autoLedgerEnabled,
+    description,
+    dueDate,
+    isEditMode,
+    ledgerAmount,
+    ledgerCategory,
+    ledgerCurrency,
+    ledgerDescription,
+    ledgerType,
+    ledgerWalletCurrency,
+    reminderMode,
+    selectedGoalID,
+    selectedPriority,
+    selectedStatus,
+    selectedTagIDs,
+    step,
+    subtasks,
+    title,
+    userId,
   ]);
 
   const dueDateValidationError = useMemo(() => {
@@ -243,50 +280,56 @@ export function TaskWizardModal({
       return;
     }
 
-    const sortOrder = nextSortOrder(effectiveBoard, selectedStatus);
-    const payload: CreateTaskRequest = {
+    const values: TaskEditorValues = {
       title: cleanTitle,
-      description: description.trim() || undefined,
+      description,
+      due_date: dueDate.trim(),
       status: selectedStatus,
       priority: selectedPriority,
-      due_date: dueDate.trim() || undefined,
-      goal_id: selectedGoalID,
-      sort_order: sortOrder,
       reminder_mode: reminderMode,
-      subtasks: subtasks.length > 0 ? subtasks : undefined,
+      selected_tag_ids: selectedTagIDs,
+      subtasks,
+      goal_id: selectedGoalID,
       auto_ledger_enabled: autoLedgerEnabled,
-      ledger_type: autoLedgerEnabled ? ledgerType : undefined,
-      ledger_amount: autoLedgerEnabled && ledgerAmount ? Number(ledgerAmount) : undefined,
-      ledger_currency: autoLedgerEnabled ? ledgerCurrency : undefined,
-      ledger_wallet_currency: autoLedgerEnabled ? ledgerWalletCurrency : undefined,
-      ledger_category: autoLedgerEnabled ? ledgerCategory.trim() || undefined : undefined,
-      ledger_description: autoLedgerEnabled ? ledgerDescription.trim() || undefined : undefined,
+      ledger_type: ledgerType,
+      ledger_amount: ledgerAmount,
+      ledger_currency: ledgerCurrency,
+      ledger_wallet_currency: ledgerWalletCurrency,
+      ledger_category: ledgerCategory,
+      ledger_description: ledgerDescription,
     };
 
     setIsSubmitting(true);
     try {
-      await onSubmit(payload, selectedTagIDs);
+      await onSubmit(values);
       void haptics.success();
-      resetWizard();
-      if (userId) await removeStorage(draftStorageKey(userId));
+      if (!isEditMode) {
+        resetWizard();
+      }
+      if (!isEditMode && userId) {
+        await removeStorage(draftStorageKey(userId));
+      }
       onClose();
     } catch (err) {
       void haptics.error();
-      Alert.alert(t('plannerQueueError') || 'Could not queue task', err instanceof Error ? err.message : 'Unknown error');
+      Alert.alert(
+        isEditMode ? (t('plannerUpdateError') || 'Could not update task') : (t('plannerQueueError') || 'Could not queue task'),
+        err instanceof Error ? err.message : 'Unknown error'
+      );
     } finally {
       setIsSubmitting(false);
     }
   }, [isSubmitting,
-    validateStep, title, effectiveBoard, selectedStatus, description,
+    validateStep, title, selectedStatus, description,
     selectedPriority, dueDate, selectedGoalID, reminderMode, subtasks,
     autoLedgerEnabled, ledgerType, ledgerAmount, ledgerCurrency,
     ledgerWalletCurrency, ledgerCategory, ledgerDescription,
-    selectedTagIDs, onSubmit, resetWizard, userId, onClose,
+    selectedTagIDs, onSubmit, resetWizard, userId, onClose, isEditMode, t,
   ]);
 
   const handleDiscard = useCallback(() => {
     Alert.alert(
-      t('plannerDiscardConfirmTitle') || 'Discard draft?',
+      t('plannerDiscardConfirmTitle') || (isEditMode ? 'Discard changes?' : 'Discard draft?'),
       t('plannerDiscardConfirmMessage') || 'All your progress on this task will be lost.',
       [
         { text: t('plannerClose') || 'Cancel', style: 'cancel' },
@@ -294,14 +337,16 @@ export function TaskWizardModal({
           text: t('plannerDiscard') || 'Discard',
           style: 'destructive',
           onPress: () => {
-            resetWizard();
-            if (userId) void removeStorage(draftStorageKey(userId));
+            if (!isEditMode) {
+              resetWizard();
+              if (userId) void removeStorage(draftStorageKey(userId));
+            }
             onClose();
           },
         },
       ],
     );
-  }, [resetWizard, userId, onClose, t]);
+  }, [isEditMode, onClose, resetWizard, t, userId]);
 
   const addSubtask = useCallback(() => {
     const text = subtaskDraft.trim();
@@ -316,7 +361,7 @@ export function TaskWizardModal({
   }, []);
 
   const handleDateSelect = useCallback((date: string) => {
-    setDueDate(date);
+    setDueDate(normalizePlannerDueDate(date));
     if (date.trim() && reminderMode === 'off') setReminderMode('aggressive');
   }, [reminderMode]);
 
@@ -343,26 +388,117 @@ export function TaskWizardModal({
   }));
   const statusLabel = (s: PlannerStatus) => getStatusLabel(s, t as (key: string) => string | undefined);
   const contentGap = isPhone ? 12 : 14;
+  const selectedTags = useMemo(
+    () => tags.filter((tag) => selectedTagIDs.includes(tag.id)),
+    [selectedTagIDs, tags]
+  );
+  const selectedGoal = useMemo(
+    () => goals.find((goal) => goal.id === selectedGoalID),
+    [goals, selectedGoalID]
+  );
+  const tagOptions = useMemo(
+    () => tags.map((tag) => ({ value: tag.id, label: tag.name })),
+    [tags]
+  );
+  const goalOptions = useMemo(
+    () => [
+      { value: '__none__', label: t('plannerNoLinkedGoal') || 'No linked goal' },
+      ...goals.map((goal) => ({
+        value: goal.id,
+        label: goal.name,
+        description: `${Math.round(goal.progress)}% ${(t('plannerDone') || 'Done').toLowerCase()}`,
+      })),
+    ],
+    [goals, t]
+  );
+  const closeWizard = isEditMode ? handleDiscard : onClose;
 
   return (
     <>
       <MultiStepWizardScreen
-        eyebrow={t('plannerTaskWizard') || 'Task Setup Wizard'}
+        eyebrow={isEditMode ? (t('plannerEditTask') || 'Edit Task') : (t('plannerTaskWizard') || 'Task Setup Wizard')}
         title={stepLabels[step]}
         steps={stepItems}
         activeStep={step}
         onStepPress={(stepKey) => setStep(stepKey as TaskWizardStep)}
-        onClose={onClose}
+        onClose={closeWizard}
         onDiscard={handleDiscard}
         onBack={goBack}
         onPrimaryAction={step === 'finance_review' ? handleSubmit : goNext}
-        primaryLabel={step === 'finance_review' ? (t('plannerCreateTask') || 'Create Task') : (t('plannerNext') || 'Next')}
+        primaryLabel={step === 'finance_review'
+          ? (isEditMode ? (t('plannerSaveChanges') || 'Save Changes') : (t('plannerCreateTask') || 'Create Task'))
+          : (t('plannerNext') || 'Next')}
         isPrimaryLoading={step === 'finance_review' ? isSubmitting : false}
         canGoBack={step !== 'basics'}
-        discardAccessibilityLabel={t('plannerDiscardDraft') || 'Discard draft'}
+        discardAccessibilityLabel={isEditMode ? (t('plannerDiscard') || 'Discard changes') : (t('plannerDiscardDraft') || 'Discard draft')}
         closeLabel={t('plannerClose') || 'Close'}
         backLabel={t('plannerBack') || 'Back'}
       >
+            {!isEditMode && storedDraft ? (
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.accent + '44',
+                  backgroundColor: colors.accent + '12',
+                  borderRadius: 16,
+                  padding: 14,
+                  gap: 10,
+                  marginBottom: 14,
+                }}
+              >
+                <View style={{ gap: 4 }}>
+                  <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 14 }}>
+                    {t('plannerResumeDraft') || 'Resume task draft?'}
+                  </Text>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+                    {t('plannerResumeDraftMessage') || 'Continue where you left off in the task setup wizard?'}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Pressable
+                    onPress={() => {
+                      setStoredDraft(null);
+                      void removeStorage(draftStorageKey(userId));
+                    }}
+                    style={({ pressed }) => [
+                      {
+                        flex: 1,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        backgroundColor: colors.card,
+                        paddingVertical: 10,
+                      },
+                      pressed && { opacity: 0.72 },
+                    ]}
+                  >
+                    <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>
+                      {t('plannerDiscardDraft') || 'Discard'}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => applyDraft(storedDraft)}
+                    style={({ pressed }) => [
+                      {
+                        flex: 1,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: 12,
+                        backgroundColor: colors.accent,
+                        paddingVertical: 10,
+                      },
+                      pressed && { opacity: 0.78 },
+                    ]}
+                  >
+                    <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_700Bold', fontSize: 13 }}>
+                      {t('plannerResume') || 'Resume'}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
             {step === 'basics' && (
               <View style={{ gap: contentGap }}>
                 <View>
@@ -535,106 +671,115 @@ export function TaskWizardModal({
             {step === 'organization' && (
               <View style={{ gap: contentGap }}>
                 <View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                    <Tag size={13} color={colors.mutedForeground} />
-                    <Text style={{ color: colors.mutedForeground, fontSize: 12, marginStart: 6 }}>
-                      {t('plannerTags') || 'Tags'}
-                    </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Tag size={13} color={colors.mutedForeground} />
+                      <Text style={{ color: colors.mutedForeground, fontSize: 12, marginStart: 6 }}>
+                        {t('plannerTags') || 'Tags'}
+                      </Text>
+                    </View>
+                    <Pressable
+                      onPress={() => setShowTagSheet(true)}
+                      style={({ pressed }) => [{
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: 999,
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        backgroundColor: colors.card,
+                      }, pressed && { opacity: 0.76 }]}
+                    >
+                      <Text style={{ color: colors.foreground, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>
+                        {selectedTags.length > 0
+                          ? `${selectedTags.length} ${(t('plannerTags') || 'Tags')}`
+                          : (t('plannerManageTags') || 'Select tags')}
+                      </Text>
+                    </Pressable>
                   </View>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                    {tags.map((tag) => {
-                      const selected = selectedTagIDs.includes(tag.id);
-                      return (
+                  {selectedTags.length > 0 ? (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {selectedTags.map((tag) => (
                         <Pressable
                           key={tag.id}
-                          onPress={() => setSelectedTagIDs((prev) =>
-                            selected ? prev.filter((id) => id !== tag.id) : [...prev, tag.id]
-                          )}
+                          onPress={() => setSelectedTagIDs((prev) => prev.filter((id) => id !== tag.id))}
                           style={({ pressed }) => [{
-                            paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1,
-                            borderColor: selected ? colors.accent : colors.border,
-                            backgroundColor: selected ? colors.accent + '24' : colors.card,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 6,
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: 999,
+                            borderWidth: 1,
+                            borderColor: colors.accent,
+                            backgroundColor: colors.accent + '24',
                           }, pressed && { opacity: 0.78 }]}
                         >
-                          <Text style={{ color: selected ? colors.accent : colors.foreground, fontSize: 12 }}>
+                          <Text style={{ color: colors.accent, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>
                             {tag.name}
                           </Text>
+                          <X size={12} color={colors.accent} />
                         </Pressable>
-                      );
-                    })}
-                  </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+                      {t('plannerNoTagsSelected') || 'No tags selected yet.'}
+                    </Text>
+                  )}
                 </View>
 
                 <View>
-                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 8 }}>
-                    {t('plannerGoalLinkage') || 'Goal linkage (optional)'}
-                  </Text>
-                  {isPhone ? (
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                      <Pressable
-                        onPress={() => setSelectedGoalID(undefined)}
-                        style={({ pressed }) => [{
-                          paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1,
-                          borderColor: !selectedGoalID ? colors.accent : colors.border,
-                          backgroundColor: !selectedGoalID ? colors.accent + '24' : colors.card,
-                        }, pressed && { opacity: 0.76 }]}
-                      >
-                        <Text style={{ color: !selectedGoalID ? colors.accent : colors.foreground, fontSize: 12 }}>
-                          {t('plannerNoLinkedGoal') || 'No linked goal'}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+                      {t('plannerGoalLinkage') || 'Goal linkage (optional)'}
+                    </Text>
+                    <Pressable
+                      onPress={() => setShowGoalSheet(true)}
+                      style={({ pressed }) => [{
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: 999,
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        backgroundColor: colors.card,
+                      }, pressed && { opacity: 0.76 }]}
+                    >
+                      <Text style={{ color: colors.foreground, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>
+                        {selectedGoal ? (t('plannerChange') || 'Change') : (t('plannerSelect') || 'Select')}
+                      </Text>
+                    </Pressable>
+                  </View>
+                  {selectedGoal ? (
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 10,
+                        borderWidth: 1,
+                        borderColor: colors.accent,
+                        backgroundColor: colors.accent + '14',
+                        borderRadius: 14,
+                        paddingHorizontal: 12,
+                        paddingVertical: 10,
+                      }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: colors.accent, fontSize: 13, fontFamily: 'Inter_700Bold' }}>
+                          {selectedGoal.name}
                         </Text>
+                        <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 2 }}>
+                          {Math.round(selectedGoal.progress)}% {(t('plannerDone') || 'Done').toLowerCase()}
+                        </Text>
+                      </View>
+                      <Pressable onPress={() => setSelectedGoalID(undefined)} hitSlop={6}>
+                        <X size={14} color={colors.accent} />
                       </Pressable>
-                      {goals.map((goal: Goal) => {
-                        const selected = selectedGoalID === goal.id;
-                        return (
-                          <Pressable
-                            key={goal.id}
-                            onPress={() => setSelectedGoalID(goal.id)}
-                            style={({ pressed }) => [{
-                              paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1,
-                              borderColor: selected ? colors.accent : colors.border,
-                              backgroundColor: selected ? colors.accent + '24' : colors.card,
-                            }, pressed && { opacity: 0.76 }]}
-                          >
-                            <Text style={{ color: selected ? colors.accent : colors.foreground, fontSize: 12 }}>
-                              {goal.name}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
                     </View>
                   ) : (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                      <Pressable
-                        onPress={() => setSelectedGoalID(undefined)}
-                        style={({ pressed }) => [{
-                          paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1,
-                          borderColor: !selectedGoalID ? colors.accent : colors.border,
-                          backgroundColor: !selectedGoalID ? colors.accent + '24' : colors.card,
-                        }, pressed && { opacity: 0.76 }]}
-                      >
-                        <Text style={{ color: !selectedGoalID ? colors.accent : colors.foreground, fontSize: 12 }}>
-                          {t('plannerNoLinkedGoal') || 'No linked goal'}
-                        </Text>
-                      </Pressable>
-                      {goals.map((goal: Goal) => {
-                        const selected = selectedGoalID === goal.id;
-                        return (
-                          <Pressable
-                            key={goal.id}
-                            onPress={() => setSelectedGoalID(goal.id)}
-                            style={({ pressed }) => [{
-                              paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1,
-                              borderColor: selected ? colors.accent : colors.border,
-                              backgroundColor: selected ? colors.accent + '24' : colors.card,
-                            }, pressed && { opacity: 0.76 }]}
-                          >
-                            <Text style={{ color: selected ? colors.accent : colors.foreground, fontSize: 12 }}>
-                              {goal.name}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </ScrollView>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+                      {t('plannerNoLinkedGoal') || 'No linked goal'}
+                    </Text>
                   )}
                 </View>
 
@@ -663,14 +808,20 @@ export function TaskWizardModal({
                       <Plus size={16} color={colors.accentForeground} />
                     </Pressable>
                   </View>
-                  {subtasks.map((sub) => (
-                    <View key={sub.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 }}>
-                      <Text style={{ color: colors.foreground, flex: 1 }}>{sub.title}</Text>
-                      <Pressable onPress={() => removeSubtask(sub.id)}>
-                        <Trash2 size={14} color={colors.danger} />
-                      </Pressable>
-                    </View>
-                  ))}
+                  {subtasks.length > 0 ? (
+                    subtasks.map((sub) => (
+                      <View key={sub.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, gap: 10 }}>
+                        <Text style={{ color: colors.foreground, flex: 1 }}>{sub.title}</Text>
+                        <Pressable onPress={() => removeSubtask(sub.id)}>
+                          <Trash2 size={14} color={colors.danger} />
+                        </Pressable>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+                      {t('plannerNoSubtasks') || 'No subtasks yet.'}
+                    </Text>
+                  )}
                 </View>
               </View>
             )}
@@ -814,6 +965,11 @@ export function TaskWizardModal({
                     <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
                       {t('plannerReviewSubtasks') || 'Subtasks:'} {subtasks.length}
                     </Text>
+                    {selectedGoal ? (
+                      <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+                        {(t('plannerGoalLinkage') || 'Goal linkage') + ':'} {selectedGoal.name}
+                      </Text>
+                    ) : null}
                   </View>
 
                   <WizardStepJumpChips
@@ -824,6 +980,33 @@ export function TaskWizardModal({
               </View>
             )}
       </MultiStepWizardScreen>
+
+      <PlannerSelectionSheet
+        visible={showTagSheet}
+        title={t('plannerTags') || 'Tags'}
+        options={tagOptions}
+        selectedValues={selectedTagIDs}
+        onToggle={(value) => {
+          setSelectedTagIDs((prev) =>
+            prev.includes(value) ? prev.filter((id) => id !== value) : [...prev, value]
+          );
+        }}
+        onClose={() => setShowTagSheet(false)}
+        multiple
+        searchPlaceholder={t('plannerSearchTags') || 'Search tags'}
+      />
+
+      <PlannerSelectionSheet
+        visible={showGoalSheet}
+        title={t('plannerGoalLinkage') || 'Goal linkage'}
+        options={goalOptions}
+        selectedValues={selectedGoalID ? [selectedGoalID] : ['__none__']}
+        onToggle={(value) => {
+          setSelectedGoalID(value === '__none__' ? undefined : value);
+        }}
+        onClose={() => setShowGoalSheet(false)}
+        searchPlaceholder={t('plannerSearchGoals') || 'Search goals'}
+      />
 
       <DatePickerModal
         visible={showDatePicker}

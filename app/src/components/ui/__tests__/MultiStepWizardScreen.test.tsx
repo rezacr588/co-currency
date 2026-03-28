@@ -133,6 +133,8 @@ describe('MultiStepWizardScreen', () => {
 
     expect(activeStyles.backgroundColor).toBe(theme.colors.foreground);
     expect(pendingStyles.backgroundColor).toBe(theme.colors.background + 'E8');
+    expect(view.getByText('Wizard')).toBeTruthy();
+    expect(view.getAllByText('Basics').length).toBeGreaterThan(0);
     expect(view.getByText('Review')).toBeTruthy();
   });
 });

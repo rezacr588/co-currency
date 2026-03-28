@@ -33,6 +33,25 @@ export interface Task {
   updated_at: string;
 }
 
+export interface TaskEditorValues {
+  title: string;
+  description: string;
+  due_date: string;
+  status: PlannerStatus;
+  priority: 'low' | 'medium' | 'high';
+  reminder_mode: 'off' | 'aggressive';
+  selected_tag_ids: string[];
+  subtasks: TaskSubtask[];
+  goal_id?: string;
+  auto_ledger_enabled: boolean;
+  ledger_type: 'credit' | 'debit';
+  ledger_amount: string;
+  ledger_currency: string;
+  ledger_wallet_currency: string;
+  ledger_category: string;
+  ledger_description: string;
+}
+
 export interface TodoItem {
   id: string;
   type: PlannerItemType;
@@ -94,7 +113,25 @@ export interface CreateTaskRequest {
   ledger_description?: string;
 }
 
-export interface UpdateTaskRequest extends Partial<CreateTaskRequest> {}
+export interface UpdateTaskRequest {
+  goal_id?: string;
+  transaction_id?: string;
+  title?: string;
+  description?: string;
+  status?: PlannerStatus;
+  priority?: 'low' | 'medium' | 'high';
+  sort_order?: number;
+  subtasks?: TaskSubtask[];
+  due_date?: string;
+  reminder_mode?: 'off' | 'aggressive';
+  auto_ledger_enabled?: boolean;
+  ledger_type?: string;
+  ledger_amount?: number | null;
+  ledger_currency?: string;
+  ledger_wallet_currency?: string;
+  ledger_category?: string;
+  ledger_description?: string;
+}
 
 export interface MovePlannerItemRequest {
   status: PlannerStatus;
@@ -117,24 +154,8 @@ export interface PlannerPendingMarker {
   pending_verification?: boolean;
 }
 
-export interface TaskWizardDraft {
+export interface TaskWizardDraft extends TaskEditorValues {
   version: number;
   updated_at: number;
   step: TaskWizardStep;
-  title: string;
-  description: string;
-  due_date: string;
-  status: PlannerStatus;
-  priority: 'low' | 'medium' | 'high';
-  reminder_mode: 'off' | 'aggressive';
-  selected_tag_ids: string[];
-  subtasks: TaskSubtask[];
-  goal_id?: string;
-  auto_ledger_enabled: boolean;
-  ledger_type: 'credit' | 'debit';
-  ledger_amount: string;
-  ledger_currency: string;
-  ledger_wallet_currency: string;
-  ledger_category: string;
-  ledger_description: string;
 }

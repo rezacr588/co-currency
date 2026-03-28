@@ -7,12 +7,8 @@ import {
   ArrowLeftRight,
   ArrowRight,
   BarChart3,
-  Bot,
-  Briefcase,
   MessageCircle,
   Plus,
-  Sparkles,
-  Target,
   Wallet,
 } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
@@ -22,9 +18,16 @@ import { DashboardCharts } from '../../../src/components/features/Dashboard';
 import { Card, PageHeader, PageScaffold, SectionBlock } from '../../../src/components/ui';
 import { useAuth } from '../../../src/context/AuthContext';
 import { useLanguage } from '../../../src/context/LanguageContext';
-import { formatCurrency } from '../../../src/utils/format';
-import { openRecommendedAction } from '../../../src/utils/coaiActions';
 import { useScreenLayout } from '../../../src/hooks/useScreenLayout';
+import {
+  formatCompactCurrency,
+  formatCurrency,
+  formatDate,
+  formatTransactionAmount,
+  getCurrencyDisplay,
+  getTransactionCurrency,
+} from '../../../src/utils/format';
+import { StyledCategoryIcon } from '../../../src/constants/icons';
 
 function QuickAction({
   icon: Icon,
@@ -38,6 +41,7 @@ function QuickAction({
   color?: string;
 }) {
   const theme = useTheme();
+
   return (
     <Pressable
       onPress={onPress}
@@ -46,7 +50,7 @@ function QuickAction({
           flex: 1,
           alignItems: 'center',
           gap: 8,
-          opacity: pressed ? 0.7 : 1,
+          opacity: pressed ? 0.72 : 1,
         },
       ]}
     >
@@ -71,7 +75,7 @@ function QuickAction({
           fontFamily: theme.typography.bodyMedium.fontFamily,
           textAlign: 'center',
         }}
-        numberOfLines={1}
+        numberOfLines={2}
       >
         {label}
       </Text>
@@ -79,18 +83,18 @@ function QuickAction({
   );
 }
 
-export default function CoAIHomeScreen() {
+export default function WalletHomeScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { t } = useLanguage();
   const { user } = useAuth();
-  const { isDesktop } = useScreenLayout();
+  const { width, isCompactPhone, isDesktop, isTablet } = useScreenLayout();
   const [refreshing, setRefreshing] = useState(false);
 
   const {
     data: briefData,
-    isPending,
-    isError,
+    isPending: isLoadingBrief,
+    isError: briefError,
     refetch: refetchBrief,
   } = useQuery({
     queryKey: ['coai-brief'],
@@ -104,6 +108,23 @@ export default function CoAIHomeScreen() {
     staleTime: 30 * 1000,
   });
 
+  const { data: summary, isPending: isLoadingSummary, refetch: refetchSummary } = useQuery({
+    queryKey: ['wallet', 'summary'],
+    queryFn: () => api.wallet.getSummary(),
+  });
+
+  const { data: balancesData, isPending: isLoadingBalances, refetch: refetchBalances } = useQuery({
+    queryKey: ['wallet', 'balances'],
+    queryFn: () => api.wallet.getBalances(),
+  });
+
+  const { data: transactionsData, isPending: isLoadingTransactions, refetch: refetchTransactions } = useQuery({
+    queryKey: ['wallet', 'transactions'],
+    queryFn: () => api.wallet.getTransactions(10),
+  });
+
+  const balances = balancesData?.balances || [];
+  const transactions = transactionsData?.transactions || [];
   const recentConversation = conversationsData?.conversations?.[0];
   const snapshot = briefData?.context_snapshot;
   const hasSetupData = Boolean(
@@ -121,11 +142,22 @@ export default function CoAIHomeScreen() {
     return t('goodEvening') || 'Good evening';
   }, [t]);
 
+  const heroCurrency = summary ? 'USD' : briefData?.currency || user?.preferred_currency || 'USD';
+  const heroBalance = summary?.total_balance_usd ?? snapshot?.total_balance ?? 0;
+  const displayedBalances = balances.slice(0, isDesktop ? 6 : 4);
+  const actionColumns = width < 375 ? 2 : 4;
+
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([refetchBrief(), refetchConversations()]);
+    await Promise.all([
+      refetchBrief(),
+      refetchConversations(),
+      refetchSummary(),
+      refetchBalances(),
+      refetchTransactions(),
+    ]);
     setRefreshing(false);
-  }, [refetchBrief, refetchConversations]);
+  }, [refetchBalances, refetchBrief, refetchConversations, refetchSummary, refetchTransactions]);
 
   const quickActions = [
     {
@@ -133,12 +165,6 @@ export default function CoAIHomeScreen() {
       icon: Plus,
       onPress: () => router.push('/(app)/(tabs)/add' as any),
       color: theme.colors.primary,
-    },
-    {
-      label: t('chat') || 'Chat',
-      icon: MessageCircle,
-      onPress: () => router.push('/(app)/coai-chat' as any),
-      color: theme.colors.accent,
     },
     {
       label: t('convert') || 'Convert',
@@ -152,12 +178,13 @@ export default function CoAIHomeScreen() {
       onPress: () => router.push('/(app)/(tabs)/reports' as any),
       color: theme.colors.secondaryForeground,
     },
+    {
+      label: t('chat') || 'Chat',
+      icon: MessageCircle,
+      onPress: () => router.push('/(app)/coai-chat' as any),
+      color: theme.colors.accent,
+    },
   ];
-
-  // Responsive quick actions layout (2x2 on small screens)
-  const { width } = useScreenLayout();
-  const isSmallScreen = width < 375;
-  const quickActionsPerRow = isSmallScreen ? 2 : 4;
 
   return (
     <PageScaffold
@@ -168,48 +195,62 @@ export default function CoAIHomeScreen() {
       }}
     >
       <PageHeader
-        title={greeting + (user?.name ? `, ${user.name}` : '')}
-        subtitle={t('homeSubtitle') || 'Your financial overview and AI insights.'}
+        title={t('wallet') || 'Wallet'}
+        subtitle={t('walletHomeSubtitle') || 'Balances, activity, and AI guidance in one place.'}
         actions={<AppSwitcherTrigger variant="header_inline" />}
       />
 
-      {/* Hero Balance Card */}
       <View
+        testID="wallet-home-hero"
         style={{
           backgroundColor: theme.colors.card,
           borderRadius: theme.radii.xl,
           borderWidth: 1,
           borderColor: theme.colors.border,
           padding: theme.spacing.xl,
-          marginBottom: theme.spacing.xxl,
+          marginBottom: theme.spacing.xl,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View>
-            <Text style={{ color: theme.colors.mutedForeground, fontSize: 14, fontFamily: theme.typography.bodyMedium.fontFamily }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: theme.colors.mutedForeground, fontSize: 13 }}>
+              {greeting + (user?.name ? `, ${user.name}` : '')}
+            </Text>
+            <Text
+              style={{
+                color: theme.colors.mutedForeground,
+                fontSize: 14,
+                marginTop: 8,
+                fontFamily: theme.typography.bodyMedium.fontFamily,
+              }}
+            >
               {t('totalBalance') || 'Total Balance'}
             </Text>
-            {isPending && !briefData ? (
-              <ActivityIndicator size="small" color={theme.colors.mutedForeground} style={{ marginTop: 8, alignSelf: 'flex-start' }} />
+            {isLoadingSummary && isLoadingBrief ? (
+              <ActivityIndicator
+                size="small"
+                color={theme.colors.mutedForeground}
+                style={{ marginTop: 8, alignSelf: 'flex-start' }}
+              />
             ) : (
               <Text
                 style={{
                   color: theme.colors.foreground,
-                  fontSize: 32,
+                  fontSize: isCompactPhone ? 30 : 34,
                   fontFamily: theme.typography.h1.fontFamily,
                   marginTop: 4,
-                  lineHeight: 40,
+                  lineHeight: isCompactPhone ? 38 : 42,
                 }}
               >
-                {formatCurrency(snapshot?.total_balance ?? 0, briefData?.currency || user?.preferred_currency || 'USD')}
+                {formatCurrency(heroBalance, heroCurrency)}
               </Text>
             )}
           </View>
           <View
             style={{
-              width: 48,
-              height: 48,
-              borderRadius: 24,
+              width: 52,
+              height: 52,
+              borderRadius: 26,
               backgroundColor: theme.colors.secondary,
               alignItems: 'center',
               justifyContent: 'center',
@@ -219,71 +260,52 @@ export default function CoAIHomeScreen() {
           </View>
         </View>
 
-        {/* Quick Stats if available */}
-        {snapshot && (snapshot.recent_transaction_count > 0 || snapshot.active_budget_count > 0 || snapshot.active_goal_count > 0) && (
-          <View style={{ marginTop: 16, flexDirection: 'row', gap: 16, flexWrap: 'wrap' }}>
-            {snapshot.balance_currency_count > 0 && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={{ color: theme.colors.primary, fontSize: 18, fontFamily: theme.typography.bodyMedium.fontFamily }}>
-                  {snapshot.balance_currency_count}
-                </Text>
-                <Text style={{ color: theme.colors.mutedForeground, fontSize: 12 }}>
-                  {snapshot.balance_currency_count === 1 ? 'currency' : 'currencies'}
-                </Text>
-              </View>
-            )}
-            {snapshot.active_budget_count > 0 && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={{ color: theme.colors.primary, fontSize: 18, fontFamily: theme.typography.bodyMedium.fontFamily }}>
-                  {snapshot.active_budget_count}
-                </Text>
-                <Text style={{ color: theme.colors.mutedForeground, fontSize: 12 }}>
-                  {snapshot.active_budget_count === 1 ? t('budget') || 'budget' : t('budgets') || 'budgets'}
-                </Text>
-              </View>
-            )}
-            {snapshot.active_goal_count > 0 && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={{ color: theme.colors.primary, fontSize: 18, fontFamily: theme.typography.bodyMedium.fontFamily }}>
-                  {snapshot.active_goal_count}
-                </Text>
-                <Text style={{ color: theme.colors.mutedForeground, fontSize: 12 }}>
-                  {snapshot.active_goal_count === 1 ? t('goal') || 'goal' : t('goals') || 'goals'}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* AI Brief inside Hero */}
-        {briefData?.brief ? (
-          <View style={{ marginTop: theme.spacing.xl, paddingTop: theme.spacing.lg, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
-             <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Bot size={16} color={theme.colors.accent} style={{ marginTop: 2 }} />
-                <Text style={{ flex: 1, color: theme.colors.mutedForeground, fontSize: 14, lineHeight: 20 }}>
-                  {briefData.brief}
-                </Text>
-             </View>
-          </View>
-        ) : null}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 18 }}>
+          {snapshot?.recent_transaction_count ? (
+            <View style={{ backgroundColor: theme.colors.muted, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 }}>
+              <Text style={{ color: theme.colors.mutedForeground, fontSize: 11 }}>
+                {(t('recentTransactions') || 'Recent Transactions') + ` · ${snapshot.recent_transaction_count}`}
+              </Text>
+            </View>
+          ) : null}
+          {snapshot?.active_goal_count ? (
+            <View style={{ backgroundColor: theme.colors.muted, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 }}>
+              <Text style={{ color: theme.colors.mutedForeground, fontSize: 11 }}>
+                {(t('goals') || 'Goals') + ` · ${snapshot.active_goal_count}`}
+              </Text>
+            </View>
+          ) : null}
+          {snapshot?.active_budget_count ? (
+            <View style={{ backgroundColor: theme.colors.muted, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 }}>
+              <Text style={{ color: theme.colors.mutedForeground, fontSize: 11 }}>
+                {(t('budgets') || 'Budgets') + ` · ${snapshot.active_budget_count}`}
+              </Text>
+            </View>
+          ) : null}
+          {snapshot?.balance_currency_count ? (
+            <View style={{ backgroundColor: theme.colors.muted, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 }}>
+              <Text style={{ color: theme.colors.mutedForeground, fontSize: 11 }}>
+                {`${snapshot.balance_currency_count} ${(snapshot.balance_currency_count === 1 ? 'currency' : 'currencies')}`}
+              </Text>
+            </View>
+          ) : null}
+        </View>
       </View>
 
-      {/* Quick Actions */}
       <View
         style={{
-          marginBottom: 32,
-          paddingHorizontal: 8,
+          marginBottom: 28,
           flexDirection: 'row',
           flexWrap: 'wrap',
           gap: 16,
         }}
       >
-        {quickActions.map((action, index) => (
+        {quickActions.map((action) => (
           <View
-            key={index}
+            key={action.label}
             style={{
-              width: quickActionsPerRow === 2 ? '45%' : 'auto',
-              flex: quickActionsPerRow === 4 ? 1 : undefined,
+              width: actionColumns === 2 ? '46%' : 'auto',
+              flex: actionColumns === 4 ? 1 : undefined,
             }}
           >
             <QuickAction {...action} />
@@ -291,243 +313,215 @@ export default function CoAIHomeScreen() {
         ))}
       </View>
 
-      {isPending && !briefData ? (
-        <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={theme.colors.accent} />
-        </View>
-      ) : null}
-
-      {isError && !briefData ? (
-        <Card style={{ marginBottom: 24 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <AlertTriangle size={18} color={theme.colors.warning} />
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  color: theme.colors.foreground,
-                  fontFamily: theme.typography.bodyMedium.fontFamily,
-                }}
-              >
-                CoAI brief is unavailable right now.
+      <SectionBlock
+        title={t('balances') || 'Balances'}
+        subtitle={t('walletCardDesc') || 'Track balances and transactions'}
+      >
+        <View testID="wallet-home-balances" style={{ gap: 14 }}>
+          {isLoadingBalances ? (
+            <Card>
+              <ActivityIndicator size="small" color={theme.colors.accent} />
+            </Card>
+          ) : displayedBalances.length === 0 ? (
+            <Card>
+              <Text style={{ color: theme.colors.mutedForeground }}>
+                {t('noBalances') || 'No balances yet. Add a transaction to get started.'}
               </Text>
-              <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginTop: 4 }}>
-                Chat and the rest of the app still work. Pull to retry.
-              </Text>
-            </View>
-          </View>
-        </Card>
-      ) : null}
-
-      {/* Empty State for New Users */}
-      {briefData && !hasSetupData && !isPending ? (
-        <Card style={{ marginBottom: 24, padding: 20 }}>
-          <View style={{ alignItems: 'center', gap: 16 }}>
-            <View
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 32,
-                backgroundColor: theme.colors.primary + '14',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Sparkles size={28} color={theme.colors.primary} />
-            </View>
-            <View style={{ alignItems: 'center', gap: 8 }}>
-              <Text
-                style={{
-                  fontSize: 20,
-                  fontFamily: theme.typography.h2.fontFamily,
-                  color: theme.colors.foreground,
-                  textAlign: 'center',
-                }}
-              >
-                {t('homeGetStartedWelcome') || 'Welcome to CoAI!'}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: theme.colors.mutedForeground,
-                  textAlign: 'center',
-                  lineHeight: 20,
-                  maxWidth: 400,
-                }}
-              >
-                {t('homeGetStartedDescription') || 'Start tracking your finances by adding your first transaction, setting up a budget, or creating a savings goal.'}
-              </Text>
-            </View>
-            <View style={{ width: '100%', gap: 12, marginTop: 8 }}>
+            </Card>
+          ) : (
+            <>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                {displayedBalances.map((balance) => {
+                  const display = getCurrencyDisplay(balance.currency);
+                  return (
+                    <View
+                      key={balance.currency}
+                      style={{
+                        flexGrow: 1,
+                        width: isCompactPhone ? '47%' : undefined,
+                        minWidth: isCompactPhone ? undefined : 150,
+                        backgroundColor: theme.colors.card,
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
+                        borderRadius: 16,
+                        padding: 14,
+                      }}
+                    >
+                      <Text style={{ fontSize: 20 }}>{display.flag || '🌐'}</Text>
+                      <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily, marginTop: 8 }}>
+                        {balance.currency}
+                      </Text>
+                      <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginTop: 4 }}>
+                        {formatCompactCurrency(balance.balance, balance.currency)}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
               <Pressable
-                onPress={() => router.push('/(app)/(tabs)/add' as any)}
-                style={({ pressed }) => [
-                  {
-                    backgroundColor: theme.colors.primary,
-                    borderRadius: theme.radii.lg,
-                    padding: theme.spacing.lg,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
+                onPress={() => router.push('/(app)/(tabs)/wallet' as any)}
+                style={({ pressed }) => [{ alignSelf: 'flex-start' }, pressed && { opacity: 0.72 }]}
               >
-                <Plus size={18} color={theme.colors.primaryForeground} />
-                <Text
-                  style={{
-                    color: theme.colors.primaryForeground,
-                    fontFamily: theme.typography.bodyMedium.fontFamily,
-                    fontSize: 14,
-                  }}
-                >
-                  {t('homeAddFirstTransaction') || 'Add First Transaction'}
+                <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.bodyMedium.fontFamily }}>
+                  {t('viewAll') || 'View All'}
                 </Text>
               </Pressable>
-              <View style={{ flexDirection: 'row', gap: 12 }}>
-                <Pressable
-                  onPress={() => router.push('/(app)/budgets' as any)}
-                  style={({ pressed }) => [
-                    {
-                      flex: 1,
-                      backgroundColor: theme.colors.secondary,
-                      borderRadius: theme.radii.lg,
-                      padding: 12,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 6,
-                      opacity: pressed ? 0.7 : 1,
-                    },
-                  ]}
-                >
-                  <Briefcase size={16} color={theme.colors.secondaryForeground} />
-                  <Text
-                    style={{
-                      color: theme.colors.secondaryForeground,
-                      fontFamily: theme.typography.bodyMedium.fontFamily,
-                      fontSize: 13,
-                    }}
-                  >
-                    {t('homeCreateFirstBudget') || 'Create Budget'}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => router.push('/(app)/(tabs)/goals' as any)}
-                  style={({ pressed }) => [
-                    {
-                      flex: 1,
-                      backgroundColor: theme.colors.secondary,
-                      borderRadius: theme.radii.lg,
-                      padding: 12,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 6,
-                      opacity: pressed ? 0.7 : 1,
-                    },
-                  ]}
-                >
-                  <Target size={16} color={theme.colors.secondaryForeground} />
-                  <Text
-                    style={{
-                      color: theme.colors.secondaryForeground,
-                      fontFamily: theme.typography.bodyMedium.fontFamily,
-                      fontSize: 13,
-                    }}
-                  >
-                    {t('homeSetFirstGoal') || 'Set Savings Goal'}
-                  </Text>
-                </Pressable>
+            </>
+          )}
+        </View>
+      </SectionBlock>
+
+      <SectionBlock
+        title={t('aiAdvisor') || 'CoAI Chat'}
+        subtitle={t('homeAiSubtitle') || 'A compact brief and a single path into chat.'}
+      >
+        <Card testID="wallet-home-ai-card">
+          {briefError ? (
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+              <AlertTriangle size={18} color={theme.colors.warning} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily }}>
+                  {t('homeAiUnavailable') || 'AI insight is unavailable right now.'}
+                </Text>
+                <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginTop: 4 }}>
+                  {t('homeAiUnavailableDesc') || 'Chat is still available if you want to ask something directly.'}
+                </Text>
               </View>
             </View>
-          </View>
-        </Card>
-      ) : null}
-
-      {briefData && hasSetupData ? (
-        <>
-          {/* Separator */}
-          <View
-            style={{
-              height: 1,
-              backgroundColor: theme.colors.border,
-              marginVertical: 16,
-              marginHorizontal: -theme.spacing.lg,
-            }}
-          />
-
-          {/* Priorities & Alerts */}
-          {((briefData.priorities?.length ?? 0) > 0 || (briefData.alerts?.length ?? 0) > 0) && (
-             <SectionBlock title={t('insights') || 'Insights'} subtitle="Key updates for your attention.">
-                <View style={{ gap: 12 }}>
-                  {/* Alerts first */}
-                  {(briefData.alerts ?? []).map((alert) => (
-                    <Card key={alert.id} style={{ borderColor: theme.colors.warning + '40', backgroundColor: theme.colors.warning + '05' }}>
-                      <View style={{ flexDirection: 'row', gap: 12 }}>
-                         <AlertTriangle size={18} color={theme.colors.warning} style={{ marginTop: 2 }} />
-                         <View style={{ flex: 1 }}>
-                            <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily }}>{alert.title}</Text>
-                            <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginTop: 4 }}>{alert.description}</Text>
-                         </View>
-                      </View>
-                    </Card>
-                  ))}
-                  {/* Then Priorities */}
-                  {(briefData.priorities ?? []).map((priority) => (
-                    <Card key={priority.id}>
-                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
-                          <View style={{ flex: 1 }}>
-                             <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily }}>{priority.title}</Text>
-                             <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginTop: 4 }}>{priority.description}</Text>
-                          </View>
-                          {priority.target_route && (
-                             <Pressable onPress={() => router.push(priority.target_route as any)}>
-                                <ArrowRight size={18} color={theme.colors.mutedForeground} />
-                             </Pressable>
-                          )}
-                       </View>
-                    </Card>
-                  ))}
+          ) : isLoadingBrief && !briefData ? (
+            <ActivityIndicator size="small" color={theme.colors.accent} />
+          ) : (
+            <View style={{ gap: 14 }}>
+              <Text style={{ color: theme.colors.foreground, fontSize: 15, lineHeight: 22 }}>
+                {briefData?.brief || (t('homeAiFallback') || 'Open CoAI chat to review your latest balances, spending, and priorities.')}
+              </Text>
+              {briefData?.priorities?.[0]?.target_route ? (
+                <Pressable
+                  onPress={() => router.push(briefData.priorities[0].target_route as any)}
+                  style={({ pressed }) => [
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      paddingHorizontal: 14,
+                      paddingVertical: 12,
+                    },
+                    pressed && { opacity: 0.78 },
+                  ]}
+                >
+                  <View style={{ flex: 1, marginEnd: 12 }}>
+                    <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily }} numberOfLines={1}>
+                      {briefData.priorities[0].title}
+                    </Text>
+                    <Text style={{ color: theme.colors.mutedForeground, fontSize: 12, marginTop: 2 }} numberOfLines={2}>
+                      {briefData.priorities[0].description}
+                    </Text>
+                  </View>
+                  <ArrowRight size={16} color={theme.colors.mutedForeground} />
+                </Pressable>
+              ) : null}
+              <Pressable
+                onPress={() => router.push({ pathname: '/(app)/coai-chat', params: recentConversation ? { conversationId: recentConversation.id } : undefined } as any)}
+                style={({ pressed }) => [
+                  {
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    backgroundColor: theme.colors.secondary,
+                    borderRadius: 14,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                  },
+                  pressed && { opacity: 0.78 },
+                ]}
+              >
+                <View style={{ flex: 1, marginEnd: 12 }}>
+                  <Text style={{ color: theme.colors.secondaryForeground, fontFamily: theme.typography.bodyMedium.fontFamily }}>
+                    {recentConversation ? (recentConversation.title || (t('chat') || 'Chat')) : (t('chat') || 'Chat')}
+                  </Text>
+                  <Text style={{ color: theme.colors.secondaryForeground, opacity: 0.82, fontSize: 12, marginTop: 2 }}>
+                    {recentConversation
+                      ? (t('homeResumeChat') || 'Resume your latest conversation')
+                      : (t('homeOpenChat') || 'Open CoAI chat')}
+                  </Text>
                 </View>
-             </SectionBlock>
+                <ArrowRight size={16} color={theme.colors.secondaryForeground} />
+              </Pressable>
+            </View>
           )}
+        </Card>
+      </SectionBlock>
 
-          {/* Financial Charts */}
-          <SectionBlock
-            title={t('financialOverview') || 'Financial Overview'}
-            subtitle={t('financialOverviewSubtitle') || 'Quick insights from your recent activity'}
-          >
-            <DashboardCharts currency={briefData.currency || user?.preferred_currency || 'USD'} />
-          </SectionBlock>
-
-          {/* Recent Conversation - if exists */}
-          {recentConversation && (
-            <SectionBlock title="Recent Chat">
-               <Pressable
-                  onPress={() => router.push({ pathname: '/(app)/coai-chat', params: { conversationId: recentConversation.id } } as any)}
-                  style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-               >
-                 <Card>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: theme.colors.secondary, alignItems: 'center', justifyContent: 'center' }}>
-                             <Bot size={20} color={theme.colors.secondaryForeground} />
-                          </View>
-                          <View style={{ flex: 1 }}>
-                             <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily }} numberOfLines={1}>
-                                {recentConversation.title}
-                             </Text>
-                             <Text style={{ color: theme.colors.mutedForeground, fontSize: 12 }}>Resume conversation</Text>
-                          </View>
-                       </View>
-                       <ArrowRight size={16} color={theme.colors.mutedForeground} />
-                    </View>
-                 </Card>
-               </Pressable>
-            </SectionBlock>
+      <SectionBlock
+        title={t('recentTransactions') || 'Recent Transactions'}
+        subtitle={t('homeRecentActivitySubtitle') || 'Your latest activity at a glance.'}
+      >
+        <View testID="wallet-home-transactions" style={{ gap: 12 }}>
+          {isLoadingTransactions ? (
+            <Card>
+              <ActivityIndicator size="small" color={theme.colors.accent} />
+            </Card>
+          ) : transactions.length === 0 ? (
+            <Card>
+              <Text style={{ color: theme.colors.mutedForeground }}>
+                {t('noTransactions') || 'No transactions yet.'}
+              </Text>
+            </Card>
+          ) : (
+            transactions.slice(0, 5).map((tx) => (
+              <Card key={tx.id}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <StyledCategoryIcon category={tx.category || 'other'} size={18} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily }} numberOfLines={1}>
+                      {tx.description || tx.category || 'Transaction'}
+                    </Text>
+                    <Text style={{ color: theme.colors.mutedForeground, fontSize: 12, marginTop: 2 }} numberOfLines={1}>
+                      {formatDate(tx.created_at, { month: 'short', day: 'numeric' })}
+                      {tx.category ? ` · ${tx.category}` : ''}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text
+                      style={{
+                        color: tx.type === 'credit' ? theme.colors.success : theme.colors.danger,
+                        fontFamily: theme.typography.bodyMedium.fontFamily,
+                      }}
+                    >
+                      {formatTransactionAmount(tx)}
+                    </Text>
+                    <Text style={{ color: theme.colors.mutedForeground, fontSize: 11, marginTop: 2 }}>
+                      {getTransactionCurrency(tx)}
+                    </Text>
+                  </View>
+                </View>
+              </Card>
+            ))
           )}
-        </>
+          {transactions.length > 0 ? (
+            <Pressable
+              onPress={() => router.push('/(app)/(tabs)/wallet/history' as any)}
+              style={({ pressed }) => [{ alignSelf: 'flex-start' }, pressed && { opacity: 0.72 }]}
+            >
+              <Text style={{ color: theme.colors.primary, fontFamily: theme.typography.bodyMedium.fontFamily }}>
+                {t('viewAll') || 'View All'}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </SectionBlock>
+
+      {hasSetupData && (isDesktop || isTablet) ? (
+        <SectionBlock
+          title={t('financialOverview') || 'Financial Overview'}
+          subtitle={t('financialOverviewSubtitle') || 'Quick insights from your recent activity'}
+        >
+          <DashboardCharts currency={briefData?.currency || user?.preferred_currency || 'USD'} />
+        </SectionBlock>
       ) : null}
     </PageScaffold>
   );

@@ -1,12 +1,12 @@
-import { isValidPlannerDueDate } from '../plannerDate';
+import { isValidPlannerDueDate, normalizePlannerDueDate } from '../plannerDate';
 
 describe('isValidPlannerDueDate', () => {
   it('accepts YYYY-MM-DD dates', () => {
     expect(isValidPlannerDueDate('2026-03-01')).toBe(true);
   });
 
-  it('rejects ISO timestamps', () => {
-    expect(isValidPlannerDueDate('2026-03-01T10:00:00Z')).toBe(false);
+  it('accepts ISO timestamps after normalization', () => {
+    expect(isValidPlannerDueDate('2026-03-01T10:00:00Z')).toBe(true);
   });
 
   it('rejects impossible calendar dates', () => {
@@ -16,5 +16,9 @@ describe('isValidPlannerDueDate', () => {
   it('allows empty values', () => {
     expect(isValidPlannerDueDate('')).toBe(true);
     expect(isValidPlannerDueDate('   ')).toBe(true);
+  });
+
+  it('normalizes ISO timestamps into planner dates', () => {
+    expect(normalizePlannerDueDate('2026-03-01T10:00:00Z')).toBe('2026-03-01');
   });
 });

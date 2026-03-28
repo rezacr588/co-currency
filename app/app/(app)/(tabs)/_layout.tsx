@@ -24,7 +24,6 @@ import { useAuth } from '../../../src/context/AuthContext';
 import { ErrorBoundary } from '../../../src/components/ui/ErrorBoundary';
 import { AppSwitcherTrigger } from '../../../src/components/navigation/AppSwitcherTrigger';
 import { useScreenLayout } from '../../../src/hooks/useScreenLayout';
-import { isTodoPath } from '../../../src/navigation/mode';
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -374,6 +373,7 @@ function TabScreens() {
   return (
     <>
       <Tabs.Screen name="index" />
+      <Tabs.Screen name="planner" />
       <Tabs.Screen
         name="wallet"
         options={{
@@ -395,8 +395,8 @@ function TabsLayoutInner() {
   const { isCompactPhone, isDesktop, isTablet } = useScreenLayout();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const compactTabLabels = {
-    index: 'CoAI',
-    wallet: t('walletTabCompact') || t('wallet') || 'Wallet',
+    index: t('walletTabCompact') || t('wallet') || 'Wallet',
+    planner: t('plannerTabCompact') || 'Planner',
     add: t('addTabCompact') || 'Add',
     settings: t('settings') || 'Settings',
   };
@@ -463,15 +463,14 @@ function TabsLayoutInner() {
           name="index"
           options={{
             title: compactTabLabels.index,
-            tabBarIcon: ({ color, size }) => <Bot size={size} color={color} />,
+            tabBarIcon: ({ color, size }) => <Wallet size={size} color={color} />,
           }}
         />
         <Tabs.Screen
-          name="wallet"
+          name="planner"
           options={{
-            title: compactTabLabels.wallet,
-            popToTopOnBlur: true,
-            tabBarIcon: ({ color, size }) => <Wallet size={size} color={color} />,
+            title: compactTabLabels.planner,
+            tabBarIcon: ({ color, size }) => <KanbanSquare size={size} color={color} />,
           }}
         />
         <Tabs.Screen
@@ -486,6 +485,12 @@ function TabsLayoutInner() {
           options={{
             title: compactTabLabels.settings,
             tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="wallet"
+          options={{
+            href: null,
           }}
         />
         <Tabs.Screen name="reports" options={{ href: null }} />

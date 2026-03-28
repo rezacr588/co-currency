@@ -23,7 +23,7 @@ export const MODE_ENTRY_ROUTE: Record<AppMode, string> = {
 
 export const MODE_DEFAULT_ROUTE: Record<AppMode, string> = {
   finapp: '/(app)/(tabs)',
-  todo: '/planner',
+  todo: '/(app)/(tabs)/planner',
 };
 
 const STORAGE_CURRENT_MODE = 'current_mode';
@@ -31,7 +31,7 @@ const STORAGE_LAST_ROUTE_FINAPP = 'last_route_finapp';
 const STORAGE_LAST_ROUTE_TODO = 'last_route_todo';
 
 const NON_APP_PREFIXES = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/about', '/converter', '/auth'];
-const TODO_PATH_PREFIXES = ['/todo', '/planner', '/(app)/planner', '/planner-create', '/(app)/planner-create'] as const;
+const TODO_PATH_PREFIXES = ['/todo', '/planner', '/(app)/planner', '/(app)/(tabs)/planner', '/planner-create', '/(app)/planner-create'] as const;
 const TODO_TRANSIENT_PATHS = ['/planner-create', '/(app)/planner-create'] as const;
 const FINAPP_TRANSIENT_PATHS = [
   '/(app)/(tabs)/add',

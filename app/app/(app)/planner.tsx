@@ -13,20 +13,19 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   AlertTriangle,
   ArrowLeft,
-  ChevronLeft,
-  ChevronRight,
   KanbanSquare,
   Plus,
   RotateCw,
   Search,
   Sparkles,
   WifiOff,
+  X,
 } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
 import { api } from '../../src/api';
@@ -36,10 +35,13 @@ import { AppSwitcherTrigger } from '../../src/components/navigation/AppSwitcherT
 import { useToast } from '../../src/components/ui/Toast';
 import { EmptyState } from '../../src/components/ui/EmptyState';
 import { PlannerCard } from '../../src/components/features/Planner/PlannerCard';
+import { PlannerPhoneTaskRow } from '../../src/components/features/Planner/PlannerPhoneTaskRow';
+import { PlannerStatusSheet } from '../../src/components/features/Planner/PlannerStatusSheet';
 import { TaskEditModal } from '../../src/components/features/Planner/TaskEditModal';
 import { useScreenLayout } from '../../src/hooks/useScreenLayout';
 import { haptics } from '../../src/utils/haptics';
 import { useDebounce } from '../../src/hooks/useDebounce';
+import { buildPlannerPhoneSections, type PlannerPhoneSectionKey } from '../../src/utils/plannerPhoneSections';
 import {
   clearPlannerFundingRequired,
   getPlannerBoardCache,
@@ -74,11 +76,10 @@ import type {
   PlannerBoardResponse,
   PlannerPendingMarker,
   PlannerStatus,
+  Task,
   TodoItem,
   UpdateTaskRequest,
 } from '../../src/types/planner';
-
-type DragDirection = 'left' | 'right' | null;
 
 const COLUMN_META: Record<PlannerStatus, { glow: string; border: string }> = {
   todo: { glow: 'rgba(59,130,246,0.30)', border: 'rgba(59,130,246,0.5)' },
@@ -110,7 +111,7 @@ function nextSortOrder(board: PlannerBoardResponse, status: PlannerStatus, movin
   return (tail.sort_order ?? filtered.length) + 1;
 }
 
-export default function PlannerScreen() {
+export function PlannerScreenContent() {
   const theme = useTheme();
   const colors = theme.colors;
   const insets = useSafeAreaInsets();
@@ -129,8 +130,6 @@ export default function PlannerScreen() {
     Math.floor((width - boardHorizontalPadding - boardGap * (desktopColumnCount - 1)) / desktopColumnCount),
     240,
   );
-  // For phone, pagingEnabled requires pages to be exactly the ScrollView width (which is the screen width)
-  const phonePageWidth = width;
   const tabletColumnWidth = Math.max(
     Math.min(Math.floor((width - boardHorizontalPadding - boardGap) / 2), 420),
     300,
@@ -146,12 +145,11 @@ export default function PlannerScreen() {
   const [fundingRequiredMap, setFundingRequiredMap] = useState<Record<string, GoalFundingRequired>>({});
 
   const [launchingTaskID, setLaunchingTaskID] = useState<string | null>(null);
-  const [editingTask, setEditingTask] = useState<TodoItem | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [completingTaskID, setCompletingTaskID] = useState<string | null>(null);
+  const [statusSheetTask, setStatusSheetTask] = useState<TodoItem | null>(null);
 
   const [activeColumn, setActiveColumn] = useState<PlannerStatus>('todo');
-  const [isDraggingCard, setIsDraggingCard] = useState(false);
-  const [dragDirection, setDragDirection] = useState<DragDirection>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // --- Search & filter ---
@@ -363,8 +361,38 @@ export default function PlannerScreen() {
     return counts;
   }, [effectiveBoard]);
 
+  const activeFilters = useMemo(() => {
+    const filters: string[] = [];
+    if (debouncedSearch.trim()) {
+      filters.push(`"${debouncedSearch.trim()}"`);
+    }
+    if (priorityFilter) {
+      filters.push(
+        t(`priority${priorityFilter.charAt(0).toUpperCase() + priorityFilter.slice(1)}` as any) ||
+          priorityFilter
+      );
+    }
+    return filters;
+  }, [debouncedSearch, priorityFilter, t]);
+
   const columnLabel = useCallback((s: PlannerStatus) => {
     return getStatusLabel(s, t as (key: string) => string | undefined);
+  }, [t]);
+
+  const phoneSectionLabel = useCallback((section: PlannerPhoneSectionKey) => {
+    switch (section) {
+      case 'overdue':
+        return t('plannerSectionOverdue') || 'Overdue';
+      case 'today':
+        return t('plannerSectionToday') || 'Today';
+      case 'upcoming':
+        return t('plannerSectionUpcoming') || 'Upcoming';
+      case 'no_date':
+        return t('plannerSectionNoDate') || 'No date';
+      case 'recent':
+      default:
+        return t('plannerSectionRecent') || 'Recently updated';
+    }
   }, [t]);
 
   // --- Actions ---
@@ -387,7 +415,24 @@ export default function PlannerScreen() {
     } finally {
       setLaunchingTaskID(null);
     }
-  }, [router]);
+  }, [router, t]);
+
+  const openTaskEditor = useCallback(async (item: TodoItem) => {
+    if (isPhone) {
+      router.push({ pathname: '/planner-create', params: { task_id: item.id } } as any);
+      return;
+    }
+
+    try {
+      const response = await api.tasks.get(item.id);
+      setEditingTask(response.task);
+    } catch (error) {
+      Alert.alert(
+        t('plannerUpdateError') || 'Could not open task editor',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+    }
+  }, [isPhone, router, t]);
 
   const handleMoveItem = useCallback(async (item: TodoItem, nextStatus: PlannerStatus) => {
     if (!userID || item.status === nextStatus) return;
@@ -510,14 +555,16 @@ export default function PlannerScreen() {
     const index = COLUMN_ORDER.indexOf(status);
     setActiveColumn(status);
     if (isPhone) {
-      pagerRef.current?.scrollTo({ x: index * phonePageWidth, y: 0, animated: true });
       return;
     }
     if (isTablet) {
       pagerRef.current?.scrollTo({ x: index * (tabletColumnWidth + boardGap), y: 0, animated: true });
     }
     // On desktop, all columns are visible in flex row — no scroll needed
-  }, [boardGap, isPhone, isTablet, phonePageWidth, tabletColumnWidth]);
+  }, [boardGap, isPhone, isTablet, tabletColumnWidth]);
+
+  const handleDragStateChange = useCallback((_dragging: boolean) => {}, []);
+  const handleDragDirectionChange = useCallback((_direction: 'left' | 'right' | null) => {}, []);
 
   // --- Filtering ---
   const filterItems = useCallback((items: TodoItem[]) => {
@@ -532,7 +579,7 @@ export default function PlannerScreen() {
     return filtered;
   }, [debouncedSearch, priorityFilter]);
 
-  // --- Render column ---
+  // --- Render board column ---
   const renderColumn = useCallback((status: PlannerStatus, columnIndex: number, widthOverride?: number) => {
     const rawItems = getColumnItems(effectiveBoard, status);
     const items = filterItems(rawItems);
@@ -577,16 +624,17 @@ export default function PlannerScreen() {
               marker={pendingMarkers[markerKey(item)]}
               columnIndex={columnIndex}
               onMove={handleMoveItem}
-              onDragStateChange={setIsDraggingCard}
-              onDragDirectionChange={setDragDirection}
-              onEdit={item.type === 'task' ? (i) => setEditingTask(i) : undefined}
+              onDragStateChange={handleDragStateChange}
+              onDragDirectionChange={handleDragDirectionChange}
+              onEdit={item.type === 'task' ? openTaskEditor : undefined}
+              onRequestMove={isPhone ? setStatusSheetTask : undefined}
               onAddTransaction={item.type === 'task' ? openAddTransactionForTask : undefined}
               isLaunchingTransaction={item.type === 'task' && launchingTaskID === item.id}
               onCompleteTask={handleCompleteTask}
               onDeleteTask={handleDeleteTask}
               isCompleting={completingTaskID === item.id}
               userId={userID}
-              interactionMode={isDesktop ? 'gesture' : 'explicit'}
+              interactionMode="gesture"
             />
           ))
         )}
@@ -594,9 +642,87 @@ export default function PlannerScreen() {
     );
   }, [
     colors, effectiveBoard, filterItems, handleCompleteTask, handleDeleteTask,
-    handleMoveItem, isDesktop, launchingTaskID, openAddTransactionForTask,
-    phonePageWidth,
+    handleMoveItem, handleDragDirectionChange, handleDragStateChange, launchingTaskID, openAddTransactionForTask, openTaskEditor,
     pendingMarkers, completingTaskID, userID, columnLabel, t,
+  ]);
+
+  const renderPhoneList = useCallback((status: PlannerStatus) => {
+    const items = filterItems(getColumnItems(effectiveBoard, status));
+    const sections = buildPlannerPhoneSections(items, status);
+
+    if (sections.length === 0) {
+      return (
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderStyle: 'dashed',
+            borderRadius: 16,
+            paddingVertical: 28,
+            paddingHorizontal: 16,
+            alignItems: 'center',
+            backgroundColor: colors.muted,
+          }}
+        >
+          <Sparkles size={16} color={colors.mutedForeground} />
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 8 }}>
+            {(debouncedSearch || priorityFilter)
+              ? (t('plannerNoResults') || 'No matching tasks')
+              : (t('plannerEmptyStatus') || 'No items in this list yet')}
+          </Text>
+          {(debouncedSearch || priorityFilter) && (
+            <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 4, opacity: 0.7 }}>
+              {t('plannerNoResultsDescription') || 'Try adjusting your search or filters.'}
+            </Text>
+          )}
+        </View>
+      );
+    }
+
+    return (
+      <View style={{ gap: 14 }}>
+        {sections.map((section) => (
+          <View key={section.key}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_700Bold' }}>
+                {phoneSectionLabel(section.key)}
+              </Text>
+              <Text style={{ color: colors.mutedForeground, fontSize: 11 }}>
+                {section.items.length}
+              </Text>
+            </View>
+            <View style={{ gap: 8 }}>
+              {section.items.map((item) => (
+                <PlannerPhoneTaskRow
+                  key={item.id}
+                  item={item}
+                  marker={pendingMarkers[markerKey(item)]}
+                  onOpen={openTaskEditor}
+                  onRequestMove={setStatusSheetTask}
+                  onCompleteTask={handleCompleteTask}
+                  onDeleteTask={handleDeleteTask}
+                />
+              ))}
+            </View>
+          </View>
+        ))}
+      </View>
+    );
+  }, [
+    colors.border,
+    colors.foreground,
+    colors.muted,
+    colors.mutedForeground,
+    debouncedSearch,
+    effectiveBoard,
+    filterItems,
+    handleCompleteTask,
+    handleDeleteTask,
+    openTaskEditor,
+    pendingMarkers,
+    phoneSectionLabel,
+    priorityFilter,
+    t,
   ]);
 
   const isEmpty = effectiveBoard.summary.total === 0;
@@ -791,29 +917,58 @@ export default function PlannerScreen() {
           )}
 
           {/* Summary cards */}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: summaryGap }}>
-            {summaryCards.map((metric) => (
-              <Animated.View
-                key={metric.label}
-                entering={FadeInDown.duration(350)}
-                accessibilityLabel={`${metric.label}: ${metric.value}`}
-                style={[
-                  {
+          {isPhone ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingEnd: 4 }}>
+              {summaryCards.map((metric) => (
+                <View
+                  key={metric.label}
+                  accessibilityLabel={`${metric.label}: ${metric.value}`}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
                     backgroundColor: colors.card,
-                    borderRadius: 12,
+                    borderRadius: 999,
                     borderWidth: 1,
                     borderColor: colors.border,
-                    padding: 10,
-                    minHeight: 64,
-                  },
-                  isDesktop ? { flex: 1 } : { width: summaryCardWidth },
-                ]}
-              >
-                <Text style={{ color: colors.mutedForeground, fontSize: 11 }}>{metric.label}</Text>
-                <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 18, marginTop: 2 }}>{metric.value}</Text>
-              </Animated.View>
-            ))}
-          </View>
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                  }}
+                >
+                  <Text style={{ color: colors.mutedForeground, fontSize: 11, fontFamily: 'Inter_500Medium' }}>
+                    {metric.label}
+                  </Text>
+                  <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 13 }}>
+                    {metric.value}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: summaryGap }}>
+              {summaryCards.map((metric) => (
+                <Animated.View
+                  key={metric.label}
+                  entering={FadeInDown.duration(350)}
+                  accessibilityLabel={`${metric.label}: ${metric.value}`}
+                  style={[
+                    {
+                      backgroundColor: colors.card,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      padding: 10,
+                      minHeight: 64,
+                    },
+                    isDesktop ? { flex: 1 } : { width: summaryCardWidth },
+                  ]}
+                >
+                  <Text style={{ color: colors.mutedForeground, fontSize: 11 }}>{metric.label}</Text>
+                  <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 18, marginTop: 2 }}>{metric.value}</Text>
+                </Animated.View>
+              ))}
+            </View>
+          )}
 
           {/* Search & priority filter */}
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
@@ -832,6 +987,11 @@ export default function PlannerScreen() {
                 returnKeyType="search"
                 style={{ flex: 1, color: colors.foreground, fontSize: 13, paddingVertical: 2 }}
               />
+              {searchText ? (
+                <Pressable onPress={() => setSearchText('')} hitSlop={6}>
+                  <X size={14} color={colors.mutedForeground} />
+                </Pressable>
+              ) : null}
             </View>
           </View>
 
@@ -866,6 +1026,47 @@ export default function PlannerScreen() {
               </Pressable>
             ))}
           </ScrollView>
+
+          {activeFilters.length > 0 ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                borderWidth: 1,
+                borderColor: colors.accent + '33',
+                backgroundColor: colors.accent + '10',
+                borderRadius: 12,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+              }}
+            >
+              <Text style={{ color: colors.foreground, fontSize: 12, flex: 1 }}>
+                {(t('plannerShowingResults') || 'Showing results for') + ' ' + activeFilters.join(' • ')}
+              </Text>
+              <Pressable
+                onPress={() => {
+                  setSearchText('');
+                  setPriorityFilter(null);
+                }}
+                style={({ pressed }) => [
+                  {
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    backgroundColor: colors.card,
+                  },
+                  pressed && { opacity: 0.72 },
+                ]}
+              >
+                <Text style={{ color: colors.foreground, fontSize: 11, fontFamily: 'Inter_600SemiBold' }}>
+                  {t('plannerClearFilters') || 'Clear'}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
 
           {/* Column tabs */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
@@ -915,36 +1116,18 @@ export default function PlannerScreen() {
         ) : isPhone ? (
           <View style={{ flex: 1, marginTop: 12 }}>
             <ScrollView
-              ref={pagerRef}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onMomentumScrollEnd={(event) => {
-                const index = Math.round(event.nativeEvent.contentOffset.x / width);
-                const safeIndex = Math.max(0, Math.min(index, COLUMN_ORDER.length - 1));
-                setActiveColumn(COLUMN_ORDER[safeIndex]);
-              }}
-              // No horizontal padding on container since pagingEnabled needs accurate width measurements
-              contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 20, 30) }}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: Math.max(insets.bottom + 20, 30) }}
+              refreshControl={
+                <RefreshControl
+                  refreshing={isRefreshing}
+                  onRefresh={handleRefresh}
+                  tintColor={colors.accent}
+                  colors={[colors.accent]}
+                />
+              }
             >
-              {COLUMN_ORDER.map((status, index) => (
-                <View key={status} style={{ width: width, paddingHorizontal: 16 }}>
-                  <ScrollView
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 14 }}
-                    refreshControl={
-                      <RefreshControl
-                        refreshing={isRefreshing}
-                        onRefresh={handleRefresh}
-                        tintColor={colors.accent}
-                        colors={[colors.accent]}
-                      />
-                    }
-                  >
-                    {renderColumn(status, index, undefined)}
-                  </ScrollView>
-                </View>
-              ))}
+              {renderPhoneList(activeColumn)}
             </ScrollView>
           </View>
         ) : isTablet ? (
@@ -1034,6 +1217,17 @@ export default function PlannerScreen() {
         onDelete={queueDeleteTask}
       />
 
+      <PlannerStatusSheet
+        visible={!!statusSheetTask}
+        task={statusSheetTask}
+        onClose={() => setStatusSheetTask(null)}
+        onSelect={(status) => {
+          if (!statusSheetTask) return;
+          void handleMoveItem(statusSheetTask, status);
+          setStatusSheetTask(null);
+        }}
+      />
+
       {/* Funding Required Modal */}
       <Modal visible={!!fundingRequired} transparent animationType="fade" onRequestClose={() => setFundingRequired(null)}>
         <View style={{ flex: 1, backgroundColor: colors.overlay, alignItems: 'center', justifyContent: 'center', padding: 20 }}>
@@ -1070,4 +1264,14 @@ export default function PlannerScreen() {
       </Modal>
     </SafeAreaView>
   );
+}
+
+export default function PlannerScreen() {
+  const { isPhone } = useScreenLayout();
+
+  if (isPhone) {
+    return <Redirect href={"/(app)/(tabs)/planner" as any} />;
+  }
+
+  return <PlannerScreenContent />;
 }

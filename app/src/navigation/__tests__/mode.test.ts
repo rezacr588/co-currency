@@ -40,6 +40,10 @@ describe('mode routing persistence', () => {
     expect(isFinAppPath('/(app)/coai-chat')).toBe(true);
   });
 
+  it('treats the planner tab route as a todo route', () => {
+    expect(getModeFromPath('/(app)/(tabs)/planner')).toBe('todo');
+  });
+
   it('treats the landing page as a public route', () => {
     expect(isFinAppPath('/')).toBe(false);
     expect(getModeFromPath('/')).toBeNull();

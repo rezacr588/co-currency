@@ -171,18 +171,30 @@ export function MultiStepWizardScreen({
                     </View>
                   </View>
 
-                  {!isPhone && (
-                    <>
-                      {eyebrow ? (
-                        <Text style={{ color: colors.accent, fontSize: 11, fontFamily: 'Inter_700Bold', textTransform: 'uppercase', letterSpacing: 1 }}>
-                          {eyebrow}
-                        </Text>
-                      ) : null}
-                      <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 28, marginTop: eyebrow ? 6 : 0 }}>
-                        {title}
-                      </Text>
-                    </>
-                  )}
+                  {eyebrow ? (
+                    <Text
+                      style={{
+                        color: colors.accent,
+                        fontSize: isPhone ? 10 : 11,
+                        fontFamily: 'Inter_700Bold',
+                        textTransform: 'uppercase',
+                        letterSpacing: 1,
+                        marginTop: isPhone ? 2 : 0,
+                      }}
+                    >
+                      {eyebrow}
+                    </Text>
+                  ) : null}
+                  <Text
+                    style={{
+                      color: colors.foreground,
+                      fontFamily: 'Inter_700Bold',
+                      fontSize: isPhone ? 22 : 28,
+                      marginTop: eyebrow ? 6 : 0,
+                    }}
+                  >
+                    {title}
+                  </Text>
 
                   {isPhone ? (
                     <ScrollView
