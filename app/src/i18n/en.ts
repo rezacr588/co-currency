@@ -1549,4 +1549,25 @@ export const en = {
   decline: 'Decline',
   iUnderstand: 'I Understand',
 
+  // Download page
+  downloadNav: 'Download',
+  downloadTitle: 'Download CoAI',
+  downloadSubtitle: 'Get the mobile app for the best experience — offline access, push notifications, and biometric security.',
+  downloadAndroidDesc: 'Download the APK and install directly on your device.',
+  downloadAPKButton: 'Download APK',
+  downloadIOSComingSoon: 'iOS app coming soon. Use the web app in the meantime.',
+  downloadUseWeb: 'Use Web App',
+  downloadInstallGuide: 'Installation Guide',
+  downloadStep1: 'Tap "Download APK" above to download the file.',
+  downloadStep2: 'Open the downloaded file from your notifications or file manager.',
+  downloadStep3: 'If prompted, allow installation from unknown sources in your device settings.',
+  downloadStep4: 'Install and open CoAI. Sign in with your existing account or create a new one.',
+  downloadWhyApp: 'Why use the app?',
+  downloadOffline: 'Works offline — track expenses without internet',
+  downloadNotifications: 'Push notifications for budget alerts and reminders',
+  downloadBiometric: 'Biometric lock — Face ID or fingerprint security',
+  downloadFaster: 'Faster performance with native rendering',
+  landingDownloadApp: 'Download APK',
+  landingOpenWebApp: 'Open Web App',
+
 } as const;

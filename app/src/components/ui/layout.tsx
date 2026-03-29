@@ -413,6 +413,7 @@ export function MarketingScaffold({ children }: MarketingScaffoldProps) {
               {isTablet ? (
                 <>
                   <MarketingNavLink href="/converter" label={t('converterTitle') || 'Converter'} />
+                  <MarketingNavLink href={"/download" as any} label={t('downloadNav') || 'Download'} />
                   <MarketingNavLink href="/about" label={t('aboutUs') || 'About'} />
                 </>
               ) : null}

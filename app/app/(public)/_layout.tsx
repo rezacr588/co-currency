@@ -6,6 +6,7 @@ export default function PublicLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="converter" />
       <Stack.Screen name="about" />
+      <Stack.Screen name="download" />
     </Stack>
   );
 }

@@ -154,21 +154,41 @@ jobs:
 
       - name: Build Android APK
         working-directory: ./app
-        run: eas build --platform android --profile production --non-interactive
+        run: eas build --platform android --profile apk --non-interactive
 
-      - name: Get build URL
+      - name: Download APK from EAS
+        if: success()
+        working-directory: ./app
+        run: |
+          BUILD_ID=$(eas build:list --platform android --status finished --limit 1 --json --non-interactive | jq -r '.[0].id')
+          echo "Downloading build $BUILD_ID..."
+          mkdir -p ../artifacts
+          eas build:download --id "$BUILD_ID" --output ../artifacts/coai.apk --non-interactive
+
+      - name: Upload to GitHub Release
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: CoAI Latest Build
+          body: |
+            Latest Android APK build.
+            Commit: ${{ github.sha }}
+            Built: ${{ github.event.head_commit.timestamp }}
+
+            **Install:** Download `coai.apk` and open it on your Android device.
+          files: artifacts/coai.apk
+          prerelease: true
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build summary
         if: success()
         working-directory: ./app
         run: |
           echo "## Android APK Build Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Build triggered by:" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ github.event.inputs.build_apk }}" == "true" ]; then
-            echo "- Manual trigger" >> $GITHUB_STEP_SUMMARY
-          elif [[ "${{ github.event.head_commit.message }}" == *"[build-apk]"* ]]; then
-            echo "- Commit message [build-apk]" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "- Native file changes detected" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "APK uploaded to GitHub Releases: https://github.com/rezacr588/co-currency/releases/tag/latest" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "View builds at: https://expo.dev/accounts/rez.zet.int/projects/coai/builds" >> $GITHUB_STEP_SUMMARY
+          echo "Direct download: https://github.com/rezacr588/co-currency/releases/download/latest/coai.apk" >> $GITHUB_STEP_SUMMARY

@@ -326,19 +326,24 @@ export default function HomeScreen() {
 
       {/* ── Section 8: Multi-Platform ── */}
       <SectionBlock title={t('landingPlatformTitle') || 'Everywhere you are.'}>
-        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: theme.spacing.xxxl, paddingVertical: theme.spacing.xl }}>
-          {[
-            { icon: <Monitor size={28} color={theme.colors.foreground} />, label: 'Web' },
-            { icon: <Smartphone size={28} color={theme.colors.foreground} />, label: 'iOS' },
-            { icon: <Smartphone size={28} color={theme.colors.foreground} />, label: 'Android' },
-          ].map((p) => (
-            <View key={p.label} style={{ alignItems: 'center', gap: 8 }}>
-              {p.icon}
-              <Text style={{ fontSize: 13, color: theme.colors.mutedForeground }}>{p.label}</Text>
-            </View>
-          ))}
+        <View style={{ flexDirection: isTablet ? 'row' : 'column', justifyContent: 'center', alignItems: 'center', gap: theme.spacing.xl, paddingVertical: theme.spacing.xl }}>
+          <View style={{ alignItems: 'center', gap: 10 }}>
+            <Smartphone size={28} color="#3ddc84" />
+            <Text style={{ fontSize: 15, fontFamily: theme.typography.bodyMedium.fontFamily, color: theme.colors.foreground }}>Android</Text>
+            <CTAButton href="/download" label={t('landingDownloadApp') || 'Download APK'} primary />
+          </View>
+          <View style={{ alignItems: 'center', gap: 10 }}>
+            <Monitor size={28} color={theme.colors.foreground} />
+            <Text style={{ fontSize: 15, fontFamily: theme.typography.bodyMedium.fontFamily, color: theme.colors.foreground }}>Web</Text>
+            <CTAButton href="/login" label={t('landingOpenWebApp') || 'Open Web App'} />
+          </View>
+          <View style={{ alignItems: 'center', gap: 10, opacity: 0.5 }}>
+            <Smartphone size={28} color={theme.colors.mutedForeground} />
+            <Text style={{ fontSize: 15, fontFamily: theme.typography.bodyMedium.fontFamily, color: theme.colors.mutedForeground }}>iOS</Text>
+            <Text style={{ fontSize: 12, color: theme.colors.mutedForeground }}>{t('downloadIOSComingSoon') || 'Coming soon'}</Text>
+          </View>
         </View>
-        <Text style={{ textAlign: 'center', fontSize: 14, color: theme.colors.mutedForeground }}>
+        <Text style={{ textAlign: 'center', fontSize: 14, color: theme.colors.mutedForeground, marginTop: theme.spacing.md }}>
           {t('landingPlatformDesc') || 'One account. Every device. Always in sync.'}
         </Text>
       </SectionBlock>
