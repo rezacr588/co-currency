@@ -157,10 +157,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const lock = useCallback(() => {
-    if (settings.requireBiometricOnOpen) {
+    if (settingsRef.current.requireBiometricOnOpen) {
       setIsLocked(true);
     }
-  }, [settings.requireBiometricOnOpen]);
+  }, []);
 
   const toggleHideBalances = useCallback(async () => {
     setSettings((prev) => {
@@ -183,6 +183,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }),
     [settings, updateSettings, isLocked, unlock, lock, biometricType, isBiometricAvailable, toggleHideBalances],
   );
+
+  // Block rendering until settings are loaded from AsyncStorage
+  if (!isLoaded) return null;
 
   return (
     <SettingsContext.Provider value={value}>

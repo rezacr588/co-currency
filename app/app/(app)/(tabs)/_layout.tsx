@@ -470,6 +470,7 @@ function TabsLayoutInner() {
         <Tabs.Screen
           name="planner"
           options={{
+            lazy: false,
             title: compactTabLabels.planner,
             tabBarIcon: ({ color, size }) => <KanbanSquare size={size} color={color} />,
           }}

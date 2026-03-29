@@ -1106,7 +1106,6 @@ export function PlannerScreenContent() {
               initialNumToRender={15}
               maxToRenderPerBatch={10}
               windowSize={7}
-              removeClippedSubviews={Platform.OS !== 'web'}
               refreshControl={
                 <RefreshControl
                   refreshing={isRefreshing}

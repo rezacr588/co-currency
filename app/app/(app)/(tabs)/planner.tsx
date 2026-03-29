@@ -1,4 +1,3 @@
-import { memo } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useTheme } from 'styled-components/native';
@@ -6,7 +5,7 @@ import { PlannerScreenContent } from '../planner';
 import { useScreenLayout } from '../../../src/hooks/useScreenLayout';
 import { ErrorBoundary } from '../../../src/components/ui/ErrorBoundary';
 
-export default memo(function PlannerTabScreen() {
+export default function PlannerTabScreen() {
   const theme = useTheme();
   const { width, isDesktop, isTablet } = useScreenLayout();
 
@@ -28,4 +27,4 @@ export default memo(function PlannerTabScreen() {
       <PlannerScreenContent />
     </ErrorBoundary>
   );
-});
+}

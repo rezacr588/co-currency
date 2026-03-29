@@ -1,4 +1,4 @@
-import { memo, useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -47,7 +47,7 @@ const GOAL_CATEGORIES = [
   'other',
 ];
 
-export default memo(function GoalsScreen() {
+export default function GoalsScreen() {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
@@ -273,7 +273,7 @@ export default memo(function GoalsScreen() {
       )}
     </>
   );
-});
+}
 
 interface GoalCardProps {
   goal: Goal;

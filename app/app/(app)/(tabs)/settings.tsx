@@ -1,4 +1,3 @@
-import { memo } from 'react';
 import { View, Text, Pressable, ScrollView, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -105,7 +104,7 @@ function Section({ title, children }: SectionProps) {
   );
 }
 
-export default memo(function SettingsScreen() {
+export default function SettingsScreen() {
   const router = useRouter();
   const theme = useStyledTheme();
   const { t } = useLanguage();
@@ -325,4 +324,4 @@ export default memo(function SettingsScreen() {
       </ScrollView>
     </PageScaffold>
   );
-});
+}
