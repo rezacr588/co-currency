@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Link, type Href } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets, type Edge } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronRight, Moon, Sun } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Download, Moon, Sun } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
 import { useTheme as useAppTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -416,7 +416,29 @@ export function MarketingScaffold({ children }: MarketingScaffoldProps) {
                   <MarketingNavLink href={"/download" as any} label={t('downloadNav') || 'Download'} />
                   <MarketingNavLink href="/about" label={t('aboutUs') || 'About'} />
                 </>
-              ) : null}
+              ) : (
+                <Link href={"/download" as any} asChild>
+                  <Pressable
+                    style={({ pressed }) => [
+                      {
+                        width: 40,
+                        height: 40,
+                        borderRadius: theme.radii.md,
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
+                        backgroundColor: theme.colors.card,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      },
+                      pressed && { opacity: 0.72 },
+                    ]}
+                    accessibilityRole="link"
+                    accessibilityLabel={t('downloadNav') || 'Download'}
+                  >
+                    <Download size={18} color={theme.colors.foreground} />
+                  </Pressable>
+                </Link>
+              )}
 
               <Pressable
                 onPress={toggleTheme}
