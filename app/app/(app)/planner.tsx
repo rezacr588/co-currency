@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   AppState,
+  FlatList,
   Modal,
   Pressable,
   RefreshControl,
@@ -646,84 +647,76 @@ export function PlannerScreenContent() {
     pendingMarkers, completingTaskID, userID, columnLabel, t,
   ]);
 
-  const renderPhoneList = useCallback((status: PlannerStatus) => {
-    const items = filterItems(getColumnItems(effectiveBoard, status));
-    const sections = buildPlannerPhoneSections(items, status);
+  type PhoneFlatItem =
+    | { kind: 'section'; key: string; sectionKey: PlannerPhoneSectionKey; count: number }
+    | { kind: 'item'; key: string; item: TodoItem };
 
-    if (sections.length === 0) {
+  const phoneFlatData = useMemo((): PhoneFlatItem[] => {
+    const items = filterItems(getColumnItems(effectiveBoard, activeColumn));
+    const sections = buildPlannerPhoneSections(items, activeColumn);
+    const flat: PhoneFlatItem[] = [];
+    for (const section of sections) {
+      flat.push({ kind: 'section', key: `hdr:${section.key}`, sectionKey: section.key, count: section.items.length });
+      for (const item of section.items) {
+        flat.push({ kind: 'item', key: item.id, item });
+      }
+    }
+    return flat;
+  }, [activeColumn, effectiveBoard, filterItems]);
+
+  const renderPhoneFlatItem = useCallback(({ item: row }: { item: PhoneFlatItem }) => {
+    if (row.kind === 'section') {
       return (
-        <View
-          style={{
-            borderWidth: 1,
-            borderColor: colors.border,
-            borderStyle: 'dashed',
-            borderRadius: 16,
-            paddingVertical: 28,
-            paddingHorizontal: 16,
-            alignItems: 'center',
-            backgroundColor: colors.muted,
-          }}
-        >
-          <Sparkles size={16} color={colors.mutedForeground} />
-          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 8 }}>
-            {(debouncedSearch || priorityFilter)
-              ? (t('plannerNoResults') || 'No matching tasks')
-              : (t('plannerEmptyStatus') || 'No items in this list yet')}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, marginTop: 6 }}>
+          <Text style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_700Bold' }}>
+            {phoneSectionLabel(row.sectionKey)}
           </Text>
-          {(debouncedSearch || priorityFilter) && (
-            <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 4, opacity: 0.7 }}>
-              {t('plannerNoResultsDescription') || 'Try adjusting your search or filters.'}
-            </Text>
-          )}
+          <Text style={{ color: colors.mutedForeground, fontSize: 11 }}>
+            {row.count}
+          </Text>
         </View>
       );
     }
-
     return (
-      <View style={{ gap: 14 }}>
-        {sections.map((section) => (
-          <View key={section.key}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <Text style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_700Bold' }}>
-                {phoneSectionLabel(section.key)}
-              </Text>
-              <Text style={{ color: colors.mutedForeground, fontSize: 11 }}>
-                {section.items.length}
-              </Text>
-            </View>
-            <View style={{ gap: 8 }}>
-              {section.items.map((item) => (
-                <PlannerPhoneTaskRow
-                  key={item.id}
-                  item={item}
-                  marker={pendingMarkers[markerKey(item)]}
-                  onOpen={openTaskEditor}
-                  onRequestMove={setStatusSheetTask}
-                  onCompleteTask={handleCompleteTask}
-                  onDeleteTask={handleDeleteTask}
-                />
-              ))}
-            </View>
-          </View>
-        ))}
+      <View style={{ marginBottom: 8 }}>
+        <PlannerPhoneTaskRow
+          item={row.item}
+          marker={pendingMarkers[markerKey(row.item)]}
+          onOpen={openTaskEditor}
+          onRequestMove={setStatusSheetTask}
+          onCompleteTask={handleCompleteTask}
+          onDeleteTask={handleDeleteTask}
+        />
       </View>
     );
-  }, [
-    colors.border,
-    colors.foreground,
-    colors.muted,
-    colors.mutedForeground,
-    debouncedSearch,
-    effectiveBoard,
-    filterItems,
-    handleCompleteTask,
-    handleDeleteTask,
-    openTaskEditor,
-    pendingMarkers,
-    phoneSectionLabel,
-    priorityFilter,
-    t,
-  ]);
+  }, [colors.foreground, colors.mutedForeground, handleCompleteTask, handleDeleteTask, openTaskEditor, pendingMarkers, phoneSectionLabel]);
+
+  const phoneEmptyComponent = useMemo(() => (
+    <View
+      style={{
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderStyle: 'dashed',
+        borderRadius: 16,
+        paddingVertical: 28,
+        paddingHorizontal: 16,
+        alignItems: 'center',
+        backgroundColor: colors.muted,
+      }}
+    >
+      <Sparkles size={16} color={colors.mutedForeground} />
+      <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 8 }}>
+        {(debouncedSearch || priorityFilter)
+          ? (t('plannerNoResults') || 'No matching tasks')
+          : (t('plannerEmptyStatus') || 'No items in this list yet')}
+      </Text>
+      {(debouncedSearch || priorityFilter) && (
+        <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 4, opacity: 0.7 }}>
+          {t('plannerNoResultsDescription') || 'Try adjusting your search or filters.'}
+        </Text>
+      )}
+    </View>
+  ), [colors.border, colors.muted, colors.mutedForeground, debouncedSearch, priorityFilter, t]);
 
   const isEmpty = effectiveBoard.summary.total === 0;
 
@@ -1115,9 +1108,16 @@ export function PlannerScreenContent() {
           </View>
         ) : isPhone ? (
           <View style={{ flex: 1, marginTop: 12 }}>
-            <ScrollView
+            <FlatList<PhoneFlatItem>
+              data={phoneFlatData}
+              keyExtractor={(row) => row.key}
+              renderItem={renderPhoneFlatItem}
+              ListEmptyComponent={phoneEmptyComponent}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: Math.max(insets.bottom + 20, 30) }}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: Math.max(insets.bottom + 20, 30), flexGrow: 1 }}
+              initialNumToRender={15}
+              maxToRenderPerBatch={10}
+              windowSize={7}
               refreshControl={
                 <RefreshControl
                   refreshing={isRefreshing}
@@ -1126,21 +1126,21 @@ export function PlannerScreenContent() {
                   colors={[colors.accent]}
                 />
               }
-            >
-              {renderPhoneList(activeColumn)}
-            </ScrollView>
+            />
           </View>
         ) : isTablet ? (
           <View style={{ flex: 1, marginTop: 12 }}>
             <ScrollView
               ref={pagerRef}
               horizontal
+              nestedScrollEnabled
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: Math.max(insets.bottom + 24, 36), gap: boardGap }}
             >
               {COLUMN_ORDER.map((status, index) => (
                 <View key={status} style={{ width: tabletColumnWidth }}>
                   <ScrollView
+                    nestedScrollEnabled
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ paddingBottom: 14 }}
                     refreshControl={

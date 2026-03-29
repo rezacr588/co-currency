@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import DateTimePicker, {
   DateTimePickerAndroid,
@@ -121,19 +121,27 @@ export function DatePickerModal({
     onClose();
   }, [onClose, onSelect]);
 
+  // Use refs for Android callbacks to avoid re-triggering the useEffect
+  const onCloseRef = useRef(onClose);
+  const onSelectRef = useRef(onSelect);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+  useEffect(() => { onSelectRef.current = onSelect; }, [onSelect]);
+  const androidPickerOpenRef = useRef(false);
+
   const handleNativeChange = useCallback(
     (event: DateTimePickerEvent, value?: Date) => {
       if (Platform.OS === 'android') {
+        androidPickerOpenRef.current = false;
         if (event.type === 'dismissed') {
-          onClose();
+          onCloseRef.current();
           return;
         }
 
         if (value) {
           void haptics.success();
-          onSelect(formatDateForPlanner(value));
+          onSelectRef.current(formatDateForPlanner(value));
         }
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -141,7 +149,7 @@ export function DatePickerModal({
         setNativeDate(value);
       }
     },
-    [onClose, onSelect]
+    []
   );
 
   useEffect(() => {
@@ -149,12 +157,23 @@ export function DatePickerModal({
       return;
     }
 
-    DateTimePickerAndroid.open({
-      mode: 'date',
-      value: nativeDate,
-      onChange: handleNativeChange,
-    });
-  }, [handleNativeChange, nativeDate, visible]);
+    // Guard against opening multiple pickers simultaneously
+    if (androidPickerOpenRef.current) {
+      return;
+    }
+    androidPickerOpenRef.current = true;
+
+    try {
+      DateTimePickerAndroid.open({
+        mode: 'date',
+        value: nativeDate,
+        onChange: handleNativeChange,
+      });
+    } catch {
+      androidPickerOpenRef.current = false;
+      onCloseRef.current();
+    }
+  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleConfirm = useCallback(() => {
     if (Platform.OS === 'web') {
