@@ -62,7 +62,10 @@ func (s *AIService) TranscribeAudio(ctx context.Context, audioData []byte, mimeT
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		respBody, readErr := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		if readErr != nil {
+			respBody = []byte("(read error)")
+		}
 		return "", fmt.Errorf("transcription API returned status %d: %s", resp.StatusCode, string(respBody))
 	}
 

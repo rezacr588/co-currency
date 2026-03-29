@@ -467,7 +467,10 @@ func (e *AIToolExecutor) executeWebSearch(ctx context.Context, params map[string
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		respBody, readErr := io.ReadAll(io.LimitReader(resp.Body, 512))
+		if readErr != nil {
+			respBody = []byte("(read error)")
+		}
 		return "", fmt.Errorf("search API returned status %d: %s", resp.StatusCode, string(respBody))
 	}
 

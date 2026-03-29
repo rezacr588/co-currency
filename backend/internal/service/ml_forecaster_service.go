@@ -226,7 +226,10 @@ func (s *MLForecasterService) HealthCheck(ctx context.Context) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			body = []byte("(read error)")
+		}
 		return fmt.Errorf("health check returned status %d: %s", resp.StatusCode, string(body))
 	}
 

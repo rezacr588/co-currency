@@ -163,7 +163,10 @@ func (s *LinkedInOAuthService) getLinkedInUser(accessToken string) (*LinkedInUse
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			body = []byte("(read error)")
+		}
 		return nil, fmt.Errorf("LinkedIn API error: %s", string(body))
 	}
 

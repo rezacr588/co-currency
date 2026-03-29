@@ -528,7 +528,9 @@ func (s *CryptoService) syncTokenBalances(ctx context.Context, wallet *model.Cry
 			balance.BalanceUSD = price.Price * s.hexToFloat(tb.TokenBalance, metadata.Decimals)
 		}
 
-		s.db.UpsertBalance(ctx, balance)
+		if err := s.db.UpsertBalance(ctx, balance); err != nil {
+			log.Warn().Err(err).Str("wallet_id", wallet.ID.String()).Msg("failed to upsert crypto balance")
+		}
 	}
 
 	// Also get native balance
@@ -554,7 +556,10 @@ func (s *CryptoService) syncNativeBalance(ctx context.Context, wallet *model.Cry
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		body = []byte("(read error)")
+	}
 
 	var result struct {
 		Result string `json:"result"`
@@ -613,7 +618,10 @@ func (s *CryptoService) syncTransactions(ctx context.Context, wallet *model.Cryp
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		body = []byte("(read error)")
+	}
 
 	var result struct {
 		Result struct {
@@ -653,7 +661,9 @@ func (s *CryptoService) syncTransactions(ctx context.Context, wallet *model.Cryp
 			Timestamp:    time.Now(), // Would parse from block
 		}
 
-		s.db.CreateTransaction(ctx, tx)
+		if err := s.db.CreateTransaction(ctx, tx); err != nil {
+			log.Warn().Err(err).Str("tx_hash", t.Hash).Msg("failed to create crypto transaction")
+		}
 	}
 
 	return nil
@@ -684,7 +694,10 @@ func (s *CryptoService) syncNFTs(ctx context.Context, wallet *model.CryptoWallet
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		body = []byte("(read error)")
+	}
 
 	var result struct {
 		Result struct {
@@ -722,7 +735,9 @@ func (s *CryptoService) syncNFTs(ctx context.Context, wallet *model.CryptoWallet
 			ImageURL:     imageURL,
 		}
 
-		s.db.UpsertNFT(ctx, nft)
+		if err := s.db.UpsertNFT(ctx, nft); err != nil {
+			log.Warn().Err(err).Str("wallet_id", wallet.ID.String()).Msg("failed to upsert NFT")
+		}
 	}
 
 	return nil

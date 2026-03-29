@@ -165,7 +165,10 @@ func (s *GoogleOAuthService) getGoogleUser(accessToken string) (*GoogleUser, err
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			body = []byte("(read error)")
+		}
 		return nil, fmt.Errorf("Google API error: %s", string(body))
 	}
 

@@ -195,7 +195,10 @@ func (r *NotificationRepository) UpdatePreferences(ctx context.Context, userID s
 
 // LogNotification records a sent notification
 func (r *NotificationRepository) LogNotification(ctx context.Context, userID, notifType, title, body string, data map[string]interface{}, status string) error {
-	dataJSON, _ := json.Marshal(data)
+	dataJSON, marshalErr := json.Marshal(data)
+	if marshalErr != nil {
+		dataJSON = []byte("{}")
+	}
 
 	query := `
 		INSERT INTO notification_history (user_id, type, title, body, data, status)

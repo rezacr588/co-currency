@@ -528,6 +528,8 @@ export default function AIChatScreen() {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const mountedRef = useRef(true);
+  useEffect(() => { return () => { mountedRef.current = false; }; }, []);
   const { conversationId, prompt } = useLocalSearchParams<{ conversationId?: string; prompt?: string }>();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -825,12 +827,14 @@ export default function AIChatScreen() {
             }
           },
           onDelta: (event) => {
+            if (!mountedRef.current) return;
             deltaEvents += 1;
             setIsTyping(false);
             streamingDraftRef.current += event.content;
             setStreamingDraft((prev) => prev + event.content);
           },
           onTrace: (event: ChatStreamTraceEvent) => {
+            if (!mountedRef.current) return;
             liveTraceRef.current = [...liveTraceRef.current, event];
             setLiveTrace(liveTraceRef.current);
             if (__DEV__) {
@@ -838,6 +842,7 @@ export default function AIChatScreen() {
             }
           },
           onDone: (event) => {
+            if (!mountedRef.current) return;
             if (__DEV__ && event.trace_id) {
               console.debug(`[AI trace] stream done: ${event.trace_id}`);
             }

@@ -439,123 +439,111 @@ export async function syncPlannerOutbox(userID: string): Promise<PlannerSyncResu
 
   const now = Date.now();
 
-  for (let index = 0; index < ops.length; index += 1) {
-    const op = ops[index];
+  // Track which op IDs we've already processed to avoid infinite loops
+  const processedOpIDs = new Set<string>();
 
-    if (op.status === 'failed') {
-      continue;
-    }
+  // Use a while-loop with ID-based lookup instead of index-based iteration.
+  // After each storage write the array may change, so we re-read and find
+  // the next processable op by scanning from the start each time.
+  let keepGoing = true;
+  while (keepGoing) {
+    ops = await getPlannerOutbox(userID);
+    keepGoing = false;
 
-    if (op.depends_on) {
-      const dependency = ops.find((entry) => entry.id === op.depends_on);
-      if (dependency) {
-        if (dependency.status !== 'failed') {
-          continue;
-        }
-
-        failed += 1;
-        needsRefresh = true;
-        ops[index] = {
-          ...op,
-          status: 'failed',
-          attempt_count: op.attempt_count + 1,
-          last_error: `Dependency failed (${dependency.op_type}).`,
-        };
-        await replacePlannerOutbox(userID, ops);
-        // Re-read ops to avoid stale array after write
-        ops = await getPlannerOutbox(userID);
+    for (const op of ops) {
+      if (op.status === 'failed' || processedOpIDs.has(op.id)) {
         continue;
       }
+
+      if (op.depends_on) {
+        const dependency = ops.find((entry) => entry.id === op.depends_on);
+        if (dependency) {
+          if (dependency.status !== 'failed') {
+            continue; // dependency not done yet, skip
+          }
+
+          // Dependency failed — mark this op failed too
+          failed += 1;
+          needsRefresh = true;
+          processedOpIDs.add(op.id);
+          const updated = ops.map((o) =>
+            o.id === op.id
+              ? { ...o, status: 'failed' as const, attempt_count: o.attempt_count + 1, last_error: `Dependency failed (${dependency.op_type}).` }
+              : o
+          );
+          await replacePlannerOutbox(userID, updated);
+          keepGoing = true;
+          break; // restart scan
+        }
+      }
+
+      if (op.last_attempt_at && now - op.last_attempt_at < backoffDelayMs(op.attempt_count)) {
+        continue; // still in backoff
+      }
+
+      // Mark as syncing
+      const syncingOp: PlannerOutboxOp = { ...op, status: 'syncing', last_attempt_at: Date.now() };
+      const markedSyncing = ops.map((o) => (o.id === op.id ? syncingOp : o));
+      await replacePlannerOutbox(userID, markedSyncing);
+
+      const result = await executePlannerOp(userID, syncingOp);
+
+      if (result.ok) {
+        // Remove from outbox
+        const afterRemove = (await getPlannerOutbox(userID)).filter((o) => o.id !== op.id);
+        await replacePlannerOutbox(userID, afterRemove);
+        synced += 1;
+        needsRefresh = true;
+        processedOpIDs.add(op.id);
+        keepGoing = true;
+        break; // restart scan
+      }
+
+      if (result.defer) {
+        const afterDefer = (await getPlannerOutbox(userID)).map((o) =>
+          o.id === op.id ? { ...syncingOp, status: 'pending' as const } : o
+        );
+        await replacePlannerOutbox(userID, afterDefer);
+        processedOpIDs.add(op.id);
+        keepGoing = true;
+        break; // restart scan
+      }
+
+      if (result.networkError) {
+        // Revert to pending and stop syncing
+        const afterNet = normalizeSyncingOps(await getPlannerOutbox(userID)).map((o) =>
+          o.id === op.id ? { ...o, status: 'pending' as const, last_error: result.errorMessage } : o
+        );
+        await replacePlannerOutbox(userID, afterNet);
+        keepGoing = false;
+        break; // stop — we're offline
+      }
+
+      const nextAttempt = syncingOp.attempt_count + 1;
+      const errorMessage = result.errorMessage || 'Sync rejected by server';
+      processedOpIDs.add(op.id);
+
+      if (result.conflict) {
+        conflicts += 1;
+        failed += 1;
+        needsRefresh = true;
+        fundingRequired.push(result.conflict);
+      } else if (nextAttempt >= MAX_ATTEMPTS) {
+        failed += 1;
+        needsRefresh = true;
+      }
+
+      const nextStatus: 'failed' | 'pending' =
+        result.conflict || nextAttempt >= MAX_ATTEMPTS ? 'failed' : 'pending';
+      const afterUpdate = (await getPlannerOutbox(userID)).map((o) =>
+        o.id === op.id
+          ? { ...syncingOp, status: nextStatus, attempt_count: nextAttempt, last_error: errorMessage }
+          : o
+      );
+      await replacePlannerOutbox(userID, afterUpdate);
+      keepGoing = true;
+      break; // restart scan
     }
-
-    if (op.last_attempt_at && now - op.last_attempt_at < backoffDelayMs(op.attempt_count)) {
-      continue;
-    }
-
-    const syncingOp: PlannerOutboxOp = {
-      ...op,
-      status: 'syncing',
-      last_attempt_at: Date.now(),
-    };
-
-    ops[index] = syncingOp;
-    await replacePlannerOutbox(userID, ops);
-
-    const result = await executePlannerOp(userID, syncingOp);
-
-    if (result.ok) {
-      ops.splice(index, 1);
-      index -= 1;
-      synced += 1;
-      needsRefresh = true;
-      await replacePlannerOutbox(userID, ops);
-      // Re-read ops to pick up any newly enqueued ops
-      ops = await getPlannerOutbox(userID);
-      continue;
-    }
-
-    if (result.defer) {
-      ops[index] = {
-        ...syncingOp,
-        status: 'pending',
-      };
-      await replacePlannerOutbox(userID, ops);
-      ops = await getPlannerOutbox(userID);
-      continue;
-    }
-
-    if (result.networkError) {
-      ops[index] = {
-        ...syncingOp,
-        status: 'pending',
-        last_error: result.errorMessage,
-      };
-      ops = normalizeSyncingOps(ops);
-      await replacePlannerOutbox(userID, ops);
-      break;
-    }
-
-    const nextAttempt = syncingOp.attempt_count + 1;
-    const errorMessage = result.errorMessage || 'Sync rejected by server';
-
-    if (result.conflict) {
-      conflicts += 1;
-      failed += 1;
-      needsRefresh = true;
-      fundingRequired.push(result.conflict);
-      ops[index] = {
-        ...syncingOp,
-        status: 'failed',
-        attempt_count: nextAttempt,
-        last_error: errorMessage,
-      };
-      await replacePlannerOutbox(userID, ops);
-      ops = await getPlannerOutbox(userID);
-      continue;
-    }
-
-    if (nextAttempt >= MAX_ATTEMPTS) {
-      failed += 1;
-      needsRefresh = true;
-      ops[index] = {
-        ...syncingOp,
-        status: 'failed',
-        attempt_count: nextAttempt,
-        last_error: errorMessage,
-      };
-      await replacePlannerOutbox(userID, ops);
-      ops = await getPlannerOutbox(userID);
-      continue;
-    }
-
-    ops[index] = {
-      ...syncingOp,
-      status: 'pending',
-      attempt_count: nextAttempt,
-      last_error: errorMessage,
-    };
-    await replacePlannerOutbox(userID, ops);
-    ops = await getPlannerOutbox(userID);
   }
 
   ops = await getPlannerOutbox(userID);

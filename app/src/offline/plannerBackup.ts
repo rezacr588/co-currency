@@ -3,6 +3,16 @@ import { readJSON, writeJSON } from '../utils/storage';
 
 const BOARD_BACKUP_KEY_PREFIX = '@planner_board_backup:';
 
+// Promise-based mutex to serialize backup writes and prevent race conditions
+let backupLockPromise: Promise<void> = Promise.resolve();
+
+function withBackupLock<T>(fn: () => Promise<T>): Promise<T> {
+  const prev = backupLockPromise;
+  let resolve: () => void;
+  backupLockPromise = new Promise<void>((r) => { resolve = r; });
+  return prev.then(fn).finally(() => resolve!());
+}
+
 export interface PlannerBoardBackupPayload {
   board: PlannerBoardResponse;
   updated_at: number;
@@ -20,9 +30,11 @@ export async function getPlannerBoardBackup(userID: string): Promise<PlannerBoar
 export async function setPlannerBoardBackup(userID: string, board: PlannerBoardResponse): Promise<void> {
   if (!userID) return;
 
-  await writeJSON<PlannerBoardBackupPayload>(plannerBoardBackupKey(userID), {
-    board,
-    updated_at: Date.now(),
+  return withBackupLock(async () => {
+    await writeJSON<PlannerBoardBackupPayload>(plannerBoardBackupKey(userID), {
+      board,
+      updated_at: Date.now(),
+    });
   });
 }
 

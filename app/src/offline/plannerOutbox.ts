@@ -263,19 +263,28 @@ export async function updatePlannerOutboxOp(
 ): Promise<void> {
   if (!userID || !opID) return;
 
-  const ops = await getPlannerOutbox(userID);
-  const index = ops.findIndex((op) => op.id === opID);
-  if (index < 0) return;
+  return withOutboxLock(async () => {
+    const ops = await getPlannerOutbox(userID);
+    const index = ops.findIndex((op) => op.id === opID);
+    if (index < 0) return;
 
-  ops[index] = updater(ops[index]);
-  await replacePlannerOutbox(userID, ops);
+    ops[index] = updater(ops[index]);
+    const sorted = sortOutbox(ops);
+    await writeJSON(outboxKey(userID), sorted);
+    notify(userID, sorted);
+  });
 }
 
 export async function removePlannerOutboxOp(userID: string, opID: string): Promise<void> {
   if (!userID || !opID) return;
-  const ops = await getPlannerOutbox(userID);
-  const next = ops.filter((op) => op.id !== opID);
-  await replacePlannerOutbox(userID, next);
+
+  return withOutboxLock(async () => {
+    const ops = await getPlannerOutbox(userID);
+    const next = ops.filter((op) => op.id !== opID);
+    const sorted = sortOutbox(next);
+    await writeJSON(outboxKey(userID), sorted);
+    notify(userID, sorted);
+  });
 }
 
 export async function retryFailedPlannerOps(userID: string): Promise<void> {

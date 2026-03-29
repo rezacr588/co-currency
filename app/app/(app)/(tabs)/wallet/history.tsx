@@ -469,6 +469,10 @@ export default function TransactionHistoryScreen() {
     setIsExporting(true);
     try {
       const token = getAuthToken();
+      if (!token) {
+        Alert.alert(t('exportError') || 'Export Error', t('exportAuthError') || 'Please log in to export transactions');
+        return;
+      }
       const exportUrl = api.wallet.exportTransactions('csv', hasActiveFilters ? filter : undefined);
 
       if (Platform.OS === 'web') {

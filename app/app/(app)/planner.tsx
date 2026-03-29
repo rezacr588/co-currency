@@ -171,12 +171,14 @@ export function PlannerScreenContent() {
   const pagerRef = useRef<ScrollView>(null);
   const syncInFlightRef = useRef(false);
   const syncDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const completingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Bug #8: Clean up timers on unmount
+  // Clean up timers on unmount
   useEffect(() => {
     return () => {
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
       if (syncDebounceRef.current) clearTimeout(syncDebounceRef.current);
+      if (completingTimerRef.current) clearTimeout(completingTimerRef.current);
     };
   }, []);
 
@@ -331,17 +333,15 @@ export function PlannerScreenContent() {
   const prevEffectiveBoardRef = useRef<PlannerBoardResponse | null>(null);
   useEffect(() => {
     if (!userID) return;
-    // Only update backup if the effective board actually changed (avoid infinite loop)
+    // Only update backup if the effective board content actually changed
     if (prevEffectiveBoardRef.current && plannerBoardsEqual(prevEffectiveBoardRef.current, effectiveBoard)) {
       return;
     }
     prevEffectiveBoardRef.current = effectiveBoard;
-    if (!plannerBoardsEqual(backupBoard, effectiveBoard)) {
-      setBackupBoard(effectiveBoard);
-      backupTimestampRef.current = Date.now();
-    }
+    setBackupBoard(effectiveBoard);
+    backupTimestampRef.current = Date.now();
     void setPlannerBoardBackup(userID, effectiveBoard);
-  }, [effectiveBoard, userID]); // Removed backupBoard from deps to break the cycle
+  }, [effectiveBoard, userID]);
 
   const pendingMarkers = useMemo(() => {
     const base = buildPlannerPendingMarkers(outbox);
@@ -506,7 +506,7 @@ export function PlannerScreenContent() {
     } catch (error) {
       Alert.alert(t('plannerCompleteError') || 'Could not queue task completion', error instanceof Error ? error.message : 'Unknown error');
     } finally {
-      setTimeout(() => setCompletingTaskID(null), 600);
+      completingTimerRef.current = setTimeout(() => setCompletingTaskID(null), 600);
     }
   }, [effectiveBoard, syncOutboxNow, userID, showToast, t]);
 

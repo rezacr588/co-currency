@@ -4,6 +4,16 @@ import { readJSON, removeStorage, writeJSON } from '../utils/storage';
 const BOARD_CACHE_KEY_PREFIX = '@planner_board_cache:';
 const FUNDING_REQUIRED_KEY_PREFIX = '@planner_funding_required:';
 
+// Promise-based mutex to serialize cache writes and prevent race conditions
+let cacheLockPromise: Promise<void> = Promise.resolve();
+
+function withCacheLock<T>(fn: () => Promise<T>): Promise<T> {
+  const prev = cacheLockPromise;
+  let resolve: () => void;
+  cacheLockPromise = new Promise<void>((r) => { resolve = r; });
+  return prev.then(fn).finally(() => resolve!());
+}
+
 export interface PlannerBoardCachePayload {
   board: PlannerBoardResponse;
   cached_at: number;
@@ -27,9 +37,11 @@ export async function getPlannerBoardCache(userID: string): Promise<PlannerBoard
 export async function setPlannerBoardCache(userID: string, board: PlannerBoardResponse): Promise<void> {
   if (!userID) return;
 
-  await writeJSON<PlannerBoardCachePayload>(boardCacheKey(userID), {
-    board,
-    cached_at: Date.now(),
+  return withCacheLock(async () => {
+    await writeJSON<PlannerBoardCachePayload>(boardCacheKey(userID), {
+      board,
+      cached_at: Date.now(),
+    });
   });
 }
 
