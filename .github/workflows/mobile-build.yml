@@ -14,6 +14,9 @@ on:
         default: 'false'
         type: boolean
 
+permissions:
+  contents: write  # Required for creating GitHub Releases
+
 jobs:
   # Detect if native files changed (requires new APK build)
   detect-native-changes:
