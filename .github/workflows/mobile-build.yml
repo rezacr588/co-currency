@@ -160,10 +160,11 @@ jobs:
         if: success()
         working-directory: ./app
         run: |
-          BUILD_ID=$(eas build:list --platform android --status finished --limit 1 --json --non-interactive | jq -r '.[0].id')
-          echo "Downloading build $BUILD_ID..."
+          APK_URL=$(eas build:list --platform android --status finished --limit 1 --json --non-interactive | jq -r '.[0].artifacts.buildUrl')
+          echo "Downloading APK from $APK_URL..."
           mkdir -p ../artifacts
-          eas build:download --id "$BUILD_ID" --output ../artifacts/coai.apk --non-interactive
+          curl -L -o ../artifacts/coai.apk "$APK_URL"
+          ls -lh ../artifacts/coai.apk
 
       - name: Upload to GitHub Release
         if: success()
