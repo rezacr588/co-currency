@@ -98,7 +98,7 @@ ctxkeys.GetTraceID(ctx) string
 **Route structure:**
 ```
 app/
-├── (public)/            # Welcome, converter, about
+├── (public)/            # Welcome, converter, about, download (web-only APK download page)
 ├── (auth)/              # Login, register, password reset (Stack-based)
 ├── auth/                # OAuth callbacks (google, linkedin)
 └── (app)/               # Protected (auth guard in _layout.tsx)
@@ -113,10 +113,10 @@ app/
 **Theme system (`src/theme/index.ts`):** `buildTheme(colors, isDark, isRTL)` returns `AppTheme`. Dark mode default. Font: Inter + Vazirmatn (RTL). Type declarations in `src/theme/styled.d.ts`.
 
 **Offline support:** AsyncStorage-based offline queue (max 100 items, 3 retries, auto-sync on reconnect). Planner has dedicated cache/outbox/sync engine in `src/offline/`:
-- `plannerOutbox.ts`: Outbox queue with promise-based mutex (`withOutboxLock`) serializing all writes to prevent AsyncStorage race conditions. Compaction only targets `'pending'` ops, never in-flight `'syncing'` ops. Max 500 ops. Includes temp-ID map with automatic cleanup after sync.
-- `plannerSyncEngine.ts`: Processes outbox ops sequentially with exponential backoff (max 6 attempts, up to 60s). Normalizes stuck `'syncing'` ops to `'pending'` on startup (crash recovery). Re-reads ops from storage after each write to avoid stale array issues. Uses stable timestamps from `op.created_at` for materialized tasks.
-- `plannerBackup.ts`: Local board backup with timestamp tracking. `plannerBoardsEqual()` compares summary counts + sorted item ID sets (order-independent). `shouldUseLocalPlannerBackup()` uses timestamp comparison to avoid resurrecting intentionally cleared boards.
-- `plannerCache.ts`: Separate board cache + funding-required map storage.
+- `plannerOutbox.ts`: Outbox queue with promise-based mutex (`withOutboxLock`) serializing all writes to prevent AsyncStorage race conditions. **All mutations** (`enqueuePlannerOp`, `updatePlannerOutboxOp`, `removePlannerOutboxOp`, `retryFailedPlannerOps`, `discardFailedPlannerOps`) must use the mutex. Compaction only targets `'pending'` ops, never in-flight `'syncing'` ops. Max 500 ops. Includes temp-ID map with automatic cleanup after sync.
+- `plannerSyncEngine.ts`: Processes outbox ops with ID-based while-loop (not index-based for-loop) and exponential backoff (max 6 attempts, up to 60s). Re-reads ops from storage after each write. Normalizes stuck `'syncing'` ops to `'pending'` on startup (crash recovery). Uses `processedOpIDs` set to prevent infinite loops.
+- `plannerBackup.ts`: Local board backup with timestamp tracking and write mutex (`withBackupLock`). `plannerBoardsEqual()` compares summary counts + sorted item ID sets (order-independent). `shouldUseLocalPlannerBackup()` uses timestamp comparison to avoid resurrecting intentionally cleared boards.
+- `plannerCache.ts`: Separate board cache + funding-required map storage with write mutex (`withCacheLock`).
 - `src/api/planner.ts`: Dedicated `plannerRequest()` with 30s `AbortController` timeout (separate from base API client).
 
 ## Critical Conventions
@@ -133,6 +133,10 @@ app/
 - Styled-components: `const theme = useTheme()` for colors, spacing, RTL detection
 - Nested modals: On iOS, nested `<Modal>` components cause z-order issues. Render inner modals (e.g. `DatePickerModal`) as siblings using `<Fragment>`, not children of the outer modal.
 - Async handlers in Alert: When `Alert.alert` `onPress` calls async operations (e.g. delete), use `async () => { try { await op(); onClose(); } catch { showError(); } }` — never fire-and-forget with `void`.
+
+### Web-Only UI
+- The `/download` page and download nav links must only render on web (`Platform.OS === 'web'`). Never show download/install prompts in the native app — the user already has it installed.
+- The `SettingsProvider` blocks rendering with `if (!isLoaded) return null` until settings load from AsyncStorage. Do not remove this guard — it prevents race conditions with biometric lock and auth state on Android.
 
 ### React Hook Dependency Guidelines
 - Never put `useQuery()` result objects (e.g. `boardQuery`) in `useCallback` deps — they are new objects every render. Extract stable references (`queryClient.invalidateQueries`) instead.
@@ -191,7 +195,8 @@ koyeb services logs coai/co-currency -t runtime
 **CI/CD:**
 - Push to main → pre-deploy DB backup → Docker build → ghcr.io → Koyeb deploy
 - PRs → Go tests + app typecheck
-- Mobile: push to main (app/** paths) → OTA update; APK built when native files change or `[build-apk]` in commit
+- Mobile: push to main (app/** paths) → OTA update + publish latest APK to GitHub Releases; APK rebuilt when native files change or `[build-apk]` in commit
+- APK download URL: `https://github.com/rezacr588/co-currency/releases/download/latest/coai.apk`
 
 **Pre-push hook** (`.githooks/pre-push`): Docker build + EAS OTA updates. Skip with `SKIP_DEPLOY=1 git push`.
 

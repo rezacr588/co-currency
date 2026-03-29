@@ -3,8 +3,7 @@ import { View, ScrollView, RefreshControl, Alert, Modal, Pressable } from 'react
 import { Stack, router } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components/native';
-import { Ionicons } from '@expo/vector-icons';
-import { Users, Mail } from 'lucide-react-native';
+import { Users, Mail, Plus, PlusCircle, ChevronRight, LogIn } from 'lucide-react-native';
 
 import { api } from '@/src/api';
 import { SharedSpace, SpaceInvite, SpaceType } from '@/src/api/social';
@@ -317,7 +316,7 @@ export default function SpacesScreen() {
     >
       <SpaceHeader>
         <SpaceIcon $color={space.color || colors.primary}>
-          <Ionicons name="people" size={24} color={space.color || colors.primary} />
+          <Users size={24} color={space.color || colors.primary} />
         </SpaceIcon>
         <SpaceInfo>
           <SpaceName $color={colors.foreground}>{space.name}</SpaceName>
@@ -458,7 +457,7 @@ export default function SpacesScreen() {
         )}
         
         <FAB $bg={colors.primary} onPress={() => setShowActionSheet(true)}>
-          <Ionicons name="add" size={28} color="#fff" />
+          <Plus size={28} color="#fff" />
         </FAB>
       </Container>
       
@@ -484,7 +483,7 @@ export default function SpacesScreen() {
                 }}
               >
                 <OptionIcon $bg={colors.primary + '20'}>
-                  <Ionicons name="add-circle" size={24} color={colors.primary} />
+                  <PlusCircle size={24} color={colors.primary} />
                 </OptionIcon>
                 <OptionText>
                   <OptionTitle $color={colors.foreground}>
@@ -494,9 +493,9 @@ export default function SpacesScreen() {
                     {t('socialSpacesDesc') || 'Start a new shared space'}
                   </OptionDesc>
                 </OptionText>
-                <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+                <ChevronRight size={20} color={colors.mutedForeground} />
               </OptionButton>
-              
+
               <OptionButton
                 $bg={colors.card}
                 onPress={() => {
@@ -505,7 +504,7 @@ export default function SpacesScreen() {
                 }}
               >
                 <OptionIcon $bg={colors.success + '20'}>
-                  <Ionicons name="enter" size={24} color={colors.success} />
+                  <LogIn size={24} color={colors.success} />
                 </OptionIcon>
                 <OptionText>
                   <OptionTitle $color={colors.foreground}>
@@ -515,7 +514,7 @@ export default function SpacesScreen() {
                     {t('enterInviteCode') || 'Enter an invite code to join'}
                   </OptionDesc>
                 </OptionText>
-                <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+                <ChevronRight size={20} color={colors.mutedForeground} />
               </OptionButton>
             </ModalContent>
           </Pressable>

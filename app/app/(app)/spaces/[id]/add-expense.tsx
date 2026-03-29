@@ -3,7 +3,7 @@ import { View, ScrollView, Alert } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components/native';
-import { Ionicons } from '@expo/vector-icons';
+import { User, Check } from 'lucide-react-native';
 
 import { api } from '@/src/api';
 import { SplitMethod, CreateExpenseRequest, SpaceMember } from '@/src/api/social';
@@ -347,7 +347,7 @@ export default function AddExpenseScreen() {
                 onPress={() => setPaidBy(member.user_id)}
               >
                 <MemberAvatar $bg={colors.primary + '20'}>
-                  <Ionicons name="person" size={18} color={colors.primary} />
+                  <User size={18} color={colors.primary} />
                 </MemberAvatar>
                 <MemberInfo>
                   <MemberName $color={colors.foreground}>
@@ -355,7 +355,7 @@ export default function AddExpenseScreen() {
                   </MemberName>
                 </MemberInfo>
                 <Checkbox $checked={paidBy === member.user_id} $color={colors.primary}>
-                  {paidBy === member.user_id && <Ionicons name="checkmark" size={16} color="#fff" />}
+                  {paidBy === member.user_id && <Check size={16} color="#fff" />}
                 </Checkbox>
               </MemberRow>
             ))}
@@ -400,7 +400,7 @@ export default function AddExpenseScreen() {
                   onPress={() => handleToggleMember(member.user_id)}
                 >
                   <MemberAvatar $bg={colors.primary + '20'}>
-                    <Ionicons name="person" size={18} color={colors.primary} />
+                    <User size={18} color={colors.primary} />
                   </MemberAvatar>
                   <MemberInfo>
                     <MemberName $color={colors.foreground}>
@@ -413,7 +413,7 @@ export default function AddExpenseScreen() {
                     )}
                   </MemberInfo>
                   <Checkbox $checked={isSelected} $color={colors.primary}>
-                    {isSelected && <Ionicons name="checkmark" size={16} color="#fff" />}
+                    {isSelected && <Check size={16} color="#fff" />}
                   </Checkbox>
                 </MemberRow>
               );

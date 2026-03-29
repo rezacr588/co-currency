@@ -3,8 +3,7 @@ import { View, ScrollView, RefreshControl, Alert, Modal, Pressable } from 'react
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components/native';
-import { Ionicons } from '@expo/vector-icons';
-import { Receipt, Users, Scale } from 'lucide-react-native';
+import { Receipt, Users, Scale, Settings, UserPlus, ArrowLeftRight, Plus, User } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 
 import { api } from '@/src/api';
@@ -397,7 +396,7 @@ export default function SpaceDetailScreen() {
       onPress={() => router.push(`/spaces/${id}/expense/${expense.id}` as any)}
     >
       <ExpenseIcon $bg={colors.primary + '20'}>
-        <Ionicons name="receipt-outline" size={22} color={colors.primary} />
+        <Receipt size={22} color={colors.primary} />
       </ExpenseIcon>
       <ExpenseInfo>
         <ExpenseTitle $color={colors.foreground}>{expense.title}</ExpenseTitle>
@@ -414,7 +413,7 @@ export default function SpaceDetailScreen() {
   const renderBalance = (balance: BalanceSummary) => (
     <MemberCard key={balance.member_id} $bg={colors.card}>
       <MemberAvatar $bg={colors.primary + '20'}>
-        <Ionicons name="person" size={22} color={colors.primary} />
+        <User size={22} color={colors.primary} />
       </MemberAvatar>
       <MemberInfo>
         <MemberName $color={colors.foreground}>{balance.member_name}</MemberName>
@@ -448,7 +447,7 @@ export default function SpaceDetailScreen() {
     return (
       <MemberCard key={member.id} $bg={colors.card}>
         <MemberAvatar $bg={colors.primary + '20'}>
-          <Ionicons name="person" size={22} color={colors.primary} />
+          <User size={22} color={colors.primary} />
         </MemberAvatar>
         <MemberInfo>
           <MemberName $color={colors.foreground}>
@@ -475,12 +474,9 @@ export default function SpaceDetailScreen() {
           headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.foreground,
           headerRight: () => (
-            <Ionicons
-              name="settings-outline"
-              size={24}
-              color={colors.foreground}
-              onPress={() => router.push(`/spaces/${id}/settings` as any)}
-            />
+            <Pressable onPress={() => router.push(`/spaces/${id}/settings` as any)}>
+              <Settings size={24} color={colors.foreground} />
+            </Pressable>
           ),
         }}
       />
@@ -511,11 +507,11 @@ export default function SpaceDetailScreen() {
           
           <ActionRow>
             <ActionButton $bg={colors.card} onPress={() => setShowInviteSheet(true)}>
-              <Ionicons name="person-add" size={18} color={colors.primary} />
+              <UserPlus size={18} color={colors.primary} />
               <ActionText $color={colors.foreground}>{t('inviteMember') || 'Invite'}</ActionText>
             </ActionButton>
             <ActionButton $bg={colors.card} onPress={() => router.push(`/spaces/${id}/settle` as any)}>
-              <Ionicons name="swap-horizontal" size={18} color={colors.success} />
+              <ArrowLeftRight size={18} color={colors.success} />
               <ActionText $color={colors.foreground}>{t('settleUp') || 'Settle'}</ActionText>
             </ActionButton>
           </ActionRow>
@@ -594,7 +590,7 @@ export default function SpaceDetailScreen() {
         
         {activeTab === 'expenses' && (
           <FAB $bg={colors.primary} onPress={() => router.push(`/spaces/${id}/add-expense` as any)}>
-            <Ionicons name="add" size={28} color="#fff" />
+            <Plus size={28} color="#fff" />
           </FAB>
         )}
       </Container>

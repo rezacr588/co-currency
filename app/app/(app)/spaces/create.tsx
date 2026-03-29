@@ -3,7 +3,7 @@ import { View, ScrollView, Alert } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components/native';
-import { Ionicons } from '@expo/vector-icons';
+import { Check } from 'lucide-react-native';
 
 import { api } from '@/src/api';
 import { SpaceType, CreateSpaceRequest } from '@/src/api/social';
@@ -287,7 +287,7 @@ export default function CreateSpaceScreen() {
                   $selected={color === c}
                   onPress={() => setColor(c)}
                 >
-                  {color === c && <Ionicons name="checkmark" size={20} color="#fff" />}
+                  {color === c && <Check size={20} color="#fff" />}
                 </ColorCircle>
               ))}
             </ColorGrid>
