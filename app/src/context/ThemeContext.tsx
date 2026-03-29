@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 import { readStorage, writeStorage } from '../utils/storage';
 import { darkColors, lightColors, type ColorPalette } from '../constants/colors';
@@ -43,24 +43,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, [theme, isInitialized]);
 
-  const toggleTheme = useCallback(() => {
+  const toggleTheme = () => {
     setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  }, []);
+  };
 
-  const setTheme = useCallback((newTheme: Theme) => {
+  const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
-  }, []);
+  };
 
   const isDark = theme === 'dark';
   const colors = useMemo(() => (isDark ? darkColors : lightColors), [isDark]);
 
-  const value = useMemo(
-    () => ({ theme, toggleTheme, setTheme, isDark, colors }),
-    [theme, toggleTheme, setTheme, isDark, colors],
-  );
-
   return (
-    <ThemeContext.Provider value={value}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme, isDark, colors }}>
       {children}
     </ThemeContext.Provider>
   );

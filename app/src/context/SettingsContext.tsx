@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef, useMemo, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback } from 'react';
 import { Platform, AppState, AppStateStatus } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { readJSON, writeJSON } from '../utils/storage';
@@ -157,10 +157,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const lock = useCallback(() => {
-    if (settingsRef.current.requireBiometricOnOpen) {
+    if (settings.requireBiometricOnOpen) {
       setIsLocked(true);
     }
-  }, []);
+  }, [settings.requireBiometricOnOpen]);
 
   const toggleHideBalances = useCallback(async () => {
     setSettings((prev) => {
@@ -170,25 +170,24 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const value = useMemo(
-    () => ({
-      settings,
-      updateSettings,
-      isLocked,
-      unlock,
-      lock,
-      biometricType,
-      isBiometricAvailable,
-      toggleHideBalances,
-    }),
-    [settings, updateSettings, isLocked, unlock, lock, biometricType, isBiometricAvailable, toggleHideBalances],
-  );
-
-  // Block rendering until settings are loaded from AsyncStorage
-  if (!isLoaded) return null;
+  // Don't render children until settings are loaded
+  if (!isLoaded) {
+    return null;
+  }
 
   return (
-    <SettingsContext.Provider value={value}>
+    <SettingsContext.Provider
+      value={{
+        settings,
+        updateSettings,
+        isLocked,
+        unlock,
+        lock,
+        biometricType,
+        isBiometricAvailable,
+        toggleHideBalances,
+      }}
+    >
       {children}
     </SettingsContext.Provider>
   );

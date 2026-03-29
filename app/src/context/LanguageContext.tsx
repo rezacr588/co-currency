@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { I18nManager, Platform } from 'react-native';
 import { getLocales } from 'expo-localization';
 import { translations, Language } from '../i18n/translations';
@@ -84,7 +84,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     void initLanguage();
   }, []);
 
-  const setLanguage = useCallback(async (lang: Language) => {
+  const setLanguage = async (lang: Language) => {
     setLanguageState(lang);
     await writeStorage(STORAGE_KEY, lang);
 
@@ -98,13 +98,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       I18nManager.forceRTL(shouldBeRTL);
       // Note: On native, RTL changes require app restart to take effect
     }
-  }, []);
+  };
 
-  const t = useCallback((key: string): string => {
+  const t = (key: string): string => {
     const langTranslations = translations[language] as Record<string, string>;
     const enTranslations = translations.en as Record<string, string>;
     return langTranslations[key] || enTranslations[key] || key;
-  }, [language]);
+  };
 
   const isRTL = RTL_LANGUAGES.includes(language);
 
@@ -119,13 +119,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   }, [isHydrated, isRTL, language]);
 
-  const value = useMemo(
-    () => ({ language, setLanguage, t, isRTL }),
-    [language, setLanguage, t, isRTL],
-  );
-
   return (
-    <LanguageContext.Provider value={value}>
+    <LanguageContext.Provider value={{ language, setLanguage, t, isRTL }}>
       {children}
     </LanguageContext.Provider>
   );

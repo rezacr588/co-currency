@@ -440,7 +440,6 @@ function TabsLayoutInner() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          lazy: true,
           sceneStyle: { backgroundColor: theme.colors.background },
           tabBarActiveTintColor: theme.colors.tabBarActive,
           tabBarInactiveTintColor: theme.colors.tabBarInactive,
@@ -470,7 +469,6 @@ function TabsLayoutInner() {
         <Tabs.Screen
           name="planner"
           options={{
-            lazy: false,
             title: compactTabLabels.planner,
             tabBarIcon: ({ color, size }) => <KanbanSquare size={size} color={color} />,
           }}

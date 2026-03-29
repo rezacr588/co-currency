@@ -1,13 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, Animated } from 'react-native';
 import { WifiOff, Wifi } from 'lucide-react-native';
 import * as Network from 'expo-network';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
-
-const ONLINE_POLL_INTERVAL = 30_000;  // 30s when online
-const OFFLINE_POLL_INTERVAL = 5_000;  // 5s when offline (fast recovery)
 
 export function OfflineBanner() {
   const { t } = useLanguage();
@@ -17,7 +14,6 @@ export function OfflineBanner() {
   const [isOnline, setIsOnline] = useState(true);
   const [showBanner, setShowBanner] = useState(false);
   const translateY = useState(new Animated.Value(-50))[0];
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -30,6 +26,7 @@ export function OfflineBanner() {
           setIsOnline(online ?? true);
         }
       } catch {
+        // If we can't check, assume online
         if (isMounted) {
           setIsOnline(true);
         }
@@ -39,31 +36,14 @@ export function OfflineBanner() {
     // Initial check
     checkConnection();
 
+    // Set up polling for network state changes
+    const interval = setInterval(checkConnection, 5000);
+
     return () => {
       isMounted = false;
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      clearInterval(interval);
     };
   }, []);
-
-  // Adaptive polling: fast when offline, slow when online
-  useEffect(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-
-    const delay = isOnline ? ONLINE_POLL_INTERVAL : OFFLINE_POLL_INTERVAL;
-    intervalRef.current = setInterval(async () => {
-      try {
-        const networkState = await Network.getNetworkStateAsync();
-        const online = networkState.isConnected && networkState.isInternetReachable !== false;
-        setIsOnline(online ?? true);
-      } catch {
-        // assume online on error
-      }
-    }, delay);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [isOnline]);
 
   useEffect(() => {
     if (!isOnline) {
