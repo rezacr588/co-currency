@@ -413,10 +413,12 @@ export function MarketingScaffold({ children }: MarketingScaffoldProps) {
               {isTablet ? (
                 <>
                   <MarketingNavLink href="/converter" label={t('converterTitle') || 'Converter'} />
-                  <MarketingNavLink href={"/download" as any} label={t('downloadNav') || 'Download'} />
+                  {Platform.OS === 'web' ? (
+                    <MarketingNavLink href={"/download" as any} label={t('downloadNav') || 'Download'} />
+                  ) : null}
                   <MarketingNavLink href="/about" label={t('aboutUs') || 'About'} />
                 </>
-              ) : (
+              ) : Platform.OS === 'web' ? (
                 <Link href={"/download" as any} asChild>
                   <Pressable
                     style={({ pressed }) => [
@@ -438,7 +440,7 @@ export function MarketingScaffold({ children }: MarketingScaffoldProps) {
                     <Download size={18} color={theme.colors.foreground} />
                   </Pressable>
                 </Link>
-              )}
+              ) : null}
 
               <Pressable
                 onPress={toggleTheme}
