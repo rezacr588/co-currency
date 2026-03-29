@@ -112,7 +112,12 @@ app/
 
 **Theme system (`src/theme/index.ts`):** `buildTheme(colors, isDark, isRTL)` returns `AppTheme`. Dark mode default. Font: Inter + Vazirmatn (RTL). Type declarations in `src/theme/styled.d.ts`.
 
-**Offline support:** AsyncStorage-based offline queue (max 100 items, 3 retries, auto-sync on reconnect). Planner has dedicated cache/outbox/sync engine in `src/offline/`.
+**Offline support:** AsyncStorage-based offline queue (max 100 items, 3 retries, auto-sync on reconnect). Planner has dedicated cache/outbox/sync engine in `src/offline/`:
+- `plannerOutbox.ts`: Outbox queue with promise-based mutex (`withOutboxLock`) serializing all writes to prevent AsyncStorage race conditions. Compaction only targets `'pending'` ops, never in-flight `'syncing'` ops. Max 500 ops. Includes temp-ID map with automatic cleanup after sync.
+- `plannerSyncEngine.ts`: Processes outbox ops sequentially with exponential backoff (max 6 attempts, up to 60s). Normalizes stuck `'syncing'` ops to `'pending'` on startup (crash recovery). Re-reads ops from storage after each write to avoid stale array issues. Uses stable timestamps from `op.created_at` for materialized tasks.
+- `plannerBackup.ts`: Local board backup with timestamp tracking. `plannerBoardsEqual()` compares summary counts + sorted item ID sets (order-independent). `shouldUseLocalPlannerBackup()` uses timestamp comparison to avoid resurrecting intentionally cleared boards.
+- `plannerCache.ts`: Separate board cache + funding-required map storage.
+- `src/api/planner.ts`: Dedicated `plannerRequest()` with 30s `AbortController` timeout (separate from base API client).
 
 ## Critical Conventions
 
@@ -126,6 +131,15 @@ app/
 - Confirmations: `Alert.alert(title, message, [{text: 'Cancel'}, {text: 'Confirm', onPress, style: 'destructive'}])`
 - Safe areas: Always use `useSafeAreaInsets()` from `react-native-safe-area-context`
 - Styled-components: `const theme = useTheme()` for colors, spacing, RTL detection
+- Nested modals: On iOS, nested `<Modal>` components cause z-order issues. Render inner modals (e.g. `DatePickerModal`) as siblings using `<Fragment>`, not children of the outer modal.
+- Async handlers in Alert: When `Alert.alert` `onPress` calls async operations (e.g. delete), use `async () => { try { await op(); onClose(); } catch { showError(); } }` — never fire-and-forget with `void`.
+
+### React Hook Dependency Guidelines
+- Never put `useQuery()` result objects (e.g. `boardQuery`) in `useCallback` deps — they are new objects every render. Extract stable references (`queryClient.invalidateQueries`) instead.
+- When a `useEffect` reads state A, computes new value, then calls `setState(A)`, omit A from deps to avoid infinite loops. Use a ref to track the previous value and compare before setting.
+- Always include all captured state variables in `useCallback` dependency arrays. Common misses: `undoOriginalStatus`, translation function `t`, boolean flags like `isOnline`.
+- Clean up `setTimeout`/`setInterval` refs in a `useEffect` cleanup function to prevent timer leaks on unmount.
+- When `due_date` or similar optional fields are empty strings, send `undefined` instead of `""` to the API (`value.trim() || undefined`).
 
 ### Backend Error Handling
 - Use `pkg/httputil` methods: `BadRequestWithContext()`, `UnauthorizedWithContext()`, `NotFoundWithContext()`, `InternalServerErrorWithContext()`, `ServiceUnavailableWithContext()`

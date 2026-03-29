@@ -33,6 +33,7 @@ import { useAndroidNavigationBar } from '../src/hooks/useAndroidNavigationBar';
 import { usePushNotifications } from '../src/hooks/usePushNotifications';
 import { buildTheme } from '../src/theme';
 import { markStartup } from '../src/utils/startupPerf';
+import { STALE_STANDARD } from '../src/config/queryConfig';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -42,7 +43,10 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 2,
-      staleTime: 30 * 1000, // 30 seconds
+      staleTime: STALE_STANDARD,           // 5 minutes (was 30s)
+      gcTime: 10 * 60 * 1000,              // 10 min garbage collection
+      refetchOnWindowFocus: false,          // don't refetch on tab/app focus
+      refetchOnReconnect: 'always',         // do refetch on network reconnect
     },
   },
 });

@@ -440,6 +440,7 @@ function TabsLayoutInner() {
       <Tabs
         screenOptions={{
           headerShown: false,
+          lazy: true,
           sceneStyle: { backgroundColor: theme.colors.background },
           tabBarActiveTintColor: theme.colors.tabBarActive,
           tabBarInactiveTintColor: theme.colors.tabBarInactive,

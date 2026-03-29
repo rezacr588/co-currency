@@ -28,6 +28,7 @@ import {
   getTransactionCurrency,
 } from '../../../src/utils/format';
 import { StyledCategoryIcon } from '../../../src/constants/icons';
+import { STALE_FREQUENT, STALE_REALTIME } from '../../../src/config/queryConfig';
 
 function QuickAction({
   icon: Icon,
@@ -99,13 +100,13 @@ export default memo(function WalletHomeScreen() {
   } = useQuery({
     queryKey: ['coai-brief'],
     queryFn: () => api.coai.getBrief(),
-    staleTime: 60 * 1000,
+    staleTime: STALE_FREQUENT,
   });
 
   const { data: conversationsData, refetch: refetchConversations } = useQuery({
     queryKey: ['ai-conversations'],
     queryFn: () => api.chat.listConversations(),
-    staleTime: 30 * 1000,
+    staleTime: STALE_REALTIME,
   });
 
   const { data: summary, isPending: isLoadingSummary, refetch: refetchSummary } = useQuery({

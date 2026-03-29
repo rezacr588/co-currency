@@ -5,9 +5,11 @@ import {
   AppState,
   FlatList,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   View,
@@ -39,6 +41,8 @@ import { PlannerCard } from '../../src/components/features/Planner/PlannerCard';
 import { PlannerPhoneTaskRow } from '../../src/components/features/Planner/PlannerPhoneTaskRow';
 import { PlannerStatusSheet } from '../../src/components/features/Planner/PlannerStatusSheet';
 import { TaskEditModal } from '../../src/components/features/Planner/TaskEditModal';
+import { PlannerUndoBar } from '../../src/components/features/Planner/PlannerUndoBar';
+import { PlannerSummaryCards } from '../../src/components/features/Planner/PlannerSummaryCards';
 import { useScreenLayout } from '../../src/hooks/useScreenLayout';
 import { haptics } from '../../src/utils/haptics';
 import { useDebounce } from '../../src/hooks/useDebounce';
@@ -939,58 +943,13 @@ export function PlannerScreenContent() {
           )}
 
           {/* Summary cards */}
-          {isPhone ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingEnd: 4 }}>
-              {summaryCards.map((metric) => (
-                <View
-                  key={metric.label}
-                  accessibilityLabel={`${metric.label}: ${metric.value}`}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 8,
-                    backgroundColor: colors.card,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                    paddingHorizontal: 12,
-                    paddingVertical: 8,
-                  }}
-                >
-                  <Text style={{ color: colors.mutedForeground, fontSize: 11, fontFamily: 'Inter_500Medium' }}>
-                    {metric.label}
-                  </Text>
-                  <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 13 }}>
-                    {metric.value}
-                  </Text>
-                </View>
-              ))}
-            </ScrollView>
-          ) : (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: summaryGap }}>
-              {summaryCards.map((metric) => (
-                <Animated.View
-                  key={metric.label}
-                  entering={FadeInDown.duration(350)}
-                  accessibilityLabel={`${metric.label}: ${metric.value}`}
-                  style={[
-                    {
-                      backgroundColor: colors.card,
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      padding: 10,
-                      minHeight: 64,
-                    },
-                    isDesktop ? { flex: 1 } : { width: summaryCardWidth },
-                  ]}
-                >
-                  <Text style={{ color: colors.mutedForeground, fontSize: 11 }}>{metric.label}</Text>
-                  <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 18, marginTop: 2 }}>{metric.value}</Text>
-                </Animated.View>
-              ))}
-            </View>
-          )}
+          <PlannerSummaryCards
+            cards={summaryCards}
+            isPhone={isPhone}
+            isDesktop={isDesktop}
+            summaryGap={summaryGap}
+            summaryCardWidth={summaryCardWidth}
+          />
 
           {/* Search & priority filter */}
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
@@ -1143,10 +1102,11 @@ export function PlannerScreenContent() {
               renderItem={renderPhoneFlatItem}
               ListEmptyComponent={phoneEmptyComponent}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: Math.max(insets.bottom + 20, 30), flexGrow: 1 }}
+              contentContainerStyle={[plannerStyles.flatListContent, { paddingBottom: Math.max(insets.bottom + 20, 30) }]}
               initialNumToRender={15}
               maxToRenderPerBatch={10}
               windowSize={7}
+              removeClippedSubviews={Platform.OS !== 'web'}
               refreshControl={
                 <RefreshControl
                   refreshing={isRefreshing}
@@ -1164,14 +1124,14 @@ export function PlannerScreenContent() {
               horizontal
               nestedScrollEnabled
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: Math.max(insets.bottom + 24, 36), gap: boardGap }}
+              contentContainerStyle={[plannerStyles.tabletScrollContent, { paddingBottom: Math.max(insets.bottom + 24, 36), gap: boardGap }]}
             >
               {COLUMN_ORDER.map((status, index) => (
                 <View key={status} style={{ width: tabletColumnWidth }}>
                   <ScrollView
                     nestedScrollEnabled
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 14 }}
+                    contentContainerStyle={plannerStyles.columnScrollContent}
                     refreshControl={
                       <RefreshControl
                         refreshing={isRefreshing}
@@ -1212,27 +1172,7 @@ export function PlannerScreenContent() {
 
         {/* Undo bar */}
         {undoTaskID && (
-          <View
-            accessibilityRole="alert"
-            accessibilityLabel={`${t('plannerTaskCompleted') || 'Task completed'}. ${t('plannerUndo') || 'Undo'}`}
-            style={{
-              position: 'absolute', bottom: Math.max(insets.bottom + 8, 20), left: 16, right: 16,
-              backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border,
-              flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-              paddingHorizontal: 14, paddingVertical: 10,
-              shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
-              elevation: 8,
-            }}
-          >
-            <Text style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_500Medium' }}>
-              {t('plannerTaskCompleted') || 'Task completed'}
-            </Text>
-            <Pressable onPress={handleUndoComplete} hitSlop={8} style={{ minHeight: 36, justifyContent: 'center' }}>
-              <Text style={{ color: colors.accent, fontSize: 13, fontFamily: 'Inter_700Bold' }}>
-                {t('plannerUndo') || 'Undo'}
-              </Text>
-            </Pressable>
-          </View>
+          <PlannerUndoBar onUndo={handleUndoComplete} />
         )}
       </LinearGradient>
 
@@ -1314,3 +1254,16 @@ export default function PlannerScreen() {
 
   return <PlannerScreenContent />;
 }
+
+const plannerStyles = StyleSheet.create({
+  flatListContent: {
+    paddingHorizontal: 16,
+    flexGrow: 1,
+  },
+  tabletScrollContent: {
+    paddingHorizontal: 16,
+  },
+  columnScrollContent: {
+    paddingBottom: 14,
+  },
+});

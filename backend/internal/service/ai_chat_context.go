@@ -278,7 +278,7 @@ func (s *AIChatService) getFinancialContext(ctx context.Context, userID uuid.UUI
 		return fctx, err
 	}
 
-	s.contextCache.Set(cacheKey, fctx, 60*time.Second)
+	s.contextCache.Set(cacheKey, fctx, 5*time.Minute)
 	return fctx, nil
 }
 
@@ -357,7 +357,7 @@ func (s *AIChatService) fetchFinancialContext(ctx context.Context, userID uuid.U
 	}()
 
 	go func() {
-		transactions, err := s.walletRepo.GetTransactions(ctx, userID, 100, 0)
+		transactions, err := s.walletRepo.GetTransactions(ctx, userID, 50, 0)
 		transactionsCh <- transactionsResult{transactions, err}
 	}()
 

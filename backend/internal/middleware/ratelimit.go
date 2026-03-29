@@ -56,10 +56,10 @@ func NewRateLimiter(requestsPerMinute int) *RateLimiter {
 // NewRateLimiterWithConfig creates a new rate limiter with full configuration
 func NewRateLimiterWithConfig(cfg RateLimiterConfig) *RateLimiter {
 	if cfg.CleanupInterval == 0 {
-		cfg.CleanupInterval = 10 * time.Minute
+		cfg.CleanupInterval = 5 * time.Minute
 	}
 	if cfg.EntryTTL == 0 {
-		cfg.EntryTTL = 30 * time.Minute
+		cfg.EntryTTL = 15 * time.Minute
 	}
 	if cfg.AuthRequestsPerMinute == 0 {
 		cfg.AuthRequestsPerMinute = cfg.RequestsPerMinute // Same as anonymous by default
@@ -174,8 +174,8 @@ func (rl *RateLimiter) getLimiter(key string, limit rate.Limit, burst int) *rate
 	if !exists {
 		// Emergency guard: if the map grows beyond 100k entries, skip adding
 		// new ones to prevent unbounded memory growth from a DDoS or scan.
-		if len(rl.limiters) > 100000 {
-			log.Warn().Int("size", len(rl.limiters)).Msg("Rate limiter map exceeded 100k entries, rejecting new entry")
+		if len(rl.limiters) > 50000 {
+			log.Warn().Int("size", len(rl.limiters)).Msg("Rate limiter map exceeded 50k entries, rejecting new entry")
 			return rate.NewLimiter(limit, burst)
 		}
 		entry = &rateLimiterEntry{

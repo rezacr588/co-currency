@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, {
   runOnJS,
@@ -56,7 +56,7 @@ interface PlannerCardProps {
   interactionMode?: 'gesture' | 'explicit';
 }
 
-export function PlannerCard({
+function PlannerCardInner({
   item,
   columnIndex,
   marker,
@@ -421,3 +421,5 @@ export function PlannerCard({
     </SwipeableRow>
   );
 }
+
+export const PlannerCard = memo(PlannerCardInner);

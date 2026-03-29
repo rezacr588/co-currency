@@ -79,7 +79,14 @@ CoFinance is an all-in-one personal finance application that combines currency c
 - **Offline Support**: Basic functionality without internet
 - **Fast Loading**: Service worker caching
 
-### 10. Security Features
+### 10. Planner Offline Sync
+- **Outbox Queue**: Operations queued locally with mutex-serialized writes (max 500 ops)
+- **Sync Engine**: Sequential processing with exponential backoff, crash recovery for stuck ops
+- **Local Backup**: Board state backed up with timestamps; order-independent equality comparison
+- **Conflict Handling**: Goal funding required (409) detected and surfaced to user; retries with configurable max attempts
+- **API Timeout**: 30s AbortController timeout on all planner API requests
+
+### 11. Security Features
 - **Rate Limiting**: Per-IP request limits
 - **Authenticated Rate Limits**: Higher limits for logged-in users
 - **Login Protection**: Stricter limits on login attempts
@@ -87,26 +94,26 @@ CoFinance is an all-in-one personal finance application that combines currency c
 - **HTTPS**: Secure communication
 - **CORS Protection**: Cross-origin request filtering
 
-### 11. Financial Goals
+### 12. Financial Goals
 - **Savings Targets**: Create goals with target amounts and deadlines
 - **Progress Tracking**: Visual progress bars and contribution history
 - **Goal Categories**: Emergency fund, vacation, home, car, education, retirement, investment, debt payoff
 - **Contributions**: Contribute from wallet balance directly to goals
 - **Multi-Currency**: Goals in any supported currency
 
-### 12. Recurring Transactions
+### 13. Recurring Transactions
 - **Scheduling**: Daily, weekly, monthly, or yearly frequencies
 - **Auto-Execution**: Manual or automatic transaction creation
 - **Active/Inactive Toggle**: Pause and resume recurring transactions
 - **Next Execution Date**: Track when the next transaction will occur
 
-### 13. Budgets
+### 14. Budgets
 - **Category Budgets**: Set spending limits per category
 - **Period Tracking**: Monthly or yearly budget periods
 - **Progress Monitoring**: Spent amount, remaining balance, percentage used
 - **Alerts**: Near-limit and over-budget warnings
 
-### 14. Reports & Analytics
+### 15. Reports & Analytics
 - **Monthly/Yearly Reports**: Income, expenses, and savings summaries
 - **Category Breakdown**: Spending distribution by category with percentages
 - **Spending Trends**: Income vs expense trends over configurable time periods
@@ -117,26 +124,26 @@ CoFinance is an all-in-one personal finance application that combines currency c
 - **Cash Flow Projections**: Forward-looking cash flow analysis
 - **Spending Anomaly Detection**: Alerts for unusual spending patterns
 
-### 15. Subscriptions Tracking
+### 16. Subscriptions Tracking
 - **Subscription Management**: Track active subscriptions with billing cycles
 - **Billing Cycles**: Weekly, monthly, quarterly, yearly tracking
 - **Upcoming Payments**: See what's due soon
 - **Summary View**: Total subscription costs and category breakdown
 - **Categories**: Organize subscriptions by type
 
-### 16. Loans Management
+### 17. Loans Management
 - **Loan Tracking**: Record loans with amounts, interest rates, and terms
 - **Payment History**: Log individual loan payments
 - **Summary View**: Outstanding balance and total paid
 - **Upcoming Payments**: See upcoming loan payment due dates
 
-### 17. Notes System
+### 18. Notes System
 - **Rich Notes**: Create notes with color coding
 - **Pinned Notes**: Pin important notes to the top
 - **Transaction Links**: Attach notes to specific transactions
 - **Color Palette**: Choose from multiple note colors for organization
 
-### 18. Challenges & Gamification
+### 19. Challenges & Gamification
 - **Financial Challenges**: Join challenges to improve financial habits
 - **XP System**: Earn experience points for financial activities
 - **Badges**: Unlock badges for achievements
@@ -144,20 +151,20 @@ CoFinance is an all-in-one personal finance application that combines currency c
 - **Leaderboard**: Compare progress with other users
 - **Featured Challenges**: Curated challenges for new users
 
-### 19. Smart Financial Advice
+### 20. Smart Financial Advice
 - **AI-Powered Tips**: Personalized advice based on your spending patterns, balances, and goals
 - **Context-Aware**: Analyzes your financial data to provide relevant suggestions
 - **Dismiss & Refresh**: Dismiss tips you've seen, refresh for new advice
 - **Fallback Tips**: Static financial tips when AI is unavailable
 - **Categories**: Spending, saving, budgeting, investing, and general advice
 
-### 20. Financial News Feed
+### 21. Financial News Feed
 - **Aggregated News**: Financial news from MarketWatch, Yahoo Finance, and CNBC
 - **Categorized Articles**: Markets, finance, economy, and crypto categories
 - **Cached Feed**: News cached for fast loading (30-minute refresh)
 - **External Links**: Open full articles in browser
 
-### 21. Enhanced AI Chat
+### 22. Enhanced AI Chat
 - **Voice Recording**: Record voice messages (up to 2 minutes) for AI interaction
 - **Image Attachments**: Attach photos of receipts and invoices for AI parsing
 - **Vision Model Support**: AI can read and extract data from receipt/invoice images

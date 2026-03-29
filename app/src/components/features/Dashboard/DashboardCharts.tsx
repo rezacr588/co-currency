@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { View, Text, ActivityIndicator, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -13,7 +14,7 @@ interface DashboardChartsProps {
   currency: string;
 }
 
-export function DashboardCharts({ currency }: DashboardChartsProps) {
+function DashboardChartsInner({ currency }: DashboardChartsProps) {
   const theme = useTheme();
   const { t } = useLanguage();
   const router = useRouter();
@@ -304,3 +305,5 @@ export function DashboardCharts({ currency }: DashboardChartsProps) {
     </View>
   );
 }
+
+export const DashboardCharts = memo(DashboardChartsInner);

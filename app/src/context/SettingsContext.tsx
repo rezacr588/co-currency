@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useMemo, ReactNode, useCallback } from 'react';
 import { Platform, AppState, AppStateStatus } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { readJSON, writeJSON } from '../utils/storage';
@@ -170,24 +170,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // Don't render children until settings are loaded
-  if (!isLoaded) {
-    return null;
-  }
+  const value = useMemo(
+    () => ({
+      settings,
+      updateSettings,
+      isLocked,
+      unlock,
+      lock,
+      biometricType,
+      isBiometricAvailable,
+      toggleHideBalances,
+    }),
+    [settings, updateSettings, isLocked, unlock, lock, biometricType, isBiometricAvailable, toggleHideBalances],
+  );
 
   return (
-    <SettingsContext.Provider
-      value={{
-        settings,
-        updateSettings,
-        isLocked,
-        unlock,
-        lock,
-        biometricType,
-        isBiometricAvailable,
-        toggleHideBalances,
-      }}
-    >
+    <SettingsContext.Provider value={value}>
       {children}
     </SettingsContext.Provider>
   );

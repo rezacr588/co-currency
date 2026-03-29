@@ -38,12 +38,16 @@ import { useLanguage } from '../../../../src/context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { useToast } from '../../../../src/components/ui/Toast';
 import { haptics } from '../../../../src/utils/haptics';
-import { 
-  AttachmentButton, 
-  AttachmentPreview, 
+import {
+  AttachmentButton,
+  AttachmentPreview,
   useAttachmentPicker,
   ChatHeader,
   ConversationSidebar,
+  ChatInputComposer,
+  ChatActivityModal,
+  ChatUsageModal,
+  ChatPendingActionFlow,
   type PendingAction,
 } from '../../../../src/components/features/Chat';
 import { VoiceRecorder } from '../../../../src/components/features/Chat';
@@ -57,6 +61,7 @@ import type { ConversionResult } from '../../../../src/types/currency';
 import type { Goal, RecurringTransaction } from '../../../../src/types/goal';
 import { openRecommendedAction } from '../../../../src/utils/coaiActions';
 import { formatNumber } from '../../../../src/utils/format';
+import { STALE_REALTIME, STALE_FREQUENT, STALE_STANDARD } from '../../../../src/config/queryConfig';
 
 const MAX_MESSAGE_LENGTH = 5000;
 const CHAR_COUNT_THRESHOLD = 4000;
@@ -549,12 +554,7 @@ export default function AIChatScreen() {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(
     conversationId || null
   );
-  // Editable transaction state for validation workflow
-  const [editMode, setEditMode] = useState(false);
-  const [editAmount, setEditAmount] = useState('');
-  const [editType, setEditType] = useState<'credit' | 'debit'>('debit');
-  const [editCurrency, setEditCurrency] = useState('USD');
-  const [editDescription, setEditDescription] = useState('');
+  // Edit mode state moved to ChatPendingActionFlow component
   const [liveTrace, setLiveTrace] = useState<ChatStreamTraceEvent[]>([]);
   const [traceByMessageID, setTraceByMessageID] = useState<Record<string, ChatStreamTraceEvent[]>>({});
   const [isActivityModalVisible, setIsActivityModalVisible] = useState(false);
@@ -756,7 +756,7 @@ export default function AIChatScreen() {
   const { data: aiStatus } = useQuery({
     queryKey: ['ai-status'],
     queryFn: () => api.ai.getStatus(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: STALE_STANDARD,
   });
 
   const aiConfigured = aiStatus?.configured !== false;
@@ -767,7 +767,7 @@ export default function AIChatScreen() {
     queryKey: ['ai-usage-summary', usageWindowDays],
     queryFn: () => api.chat.getUsageSummary(usageWindowDays),
     enabled: isUsageModalVisible && aiConfigured,
-    staleTime: 60 * 1000,
+    staleTime: STALE_FREQUENT,
   });
 
   // Fetch conversations list
@@ -775,7 +775,7 @@ export default function AIChatScreen() {
     queryKey: ['ai-conversations'],
     queryFn: () => api.chat.listConversations(),
     enabled: aiConfigured,
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: STALE_REALTIME,
   });
 
   // Fetch current conversation messages
@@ -784,7 +784,7 @@ export default function AIChatScreen() {
     queryFn: () =>
       activeConversationId ? api.chat.getConversation(activeConversationId) : null,
     enabled: !!activeConversationId && aiConfigured,
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: STALE_REALTIME,
   });
 
   // Create conversation mutation
@@ -1779,433 +1779,24 @@ export default function AIChatScreen() {
         )}
 
         {pendingAction && (
-          <View style={{ flexDirection: 'row', justifyContent: 'flex-start', width: '100%', alignItems: 'flex-start' }}>
-            <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 18, paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.md, maxWidth: '92%' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
-                    {pendingAction.kind === 'transaction'
-                      ? 'Transaction assistant'
-                      : pendingAction.kind === 'recurring'
-                        ? 'Recurring transaction'
-                        : pendingAction.kind === 'goal_contribution'
-                          ? 'Goal contribution'
-                          : pendingAction.kind === 'convert'
-                            ? 'Conversion assistant'
-                            : 'Live FX rate'}
-                  </Text>
-                  {pendingAction.status === 'done' && (
-                    <CheckCircle2 size={16} color={colors.success} />
-                  )}
-                  {pendingAction.status === 'error' && (
-                    <AlertTriangle size={16} color={colors.danger} />
-                  )}
-                </View>
-
-                {pendingAction.status === 'loading' && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <ActivityIndicator size="small" color={colors.accent} />
-                    <Text style={{ fontSize: 14, color: colors.mutedForeground, marginStart: 8 }}>
-                      {pendingAction.kind === 'transaction' || pendingAction.kind === 'recurring' || pendingAction.kind === 'goal_contribution'
-                        ? 'Analyzing…'
-                        : 'Fetching rate…'}
-                    </Text>
-                  </View>
-                )}
-
-                {pendingAction.status === 'error' && (
-                  <Text style={{ fontSize: 14, color: colors.danger }}>
-                    {pendingAction.error || 'Something went wrong.'}
-                  </Text>
-                )}
-
-                {pendingAction.kind === 'transaction' && pendingAction.status === 'ready' && pendingAction.parsed && (
-                  <>
-                    {!editMode ? (
-                      <>
-                        {/* Preview Mode */}
-                        <View style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12, marginBottom: 12 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                            <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, backgroundColor: pendingAction.parsed.type === 'credit' ? colors.success + '33' : colors.danger + '33' }}>
-                              <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', color: pendingAction.parsed.type === 'credit' ? colors.success : colors.danger }}>
-                                {pendingAction.parsed.type === 'credit' ? 'Income' : 'Expense'}
-                              </Text>
-                            </View>
-                            <Text style={{ fontSize: 14, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
-                              {pendingAction.parsed.currency} {pendingAction.parsed.amount.toFixed(2)}
-                            </Text>
-                          </View>
-                          <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 4 }}>
-                            {pendingAction.parsed.description}
-                          </Text>
-                          {pendingAction.parsed.category && pendingAction.parsed.category !== 'other' && (
-                            <Text style={{ fontSize: 12, color: colors.accent }}>
-                              Category: {pendingAction.parsed.category}
-                            </Text>
-                          )}
-                          {pendingAction.parsed.confidence < 0.8 && (
-                            <View style={{ marginTop: 8, backgroundColor: colors.warning + '1A', padding: 8, borderRadius: 4 }}>
-                              <Text style={{ fontSize: 12, color: colors.warning }}>
-                                Low confidence ({(pendingAction.parsed.confidence * 100).toFixed(0)}%) - Please verify details
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                          <Pressable
-                            onPress={() => applyParsedMutation.mutate(pendingAction.parsed!)}
-                            disabled={applyParsedMutation.isPending}
-                            style={({ pressed }) => [{ backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, opacity: applyParsedMutation.isPending ? 0.5 : pressed ? 0.7 : 1 }]}
-                          >
-                            <Text style={{ color: colors.primaryForeground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>
-                              {applyParsedMutation.isPending ? 'Adding...' : 'Add transaction'}
-                            </Text>
-                          </Pressable>
-                          <Pressable
-                            onPress={() => {
-                              setEditAmount(pendingAction.parsed!.amount.toString());
-                              setEditType(pendingAction.parsed!.type);
-                              setEditCurrency(pendingAction.parsed!.currency);
-                              setEditDescription(pendingAction.parsed!.description);
-                              setEditMode(true);
-                            }}
-                            style={({ pressed }) => [{ backgroundColor: colors.secondary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.border }, pressed && { opacity: 0.7 }]}
-                          >
-                            <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>Edit</Text>
-                          </Pressable>
-                          <Pressable
-                            onPress={() => setPendingAction(null)}
-                            style={({ pressed }) => [{ paddingHorizontal: 16, paddingVertical: 8 }, pressed && { opacity: 0.7 }]}
-                          >
-                            <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>Dismiss</Text>
-                          </Pressable>
-                        </View>
-                      </>
-                    ) : (
-                      <>
-                        {/* Edit Mode */}
-                        <View style={{ marginBottom: 12 }}>
-                          <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 8 }}>Type</Text>
-                          <View style={{ flexDirection: 'row', gap: 8 }}>
-                            <Pressable
-                              onPress={() => setEditType('debit')}
-                              style={({ pressed }) => [{ flex: 1, padding: 8, borderRadius: 8, borderWidth: 1, backgroundColor: editType === 'debit' ? colors.danger + '33' : colors.muted, borderColor: editType === 'debit' ? colors.danger : colors.border }, pressed && { opacity: 0.7 }]}
-                            >
-                              <Text style={{ fontSize: 12, textAlign: 'center', fontFamily: 'Inter_600SemiBold', color: editType === 'debit' ? colors.danger : colors.mutedForeground }}>
-                                Expense
-                              </Text>
-                            </Pressable>
-                            <Pressable
-                              onPress={() => setEditType('credit')}
-                              style={({ pressed }) => [{ flex: 1, padding: 8, borderRadius: 8, borderWidth: 1, backgroundColor: editType === 'credit' ? colors.success + '33' : colors.muted, borderColor: editType === 'credit' ? colors.success : colors.border }, pressed && { opacity: 0.7 }]}
-                            >
-                              <Text style={{ fontSize: 12, textAlign: 'center', fontFamily: 'Inter_600SemiBold', color: editType === 'credit' ? colors.success : colors.mutedForeground }}>
-                                Income
-                              </Text>
-                            </Pressable>
-                          </View>
-                        </View>
-                        <View style={{ flexDirection: 'row', marginBottom: 12, gap: 8 }}>
-                          <View style={{ flex: 2 }}>
-                            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 4 }}>Amount</Text>
-                            <TextInput
-                              value={editAmount}
-                              onChangeText={setEditAmount}
-                              keyboardType="decimal-pad"
-                              style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, color: colors.foreground, fontSize: 14, outlineStyle: 'none' } as any}
-                              placeholderTextColor={colors.mutedForeground}
-                            />
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 4 }}>Currency</Text>
-                            <TextInput
-                              value={editCurrency}
-                              onChangeText={(text) => setEditCurrency(text.toUpperCase())}
-                              maxLength={3}
-                              style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, color: colors.foreground, fontSize: 14, outlineStyle: 'none' } as any}
-                              placeholderTextColor={colors.mutedForeground}
-                            />
-                          </View>
-                        </View>
-                        <View style={{ marginBottom: 12 }}>
-                          <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 4 }}>Description</Text>
-                          <TextInput
-                            value={editDescription}
-                            onChangeText={setEditDescription}
-                            style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, color: colors.foreground, fontSize: 14, outlineStyle: 'none' } as any}
-                            placeholderTextColor={colors.mutedForeground}
-                          />
-                        </View>
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                          <Pressable
-                            onPress={() => {
-                              const parsedAmount = parseFloat(editAmount);
-                              if (isNaN(parsedAmount) || parsedAmount <= 0) {
-                                setSendError('Please enter a valid amount');
-                                return;
-                              }
-                              applyParsedMutation.mutate({
-                                amount: parsedAmount,
-                                type: editType,
-                                currency: editCurrency,
-                                description: editDescription,
-                                category: 'other',
-                                action_type: 'transaction',
-                                confidence: 1,
-                              });
-                              setEditMode(false);
-                            }}
-                            disabled={applyParsedMutation.isPending}
-                            style={({ pressed }) => [{ backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, opacity: applyParsedMutation.isPending ? 0.5 : pressed ? 0.7 : 1 }]}
-                          >
-                            <Text style={{ color: colors.primaryForeground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>
-                              {applyParsedMutation.isPending ? 'Adding...' : 'Confirm & Add'}
-                            </Text>
-                          </Pressable>
-                          <Pressable
-                            onPress={() => setEditMode(false)}
-                            style={({ pressed }) => [{ backgroundColor: colors.secondary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.border }, pressed && { opacity: 0.7 }]}
-                          >
-                            <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>Cancel</Text>
-                          </Pressable>
-                        </View>
-                      </>
-                    )}
-                  </>
-                )}
-
-                {/* Recurring Transaction Card */}
-                {pendingAction.kind === 'recurring' && pendingAction.status === 'ready' && pendingAction.parsed && (
-                  <>
-                    <View style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12, marginBottom: 12 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, backgroundColor: pendingAction.parsed.type === 'credit' ? colors.success + '33' : colors.danger + '33' }}>
-                          <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', color: pendingAction.parsed.type === 'credit' ? colors.success : colors.danger }}>
-                            {pendingAction.parsed.type === 'credit' ? 'Recurring Income' : 'Recurring Expense'}
-                          </Text>
-                        </View>
-                        <Text style={{ fontSize: 14, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
-                          {pendingAction.parsed.currency} {pendingAction.parsed.amount.toFixed(2)}
-                        </Text>
-                      </View>
-                      <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 8 }}>
-                        {pendingAction.parsed.description}
-                      </Text>
-                      {pendingAction.parsed.category && pendingAction.parsed.category !== 'other' && (
-                        <Text style={{ fontSize: 12, color: colors.accent }}>
-                          Category: {pendingAction.parsed.category}
-                        </Text>
-                      )}
-                    </View>
-                    {/* Frequency selector */}
-                    <View style={{ marginBottom: 12 }}>
-                      <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 8 }}>Frequency</Text>
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                        {['daily', 'weekly', 'monthly', 'yearly'].map((freq) => (
-                          <Pressable
-                            key={freq}
-                            onPress={() => setPendingAction(prev =>
-                              prev?.kind === 'recurring' ? { ...prev, selectedFrequency: freq } : prev
-                            )}
-                            style={({ pressed }) => [{
-                              paddingHorizontal: 12,
-                              paddingVertical: 8,
-                              borderRadius: 8,
-                              borderWidth: 1,
-                              backgroundColor: pendingAction.selectedFrequency === freq ? colors.primary + '33' : colors.muted,
-                              borderColor: pendingAction.selectedFrequency === freq ? colors.primary : colors.border,
-                            }, pressed && { opacity: 0.7 }]}
-                          >
-                            <Text style={{
-                              fontSize: 12,
-                              fontFamily: 'Inter_500Medium',
-                              textTransform: 'capitalize',
-                              color: pendingAction.selectedFrequency === freq ? colors.accent : colors.foreground,
-                            }}>
-                              {freq}
-                            </Text>
-                          </Pressable>
-                        ))}
-                      </View>
-                    </View>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                      <Pressable
-                        onPress={() => applyRecurringMutation.mutate({
-                          parsed: pendingAction.parsed!,
-                          frequency: pendingAction.selectedFrequency || 'monthly',
-                        })}
-                        disabled={applyRecurringMutation.isPending}
-                        style={({ pressed }) => [{ backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, opacity: applyRecurringMutation.isPending ? 0.5 : pressed ? 0.7 : 1 }]}
-                      >
-                        <Text style={{ color: colors.primaryForeground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>
-                          {applyRecurringMutation.isPending ? 'Creating...' : 'Create recurring'}
-                        </Text>
-                      </Pressable>
-                      <Pressable
-                        onPress={() => setPendingAction(null)}
-                        style={({ pressed }) => [{ paddingHorizontal: 16, paddingVertical: 8 }, pressed && { opacity: 0.7 }]}
-                      >
-                        <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>Dismiss</Text>
-                      </Pressable>
-                    </View>
-                  </>
-                )}
-
-                {/* Goal Contribution Card */}
-                {pendingAction.kind === 'goal_contribution' && pendingAction.status === 'ready' && pendingAction.parsed && (
-                  <>
-                    <View style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12, marginBottom: 12 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, backgroundColor: colors.accent + '33' }}>
-                          <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', color: colors.accent }}>Goal Contribution</Text>
-                        </View>
-                        <Text style={{ fontSize: 14, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
-                          {pendingAction.parsed.currency} {pendingAction.parsed.amount.toFixed(2)}
-                        </Text>
-                      </View>
-                      {pendingAction.parsed.goal_name && (
-                        <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
-                          Detected goal: {pendingAction.parsed.goal_name}
-                        </Text>
-                      )}
-                    </View>
-                    {/* Goal selector */}
-                    {pendingAction.goals && pendingAction.goals.length > 0 ? (
-                      <View style={{ marginBottom: 12 }}>
-                        <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: 8 }}>Select goal to contribute to</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                          <View style={{ flexDirection: 'row', gap: 8 }}>
-                            {pendingAction.goals.map((goal) => (
-                              <Pressable
-                                key={goal.id}
-                                onPress={() => setPendingAction(prev =>
-                                  prev?.kind === 'goal_contribution' ? { ...prev, selectedGoalID: goal.id } : prev
-                                )}
-                                style={({ pressed }) => [{
-                                  paddingHorizontal: 12,
-                                  paddingVertical: 8,
-                                  borderRadius: 8,
-                                  borderWidth: 1,
-                                  backgroundColor: pendingAction.selectedGoalID === goal.id ? colors.primary + '33' : colors.muted,
-                                  borderColor: pendingAction.selectedGoalID === goal.id ? colors.primary : colors.border,
-                                }, pressed && { opacity: 0.7 }]}
-                              >
-                                <Text style={{
-                                  fontSize: 12,
-                                  fontFamily: 'Inter_500Medium',
-                                  color: pendingAction.selectedGoalID === goal.id ? colors.accent : colors.foreground,
-                                }}>
-                                  {goal.name}
-                                </Text>
-                                <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
-                                  {goal.currency} {goal.current_amount.toFixed(0)} / {goal.target_amount.toFixed(0)}
-                                </Text>
-                              </Pressable>
-                            ))}
-                          </View>
-                        </ScrollView>
-                      </View>
-                    ) : (
-                      <View style={{ marginBottom: 12, backgroundColor: colors.warning + '1A', padding: 8, borderRadius: 4 }}>
-                        <Text style={{ fontSize: 12, color: colors.warning }}>
-                          No goals found. Create a goal first to contribute.
-                        </Text>
-                      </View>
-                    )}
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                      <Pressable
-                        onPress={() => {
-                          if (!pendingAction.selectedGoalID) {
-                            Alert.alert('Select Goal', 'Please select a goal to contribute to');
-                            return;
-                          }
-                          applyGoalContributionMutation.mutate({
-                            amount: pendingAction.parsed!.amount,
-                            goalId: pendingAction.selectedGoalID,
-                            goalName: pendingAction.parsed!.goal_name,
-                          });
-                        }}
-                        disabled={applyGoalContributionMutation.isPending || !pendingAction.selectedGoalID}
-                        style={({ pressed }) => [{ backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, opacity: applyGoalContributionMutation.isPending || !pendingAction.selectedGoalID ? 0.5 : pressed ? 0.7 : 1 }]}
-                      >
-                        <Text style={{ color: colors.primaryForeground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>
-                          {applyGoalContributionMutation.isPending ? 'Contributing...' : 'Contribute'}
-                        </Text>
-                      </Pressable>
-                      <Pressable
-                        onPress={() => setPendingAction(null)}
-                        style={({ pressed }) => [{ paddingHorizontal: 16, paddingVertical: 8 }, pressed && { opacity: 0.7 }]}
-                      >
-                        <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>Dismiss</Text>
-                      </Pressable>
-                    </View>
-                  </>
-                )}
-
-                {pendingAction.kind === 'convert' && pendingAction.status === 'ready' && pendingAction.result && (
-                  <>
-                    <View style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12, marginBottom: 12 }}>
-                      <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
-                        {pendingAction.amount} {pendingAction.from} →{' '}
-                        {formatNumber(pendingAction.result.result, 2)} {pendingAction.to}
-                      </Text>
-                      <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 4 }}>
-                        Rate: {formatNumber(pendingAction.result.rate, 4)} {pendingAction.to}/{pendingAction.from}
-                      </Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
-                      <Pressable
-                        onPress={() =>
-                          walletConvertMutation.mutate({
-                            from: pendingAction.from,
-                            to: pendingAction.to,
-                            amount: pendingAction.amount,
-                          })
-                        }
-                        style={({ pressed }) => [{ backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }, pressed && { opacity: 0.7 }]}
-                      >
-                        <Text style={{ color: colors.primaryForeground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>
-                          Convert in wallet
-                        </Text>
-                      </Pressable>
-                      <Pressable
-                        onPress={() => setPendingAction(null)}
-                        style={({ pressed }) => [{ backgroundColor: colors.secondary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.border }, pressed && { opacity: 0.7 }]}
-                      >
-                        <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>Dismiss</Text>
-                      </Pressable>
-                    </View>
-                  </>
-                )}
-
-                {pendingAction.kind === 'rate' && pendingAction.status === 'ready' && pendingAction.result && (
-                  <>
-                    <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
-                      1 {pendingAction.from} = {formatNumber(pendingAction.result.rate, 4)} {pendingAction.to}
-                    </Text>
-                    <Pressable
-                      onPress={() => setPendingAction(null)}
-                      style={({ pressed }) => [{ backgroundColor: colors.secondary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.border, marginTop: 12, alignSelf: 'flex-start' }, pressed && { opacity: 0.7 }]}
-                    >
-                      <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>Dismiss</Text>
-                    </Pressable>
-                  </>
-                )}
-
-                {pendingAction.status === 'done' && (
-                  <Text style={{ fontSize: 14, color: colors.success }}>
-                    {pendingAction.kind === 'transaction'
-                      ? t('transactionAdded') || 'Transaction added.'
-                      : pendingAction.kind === 'recurring'
-                        ? t('recurringCreated') || 'Recurring transaction created.'
-                        : pendingAction.kind === 'goal_contribution'
-                          ? t('contributionAdded') || 'Contribution added to goal.'
-                          : pendingAction.kind === 'convert'
-                            ? t('conversionCompleted') || 'Conversion completed.'
-                            : t('rateUpdated') || 'Rate updated.'}
-                  </Text>
-                )}
-              </View>
-            </View>
+          <ChatPendingActionFlow
+            pendingAction={pendingAction}
+            onDismiss={() => setPendingAction(null)}
+            onApplyTransaction={(parsed) => applyParsedMutation.mutate(parsed)}
+            isApplyingTransaction={applyParsedMutation.isPending}
+            onApplyRecurring={(parsed, frequency) => applyRecurringMutation.mutate({ parsed, frequency })}
+            isApplyingRecurring={applyRecurringMutation.isPending}
+            onApplyGoalContribution={(data) => applyGoalContributionMutation.mutate(data)}
+            isApplyingGoalContribution={applyGoalContributionMutation.isPending}
+            onApplyConversion={(data) => walletConvertMutation.mutate(data)}
+            onSetFrequency={(freq) => setPendingAction(prev =>
+              prev?.kind === 'recurring' ? { ...prev, selectedFrequency: freq } : prev
+            )}
+            onSetGoalID={(goalId) => setPendingAction(prev =>
+              prev?.kind === 'goal_contribution' ? { ...prev, selectedGoalID: goalId } : prev
+            )}
+            onSetError={setSendError}
+          />
         )}
       </View>
     ) : null;
@@ -2312,411 +1903,48 @@ export default function AIChatScreen() {
             {renderMessages()}
 
             {/* Input */}
-            <View
-              style={{ paddingHorizontal: theme.spacing.lg, paddingTop: 10, paddingBottom: Math.max(insets.bottom, theme.spacing.md), backgroundColor: colors.background }}
-            >
-              {sendError && (
-                <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger + '33', padding: 12, borderRadius: 8, marginBottom: 12 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Text style={{ color: colors.danger, fontSize: 12, flex: 1 }}>{sendError}</Text>
-                    {lastFailedMessage && (
-                      <Pressable
-                        onPress={handleRetry}
-                        disabled={sendMessageMutation.isPending}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          backgroundColor: colors.danger + '20',
-                          paddingHorizontal: 8,
-                          paddingVertical: 4,
-                          borderRadius: 6,
-                          marginStart: 8,
-                        }}
-                      >
-                        <RotateCcw size={12} color={colors.danger} />
-                        <Text style={{ color: colors.danger, fontSize: 11, fontFamily: 'Inter_600SemiBold', marginStart: 4 }}>
-                          {t('retry') || 'Retry'}
-                        </Text>
-                      </Pressable>
-                    )}
-                  </View>
-                </View>
-              )}
-
-              <View
-                style={{
-                  backgroundColor: colors.card,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  borderRadius: 20,
-                  padding: 10,
-                  shadowColor: '#000',
-                  shadowOpacity: 0.08,
-                  shadowRadius: 12,
-                  shadowOffset: { width: 0, height: 4 },
-                  elevation: 2,
-                }}
-              >
-                {/* Voice Recording UI */}
-                {isRecordingVoice && (
-                  <VoiceRecorder
-                    onRecordingComplete={handleVoiceComplete}
-                    onCancel={cancelVoice}
-                    onError={(msg) => showToast(msg, 'error')}
-                  />
-                )}
-
-                {/* Attachment Preview */}
-                {attachment && !isRecordingVoice && (
-                  <AttachmentPreview attachment={attachment} onRemove={clearAttachment} />
-                )}
-
-                <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
-                  {(['auto', 'fast', 'thinking'] as const).map((mode) => {
-                    const selected = thinkingMode === mode;
-                    return (
-                      <Pressable
-                        key={mode}
-                        onPress={() => setThinkingMode(mode)}
-                        style={({ pressed }) => [{
-                          paddingHorizontal: 9,
-                          paddingVertical: 5,
-                          borderRadius: 999,
-                          borderWidth: 1,
-                          borderColor: selected ? colors.accent : colors.border,
-                          backgroundColor: selected ? colors.accent + '22' : colors.card,
-                        }, pressed && { opacity: 0.75 }]}
-                      >
-                        <Text style={{ fontSize: 11, color: selected ? colors.accent : colors.mutedForeground, fontFamily: selected ? 'Inter_600SemiBold' : undefined }}>
-                          {mode}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-
-                <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
-                  {!isRecordingVoice && (
-                    <View
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 12,
-                        backgroundColor: colors.muted,
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <AttachmentButton onPress={showAttachmentPicker} />
-                    </View>
-                  )}
-
-                  <View style={{ flex: 1 }}>
-                    <View
-                      style={{
-                        backgroundColor: colors.muted,
-                        borderWidth: 1,
-                        borderColor: colors.borderStrong,
-                        borderRadius: 14,
-                        paddingHorizontal: 12,
-                        paddingVertical: 8,
-                        minHeight: 46,
-                        maxHeight: 130,
-                      }}
-                    >
-                      <TextInput
-                        value={message}
-                        onChangeText={(text) => setMessage(text.slice(0, MAX_MESSAGE_LENGTH))}
-                        placeholder={inputPlaceholder}
-                        placeholderTextColor={colors.mutedForeground}
-                        multiline
-                        editable={!sendMessageMutation.isPending}
-                        maxLength={MAX_MESSAGE_LENGTH}
-                        selectionColor={colors.accent}
-                        cursorColor={colors.accent}
-                        style={{
-                          color: colors.foreground,
-                          fontSize: 16,
-                          lineHeight: 21,
-                          textAlignVertical: 'top',
-                          paddingVertical: Platform.OS === 'ios' ? 6 : 2,
-                          minHeight: 30,
-                          maxHeight: 108,
-                        }}
-                      />
-                    </View>
-                    {message.length > CHAR_COUNT_THRESHOLD && (
-                      <Text style={{
-                        textAlign: 'right',
-                        marginTop: 4,
-                        marginEnd: 4,
-                        fontSize: 10,
-                        color: message.length >= MAX_MESSAGE_LENGTH ? colors.danger : colors.mutedForeground,
-                      }}>
-                        {message.length}/{MAX_MESSAGE_LENGTH}
-                      </Text>
-                    )}
-                  </View>
-
-                  <Pressable
-                    onPress={() => handleSend()}
-                    disabled={!canSendMessage}
-                    accessibilityRole="button"
-                    accessibilityLabel="Send message"
-                    style={({ pressed }) => [{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 12,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: colors.primary,
-                      opacity: !canSendMessage ? 0.45 : pressed ? 0.72 : 1,
-                    }]}
-                  >
-                    {sendMessageMutation.isPending ? (
-                      <ActivityIndicator size="small" color={colors.primaryForeground} />
-                    ) : (
-                      <Send size={18} color={colors.primaryForeground} />
-                    )}
-                  </Pressable>
-                </View>
-
-                <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 8, marginHorizontal: 4 }}>
-                  {t('rateLimit') || 'Rate limit'}: {aiRateLimitPerMinute}/min ({t('burst') || 'burst'} {aiRateLimitBurst})
-                </Text>
-              </View>
-            </View>
+            <ChatInputComposer
+              message={message}
+              setMessage={setMessage}
+              onSend={() => handleSend()}
+              thinkingMode={thinkingMode}
+              setThinkingMode={setThinkingMode}
+              attachment={attachment}
+              onAttach={showAttachmentPicker}
+              onClearAttachment={clearAttachment}
+              isRecording={isRecordingVoice}
+              onCancelVoice={cancelVoice}
+              onVoiceComplete={handleVoiceComplete}
+              onVoiceError={(msg) => showToast(msg, 'error')}
+              isSending={sendMessageMutation.isPending}
+              canSend={canSendMessage}
+              maxLength={MAX_MESSAGE_LENGTH}
+              charCountThreshold={CHAR_COUNT_THRESHOLD}
+              inputPlaceholder={inputPlaceholder}
+              aiRateLimitPerMinute={aiRateLimitPerMinute}
+              aiRateLimitBurst={aiRateLimitBurst}
+              sendError={sendError}
+              lastFailedMessage={lastFailedMessage}
+              onRetry={handleRetry}
+            />
           </View>
         </View>
 
-        <Modal
+        <ChatActivityModal
           visible={isActivityModalVisible}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setIsActivityModalVisible(false)}
-        >
-          <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
-            <View style={{ maxHeight: '82%', backgroundColor: colors.background, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, borderColor: colors.border }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 16 }}>Agent Activity</Text>
-                <Pressable onPress={() => setIsActivityModalVisible(false)}>
-                  <Text style={{ color: colors.mutedForeground }}>Close</Text>
-                </Pressable>
-              </View>
-              <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: Math.max(insets.bottom, 18) }}>
-                {activeTraceEvents.length === 0 && activeToolUsage.length === 0 ? (
-                  <EmptyState
-                    icon={Activity}
-                    title={t('noActivity') || 'No activity'}
-                    description="No workflow events yet. Send a message to start capturing agent steps."
-                    variant="compact"
-                  />
-                ) : (
-                  <View>
-                    {activeToolUsage.length > 0 ? (
-                      <View
-                        style={{
-                          borderWidth: 1,
-                          borderColor: colors.border,
-                          borderRadius: 12,
-                          backgroundColor: colors.card,
-                          padding: 10,
-                          marginBottom: 10,
-                        }}
-                      >
-                        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>
-                          Tools Used
-                        </Text>
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                          {activeToolUsage.map((tool) => (
-                            <View
-                              key={`active-tool-${tool.name}`}
-                              style={{
-                                paddingHorizontal: 8,
-                                paddingVertical: 5,
-                                borderRadius: 999,
-                                borderWidth: 1,
-                                borderColor: colors.border,
-                                backgroundColor: colors.secondary,
-                              }}
-                            >
-                              <Text style={{ color: colors.foreground, fontSize: 11 }}>
-                                {getToolDisplayName(tool.name)}
-                                {tool.count > 1 ? ` ×${tool.count}` : ''}
-                              </Text>
-                            </View>
-                          ))}
-                        </View>
-                      </View>
-                    ) : null}
+          onClose={() => setIsActivityModalVisible(false)}
+          traceEvents={activeTraceEvents}
+          toolUsage={activeToolUsage}
+        />
 
-                    {activeTraceEvents.map((event, index) => (
-                      <View
-                        key={`${event.sequence_id || index}-${event.stage || event.step || index}`}
-                        style={{
-                          borderWidth: 1,
-                          borderColor: colors.border,
-                          borderRadius: 12,
-                          backgroundColor: colors.card,
-                          padding: 10,
-                          marginBottom: 10,
-                        }}
-                      >
-                        <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>
-                          {event.stage || event.step || 'event'}
-                        </Text>
-                        <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 2 }}>
-                          #{event.sequence_id || index + 1}
-                          {event.timestamp ? ` · ${new Date(event.timestamp).toLocaleTimeString()}` : ''}
-                        </Text>
-                        {event.tool_name ? (
-                          <Text style={{ color: colors.foreground, fontSize: 12, marginTop: 6 }}>
-                            Tool: {getToolDisplayName(String(event.tool_name))}
-                          </Text>
-                        ) : null}
-                        {event.duration_ms ? (
-                          <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 2 }}>
-                            Duration: {String(event.duration_ms)} ms
-                          </Text>
-                        ) : null}
-                        {event.error ? (
-                          <Text style={{ color: colors.danger, fontSize: 11, marginTop: 4 }}>
-                            Error: {String(event.error)}
-                          </Text>
-                        ) : null}
-                        {event.raw ? (
-                          <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 6 }} numberOfLines={8}>
-                            {JSON.stringify(event.raw)}
-                          </Text>
-                        ) : null}
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
-
-        <Modal
+        <ChatUsageModal
           visible={isUsageModalVisible}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setIsUsageModalVisible(false)}
-        >
-          <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
-            <View style={{ maxHeight: '84%', backgroundColor: colors.background, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, borderColor: colors.border }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 16 }}>Usage & Billing</Text>
-                <Pressable onPress={() => setIsUsageModalVisible(false)}>
-                  <Text style={{ color: colors.mutedForeground }}>Close</Text>
-                </Pressable>
-              </View>
-              <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 14, paddingTop: 12 }}>
-                {([7, 30] as const).map((days) => {
-                  const selected = usageWindowDays === days;
-                  return (
-                    <Pressable
-                      key={days}
-                      onPress={() => setUsageWindowDays(days)}
-                      style={({ pressed }) => [{
-                        paddingHorizontal: 10,
-                        paddingVertical: 6,
-                        borderRadius: 999,
-                        borderWidth: 1,
-                        borderColor: selected ? colors.accent : colors.border,
-                        backgroundColor: selected ? colors.accent + '22' : colors.card,
-                      }, pressed && { opacity: 0.75 }]}
-                    >
-                      <Text style={{ color: selected ? colors.accent : colors.foreground, fontSize: 12 }}>{days}d</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-              <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: Math.max(insets.bottom, 18) }}>
-                {isUsageSummaryLoading ? (
-                  <View style={{ gap: 10 }}>
-                    {[0, 1, 2].map((item) => (
-                      <View
-                        key={`usage-skeleton-${item}`}
-                        style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 10, backgroundColor: colors.card }}
-                      >
-                        <Skeleton width="35%" height={12} style={{ marginBottom: 10 }} />
-                        <Skeleton width="55%" height={20} style={{ marginBottom: 8 }} />
-                        <Skeleton width="90%" height={12} style={{ marginBottom: 6 }} />
-                        <Skeleton width="70%" height={12} />
-                      </View>
-                    ))}
-                  </View>
-                ) : !usageSummary || usageSummary.totals.messages === 0 ? (
-                  <EmptyState
-                    icon={Coins}
-                    title={t('noActivity') || 'No activity'}
-                    description="No usage data yet. Send a message to see token and billing details."
-                    variant="compact"
-                  />
-                ) : (
-                  <View style={{ gap: 10 }}>
-                    <View style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 10, backgroundColor: colors.card }}>
-                      <Text style={{ color: colors.mutedForeground, fontSize: 11 }}>Messages</Text>
-                      <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 20 }}>{usageSummary.totals.messages}</Text>
-                      <Text style={{ color: colors.foreground, fontSize: 12, marginTop: 6 }}>
-                        Tokens: {usageSummary.totals.total_tokens} ({usageSummary.totals.prompt_tokens} in / {usageSummary.totals.completion_tokens} out)
-                      </Text>
-                      <Text style={{ color: colors.foreground, fontSize: 12, marginTop: 2 }}>
-                        Estimated: {formatUsd(usageSummary.totals.estimated_cost_usd)} · Billed: {formatUsd(usageSummary.totals.billed_cost_usd)}
-                      </Text>
-                    </View>
-
-                    {usageSummary.by_model.length === 0 ? (
-                      <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
-                        No model-level breakdown available yet.
-                      </Text>
-                    ) : (
-                      usageSummary.by_model.map((modelUsage) => (
-                        <View key={`${modelUsage.provider}-${modelUsage.model}`} style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 10, backgroundColor: colors.card }}>
-                          <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>
-                            {modelUsage.provider} · {modelUsage.model}
-                          </Text>
-                          <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 2 }}>
-                            {modelUsage.messages} messages · {modelUsage.total_tokens} tokens · {modelUsage.billing_source}
-                          </Text>
-                          <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 2 }}>
-                            Est {formatUsd(modelUsage.estimated_cost_usd)} · Billed {formatUsd(modelUsage.billed_cost_usd)}
-                          </Text>
-                        </View>
-                      ))
-                    )}
-
-                    <View style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 10, backgroundColor: colors.card }}>
-                      <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>
-                        Tool Usage
-                      </Text>
-                      {(usageSummary.by_tool ?? []).length === 0 ? (
-                        <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 6 }}>
-                          No tool calls recorded in this period.
-                        </Text>
-                      ) : (
-                        (usageSummary.by_tool ?? []).map((toolUsage) => (
-                          <View key={`usage-tool-${toolUsage.name}`} style={{ marginTop: 6 }}>
-                            <Text style={{ color: colors.foreground, fontSize: 12 }}>
-                              {getToolDisplayName(toolUsage.name)}
-                            </Text>
-                            <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 1 }}>
-                              {toolUsage.calls} call{toolUsage.calls === 1 ? '' : 's'} across {toolUsage.messages} message{toolUsage.messages === 1 ? '' : 's'}
-                            </Text>
-                          </View>
-                        ))
-                      )}
-                    </View>
-                  </View>
-                )}
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
+          onClose={() => setIsUsageModalVisible(false)}
+          usageSummary={usageSummary}
+          windowDays={usageWindowDays}
+          onWindowChange={setUsageWindowDays}
+          isLoading={isUsageSummaryLoading}
+        />
 
         <Modal
           visible={!!tableModalContent}

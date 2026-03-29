@@ -16,6 +16,7 @@ import {
   UseMutationOptions,
 } from '@tanstack/react-query';
 import { api } from '../api';
+import { STALE_REALTIME, STALE_FREQUENT, STALE_STANDARD, STALE_SLOW } from '../config/queryConfig';
 import type {
   AgentPlan,
   PlanStep,
@@ -78,7 +79,7 @@ export function useAgentPlans(
   return useQuery({
     queryKey: agentKeys.plansList({ status }),
     queryFn: () => api.agent.listPlans({ status, limit, offset }),
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: STALE_REALTIME,
     enabled,
     ...queryOptions,
   });
@@ -94,7 +95,7 @@ export function useAgentPlan(
   return useQuery({
     queryKey: agentKeys.plan(planId),
     queryFn: () => api.agent.getPlan(planId),
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: STALE_FREQUENT,
     enabled: !!planId,
     ...queryOptions,
   });
@@ -219,8 +220,8 @@ export function usePendingApprovals(
   return useQuery({
     queryKey: agentKeys.pendingApprovals(),
     queryFn: () => api.agent.getPendingApprovals(),
-    staleTime: 10 * 1000, // 10 seconds - check frequently for pending actions
-    refetchInterval: 60 * 1000, // Poll every minute
+    staleTime: STALE_REALTIME,
+    refetchInterval: STALE_FREQUENT,
     ...queryOptions,
   });
 }
@@ -286,7 +287,7 @@ export function useAgentConfig(
   return useQuery({
     queryKey: agentKeys.config(),
     queryFn: () => api.agent.getConfig(),
-    staleTime: 5 * 60 * 1000, // 5 minutes - config doesn't change often
+    staleTime: STALE_STANDARD,
     ...queryOptions,
   });
 }
@@ -330,7 +331,7 @@ export function useAgentLogs(
   return useQuery({
     queryKey: agentKeys.logs({ limit, offset }),
     queryFn: () => api.agent.getLogs({ limit, offset }),
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: STALE_FREQUENT,
     enabled,
     ...queryOptions,
   });
@@ -349,8 +350,7 @@ export function useDailyBriefing(
   return useQuery({
     queryKey: agentKeys.briefing(),
     queryFn: () => api.agent.getDailyBriefing(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: true,
+    staleTime: STALE_STANDARD,
     ...queryOptions,
   });
 }
@@ -382,7 +382,7 @@ export function useAutopilotResult(
   return useQuery({
     queryKey: agentKeys.autopilot(),
     queryFn: () => api.agent.getAutopilotResult(),
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: STALE_FREQUENT,
     ...queryOptions,
   });
 }

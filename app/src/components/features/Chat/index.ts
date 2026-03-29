@@ -4,4 +4,8 @@ export { ChatHeader } from './ChatHeader';
 export { ChatOverflowMenu } from './ChatOverflowMenu';
 export { ConversationSidebar } from './ConversationSidebar';
 export { ConversationListItem } from './ConversationListItem';
+export { ChatInputComposer } from './ChatInputComposer';
+export { ChatActivityModal } from './ChatActivityModal';
+export { ChatUsageModal } from './ChatUsageModal';
+export { ChatPendingActionFlow } from './ChatPendingActionFlow';
 export type { PendingAction } from './types';

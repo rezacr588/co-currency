@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { Edit2, MessageCircle, Trash2 } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
@@ -17,7 +17,7 @@ interface ConversationListItemProps {
   onRename: (newTitle: string) => void;
 }
 
-export function ConversationListItem({
+function ConversationListItemInner({
   conversation,
   isActive,
   onSelect,
@@ -164,3 +164,5 @@ export function ConversationListItem({
     </Pressable>
   );
 }
+
+export const ConversationListItem = memo(ConversationListItemInner);
