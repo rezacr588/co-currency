@@ -1267,7 +1267,17 @@ export function PlannerScreenContent() {
 }
 
 export default function PlannerScreen() {
-  const { isPhone } = useScreenLayout();
+  const theme = useTheme();
+  const { width, isPhone } = useScreenLayout();
+
+  // Wait for valid dimensions before deciding layout
+  if (width === 0) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={theme.colors.accent} />
+      </View>
+    );
+  }
 
   if (isPhone) {
     return <Redirect href={"/(app)/(tabs)/planner" as any} />;
