@@ -1176,6 +1176,7 @@ export const en = {
   plannerSectionRecent: 'Recently updated',
   plannerLedgerAmountError: 'Ledger amount must be greater than zero.',
   plannerLedgerCurrencyError: 'Ledger currency is required when auto-ledger is on.',
+  plannerNoMatchesFound: 'No matches found.',
 
   // Chat UX improvements
   voiceRecordingFailed: 'Failed to start voice recording',

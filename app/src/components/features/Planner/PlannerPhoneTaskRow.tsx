@@ -12,8 +12,12 @@ function isOverdue(dueDate?: string): boolean {
   if (!dueDate) return false;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const due = new Date(`${dueDate}T00:00:00`);
-  return due.getTime() < today.getTime();
+  // Parse YYYY-MM-DD manually to avoid Android/Hermes date parsing inconsistencies
+  const parts = dueDate.split('-');
+  if (parts.length < 3) return false;
+  const due = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  if (Number.isNaN(due.getTime())) return false;
+  return due < today;
 }
 
 interface PlannerPhoneTaskRowProps {

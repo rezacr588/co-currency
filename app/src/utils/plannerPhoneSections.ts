@@ -15,7 +15,7 @@ function compareSortOrder(left: TodoItem, right: TodoItem): number {
     return leftSort - rightSort;
   }
 
-  return left.title.localeCompare(right.title);
+  return (left.title ?? '').localeCompare(right.title ?? '');
 }
 
 function compareDueDate(left: TodoItem, right: TodoItem): number {
@@ -35,10 +35,15 @@ function compareDueDate(left: TodoItem, right: TodoItem): number {
 }
 
 function compareRecent(left: TodoItem, right: TodoItem): number {
-  const leftTime = new Date(left.updated_at || left.created_at).getTime();
-  const rightTime = new Date(right.updated_at || right.created_at).getTime();
-  if (leftTime !== rightTime) {
-    return rightTime - leftTime;
+  const leftRaw = left.updated_at || left.created_at;
+  const rightRaw = right.updated_at || right.created_at;
+  const leftTime = leftRaw ? new Date(leftRaw).getTime() : 0;
+  const rightTime = rightRaw ? new Date(rightRaw).getTime() : 0;
+  // Guard against NaN from invalid date strings on Android/Hermes
+  const safeLeft = Number.isNaN(leftTime) ? 0 : leftTime;
+  const safeRight = Number.isNaN(rightTime) ? 0 : rightTime;
+  if (safeLeft !== safeRight) {
+    return safeRight - safeLeft;
   }
 
   return compareSortOrder(left, right);

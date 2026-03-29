@@ -17,7 +17,7 @@ export function normalizePlannerDueDate(value?: string | null): string {
 
   const parsed = new Date(normalized);
   if (Number.isNaN(parsed.getTime())) {
-    return normalized;
+    return '';
   }
 
   const year = parsed.getUTCFullYear();

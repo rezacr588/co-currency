@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Check, Search, X } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
+import { useLanguage } from '../../../context/LanguageContext';
 
 export interface PlannerSelectionOption {
   value: string;
@@ -42,6 +43,7 @@ export function PlannerSelectionSheet({
 }: PlannerSelectionSheetProps) {
   const theme = useTheme();
   const colors = theme.colors;
+  const { t } = useLanguage();
   const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
@@ -220,7 +222,7 @@ export function PlannerSelectionSheet({
               }}
             >
               <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>
-                No matches found.
+                {t('plannerNoMatchesFound') || 'No matches found.'}
               </Text>
             </View>
           }

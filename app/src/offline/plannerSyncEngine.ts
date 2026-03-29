@@ -16,6 +16,7 @@ import type {
   PlannerTaskTagPayload,
 } from './plannerOutbox';
 import {
+  cleanupPlannerTempIDMap,
   getPlannerOutbox,
   replacePlannerOutbox,
   resolvePlannerEntityID,
@@ -118,8 +119,8 @@ function findItem(map: Record<PlannerStatus, TodoItem[]>, entityID: string): Tod
   return null;
 }
 
-function materializeTask(payload: PlannerTaskCreatePayload, entityID: string): TodoItem {
-  const now = new Date().toISOString();
+function materializeTask(payload: PlannerTaskCreatePayload, entityID: string, opCreatedAt: number): TodoItem {
+  const ts = new Date(opCreatedAt).toISOString();
 
   return {
     id: entityID,
@@ -128,12 +129,12 @@ function materializeTask(payload: PlannerTaskCreatePayload, entityID: string): T
     description: payload.description,
     status: payload.status ?? 'todo',
     priority: payload.priority ?? 'medium',
-    sort_order: payload.sort_order ?? Date.now(),
+    sort_order: payload.sort_order ?? opCreatedAt,
     due_date: payload.due_date,
     goal_id: payload.goal_id,
     transaction_id: payload.transaction_id,
-    created_at: now,
-    updated_at: now,
+    created_at: ts,
+    updated_at: ts,
     is_pending_sync: true,
   };
 }
@@ -177,7 +178,7 @@ export function applyOutboxLocally(
         if (findItem(map, op.entity_id)) {
           break;
         }
-        const task = materializeTask(op.payload as PlannerTaskCreatePayload, op.entity_id);
+        const task = materializeTask(op.payload as PlannerTaskCreatePayload, op.entity_id, op.created_at);
         map[task.status].push(task);
         break;
       }
@@ -208,7 +209,7 @@ export function applyOutboxLocally(
           sort_order:
             typeof payload.sort_order === 'number' ? payload.sort_order : task.sort_order,
           status: nextStatus,
-          updated_at: new Date().toISOString(),
+          updated_at: task.updated_at,
           is_pending_sync: true,
         });
         break;
@@ -334,7 +335,7 @@ async function executePlannerOp(userID: string, op: PlannerOutboxOp): Promise<{
       case 'task_create': {
         const payload = op.payload as PlannerTaskCreatePayload;
         const response = await api.tasks.create(payload);
-        if (op.entity_id.startsWith('temp-task-')) {
+        if (op.entity_id.startsWith('temp-task-') && response?.task?.id) {
           await setPlannerTempID(userID, op.entity_id, response.task.id);
         }
         return { ok: true };
@@ -410,6 +411,14 @@ export async function syncPlannerOutbox(userID: string): Promise<PlannerSyncResu
   }
 
   let ops = await getPlannerOutbox(userID);
+
+  // Bug #18: Normalize any ops stuck in 'syncing' status from a prior crash
+  const hadStuckSyncing = ops.some((op) => op.status === 'syncing');
+  if (hadStuckSyncing) {
+    ops = normalizeSyncingOps(ops);
+    await replacePlannerOutbox(userID, ops);
+  }
+
   if (ops.length === 0) {
     return {
       synced: 0,
@@ -453,6 +462,8 @@ export async function syncPlannerOutbox(userID: string): Promise<PlannerSyncResu
           last_error: `Dependency failed (${dependency.op_type}).`,
         };
         await replacePlannerOutbox(userID, ops);
+        // Re-read ops to avoid stale array after write
+        ops = await getPlannerOutbox(userID);
         continue;
       }
     }
@@ -478,6 +489,8 @@ export async function syncPlannerOutbox(userID: string): Promise<PlannerSyncResu
       synced += 1;
       needsRefresh = true;
       await replacePlannerOutbox(userID, ops);
+      // Re-read ops to pick up any newly enqueued ops
+      ops = await getPlannerOutbox(userID);
       continue;
     }
 
@@ -487,6 +500,7 @@ export async function syncPlannerOutbox(userID: string): Promise<PlannerSyncResu
         status: 'pending',
       };
       await replacePlannerOutbox(userID, ops);
+      ops = await getPlannerOutbox(userID);
       continue;
     }
 
@@ -516,6 +530,7 @@ export async function syncPlannerOutbox(userID: string): Promise<PlannerSyncResu
         last_error: errorMessage,
       };
       await replacePlannerOutbox(userID, ops);
+      ops = await getPlannerOutbox(userID);
       continue;
     }
 
@@ -529,6 +544,7 @@ export async function syncPlannerOutbox(userID: string): Promise<PlannerSyncResu
         last_error: errorMessage,
       };
       await replacePlannerOutbox(userID, ops);
+      ops = await getPlannerOutbox(userID);
       continue;
     }
 
@@ -539,9 +555,15 @@ export async function syncPlannerOutbox(userID: string): Promise<PlannerSyncResu
       last_error: errorMessage,
     };
     await replacePlannerOutbox(userID, ops);
+    ops = await getPlannerOutbox(userID);
   }
 
   ops = await getPlannerOutbox(userID);
+
+  // Bug #19: Clean up temp-ID mappings no longer referenced by outbox ops
+  if (synced > 0) {
+    void cleanupPlannerTempIDMap(userID);
+  }
 
   return {
     synced,

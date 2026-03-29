@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, Fragment } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Calendar, DollarSign, Trash2 } from 'lucide-react-native';
@@ -90,7 +90,7 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
     const updates: UpdateTaskRequest = {
       title: cleanTitle,
       description: description.trim(),
-      due_date: dueDate.trim(),
+      due_date: dueDate.trim() || undefined,
       priority,
       status,
       reminder_mode: reminderMode,
@@ -120,10 +120,17 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
         {
           text: t('plannerDelete') || 'Delete',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             void haptics.error();
-            void onDelete(task.id);
-            onClose();
+            try {
+              await onDelete(task.id);
+              onClose();
+            } catch (err) {
+              Alert.alert(
+                t('plannerDeleteError') || 'Could not delete task',
+                err instanceof Error ? err.message : 'Unknown error',
+              );
+            }
           },
         },
       ],
@@ -133,6 +140,7 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
   if (!task) return null;
 
   return (
+    <Fragment>
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
@@ -405,13 +413,14 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
         </View>
       </View>
       </KeyboardAvoidingView>
-
-      <DatePickerModal
-        visible={showDatePicker}
-        onClose={() => setShowDatePicker(false)}
-        onSelect={(d) => setDueDate(d)}
-        initialDate={dueDate}
-      />
     </Modal>
+
+    <DatePickerModal
+      visible={showDatePicker}
+      onClose={() => setShowDatePicker(false)}
+      onSelect={(d) => setDueDate(d)}
+      initialDate={dueDate}
+    />
+    </Fragment>
   );
 }

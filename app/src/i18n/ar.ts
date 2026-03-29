@@ -1158,6 +1158,7 @@ export const ar = {
   plannerSearchTasks: 'البحث في المهام',
   plannerLedgerAmountError: 'يجب أن يكون مبلغ السجل أكبر من صفر.',
   plannerLedgerCurrencyError: 'عملة السجل مطلوبة عند تفعيل السجل التلقائي.',
+  plannerNoMatchesFound: 'لم يتم العثور على نتائج.',
 
   // Chat UX improvements
   voiceRecordingFailed: 'فشل في بدء التسجيل الصوتي',

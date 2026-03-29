@@ -4,6 +4,7 @@ import { Redirect } from 'expo-router';
 import { useTheme } from 'styled-components/native';
 import { PlannerScreenContent } from '../planner';
 import { useScreenLayout } from '../../../src/hooks/useScreenLayout';
+import { ErrorBoundary } from '../../../src/components/ui/ErrorBoundary';
 
 export default memo(function PlannerTabScreen() {
   const theme = useTheme();
@@ -22,5 +23,9 @@ export default memo(function PlannerTabScreen() {
     return <Redirect href="/planner" />;
   }
 
-  return <PlannerScreenContent />;
+  return (
+    <ErrorBoundary>
+      <PlannerScreenContent />
+    </ErrorBoundary>
+  );
 });

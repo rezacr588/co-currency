@@ -139,6 +139,7 @@ export function PlannerScreenContent() {
   // --- Core state ---
   const [cachedBoard, setCachedBoard] = useState<PlannerBoardResponse | null>(null);
   const [backupBoard, setBackupBoard] = useState<PlannerBoardResponse | null>(null);
+  const backupTimestampRef = useRef<number>(0);
   const [outbox, setOutbox] = useState<PlannerOutboxOp[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
@@ -165,6 +166,15 @@ export function PlannerScreenContent() {
 
   const pagerRef = useRef<ScrollView>(null);
   const syncInFlightRef = useRef(false);
+  const syncDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Bug #8: Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+      if (syncDebounceRef.current) clearTimeout(syncDebounceRef.current);
+    };
+  }, []);
 
   const boardQueryKey = useMemo(() => ['planner-board', userID], [userID]);
   const tagsQueryKey = useMemo(() => ['tags', userID], [userID]);
@@ -194,21 +204,31 @@ export function PlannerScreenContent() {
 
     let active = true;
     void (async () => {
-      const [cache, backup, queue, online, storedFunding] = await Promise.all([
-        getPlannerBoardCache(userID),
-        getPlannerBoardBackup(userID),
-        getPlannerOutbox(userID),
-        isPlannerOnline(),
-        getPlannerFundingRequiredMap(userID),
-      ]);
-      if (!active) return;
-      setCachedBoard(cache?.board ?? null);
-      setBackupBoard(backup?.board ?? null);
-      setOutbox(queue);
-      setIsOnline(online);
-      setFundingRequiredMap(storedFunding);
-      const first = Object.values(storedFunding)[0];
-      if (first) setFundingRequired(first);
+      try {
+        const [cache, backup, queue, online, storedFunding] = await Promise.all([
+          getPlannerBoardCache(userID),
+          getPlannerBoardBackup(userID),
+          getPlannerOutbox(userID),
+          isPlannerOnline(),
+          getPlannerFundingRequiredMap(userID),
+        ]);
+        if (!active) return;
+        setCachedBoard(cache?.board ?? null);
+        setBackupBoard(backup?.board ?? null);
+        backupTimestampRef.current = backup?.updated_at ?? 0;
+        setOutbox(queue);
+        setIsOnline(online);
+        setFundingRequiredMap(storedFunding);
+        const first = Object.values(storedFunding)[0];
+        if (first) setFundingRequired(first);
+      } catch {
+        // Storage read failures should not crash the screen; start with empty state
+        if (!active) return;
+        setCachedBoard(null);
+        setBackupBoard(null);
+        setOutbox([]);
+        setIsOnline(true);
+      }
     })();
 
     const unsubscribe = subscribePlannerOutbox(userID, (queue) => setOutbox(queue));
@@ -220,7 +240,7 @@ export function PlannerScreenContent() {
 
     const remoteBoard = boardQuery.data;
     const localBoard = backupBoard ?? cachedBoard;
-    if (shouldUseLocalPlannerBackup(remoteBoard, localBoard) && outbox.length === 0) {
+    if (shouldUseLocalPlannerBackup(remoteBoard, localBoard, backupTimestampRef.current, boardQuery.dataUpdatedAt) && outbox.length === 0) {
       return;
     }
 
@@ -229,6 +249,21 @@ export function PlannerScreenContent() {
   }, [backupBoard, boardQuery.data, cachedBoard, outbox.length, userID]);
 
   // --- Sync ---
+  const invalidateBoard = useCallback(() => {
+    return Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['planner-board'] }),
+      queryClient.invalidateQueries({ queryKey: boardQueryKey }),
+      queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+      queryClient.invalidateQueries({ queryKey: ['goals'] }),
+      queryClient.invalidateQueries({ queryKey: goalsQueryKey }),
+      queryClient.invalidateQueries({ queryKey: ['tags'] }),
+      queryClient.invalidateQueries({ queryKey: tagsQueryKey }),
+      queryClient.invalidateQueries({ queryKey: ['wallet'] }),
+      queryClient.invalidateQueries({ queryKey: ['wallet', 'transactions'] }),
+      queryClient.invalidateQueries({ queryKey: ['reports'] }),
+    ]);
+  }, [boardQueryKey, goalsQueryKey, queryClient, tagsQueryKey]);
+
   const syncOutboxNow = useCallback(async () => {
     if (!userID || syncInFlightRef.current) return;
     syncInFlightRef.current = true;
@@ -251,25 +286,13 @@ export function PlannerScreenContent() {
         }
       }
       if (result.synced > 0 || result.needs_refresh) {
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['planner-board'] }),
-          queryClient.invalidateQueries({ queryKey: boardQueryKey }),
-          queryClient.invalidateQueries({ queryKey: ['tasks'] }),
-          queryClient.invalidateQueries({ queryKey: ['goals'] }),
-          queryClient.invalidateQueries({ queryKey: goalsQueryKey }),
-          queryClient.invalidateQueries({ queryKey: ['tags'] }),
-          queryClient.invalidateQueries({ queryKey: tagsQueryKey }),
-          queryClient.invalidateQueries({ queryKey: ['wallet'] }),
-          queryClient.invalidateQueries({ queryKey: ['wallet', 'transactions'] }),
-          queryClient.invalidateQueries({ queryKey: ['reports'] }),
-        ]);
-        await boardQuery.refetch();
+        await invalidateBoard();
       }
     } finally {
       setIsSyncing(false);
       syncInFlightRef.current = false;
     }
-  }, [boardQuery, boardQueryKey, goalsQueryKey, queryClient, showToast, tagsQueryKey, userID, t]);
+  }, [invalidateBoard, showToast, userID, t]);
 
   const pendingCount = useMemo(() => outbox.filter((op) => op.status === 'pending' || op.status === 'syncing').length, [outbox]);
   const failedCount = useMemo(() => outbox.filter((op) => op.status === 'failed').length, [outbox]);
@@ -297,18 +320,24 @@ export function PlannerScreenContent() {
 
   // --- Board derived state ---
   const localPlannerBoard = backupBoard ?? cachedBoard;
-  const isUsingLocalPlannerBackup = shouldUseLocalPlannerBackup(boardQuery.data, localPlannerBoard) && outbox.length === 0;
+  const isUsingLocalPlannerBackup = shouldUseLocalPlannerBackup(boardQuery.data, localPlannerBoard, backupTimestampRef.current, boardQuery.dataUpdatedAt) && outbox.length === 0;
   const canonicalBoard = (isUsingLocalPlannerBackup ? localPlannerBoard : boardQuery.data) ?? cachedBoard ?? backupBoard ?? emptyBoard();
   const effectiveBoard = useMemo(() => applyOutboxLocally(canonicalBoard, outbox), [canonicalBoard, outbox]);
 
+  const prevEffectiveBoardRef = useRef<PlannerBoardResponse | null>(null);
   useEffect(() => {
     if (!userID) return;
-
+    // Only update backup if the effective board actually changed (avoid infinite loop)
+    if (prevEffectiveBoardRef.current && plannerBoardsEqual(prevEffectiveBoardRef.current, effectiveBoard)) {
+      return;
+    }
+    prevEffectiveBoardRef.current = effectiveBoard;
     if (!plannerBoardsEqual(backupBoard, effectiveBoard)) {
       setBackupBoard(effectiveBoard);
+      backupTimestampRef.current = Date.now();
     }
     void setPlannerBoardBackup(userID, effectiveBoard);
-  }, [backupBoard, effectiveBoard, userID]);
+  }, [effectiveBoard, userID]); // Removed backupBoard from deps to break the cycle
 
   const pendingMarkers = useMemo(() => {
     const base = buildPlannerPendingMarkers(outbox);
@@ -448,7 +477,7 @@ export function PlannerScreenContent() {
     } catch (error) {
       Alert.alert(t('plannerMoveError') || 'Could not queue item move', error instanceof Error ? error.message : 'Unknown error');
     }
-  }, [effectiveBoard, isOnline, syncOutboxNow, userID]);
+  }, [effectiveBoard, isOnline, syncOutboxNow, userID, t]);
 
   const handleCompleteTask = useCallback(async (taskID: string) => {
     if (!userID) return;
@@ -487,7 +516,7 @@ export function PlannerScreenContent() {
       void syncOutboxNow();
       showToast(t('plannerUndo') || 'Task restored', 'info');
     } catch { /* silent */ }
-  }, [undoTaskID, userID, syncOutboxNow, showToast, t]);
+  }, [undoTaskID, undoOriginalStatus, userID, syncOutboxNow, showToast, t]);
 
   const queueDeleteTask = useCallback(async (taskID: string) => {
     if (!userID) return;
@@ -535,22 +564,22 @@ export function PlannerScreenContent() {
           style: 'destructive',
           onPress: async () => {
             await discardFailedPlannerOps(userID);
-            await boardQuery.refetch();
+            await invalidateBoard();
           },
         },
       ],
     );
-  }, [boardQuery, userID, t]);
+  }, [invalidateBoard, userID, t]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
       await syncOutboxNow();
-      await boardQuery.refetch();
+      await invalidateBoard();
     } finally {
       setIsRefreshing(false);
     }
-  }, [syncOutboxNow, boardQuery]);
+  }, [syncOutboxNow, invalidateBoard]);
 
   const jumpToColumn = useCallback((status: PlannerStatus) => {
     const index = COLUMN_ORDER.indexOf(status);
@@ -642,9 +671,9 @@ export function PlannerScreenContent() {
       </Animated.View>
     );
   }, [
-    colors, effectiveBoard, filterItems, handleCompleteTask, handleDeleteTask,
-    handleMoveItem, handleDragDirectionChange, handleDragStateChange, launchingTaskID, openAddTransactionForTask, openTaskEditor,
-    pendingMarkers, completingTaskID, userID, columnLabel, t,
+    colors, debouncedSearch, effectiveBoard, filterItems, handleCompleteTask, handleDeleteTask,
+    handleMoveItem, handleDragDirectionChange, handleDragStateChange, isPhone, launchingTaskID, openAddTransactionForTask, openTaskEditor,
+    pendingMarkers, priorityFilter, completingTaskID, userID, columnLabel, t,
   ]);
 
   type PhoneFlatItem =

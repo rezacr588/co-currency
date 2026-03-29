@@ -1162,6 +1162,7 @@ export const tr = {
   plannerSearchTasks: 'Görevlerde ara',
   plannerLedgerAmountError: 'Kayıt tutarı sıfırdan büyük olmalıdır.',
   plannerLedgerCurrencyError: 'Otomatik kayıt açıkken kayıt para birimi gereklidir.',
+  plannerNoMatchesFound: 'Eşleşme bulunamadı.',
 
   // Chat UX improvements
   voiceRecordingFailed: 'Ses kaydı başlatılamadı',

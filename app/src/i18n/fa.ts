@@ -1173,6 +1173,7 @@ export const fa = {
   plannerSectionRecent: 'به‌تازگی به‌روزرسانی شده',
   plannerLedgerAmountError: 'مبلغ دفتر حساب باید بیشتر از صفر باشد.',
   plannerLedgerCurrencyError: 'ارز دفتر حساب هنگام فعال بودن ثبت خودکار الزامی است.',
+  plannerNoMatchesFound: 'موردی یافت نشد.',
 
   // Chat UX improvements
   voiceRecordingFailed: 'ضبط صدا شروع نشد',

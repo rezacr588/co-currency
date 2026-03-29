@@ -11,6 +11,16 @@ const OUTBOX_KEY_PREFIX = '@planner_outbox:';
 const TEMP_ID_MAP_KEY_PREFIX = '@planner_temp_to_server_id:';
 const MAX_OUTBOX_SIZE = 500;
 
+// Promise-based mutex to serialize all outbox writes and prevent race conditions
+let outboxLockPromise: Promise<void> = Promise.resolve();
+
+function withOutboxLock<T>(fn: () => Promise<T>): Promise<T> {
+  const prev = outboxLockPromise;
+  let resolve: () => void;
+  outboxLockPromise = new Promise<void>((r) => { resolve = r; });
+  return prev.then(fn).finally(() => resolve!());
+}
+
 export type PlannerOutboxStatus = 'pending' | 'syncing' | 'failed';
 
 export type PlannerOutboxOpType =
@@ -124,44 +134,45 @@ function compactOutboxForInsert(existing: PlannerOutboxOp[], candidate: PlannerO
   const ops = existing.slice();
 
   // create + delete same temporary task before sync => drop both and dependencies.
+  // Only compact 'pending' ops — never touch 'syncing' ops that are in-flight.
   if (candidate.op_type === 'task_delete' && candidate.entity_id.startsWith('temp-task-')) {
     const createOp = ops.find(
       (op) =>
         op.entity_id === candidate.entity_id &&
         op.op_type === 'task_create' &&
-        isPendingLike(op.status)
+        op.status === 'pending'
     );
 
     if (createOp) {
       const filtered = ops.filter(
-        (op) => op.id !== createOp.id && op.depends_on !== createOp.id && op.entity_id !== candidate.entity_id
+        (op) => op.id !== createOp.id && op.depends_on !== createOp.id && (op.entity_id !== candidate.entity_id || op.status === 'syncing')
       );
       return { ops: filtered, addCandidate: false };
     }
   }
 
-  // Keep latest update/move op for same entity.
+  // Keep latest update/move op for same entity (only compact pending, not syncing).
   if (candidate.op_type === 'task_update' || candidate.op_type === 'item_move') {
     const index = ops.findIndex(
       (op) =>
         op.op_type === candidate.op_type &&
         op.entity_type === candidate.entity_type &&
         op.entity_id === candidate.entity_id &&
-        isPendingLike(op.status)
+        op.status === 'pending'
     );
     if (index >= 0) {
       ops.splice(index, 1);
     }
   }
 
-  // Collapse add/remove tag when net operation is no-op.
+  // Collapse add/remove tag when net operation is no-op (only pending ops).
   if (candidate.op_type === 'task_add_tag' || candidate.op_type === 'task_remove_tag') {
     const tagID = extractTagID(candidate.payload);
     if (tagID) {
       const oppositeType: PlannerOutboxOpType =
         candidate.op_type === 'task_add_tag' ? 'task_remove_tag' : 'task_add_tag';
       const oppositeIndex = ops.findIndex((op) => {
-        if (!isPendingLike(op.status)) return false;
+        if (op.status !== 'pending') return false;
         if (op.op_type !== oppositeType) return false;
         if (op.entity_id !== candidate.entity_id) return false;
         return extractTagID(op.payload) === tagID;
@@ -173,7 +184,7 @@ function compactOutboxForInsert(existing: PlannerOutboxOp[], candidate: PlannerO
       }
 
       const sameIndex = ops.findIndex((op) => {
-        if (!isPendingLike(op.status)) return false;
+        if (op.status !== 'pending') return false;
         if (op.op_type !== candidate.op_type) return false;
         if (op.entity_id !== candidate.entity_id) return false;
         return extractTagID(op.payload) === tagID;
@@ -201,9 +212,11 @@ export async function getPlannerOutbox(userID: string): Promise<PlannerOutboxOp[
 
 export async function replacePlannerOutbox(userID: string, ops: PlannerOutboxOp[]): Promise<void> {
   if (!userID) return;
-  const sorted = sortOutbox(ops);
-  await writeJSON(outboxKey(userID), sorted);
-  notify(userID, sorted);
+  return withOutboxLock(async () => {
+    const sorted = sortOutbox(ops);
+    await writeJSON(outboxKey(userID), sorted);
+    notify(userID, sorted);
+  });
 }
 
 export async function enqueuePlannerOp<TPayload = PlannerOutboxPayload>(
@@ -212,31 +225,35 @@ export async function enqueuePlannerOp<TPayload = PlannerOutboxPayload>(
   const { user_id: userID } = input;
   if (!userID) return null;
 
-  const current = await getPlannerOutbox(userID);
-  const candidate: PlannerOutboxOp<TPayload> = {
-    id: buildOpID(),
-    user_id: userID,
-    op_type: input.op_type,
-    entity_type: input.entity_type,
-    entity_id: input.entity_id,
-    payload: input.payload,
-    created_at: Date.now(),
-    attempt_count: 0,
-    status: 'pending',
-    depends_on: input.depends_on,
-  };
+  return withOutboxLock(async () => {
+    const current = await getPlannerOutbox(userID);
+    const candidate: PlannerOutboxOp<TPayload> = {
+      id: buildOpID(),
+      user_id: userID,
+      op_type: input.op_type,
+      entity_type: input.entity_type,
+      entity_id: input.entity_id,
+      payload: input.payload,
+      created_at: Date.now(),
+      attempt_count: 0,
+      status: 'pending',
+      depends_on: input.depends_on,
+    };
 
-  const compacted = compactOutboxForInsert(current, candidate as unknown as PlannerOutboxOp);
-  const next = compacted.addCandidate
-    ? [...compacted.ops, candidate as unknown as PlannerOutboxOp]
-    : compacted.ops;
+    const compacted = compactOutboxForInsert(current, candidate as unknown as PlannerOutboxOp);
+    const next = compacted.addCandidate
+      ? [...compacted.ops, candidate as unknown as PlannerOutboxOp]
+      : compacted.ops;
 
-  if (next.length > MAX_OUTBOX_SIZE) {
-    throw new Error('Planner offline queue is full. Please sync pending planner changes first.');
-  }
+    if (next.length > MAX_OUTBOX_SIZE) {
+      throw new Error('Planner offline queue is full. Please sync pending planner changes first.');
+    }
 
-  await replacePlannerOutbox(userID, next);
-  return compacted.addCandidate ? candidate : null;
+    const sorted = sortOutbox(next);
+    await writeJSON(outboxKey(userID), sorted);
+    notify(userID, sorted);
+    return compacted.addCandidate ? candidate : null;
+  });
 }
 
 export async function updatePlannerOutboxOp(
@@ -263,23 +280,31 @@ export async function removePlannerOutboxOp(userID: string, opID: string): Promi
 
 export async function retryFailedPlannerOps(userID: string): Promise<void> {
   if (!userID) return;
-  const ops = await getPlannerOutbox(userID);
-  const next = ops.map((op) => {
-    if (op.status !== 'failed') return op;
-    return {
-      ...op,
-      status: 'pending' as const,
-      last_error: undefined,
-    };
+  return withOutboxLock(async () => {
+    const ops = await getPlannerOutbox(userID);
+    const next = ops.map((op) => {
+      if (op.status !== 'failed') return op;
+      return {
+        ...op,
+        status: 'pending' as const,
+        last_error: undefined,
+      };
+    });
+    const sorted = sortOutbox(next);
+    await writeJSON(outboxKey(userID), sorted);
+    notify(userID, sorted);
   });
-  await replacePlannerOutbox(userID, next);
 }
 
 export async function discardFailedPlannerOps(userID: string): Promise<void> {
   if (!userID) return;
-  const ops = await getPlannerOutbox(userID);
-  const next = ops.filter((op) => op.status !== 'failed');
-  await replacePlannerOutbox(userID, next);
+  return withOutboxLock(async () => {
+    const ops = await getPlannerOutbox(userID);
+    const next = ops.filter((op) => op.status !== 'failed');
+    const sorted = sortOutbox(next);
+    await writeJSON(outboxKey(userID), sorted);
+    notify(userID, sorted);
+  });
 }
 
 export async function clearPlannerOutbox(userID: string): Promise<void> {
@@ -308,9 +333,11 @@ export async function getPlannerTempIDMap(userID: string): Promise<Record<string
 export async function setPlannerTempID(userID: string, tempID: string, serverID: string): Promise<void> {
   if (!userID || !tempID || !serverID) return;
 
-  const map = await getPlannerTempIDMap(userID);
-  map[tempID] = serverID;
-  await writeJSON(tempIDMapKey(userID), map);
+  return withOutboxLock(async () => {
+    const map = await getPlannerTempIDMap(userID);
+    map[tempID] = serverID;
+    await writeJSON(tempIDMapKey(userID), map);
+  });
 }
 
 export async function resolvePlannerEntityID(userID: string, entityID: string): Promise<string> {
@@ -323,6 +350,16 @@ export async function resolvePlannerEntityID(userID: string, entityID: string): 
 export async function clearPlannerTempIDMap(userID: string): Promise<void> {
   if (!userID) return;
   await removeStorage(tempIDMapKey(userID));
+}
+
+export async function cleanupPlannerTempIDMap(userID: string): Promise<void> {
+  if (!userID) return;
+  const [map, ops] = await Promise.all([getPlannerTempIDMap(userID), getPlannerOutbox(userID)]);
+  const referencedTempIDs = new Set(ops.map((op) => op.entity_id));
+  const keysToRemove = Object.keys(map).filter((tempID) => !referencedTempIDs.has(tempID));
+  if (keysToRemove.length === 0) return;
+  for (const key of keysToRemove) delete map[key];
+  await writeJSON(tempIDMapKey(userID), map);
 }
 
 export function subscribePlannerOutbox(userID: string, listener: OutboxListener): () => void {
