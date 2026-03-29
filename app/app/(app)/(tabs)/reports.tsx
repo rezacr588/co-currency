@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { memo, useState, useMemo, useEffect } from 'react';
 import { View, Text, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -100,7 +100,7 @@ function ReportContextStrip({
   );
 }
 
-export default function ReportsScreen() {
+export default memo(function ReportsScreen() {
   const { t, language } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
@@ -392,4 +392,4 @@ export default function ReportsScreen() {
         )}
     </PageScaffold>
   );
-}
+});

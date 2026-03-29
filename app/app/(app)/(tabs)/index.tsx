@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -83,7 +83,7 @@ function QuickAction({
   );
 }
 
-export default function WalletHomeScreen() {
+export default memo(function WalletHomeScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { t } = useLanguage();
@@ -525,4 +525,4 @@ export default function WalletHomeScreen() {
       ) : null}
     </PageScaffold>
   );
-}
+});
