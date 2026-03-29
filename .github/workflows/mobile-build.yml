@@ -96,6 +96,37 @@ jobs:
         working-directory: ./app
         run: eas update --branch production --message "Auto update from commit ${{ github.sha }}"
 
+      - name: Publish latest APK to GitHub Releases
+        working-directory: ./app
+        run: |
+          # Get the latest finished Android APK build from EAS
+          APK_URL=$(eas build:list --platform android --distribution internal --status finished --limit 1 --json --non-interactive | jq -r '.[0].artifacts.buildUrl // empty')
+          if [ -z "$APK_URL" ]; then
+            echo "No APK build found on EAS — skipping release publish"
+            exit 0
+          fi
+          echo "Downloading APK from $APK_URL..."
+          mkdir -p ../artifacts
+          curl -L -o ../artifacts/coai.apk "$APK_URL"
+          ls -lh ../artifacts/coai.apk
+
+      - name: Upload APK to GitHub Release
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: CoAI Latest Build
+          body: |
+            Latest Android APK.
+            Updated from commit: ${{ github.sha }}
+
+            **Install:** Download `coai.apk` and open it on your Android device.
+          files: artifacts/coai.apk
+          prerelease: true
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   # APK Build - Runs when:
   # 1. Manual trigger with build_apk=true
   # 2. Commit message contains [build-apk]
