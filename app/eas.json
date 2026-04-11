@@ -31,9 +31,7 @@
       "distribution": "internal",
       "channel": "production",
       "android": {
-        "buildType": "apk",
-        "enableProguardInReleaseBuilds": true,
-        "enableShrinkResourcesInReleaseBuilds": true
+        "buildType": "apk"
       }
     }
   }

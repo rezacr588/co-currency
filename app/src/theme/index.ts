@@ -164,7 +164,7 @@ const buildGradients = (colors: ColorPalette, isDark: boolean) => ({
     : [colors.cardElevated, colors.card],
   accent: [colors.primary, colors.primaryHover],
   premium: isDark
-    ? ['#1b2436', '#2b354b', '#1b2436']
+    ? ['#141414', '#1e1e1e', '#141414']
     : ['#fff6dd', '#f8ecd0', '#fff6dd'],
   success: ['#16a34a', '#22c55e'],
   danger: ['#dc2626', '#f87171'],
@@ -181,7 +181,7 @@ export const animation = {
 const buildGlass = (isDark: boolean) => ({
   intensity: 20,
   tint: (isDark ? 'dark' : 'light') as 'dark' | 'light',
-  backgroundColor: isDark ? 'rgba(18, 26, 42, 0.72)' : 'rgba(255, 255, 255, 0.72)',
+  backgroundColor: isDark ? 'rgba(10, 10, 10, 0.80)' : 'rgba(255, 255, 255, 0.72)',
 });
 
 const layout = {

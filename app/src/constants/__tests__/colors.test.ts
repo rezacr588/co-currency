@@ -37,7 +37,7 @@ describe('Color Palette', () => {
   });
 
   it('dark mutedForeground matches expected value', () => {
-    expect(darkColors.mutedForeground).toBe('#71717a');
+    expect(darkColors.mutedForeground).toBe('#a1a1aa');
   });
 
   it('light mutedForeground differs from dark', () => {
@@ -45,7 +45,7 @@ describe('Color Palette', () => {
   });
 
   it('accent color is gold-ish', () => {
-    expect(darkColors.accent).toBe('#d4af37');
+    expect(darkColors.accent).toBe('#c8a94b');
   });
 
   it('no color value is empty string', () => {

@@ -72,17 +72,17 @@ export interface ColorPalette {
 }
 
 export const darkColors: ColorPalette = {
-  // Backgrounds
-  background: '#0b1220',
-  backgroundSecondary: '#111827',
-  card: '#121a2a',
-  cardHover: '#182235',
-  cardElevated: '#1c2740',
+  // Backgrounds — true black, coding-app style
+  background: '#000000',
+  backgroundSecondary: '#0a0a0a',
+  card: '#111111',
+  cardHover: '#1a1a1a',
+  cardElevated: '#1e1e1e',
 
-  // Text
-  foreground: '#f8fafc',
-  mutedForeground: '#94a3b8',
-  subtleForeground: '#64748b',
+  // Text — neutral zinc tones for clean contrast on black
+  foreground: '#f4f4f5',
+  mutedForeground: '#a1a1aa',
+  subtleForeground: '#71717a',
 
   // Primary
   primary: '#3b82f6',
@@ -90,18 +90,18 @@ export const darkColors: ColorPalette = {
   primaryForeground: '#ffffff',
 
   // Secondary
-  secondary: '#172033',
-  secondaryHover: '#1f2a40',
-  secondaryForeground: '#cbd5e1',
+  secondary: '#141414',
+  secondaryHover: '#1c1c1c',
+  secondaryForeground: '#d4d4d8',
 
   // Accent (gold)
   accent: '#c8a94b',
   accentHover: '#d7bb6a',
   accentMuted: '#8f7530',
-  accentForeground: '#0b1220',
+  accentForeground: '#000000',
 
   // Muted
-  muted: '#0f172a',
+  muted: '#0a0a0a',
 
   // Semantic
   success: '#22c55e',
@@ -113,28 +113,28 @@ export const darkColors: ColorPalette = {
   info: '#38bdf8',
   infoMuted: 'rgba(56, 189, 248, 0.14)',
 
-  // Border
-  border: '#263247',
-  borderSubtle: '#1d2739',
-  borderStrong: '#334155',
+  // Border — neutral grays
+  border: '#2a2a2a',
+  borderSubtle: '#1a1a1a',
+  borderStrong: '#3a3a3a',
 
   // Input
-  input: '#111827',
-  placeholder: '#64748b',
+  input: '#0d0d0d',
+  placeholder: '#52525b',
   ring: '#3b82f6',
 
   // Tab bar
-  tabBarBackground: '#0b1220',
-  tabBarActive: '#e2e8f0',
-  tabBarInactive: '#64748b',
-  tabBarBorder: '#1f2937',
+  tabBarBackground: '#000000',
+  tabBarActive: '#e4e4e7',
+  tabBarInactive: '#71717a',
+  tabBarBorder: '#1a1a1a',
 
   // Chat
-  chatBubbleUser: '#172033',
-  chatBubbleBot: '#121a2a',
+  chatBubbleUser: '#141414',
+  chatBubbleBot: '#111111',
 
   // Overlay
-  overlay: 'rgba(2, 6, 23, 0.64)',
+  overlay: 'rgba(0, 0, 0, 0.72)',
 };
 
 export const lightColors: ColorPalette = {

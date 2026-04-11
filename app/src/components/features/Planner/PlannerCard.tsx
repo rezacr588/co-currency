@@ -236,7 +236,7 @@ function PlannerCardInner({
           borderRadius: 16,
           padding: 12,
           marginBottom: 10,
-          shadowColor: isTask ? '#111827' : colors.accent,
+          shadowColor: isTask ? colors.backgroundSecondary : colors.accent,
           shadowOffset: { width: 0, height: 6 },
           shadowOpacity: 0.16,
           elevation: 4,
