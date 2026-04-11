@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cofinance.app",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "infoPlist": {
         "NSCameraUsageDescription": "Take photos of receipts and invoices",
         "NSPhotoLibraryUsageDescription": "Attach receipt photos from your library",
@@ -29,7 +29,7 @@
         "backgroundColor": "#0f1a2a"
       },
       "package": "com.cofinance.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
