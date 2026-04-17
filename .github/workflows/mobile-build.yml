@@ -95,9 +95,20 @@ jobs:
         working-directory: ./app
         run: npm run typecheck
 
-      - name: Push OTA Update
+      - name: Push OTA Update (production)
         working-directory: ./app
         run: eas update --branch production --message "Auto update from commit ${{ github.sha }}"
+
+      - name: Push OTA Update (internal/development/preview)
+        working-directory: ./app
+        # Non-fatal: one failing dev channel shouldn't block the production
+        # update or the APK release below.
+        continue-on-error: true
+        run: |
+          for channel in internal development preview; do
+            echo "Updating channel: $channel"
+            eas update --channel "$channel" --message "Auto update from commit ${{ github.sha }}"
+          done
 
       - name: Publish latest APK to GitHub Releases
         working-directory: ./app

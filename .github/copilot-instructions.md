@@ -369,12 +369,6 @@ app/
 - On push to main (app/** paths): lint + typecheck → OTA update
 - Conditional APK build when native files change or `[build-apk]` in commit
 
-### Pre-push Hook
-
-Located in `.githooks/pre-push`:
-- Runs Docker build + EAS OTA updates to internal/development/preview channels
-- Skip with: `SKIP_DEPLOY=1 git push`
-
 ---
 
 ## Mobile-Specific Notes

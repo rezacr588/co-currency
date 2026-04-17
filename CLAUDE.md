@@ -198,8 +198,6 @@ koyeb services logs coai/co-currency -t runtime
 - Mobile: push to main (app/** paths) → OTA update + publish latest APK to GitHub Releases; APK rebuilt when native files change or `[build-apk]` in commit
 - APK download URL: `https://github.com/rezacr588/co-currency/releases/download/latest/coai.apk`
 
-**Pre-push hook** (`.githooks/pre-push`): Docker build + EAS OTA updates. Skip with `SKIP_DEPLOY=1 git push`.
-
 ## Database
 
 Aiven PostgreSQL (free tier). Migrations auto-run on startup via embedded SQL in `internal/migrations/sql/`. Two tracking tables: `schema_migrations` (main), `schema_migrations_irr` (rates).
