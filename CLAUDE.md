@@ -218,8 +218,14 @@ Aiven PostgreSQL (free tier). Migrations auto-run on startup via embedded SQL in
 
 ## Project Documentation
 
-- `AGENTS.md` — Repository guidelines and commit conventions
 - `docs/ARCHITECTURE.md` / `docs/BACKEND_ARCHITECTURE.md` — Architecture deep dives
 - `docs/API.md` — API endpoint reference
 - `docs/FEATURES.md` — Feature documentation
 - `TASKS.md` — Active task tracking
+
+## Claude Code Skills
+
+Project-level skills live in `.claude/skills/`. Invoke with `/<skill>`:
+- `/verify` — run backend build + test, app typecheck + lint + jest; summarize failures.
+- `/deploy-status` — unpushed commits + latest CI runs + Koyeb + health endpoint.
+- `/add-translation` — add an i18n key to all four files (en/fa/ar/tr) safely.

@@ -61,3 +61,8 @@ backups/
 client_secret_*.json
 **/__pycache__/
 ml-service/venv/
+
+# Claude Code — personal overrides and worktrees
+.claude/settings.local.json
+.claude/worktrees/
+.claude/plans/
