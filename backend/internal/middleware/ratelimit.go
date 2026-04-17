@@ -266,6 +266,18 @@ func (rl *RateLimiter) LoginMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// AllowPerKey consumes a token from the login-tier limiter keyed by the given
+// prefix and identifier. Returns true if allowed, false if the caller should
+// reject the request. Use for secondary limits beyond IP (e.g. per-email on
+// password reset to prevent targeted account spam).
+func (rl *RateLimiter) AllowPerKey(prefix, id string) bool {
+	if id == "" {
+		return true
+	}
+	limiter := rl.getLimiter(prefix+":"+strings.ToLower(id), rl.loginLimit, rl.loginBurst)
+	return limiter.Allow()
+}
+
 // AIMiddleware returns a stricter rate limiting middleware for AI endpoints (per user)
 func (rl *RateLimiter) AIMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

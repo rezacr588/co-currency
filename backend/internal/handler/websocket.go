@@ -20,8 +20,12 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		// In production, check against allowed origins
-		return true
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			// Non-browser clients (native mobile, server-to-server) don't send Origin.
+			return true
+		}
+		return middleware.IsOriginAllowed(origin, middleware.AllowedOrigins())
 	},
 }
 
@@ -49,11 +53,23 @@ func (h *WebSocketHandler) authenticateRequest(r *http.Request) (uuid.UUID, bool
 		return uuid.Nil, false
 	}
 
+	// Prefer a single-use ticket on query string — used by web clients that
+	// can't attach headers to a native WebSocket. Full JWTs must never be
+	// placed on a query string because they end up in access logs.
+	if ticket := strings.TrimSpace(r.URL.Query().Get("ticket")); ticket != "" {
+		if userID, ok := h.authService.ConsumeWSTicket(ticket); ok {
+			return userID, true
+		}
+	}
+
+	// Native clients keep using the Authorization header.
 	token := ""
 	authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
 	if strings.HasPrefix(authHeader, "Bearer ") {
 		token = strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
 	}
+	// Query-string JWT kept as a transitional fallback; remove after web
+	// clients fully migrate to the ticket flow.
 	if token == "" {
 		token = strings.TrimSpace(r.URL.Query().Get("token"))
 	}

@@ -173,9 +173,11 @@ func (s *AIService) getLLMForModel(ctx context.Context, modelName string) (llms.
 	}
 
 	s.llmByModelMu.Lock()
+	defer s.llmByModelMu.Unlock()
+	if cached := s.llmByModel[modelName]; cached != nil {
+		return cached, modelName, nil
+	}
 	s.llmByModel[modelName] = llm
-	s.llmByModelMu.Unlock()
-
 	return llm, modelName, nil
 }
 

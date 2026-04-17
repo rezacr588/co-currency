@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -11,6 +12,11 @@ import (
 	"github.com/rezacr588/currency-converter/internal/middleware"
 	"github.com/rezacr588/currency-converter/pkg/httputil"
 )
+
+// maxJSONBodyBytes caps request bodies for JSON handlers. 1 MiB comfortably
+// fits any legitimate payload (including AI chat turns with base64 images are
+// routed through multipart, not JSON).
+const maxJSONBodyBytes = 1 << 20
 
 func requireUserID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
@@ -31,9 +37,16 @@ func requireService(w http.ResponseWriter, available bool, message string) bool 
 
 // decodeJSON reads the request body into a value of type T.
 // Returns the decoded value and true on success, or writes a 400 response and returns false.
+// The body is capped at maxJSONBodyBytes to prevent memory exhaustion.
 func decodeJSON[T any](w http.ResponseWriter, r *http.Request) (*T, bool) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxJSONBodyBytes)
 	var v T
 	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			httputil.BadRequestWithContext(r.Context(), w, "request body too large", err)
+			return nil, false
+		}
 		httputil.BadRequestWithContext(r.Context(), w, "invalid request body", err)
 		return nil, false
 	}

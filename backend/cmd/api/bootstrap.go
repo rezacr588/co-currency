@@ -229,6 +229,10 @@ func initAuthServices(cfg *config.Config, db *databases, svc *services) {
 	emailService := service.NewEmailService(cfg.ResendAPIKey, cfg.FrontendURL)
 	refreshTokenRepo := repository.NewRefreshTokenRepository(db.mainDB)
 	svc.auth = service.NewAuthServiceWithRefresh(db.userRepo, refreshTokenRepo, emailService, cfg.JWTSecret)
+	// Short-lived in-memory store for WebSocket upgrade tickets. In-memory
+	// is fine while the backend runs as a single instance on Koyeb; scale
+	// horizontally → move this to Redis (already imported for WS fanout).
+	svc.auth.SetTicketCache(repository.NewInMemoryCache(service.WSTicketTTL))
 	log.Info().Msg("Authentication service initialized")
 
 	oauthStateRepo := repository.NewOAuthStateRepository(db.mainDB)

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
 
 interface KeyboardShortcut {
@@ -83,7 +83,7 @@ export function useChatKeyboardShortcuts({
   onNavigateDown?: () => void;
   onEscape?: () => void;
 }) {
-  const shortcuts: KeyboardShortcut[] = [
+  const shortcuts = useMemo<KeyboardShortcut[]>(() => [
     ...(onNewConversation ? [{
       key: 'k',
       modifiers: ['cmd' as const],
@@ -123,7 +123,7 @@ export function useChatKeyboardShortcuts({
       handler: onEscape,
       description: 'Close modal or clear input',
     }] : []),
-  ];
+  ], [onNewConversation, onFocusInput, onToggleSidebar, onFocusSearch, onNavigateUp, onNavigateDown, onEscape]);
 
   useKeyboardShortcuts({ enabled, shortcuts });
 }

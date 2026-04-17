@@ -153,6 +153,30 @@ export function getOAuthCallbackParamsFromUrl(
   }
 }
 
+const OAUTH_MESSAGE_TYPE = 'coai:oauth';
+
+// Narrow structural check for the payload posted by the backend's OAuth
+// callback page (see internal/handler/oauth.go). Untrusted input, so
+// validate every field before use.
+export function getOAuthCallbackParamsFromMessage(
+  data: unknown
+): OAuthCallbackParams | null {
+  if (!data || typeof data !== 'object') return null;
+  const record = data as Record<string, unknown>;
+  if (record.type !== OAUTH_MESSAGE_TYPE) return null;
+
+  const asString = (value: unknown): string | undefined =>
+    typeof value === 'string' && value.length > 0 ? value : undefined;
+
+  const token = asString(record.token);
+  const refreshToken = asString(record.refresh_token);
+  const error = asString(record.error);
+
+  if (!token && !refreshToken && !error) return null;
+
+  return { token, refreshToken, error };
+}
+
 export function getOAuthCallbackParams(input: {
   url?: string | null;
   queryParams?: OAuthCallbackQueryParams | null;

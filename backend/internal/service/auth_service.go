@@ -31,6 +31,18 @@ type AuthService struct {
 	jwtSecret        []byte
 	jwtExpiry        time.Duration
 	refreshExpiry    time.Duration
+	ticketCache      repository.Cache // short-lived WS ticket store; optional
+}
+
+// WSTicketTTL bounds how long a WebSocket upgrade ticket remains valid.
+// Short enough that a leaked ticket in a browser history / server log is
+// worthless after a minute.
+const WSTicketTTL = 60 * time.Second
+
+// SetTicketCache wires the short-lived ticket store used for WebSocket
+// upgrades. Safe to leave nil to disable the ticket flow.
+func (s *AuthService) SetTicketCache(cache repository.Cache) {
+	s.ticketCache = cache
 }
 
 // JWTClaims represents the claims in our JWT token
@@ -431,4 +443,35 @@ func (s *AuthService) LogoutAllDevices(ctx context.Context, userID uuid.UUID) er
 	}
 
 	return s.refreshTokenRepo.DeleteAllForUser(ctx, userID)
+}
+
+// IssueWSTicket mints a short-lived single-use ticket bound to the caller's
+// user ID. The ticket is presented to the WebSocket upgrade endpoint
+// (see handler.WebSocketHandler.authenticateRequest) instead of the full
+// JWT, so the JWT never appears in query strings or server access logs.
+func (s *AuthService) IssueWSTicket(userID uuid.UUID) (string, error) {
+	if s.ticketCache == nil {
+		return "", errors.New("websocket ticket cache not configured")
+	}
+	ticket := uuid.NewString()
+	s.ticketCache.Set("ws-ticket:"+ticket, userID, WSTicketTTL)
+	return ticket, nil
+}
+
+// ConsumeWSTicket validates a ticket and deletes it so it cannot be reused.
+// Returns the bound user ID and true on success.
+func (s *AuthService) ConsumeWSTicket(ticket string) (uuid.UUID, bool) {
+	if s.ticketCache == nil || ticket == "" {
+		return uuid.Nil, false
+	}
+	value, ok := s.ticketCache.Get("ws-ticket:" + ticket)
+	if !ok {
+		return uuid.Nil, false
+	}
+	s.ticketCache.Delete("ws-ticket:" + ticket)
+	userID, ok := value.(uuid.UUID)
+	if !ok {
+		return uuid.Nil, false
+	}
+	return userID, true
 }

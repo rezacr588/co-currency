@@ -83,6 +83,9 @@ func (r *BadgeRepository) GetAllBadges(ctx context.Context) ([]model.Badge, erro
 		}
 		badges = append(badges, b)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating badges: %w", err)
+	}
 
 	return badges, nil
 }
@@ -169,6 +172,9 @@ func (r *BadgeRepository) GetUserBadges(ctx context.Context, userID uuid.UUID) (
 		}
 		ub.Badge = &b
 		userBadges = append(userBadges, ub)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating user badges: %w", err)
 	}
 
 	return userBadges, nil

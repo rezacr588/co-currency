@@ -5,13 +5,28 @@ import * as WebBrowser from 'expo-web-browser';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
 import { api } from '../../src/api';
+import { OAUTH_BASE } from '../../src/api/base';
 import { useAuth } from '../../src/context/AuthContext';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { LinkedInIcon, GoogleIcon } from '../../src/constants/icons';
 import { prepareDashboardPostAuthRoute } from '../../src/navigation/mode';
 import { AuthScaffold, Button, FormError, Input } from '../../src/components/ui';
 import { SEOHead } from '../../src/components/seo';
-import { getOAuthCallbackParamsFromUrl } from '../../src/utils/oauth';
+import {
+  getOAuthCallbackParamsFromMessage,
+  getOAuthCallbackParamsFromUrl,
+} from '../../src/utils/oauth';
+
+function resolveOAuthBackendOrigin(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    // OAUTH_BASE is always an absolute URL (see src/api/base.ts); the backend
+    // serves the postMessage page from this origin.
+    return new URL(OAUTH_BASE, window.location.origin).origin;
+  } catch {
+    return null;
+  }
+}
 
 function AuthDivider() {
   const { t } = useLanguage();
@@ -164,7 +179,72 @@ export default function LoginScreen() {
           : api.auth.getLinkedInAuthUrl();
 
       if (Platform.OS === 'web') {
-        window.location.assign(baseUrl);
+        const expectedOrigin = resolveOAuthBackendOrigin();
+        if (!expectedOrigin) {
+          setError('Unable to start OAuth flow');
+          return;
+        }
+
+        // window.open must run synchronously in the click handler so that
+        // browsers attribute it to a user gesture. No awaits before this.
+        const popup = window.open(baseUrl, 'coai-oauth', 'width=500,height=650');
+        if (!popup) {
+          setError(t('failedToOpenPopup') || 'Popup blocked — please allow popups for this site');
+          return;
+        }
+
+        await new Promise<void>((resolve) => {
+          const messageHandler = (event: MessageEvent) => {
+            if (event.origin !== expectedOrigin) return;
+            const callback = getOAuthCallbackParamsFromMessage(event.data);
+            if (!callback) return;
+
+            cleanup();
+
+            if (callback.error) {
+              setError(callback.error);
+              resolve();
+              return;
+            }
+
+            if (callback.token && callback.refreshToken) {
+              (async () => {
+                try {
+                  await handleOAuthCallback(callback.token!, callback.refreshToken!);
+                  const target = await prepareDashboardPostAuthRoute();
+                  router.replace(target as any);
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : 'OAuth failed');
+                } finally {
+                  resolve();
+                }
+              })();
+              return;
+            }
+
+            setError('Invalid callback parameters');
+            resolve();
+          };
+
+          const closedPoll = window.setInterval(() => {
+            if (popup.closed) {
+              cleanup();
+              resolve();
+            }
+          }, 500);
+
+          const cleanup = () => {
+            window.removeEventListener('message', messageHandler);
+            window.clearInterval(closedPoll);
+            try {
+              if (!popup.closed) popup.close();
+            } catch {
+              /* ignore */
+            }
+          };
+
+          window.addEventListener('message', messageHandler);
+        });
       } else {
         // Native: use auth session so the browser closes on redirect back
         // Important: we append ?platform=mobile so the backend knows to redirect to coai://

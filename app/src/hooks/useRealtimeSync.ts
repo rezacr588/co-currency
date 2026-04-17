@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { QueryClient, useQueryClient } from '@tanstack/react-query';
 import { API_BASE, getAuthToken, loadTokens } from '@/src/api';
+import { api } from '@/src/api';
 
 type RealtimeMessageType = 'agent_update' | 'social_update' | 'space_update' | string;
 
@@ -25,8 +26,13 @@ type NativeWebSocketCtor = new (
 const BASE_RECONNECT_DELAY_MS = 1000;
 const MAX_RECONNECT_DELAY_MS = 30000;
 
-function buildWebSocketURL(token: string): string {
+// buildWebSocketURL produces the upgrade URL. `ticket` is only consumed on
+// web (the native WebSocket API cannot set Authorization headers, so a
+// short-lived single-use ticket rides on the query string instead of the
+// full JWT). Native passes the JWT via header inside createSocket.
+function buildWebSocketURL(ticket: string | null): string {
   const normalizedBase = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE;
+  const ticketParam = ticket ? `?ticket=${encodeURIComponent(ticket)}` : '';
 
   if (normalizedBase.startsWith('/')) {
     if (typeof window === 'undefined') {
@@ -34,26 +40,24 @@ function buildWebSocketURL(token: string): string {
     }
     const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const origin = `${wsProtocol}://${window.location.host}`;
-    return `${origin}${normalizedBase}/ws/?token=${encodeURIComponent(token)}`;
+    return `${origin}${normalizedBase}/ws/${ticketParam}`;
   }
 
   const wsBase = normalizedBase.replace(/^http/i, 'ws');
   if (Platform.OS === 'web') {
-    return `${wsBase}/ws/?token=${encodeURIComponent(token)}`;
+    return `${wsBase}/ws/${ticketParam}`;
   }
   return `${wsBase}/ws/`;
 }
 
-function createSocket(url: string, token: string): WebSocket {
+function createSocket(url: string, token: string | null): WebSocket {
   if (Platform.OS === 'web') {
     return new WebSocket(url);
   }
 
   const NativeWebSocket = WebSocket as unknown as NativeWebSocketCtor;
   return new NativeWebSocket(url, undefined, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   });
 }
 
@@ -191,8 +195,25 @@ export function useRealtimeSync(options: { enabled?: boolean } = {}) {
           return;
         }
 
+        // Web: fetch a fresh single-use ticket (60s TTL) so the JWT never
+        // appears in the WS upgrade URL / access logs. Native attaches the
+        // JWT via Authorization header instead.
+        let ticket: string | null = null;
+        if (Platform.OS === 'web') {
+          try {
+            const response = await api.auth.requestWSTicket();
+            ticket = response.ticket;
+          } catch {
+            scheduleReconnect();
+            return;
+          }
+        }
+
         closeSocket();
-        const socket = createSocket(buildWebSocketURL(token), token);
+        const socket = createSocket(
+          buildWebSocketURL(ticket),
+          Platform.OS === 'web' ? null : token,
+        );
         socketRef.current = socket;
 
         socket.onopen = () => {

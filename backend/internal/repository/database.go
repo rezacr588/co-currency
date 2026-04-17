@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rezacr588/currency-converter/internal/migrations"
 	"github.com/rs/zerolog/log"
@@ -62,6 +64,13 @@ func NewDatabase(databaseURL string, poolCfg *DBPoolConfig) (*Database, error) {
 
 	// Connection timeouts
 	config.ConnConfig.ConnectTimeout = 10 * time.Second
+
+	// Register shopspring/decimal as the codec for PostgreSQL numeric columns
+	// so repositories can scan directly into decimal.Decimal fields.
+	config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		pgxdecimal.Register(conn.TypeMap())
+		return nil
+	}
 
 	// Create pool with retry logic
 	var pool *pgxpool.Pool

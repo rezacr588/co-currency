@@ -3,14 +3,78 @@ package handler
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/rezacr588/currency-converter/internal/model"
+	"github.com/rs/zerolog/log"
 )
 
 const mobileScheme = "coai://"
+
+// oauthPostMessageTemplate renders a minimal same-origin HTML page that
+// delivers OAuth tokens to window.opener via postMessage, then closes.
+// This replaces URL-fragment token delivery for web clients, which could
+// leak JWTs into browser history and (in some browsers) Referer headers.
+var oauthPostMessageTemplate = template.Must(template.New("oauth").Parse(`<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Signing in…</title></head>
+<body>
+<p>Signing you in…</p>
+<script>
+(function () {
+  var payload = {
+    type: "coai:oauth",
+    token: {{.Token}},
+    refresh_token: {{.RefreshToken}},
+    error: {{.Error}}
+  };
+  try {
+    if (window.opener) {
+      window.opener.postMessage(payload, {{.Origin}});
+    }
+  } catch (e) {}
+  window.close();
+})();
+</script>
+</body>
+</html>`))
+
+// oauthPostMessageData is the template input. String fields are HTML-escaped
+// by html/template so a malicious provider response can't inject script.
+type oauthPostMessageData struct {
+	Token        string
+	RefreshToken string
+	Error        string
+	Origin       string
+}
+
+// frontendOrigin returns scheme://host for the configured FrontendURL.
+// Returns empty string if parsing fails, which prevents rendering rather
+// than falling back to "*" (which would allow any parent window to read
+// the token).
+func (h *OAuthHandler) frontendOrigin() string {
+	u, err := url.Parse(h.frontendURL)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return ""
+	}
+	return u.Scheme + "://" + u.Host
+}
+
+// renderOAuthPostMessage serves the postMessage HTML page. Call only for web.
+func (h *OAuthHandler) renderOAuthPostMessage(w http.ResponseWriter, data oauthPostMessageData) {
+	// COOP allows window.opener to remain accessible to the popup; without
+	// it modern browsers null the reference and postMessage silently fails.
+	w.Header().Set("Cross-Origin-Opener-Policy", "same-origin-allow-popups")
+	w.Header().Set("Cross-Origin-Resource-Policy", "same-origin")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	if err := oauthPostMessageTemplate.Execute(w, data); err != nil {
+		log.Error().Err(err).Msg("Failed to render OAuth postMessage template")
+	}
+}
 
 // OAuthProvider abstracts an OAuth service (Google, LinkedIn, etc.).
 type OAuthProvider interface {
@@ -97,17 +161,29 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	baseURL := h.frontendURL
 	if isMobile {
-		baseURL = mobileScheme
+		// Native: keep URL fragment on the coai:// deep link — deep links
+		// aren't exposed to the same log/history surfaces as web URLs.
+		redirectURL := fmt.Sprintf("%s%s#token=%s", mobileScheme, h.callbackPath, url.QueryEscape(response.Token))
+		if response.RefreshToken != "" {
+			redirectURL += fmt.Sprintf("&refresh_token=%s", url.QueryEscape(response.RefreshToken))
+		}
+		http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+		return
 	}
 
-	redirectURL := fmt.Sprintf("%s%s#token=%s", baseURL, h.callbackPath, url.QueryEscape(response.Token))
-	if response.RefreshToken != "" {
-		redirectURL += fmt.Sprintf("&refresh_token=%s", url.QueryEscape(response.RefreshToken))
+	// Web: deliver tokens to window.opener via postMessage rather than URL
+	// fragment to avoid leaking them into browser history or Referer headers.
+	origin := h.frontendOrigin()
+	if origin == "" {
+		h.redirectErrorForPlatform(w, r, "authentication_failed", false)
+		return
 	}
-
-	http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+	h.renderOAuthPostMessage(w, oauthPostMessageData{
+		Token:        response.Token,
+		RefreshToken: response.RefreshToken,
+		Origin:       origin,
+	})
 }
 
 func (h *OAuthHandler) redirectError(w http.ResponseWriter, r *http.Request, msg string) {
@@ -115,10 +191,25 @@ func (h *OAuthHandler) redirectError(w http.ResponseWriter, r *http.Request, msg
 }
 
 func (h *OAuthHandler) redirectErrorForPlatform(w http.ResponseWriter, r *http.Request, msg string, isMobile bool) {
-	baseURL := h.frontendURL
 	if isMobile {
-		baseURL = mobileScheme
+		redirectURL := fmt.Sprintf("%s/login?error=%s", mobileScheme, url.QueryEscape(msg))
+		http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+		return
 	}
-	redirectURL := fmt.Sprintf("%s/login?error=%s", baseURL, url.QueryEscape(msg))
-	http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+
+	// Web: surface errors via postMessage so the popup flow can display them
+	// without navigating the parent window.
+	origin := h.frontendOrigin()
+	if origin == "" {
+		// Fall back to the query-string redirect when the frontend URL is
+		// misconfigured, so operators still see the error instead of a
+		// blank page. Tokens are never returned on this path.
+		redirectURL := fmt.Sprintf("%s/login?error=%s", h.frontendURL, url.QueryEscape(msg))
+		http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+		return
+	}
+	h.renderOAuthPostMessage(w, oauthPostMessageData{
+		Error:  msg,
+		Origin: origin,
+	})
 }

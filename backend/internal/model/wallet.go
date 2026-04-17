@@ -158,12 +158,12 @@ type SmartParseResult struct {
 	Currency     string  `json:"currency"`
 	Type         string  `json:"type"` // "credit" or "debit"
 	Description  string  `json:"description"`
-	Category     string  `json:"category"`                  // Inferred category (food, transportation, etc.)
-	ActionType   string  `json:"action_type"`               // "transaction", "recurring", "goal_contribution", "convert", "rate", or "none"
-	Frequency    string  `json:"frequency,omitempty"`        // For recurring: "daily", "weekly", "monthly", "yearly"
-	GoalName     string  `json:"goal_name,omitempty"`        // For goal contributions
-	FromCurrency string  `json:"from_currency,omitempty"`    // For convert/rate: source currency
-	ToCurrency   string  `json:"to_currency,omitempty"`      // For convert/rate: target currency
+	Category     string  `json:"category"`                // Inferred category (food, transportation, etc.)
+	ActionType   string  `json:"action_type"`             // "transaction", "recurring", "goal_contribution", "convert", "rate", or "none"
+	Frequency    string  `json:"frequency,omitempty"`     // For recurring: "daily", "weekly", "monthly", "yearly"
+	GoalName     string  `json:"goal_name,omitempty"`     // For goal contributions
+	FromCurrency string  `json:"from_currency,omitempty"` // For convert/rate: source currency
+	ToCurrency   string  `json:"to_currency,omitempty"`   // For convert/rate: target currency
 	Confidence   float64 `json:"confidence"`
 	RawText      string  `json:"raw_text,omitempty"`
 }

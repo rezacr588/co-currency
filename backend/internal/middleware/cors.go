@@ -6,10 +6,10 @@ import (
 	"strings"
 )
 
-// allowedOrigins returns the list of origins permitted for CORS.
+// AllowedOrigins returns the list of origins permitted for CORS.
 // It reads FRONTEND_URL from the environment and always includes
 // common localhost origins for development.
-func allowedOrigins() []string {
+func AllowedOrigins() []string {
 	origins := []string{
 		"http://localhost:5173",
 		"http://localhost:8080",
@@ -21,8 +21,8 @@ func allowedOrigins() []string {
 	return origins
 }
 
-// isOriginAllowed checks whether the given origin is in the allowed list.
-func isOriginAllowed(origin string, allowed []string) bool {
+// IsOriginAllowed checks whether the given origin is in the allowed list.
+func IsOriginAllowed(origin string, allowed []string) bool {
 	for _, o := range allowed {
 		if strings.EqualFold(o, origin) {
 			return true
@@ -35,12 +35,12 @@ func isOriginAllowed(origin string, allowed []string) bool {
 // Only origins in the allowed list are reflected back; all others are
 // rejected (no Access-Control-Allow-Origin header is set).
 func CORS(next http.Handler) http.Handler {
-	allowed := allowedOrigins()
+	allowed := AllowedOrigins()
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 
-		if origin != "" && isOriginAllowed(origin, allowed) {
+		if origin != "" && IsOriginAllowed(origin, allowed) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")

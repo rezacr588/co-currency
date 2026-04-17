@@ -126,6 +126,9 @@ func main() {
 	if handlers.Exchange != nil {
 		handlers.Exchange.SetRateLimiter(rateLimiter)
 	}
+	if handlers.Auth != nil {
+		handlers.Auth.SetRateLimiter(rateLimiter)
+	}
 	if handlers.AI != nil {
 		aiLimitPerMin, aiBurst := rateLimiter.AISettings()
 		handlers.AI.SetRateLimitInfo(aiLimitPerMin, aiBurst)

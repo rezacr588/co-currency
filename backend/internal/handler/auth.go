@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/rezacr588/currency-converter/internal/middleware"
 	"github.com/rezacr588/currency-converter/internal/model"
 	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/service"
@@ -15,11 +16,18 @@ import (
 // AuthHandler handles authentication endpoints
 type AuthHandler struct {
 	authService *service.AuthService
+	rateLimiter *middleware.RateLimiter
 }
 
-// NewAuthHandler creates a new AuthHandler
+// NewAuthHandler creates a new AuthHandler.
 func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 	return &AuthHandler{authService: authService}
+}
+
+// SetRateLimiter wires a rate limiter for per-email throttles on endpoints
+// like password reset. Safe to call with nil to leave disabled.
+func (h *AuthHandler) SetRateLimiter(rl *middleware.RateLimiter) {
+	h.rateLimiter = rl
 }
 
 // Register handles POST /api/v1/auth/register
@@ -92,6 +100,17 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Throttle per-email to prevent targeted spam of a single inbox (the
+	// IP-based LoginMiddleware already throttles bulk enumeration). Return the
+	// same opaque success message on throttle to avoid leaking which emails
+	// are registered.
+	if h.rateLimiter != nil && !h.rateLimiter.AllowPerKey("reset", req.Email) {
+		httputil.Success(w, map[string]string{
+			"message": "If an account exists with this email, a password reset link has been sent",
+		})
+		return
+	}
+
 	// Generate reset token and send email (service handles email delivery via Resend)
 	// Always return success to not leak email existence
 	_, err := h.authService.GeneratePasswordResetToken(r.Context(), req.Email)
@@ -136,6 +155,29 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, map[string]string{
 		"message": "password reset successfully",
 	})
+}
+
+// IssueWSTicket handles POST /api/v1/auth/ws-ticket. Requires a valid JWT
+// and returns a short-lived single-use ticket that the web client presents
+// when opening a WebSocket connection. Keeps the JWT out of query strings
+// and server access logs.
+func (h *AuthHandler) IssueWSTicket(w http.ResponseWriter, r *http.Request) {
+	if !requireService(w, h.authService != nil, "authentication service not available - database connection failed") {
+		return
+	}
+
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
+
+	ticket, err := h.authService.IssueWSTicket(userID)
+	if err != nil {
+		httputil.ServiceUnavailableWithContext(r.Context(), w, "websocket tickets not available")
+		return
+	}
+
+	httputil.Success(w, map[string]string{"ticket": ticket})
 }
 
 // GetProfile handles GET /api/v1/auth/profile

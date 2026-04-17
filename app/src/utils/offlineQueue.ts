@@ -188,7 +188,7 @@ async function notifyListeners() {
 // Clear the entire queue
 export async function clearQueue(): Promise<void> {
   await removeSecure(QUEUE_KEY);
-  notifyListeners();
+  await notifyListeners();
 }
 
 // Start network listener for auto-sync using polling
@@ -213,7 +213,7 @@ export function startAutoSync(): void {
       }
 
       lastNetworkState = isConnected;
-      notifyListeners();
+      await notifyListeners();
     } catch (error) {
       // Ignore errors
     }

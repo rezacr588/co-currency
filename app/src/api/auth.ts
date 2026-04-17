@@ -63,6 +63,10 @@ export const auth = {
     fetchAPI<User>('/auth/onboarding/complete', {
       method: 'POST',
     }),
+  requestWSTicket: () =>
+    fetchAPI<{ ticket: string }>('/auth/ws-ticket', {
+      method: 'POST',
+    }),
   // LinkedIn OAuth
   getLinkedInAuthUrl: () => `${OAUTH_BASE}/auth/linkedin`,
   // Google OAuth
