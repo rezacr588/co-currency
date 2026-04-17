@@ -2,8 +2,11 @@ name: Koyeb Keepalive
 
 on:
   schedule:
-    # Keep the free Koyeb instance warm before the 1 hour idle window expires.
-    - cron: '*/30 * * * *'
+    # Koyeb free tier scales to zero after ~5 min idle. Ping every 10 min on
+    # odd minute offsets to avoid the crowded :00/:15/:30/:45 slots where
+    # GitHub Actions cron firings are routinely delayed 10-30+ min.
+    # UptimeRobot (5-min interval) is the primary keep-warm; this is backup.
+    - cron: '3,13,23,33,43,53 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -40,5 +43,8 @@ jobs:
             fi
           done
 
-          echo "Koyeb health check failed after 3 attempts."
-          exit 1
+          # Exit 0 even on failure: a single missed cold-start shouldn't mark
+          # the workflow red and spam notifications. UptimeRobot is the real
+          # uptime monitor. Surface the miss via the log, not the run status.
+          echo "::warning::Koyeb health check failed after 3 attempts."
+          exit 0
