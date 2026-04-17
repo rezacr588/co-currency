@@ -71,13 +71,18 @@ ctxkeys.GetTraceID(ctx) string
 ```
 
 **Key backend patterns:**
-- PostgreSQL with pgx/pgxpool (MaxConns: 10, MinConns: 2, MaxConnLifetime: 30min)
+- PostgreSQL with pgx/pgxpool (MaxConns: 50, MinConns: 10, MaxConnLifetime: 30min); `AfterConnect` registers `pgx-shopspring-decimal` so future `decimal.Decimal` fields scan directly
 - In-memory caching with go-cache + singleflight (prevents cache stampede)
 - JWT auth: access tokens (1 hour), refresh tokens (7 days)
 - Custom migration runner with `//go:embed` SQL files, auto-runs on startup
 - Graceful degradation: no DATABASE_URL → currency-only mode, no AI_API_KEY → AI disabled, Qdrant failure → PostgreSQL-only memory. Nil handlers skipped in route registration; `requireService()` returns 503 for unavailable services
-- Rate limiting: per-IP token bucket — anonymous (100/min), login (5/min), AI (20/min, configurable)
+- Rate limiting: per-IP token bucket — anonymous (100/min), login (5/min), AI (20/min, configurable). `rateLimiter.AllowPerKey("reset", email)` provides secondary per-email throttling (used for password reset)
 - Schema conventions: Decimal(20,8) for monetary amounts, `TIMESTAMP WITH TIME ZONE`, `gen_random_uuid()`, `ON DELETE CASCADE` foreign keys
+- Request bodies decoded via `handler.decodeJSON` are capped at 1 MiB via `http.MaxBytesReader`
+- CORS + WebSocket use the same origin list: `middleware.AllowedOrigins()` / `middleware.IsOriginAllowed()` (exported for reuse by `handler.WebSocketHandler`)
+
+**Monetary precision (in-flight refactor):**
+Money fields are still `float64` in `internal/model/*.go`, but `shopspring/decimal` and the pgx numeric codec are already wired in. The full type migration is deferred to a dedicated session (touches ~20 model files + repos + mobile types). Don't unwire the codec registration in `internal/repository/database.go` — it's the groundwork for the migration.
 
 **AI system:**
 - `ai_chat_service.go`: Builds system prompt with financial context, manages conversation history (last 20 messages), semantic memory search
@@ -149,6 +154,13 @@ app/
 - Use `pkg/httputil` methods: `BadRequestWithContext()`, `UnauthorizedWithContext()`, `NotFoundWithContext()`, `InternalServerErrorWithContext()`, `ServiceUnavailableWithContext()`
 - Custom repo errors: `ErrUserAlreadyExists`, `ErrInsufficientBalance`, `ErrTransactionNotFound`, etc.
 
+### OAuth & WebSocket Auth (platform-split)
+- **OAuth callback — web**: backend serves a same-origin HTML page that `window.opener.postMessage(...)` the tokens and closes. Target origin derived from `FrontendURL` via `h.frontendOrigin()`; never `"*"`. Web client opens the OAuth URL as a popup and listens for `{type:"coai:oauth"}` messages (see `app/app/(auth)/login.tsx`). Don't revert to URL-fragment delivery — it leaks JWTs into browser history.
+- **OAuth callback — native**: unchanged. State suffix `:mobile` routes the callback to a `coai://` deep-link with the token in the fragment.
+- **WebSocket auth — web**: client calls `POST /api/v1/auth/ws-ticket` for a 60s single-use ticket, then opens WS with `?ticket=...`. Tickets are backed by an in-memory `repository.Cache` on `AuthService` (`IssueWSTicket` / `ConsumeWSTicket`).
+- **WebSocket auth — native**: unchanged. `Authorization: Bearer <jwt>` header.
+- The legacy `?token=<jwt>` query-string path on `/ws` is kept as a transitional fallback; remove after web clients fully migrate.
+
 ### Commit & PR Style
 - Commits use type prefix: `feat:`, `fix:`, `debug:` with short, imperative summaries
 - PRs should include description, testing performed, and link related issues
@@ -195,8 +207,10 @@ koyeb services logs coai/co-currency -t runtime
 **CI/CD:**
 - Push to main → pre-deploy DB backup → Docker build → ghcr.io → Koyeb deploy
 - PRs → Go tests + app typecheck
-- Mobile: push to main (app/** paths) → OTA update + publish latest APK to GitHub Releases; APK rebuilt when native files change or `[build-apk]` in commit
+- Mobile: push to main (app/** paths) → OTA update to `production` + non-fatal OTA updates to `internal`/`development`/`preview` + publish latest APK to GitHub Releases; APK rebuilt when native files change or `[build-apk]` in commit
 - APK download URL: `https://github.com/rezacr588/co-currency/releases/download/latest/coai.apk`
+- **No pre-push hook**: the `.githooks/pre-push` hook was removed on 2026-04-18 in favor of CI. Use plain `git push` — never prefix with `SKIP_DEPLOY=1` / `SKIP_BUILD=1` / `SKIP_EAS=1`.
+- **Koyeb keepalive**: UptimeRobot (5-min HTTP monitor) is primary. `.github/workflows/koyeb-keepalive.yml` is the backup, cron on odd minute offsets (`3,13,23,33,43,53`) to avoid GitHub's crowded round-minute cron slots; failures exit 0 with a warning so a single cold-start miss doesn't turn the workflow red.
 
 ## Database
 
