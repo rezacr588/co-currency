@@ -10,6 +10,7 @@ import {
   Bot,
   MessageCircle,
   Plus,
+  StickyNote,
   Wallet,
 } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
@@ -188,6 +189,12 @@ export default function WalletHomeScreen() {
       icon: MessageCircle,
       onPress: () => router.push('/(app)/coai-chat' as any),
       color: theme.colors.accent,
+    },
+    {
+      label: t('notes') || 'Notes',
+      icon: StickyNote,
+      onPress: () => router.push('/(app)/notes' as any),
+      color: theme.colors.secondaryForeground,
     },
   ];
 
