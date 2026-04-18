@@ -114,7 +114,9 @@ func (h *AgentHandler) GetPlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.JSON(w, http.StatusOK, plan)
+	// Wrap so response shape matches PlanResponse on the client
+	// (app/src/api/agent.ts). Clients do `data.plan.*`.
+	httputil.JSON(w, http.StatusOK, map[string]interface{}{"plan": plan})
 }
 
 // CreatePlan handles POST /api/v1/agent/plans
@@ -152,7 +154,7 @@ func (h *AgentHandler) CreatePlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.JSON(w, http.StatusCreated, plan)
+	httputil.JSON(w, http.StatusCreated, map[string]interface{}{"plan": plan})
 	h.publishAgentUpdate(ctx, userID, "plan_created", map[string]interface{}{
 		"plan_id": plan.ID.String(),
 		"title":   plan.Title,
@@ -447,7 +449,11 @@ func (h *AgentHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.JSON(w, http.StatusOK, config)
+	// Wrap in {config: ...} so the shape matches ConfigResponse on the client
+	// (app/src/api/agent.ts). Without this the client unwraps `.config` from a
+	// raw AgentConfig and gets undefined, leaving the settings form stuck on
+	// hardcoded defaults instead of the user's saved values.
+	httputil.JSON(w, http.StatusOK, map[string]interface{}{"config": config})
 }
 
 // UpdateConfig handles POST /api/v1/agent/config
@@ -477,7 +483,8 @@ func (h *AgentHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.JSON(w, http.StatusOK, config)
+	// See GetConfig above — response must match ConfigResponse on the client.
+	httputil.JSON(w, http.StatusOK, map[string]interface{}{"config": config})
 	h.publishAgentUpdate(ctx, userID, "config_updated", map[string]interface{}{
 		"enabled":                 config.Enabled,
 		"daily_autopilot_enabled": config.DailyAutopilotEnabled,
@@ -526,7 +533,8 @@ func (h *AgentHandler) GetDailyBriefing(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	httputil.JSON(w, http.StatusOK, briefing)
+	// Wrap so response shape matches BriefingResponse on the client.
+	httputil.JSON(w, http.StatusOK, map[string]interface{}{"briefing": briefing})
 }
 
 // GenerateAIPlan handles POST /api/v1/agent/plans/generate

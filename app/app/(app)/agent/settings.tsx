@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { View, Text, ScrollView, Switch, TextInput, Pressable, Platform } from 'react-native';
+import { View, Text, ScrollView, Switch, TextInput, Pressable, Platform, Alert, BackHandler } from 'react-native';
 import DateTimePicker, {
   DateTimePickerAndroid,
   type DateTimePickerEvent,
@@ -197,6 +197,42 @@ export default function AgentSettingsScreen() {
 
   const markChanged = () => setHasChanges(true);
 
+  // Prompt before discarding unsaved edits. Applies to both the custom back
+  // Pressable in the header and the Android hardware back button so the user
+  // doesn't lose work by reflex-tapping back.
+  const confirmDiscard = useCallback((onDiscard: () => void) => {
+    if (!hasChanges) {
+      onDiscard();
+      return;
+    }
+    Alert.alert(
+      t('discardChangesTitle') || 'Discard changes?',
+      t('discardChangesBody') || 'You have unsaved changes. Discard and go back?',
+      [
+        { text: t('keepEditing') || 'Keep editing', style: 'cancel' },
+        {
+          text: t('discard') || 'Discard',
+          style: 'destructive',
+          onPress: onDiscard,
+        },
+      ],
+    );
+  }, [hasChanges, t]);
+
+  const handleBack = useCallback(() => {
+    confirmDiscard(() => router.back());
+  }, [confirmDiscard, router]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (!hasChanges) return false; // let default handler pop
+      confirmDiscard(() => router.back());
+      return true; // we handled it
+    });
+    return () => sub.remove();
+  }, [hasChanges, confirmDiscard, router]);
+
   if (isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={['top']}>
@@ -210,7 +246,7 @@ export default function AgentSettingsScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={handleBack}
             accessibilityRole="button"
             accessibilityLabel={t('a11yBack') || 'Back'}
             hitSlop={8}

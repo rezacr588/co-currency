@@ -253,6 +253,13 @@ export interface AutopilotResponse {
   result: AutopilotResult;
 }
 
+// Generic status ack for state-transition mutations (activate / pause / resume
+// / cancel plan, approve / reject step). Backend echoes the new state; clients
+// call `queryClient.invalidateQueries` after to refetch the full entity.
+export interface StatusResponse {
+  status: string;
+}
+
 // ============================================================================
 // API Functions
 // ============================================================================
@@ -303,7 +310,7 @@ export const agent = {
    * Delete (cancel) a plan
    */
   deletePlan: (planId: string) =>
-    fetchAPI<{ message: string }>(`/agent/plans/${planId}`, {
+    fetchAPI<StatusResponse>(`/agent/plans/${planId}`, {
       method: 'DELETE',
     }),
 
@@ -311,7 +318,7 @@ export const agent = {
    * Activate a plan
    */
   activatePlan: (planId: string) =>
-    fetchAPI<PlanResponse>(`/agent/plans/${planId}/activate`, {
+    fetchAPI<StatusResponse>(`/agent/plans/${planId}/activate`, {
       method: 'POST',
     }),
 
@@ -319,7 +326,7 @@ export const agent = {
    * Pause a plan
    */
   pausePlan: (planId: string) =>
-    fetchAPI<PlanResponse>(`/agent/plans/${planId}/pause`, {
+    fetchAPI<StatusResponse>(`/agent/plans/${planId}/pause`, {
       method: 'POST',
     }),
 
@@ -327,7 +334,7 @@ export const agent = {
    * Resume a paused plan
    */
   resumePlan: (planId: string) =>
-    fetchAPI<PlanResponse>(`/agent/plans/${planId}/resume`, {
+    fetchAPI<StatusResponse>(`/agent/plans/${planId}/resume`, {
       method: 'POST',
     }),
 
@@ -339,7 +346,7 @@ export const agent = {
    * Approve a pending step
    */
   approveStep: (planId: string, stepId: string, data: ApproveStepRequest) =>
-    fetchAPI<{ message: string; step: PlanStep }>(`/agent/plans/${planId}/steps/${stepId}/approve`, {
+    fetchAPI<StatusResponse>(`/agent/plans/${planId}/steps/${stepId}/approve`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -348,7 +355,7 @@ export const agent = {
    * Reject a pending step
    */
   rejectStep: (planId: string, stepId: string, data: RejectStepRequest) =>
-    fetchAPI<{ message: string; step: PlanStep }>(`/agent/plans/${planId}/steps/${stepId}/reject`, {
+    fetchAPI<StatusResponse>(`/agent/plans/${planId}/steps/${stepId}/reject`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),

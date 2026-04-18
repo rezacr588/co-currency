@@ -245,37 +245,21 @@ func (s *AutopilotScheduler) sendAttentionNotification(ctx context.Context, user
 	}
 }
 
-// createActionProposals creates agent plans from recommendations
+// createActionProposals creates an agent plan from the autopilot analysis's
+// recommendations. Priority is medium by default — `AgentRecommendedAction`
+// does not carry a priority field, so we collapse everything into a single
+// daily plan. If priority metadata lands on the recommendation model later,
+// split the routing here.
 func (s *AutopilotScheduler) createActionProposals(ctx context.Context, userID uuid.UUID, analysis *AutopilotAnalysis) {
 	log.Info().
 		Str("user_id", userID.String()).
 		Int("count", len(analysis.Recommendations)).
 		Msg("Creating action proposals from recommendations")
 
-	// Group recommendations by priority
-	urgentActions := []model.AgentRecommendedAction{}
-	highActions := []model.AgentRecommendedAction{}
-	mediumActions := []model.AgentRecommendedAction{}
-
-	for _, rec := range analysis.Recommendations {
-		// Default to medium priority since AgentRecommendedAction doesn't have Priority field
-		mediumActions = append(mediumActions, rec)
+	if len(analysis.Recommendations) == 0 {
+		return
 	}
-
-	// Create a plan for urgent actions if any
-	if len(urgentActions) > 0 {
-		s.createPlanFromRecommendations(ctx, userID, "urgent", "Urgent Financial Actions", urgentActions)
-	}
-
-	// Create a plan for high-priority actions
-	if len(highActions) > 0 {
-		s.createPlanFromRecommendations(ctx, userID, "high", "Daily Financial Optimizations", highActions)
-	}
-
-	// Create medium-priority plan if no higher priority
-	if len(urgentActions) == 0 && len(highActions) == 0 && len(mediumActions) > 0 {
-		s.createPlanFromRecommendations(ctx, userID, "medium", "Financial Improvement Opportunities", mediumActions)
-	}
+	s.createPlanFromRecommendations(ctx, userID, "medium", "Financial Improvement Opportunities", analysis.Recommendations)
 }
 
 // createPlanFromRecommendations creates an agent plan from a list of recommendations.

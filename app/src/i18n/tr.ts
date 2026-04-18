@@ -1627,4 +1627,9 @@ export const tr = {
   ago: 'önce',
   in: 'içinde',
 
+  discardChangesTitle: 'Değişiklikler iptal edilsin mi?',
+  discardChangesBody: 'Kaydedilmemiş değişiklikleriniz var. İptal edip geri dönülsün mü?',
+  keepEditing: 'Düzenlemeye devam et',
+  discard: 'İptal et',
+
 } as const;

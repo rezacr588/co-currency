@@ -130,7 +130,7 @@ func (s *PlanningEngineService) ActivatePlan(ctx context.Context, userID, planID
 		return ErrInvalidPlanStatus
 	}
 
-	return s.agentRepo.UpdatePlanStatus(ctx, planID, "active")
+	return s.agentRepo.UpdatePlanStatus(ctx, userID, planID, "active")
 }
 
 // PausePlan pauses an active plan
@@ -144,7 +144,7 @@ func (s *PlanningEngineService) PausePlan(ctx context.Context, userID, planID uu
 		return ErrInvalidPlanStatus
 	}
 
-	return s.agentRepo.UpdatePlanStatus(ctx, planID, "paused")
+	return s.agentRepo.UpdatePlanStatus(ctx, userID, planID, "paused")
 }
 
 // ResumePlan resumes a paused plan
@@ -158,7 +158,7 @@ func (s *PlanningEngineService) ResumePlan(ctx context.Context, userID, planID u
 		return ErrInvalidPlanStatus
 	}
 
-	return s.agentRepo.UpdatePlanStatus(ctx, planID, "active")
+	return s.agentRepo.UpdatePlanStatus(ctx, userID, planID, "active")
 }
 
 // CancelPlan cancels a plan
@@ -172,7 +172,7 @@ func (s *PlanningEngineService) CancelPlan(ctx context.Context, userID, planID u
 		return ErrInvalidPlanStatus
 	}
 
-	return s.agentRepo.UpdatePlanStatus(ctx, planID, "cancelled")
+	return s.agentRepo.UpdatePlanStatus(ctx, userID, planID, "cancelled")
 }
 
 // AddStep adds a step to a plan
@@ -200,15 +200,20 @@ func (s *PlanningEngineService) GetPendingApprovals(ctx context.Context, userID 
 	return s.agentRepo.GetPendingApprovals(ctx, userID)
 }
 
-// ApproveStep approves a pending step
+// ApproveStep approves a pending step.
+//
+// Flow: verify plan ownership + step state via the in-memory plan snapshot,
+// then resolve the pending approval directly by step_id (user-scoped), then
+// flip the approval + step atomically via ApproveAction. The in-memory
+// `status != "pending"` check is just for clearer error messaging — the real
+// race guard is the `approval_status = 'pending'` WHERE clause inside
+// ApproveAction's transaction, which cannot be bypassed.
 func (s *PlanningEngineService) ApproveStep(ctx context.Context, userID, planID, stepID uuid.UUID, method string, deviceInfo map[string]interface{}) error {
-	// Verify plan ownership and step existence
 	plan, err := s.GetPlan(ctx, userID, planID)
 	if err != nil {
 		return err
 	}
 
-	// Find the step
 	var targetStep *model.PlanStep
 	for _, step := range plan.Steps {
 		if step.ID == stepID {
@@ -219,40 +224,28 @@ func (s *PlanningEngineService) ApproveStep(ctx context.Context, userID, planID,
 	if targetStep == nil {
 		return ErrStepNotFound
 	}
-
 	if targetStep.Status != "pending" {
 		return ErrStepNotPending
 	}
 
-	// Find the approval record
-	approvals, err := s.agentRepo.GetPendingApprovals(ctx, userID)
+	approvalID, err := s.agentRepo.GetPendingApprovalByStepID(ctx, userID, stepID)
 	if err != nil {
-		return err
-	}
-
-	var approvalID uuid.UUID
-	for _, approval := range approvals {
-		if approval.StepID == stepID {
-			approvalID = approval.ID
-			break
+		if errors.Is(err, repository.ErrApprovalNotFound) {
+			return ErrApprovalNotFound
 		}
-	}
-	if approvalID == uuid.Nil {
-		return ErrApprovalNotFound
+		return err
 	}
 
 	return s.agentRepo.ApproveAction(ctx, approvalID, method, deviceInfo)
 }
 
-// RejectStep rejects a pending step
+// RejectStep rejects a pending step. See ApproveStep for the flow notes.
 func (s *PlanningEngineService) RejectStep(ctx context.Context, userID, planID, stepID uuid.UUID, reason string) error {
-	// Verify plan ownership
 	plan, err := s.GetPlan(ctx, userID, planID)
 	if err != nil {
 		return err
 	}
 
-	// Find the step
 	var targetStep *model.PlanStep
 	for _, step := range plan.Steps {
 		if step.ID == stepID {
@@ -263,26 +256,16 @@ func (s *PlanningEngineService) RejectStep(ctx context.Context, userID, planID, 
 	if targetStep == nil {
 		return ErrStepNotFound
 	}
-
 	if targetStep.Status != "pending" {
 		return ErrStepNotPending
 	}
 
-	// Find the approval record
-	approvals, err := s.agentRepo.GetPendingApprovals(ctx, userID)
+	approvalID, err := s.agentRepo.GetPendingApprovalByStepID(ctx, userID, stepID)
 	if err != nil {
-		return err
-	}
-
-	var approvalID uuid.UUID
-	for _, approval := range approvals {
-		if approval.StepID == stepID {
-			approvalID = approval.ID
-			break
+		if errors.Is(err, repository.ErrApprovalNotFound) {
+			return ErrApprovalNotFound
 		}
-	}
-	if approvalID == uuid.Nil {
-		return ErrApprovalNotFound
+		return err
 	}
 
 	return s.agentRepo.RejectAction(ctx, approvalID, reason)
