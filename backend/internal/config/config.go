@@ -41,6 +41,14 @@ type Config struct {
 	InflationCrawlerEnabled  bool          `env:"INFLATION_CRAWLER_ENABLED" envDefault:"true"`
 	InflationCrawlerInterval time.Duration `env:"INFLATION_CRAWLER_INTERVAL" envDefault:"24h"`
 
+	// Autopilot scheduler settings. AutopilotTickInterval controls how often the
+	// scheduler checks for users whose local autopilot_time has arrived. Keep
+	// short (≤15m) so users near their preferred hour get scans promptly and
+	// cold-start recovery is fast; per-user dedup is enforced via the last-run
+	// timestamp in the daily_autopilot_results table.
+	AutopilotEnabled      bool          `env:"AUTOPILOT_ENABLED" envDefault:"true"`
+	AutopilotTickInterval time.Duration `env:"AUTOPILOT_TICK_INTERVAL" envDefault:"10m"`
+
 	// Pagination limits
 	PaginationDefaultLimit   int `env:"PAGINATION_DEFAULT_LIMIT" envDefault:"50"`
 	PaginationMaxAPILimit    int `env:"PAGINATION_MAX_API_LIMIT" envDefault:"500"`

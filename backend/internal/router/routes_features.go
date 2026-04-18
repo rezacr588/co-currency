@@ -378,6 +378,11 @@ func registerAgentRoutes(r chi.Router, h *Handlers, authMiddleware *middleware.A
 
 		// Daily briefing
 		r.Get("/briefing", h.Agent.GetDailyBriefing)
+
+		// Autopilot — on-demand scan, consolidated status, latest cached result
+		r.Post("/autopilot/run", h.Agent.TriggerAutopilot)
+		r.Get("/autopilot/status", h.Agent.GetAutopilotStatus)
+		r.Get("/autopilot/result", h.Agent.GetAutopilotResult)
 	})
 }
 

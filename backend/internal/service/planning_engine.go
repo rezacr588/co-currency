@@ -14,13 +14,15 @@ import (
 
 // Common errors for planning engine
 var (
-	ErrPlanNotFound      = errors.New("plan not found")
-	ErrStepNotFound      = errors.New("step not found")
-	ErrApprovalNotFound  = errors.New("approval not found")
-	ErrInvalidPlanStatus = errors.New("invalid plan status transition")
-	ErrPlanNotActive     = errors.New("plan is not active")
-	ErrStepNotPending    = errors.New("step is not pending approval")
-	ErrMaxActivePlans    = errors.New("maximum active plans limit reached")
+	ErrPlanNotFound         = errors.New("plan not found")
+	ErrStepNotFound         = errors.New("step not found")
+	ErrApprovalNotFound     = errors.New("approval not found")
+	ErrInvalidPlanStatus    = errors.New("invalid plan status transition")
+	ErrPlanNotActive        = errors.New("plan is not active")
+	ErrStepNotPending       = errors.New("step is not pending approval")
+	ErrMaxActivePlans       = errors.New("maximum active plans limit reached")
+	ErrInvalidTimezone      = errors.New("invalid IANA timezone (e.g. 'America/New_York', 'Asia/Tehran')")
+	ErrInvalidAutopilotTime = errors.New("invalid autopilot time (expected HH:MM or HH:MM:SS, 24-hour)")
 )
 
 const (
@@ -307,8 +309,24 @@ func (s *PlanningEngineService) GetConfig(ctx context.Context, userID uuid.UUID)
 	return config, err
 }
 
-// UpdateConfig updates user's agent configuration
+// UpdateConfig updates user's agent configuration. Validates the timezone
+// and autopilot_time fields because both participate in a per-row SQL query
+// (GetUsersDueForAutopilot) — a bad value would skip only the invalid user
+// (not the whole batch, thanks to the pg_timezone_names guard) but surfacing
+// the error early gives the user a clear fix instead of silently never being
+// scanned.
 func (s *PlanningEngineService) UpdateConfig(ctx context.Context, userID uuid.UUID, req *model.UpdateConfigRequest) (*model.AgentConfig, error) {
+	if req.AutopilotTimezone != nil && *req.AutopilotTimezone != "" {
+		if _, err := time.LoadLocation(*req.AutopilotTimezone); err != nil {
+			return nil, ErrInvalidTimezone
+		}
+	}
+	if req.AutopilotTime != nil && *req.AutopilotTime != "" {
+		if !isValidAutopilotTime(*req.AutopilotTime) {
+			return nil, ErrInvalidAutopilotTime
+		}
+	}
+
 	config, err := s.GetConfig(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -444,32 +462,32 @@ func (s *PlanningEngineService) generateDefaultSteps(goalType string, targetAmou
 	case "savings":
 		steps = []*model.PlanStep{
 			{
-				ID:              uuid.New(),
-				StepOrder:       1,
-				Title:           "Review current expenses",
-				Description:     stringPtr("Analyze spending patterns to identify savings opportunities"),
-				ActionType:      "recommendation",
-				ActionParams:    map[string]interface{}{"action": "expense_review"},
+				ID:               uuid.New(),
+				StepOrder:        1,
+				Title:            "Review current expenses",
+				Description:      stringPtr("Analyze spending patterns to identify savings opportunities"),
+				ActionType:       "recommendation",
+				ActionParams:     map[string]interface{}{"action": "expense_review"},
 				RequiresApproval: false,
 			},
 			{
-				ID:              uuid.New(),
-				StepOrder:       2,
-				Title:           "Set up automatic transfer",
-				Description:     stringPtr(fmt.Sprintf("Configure weekly transfer to savings goal")),
-				ActionType:      "goal_contribution",
-				ActionParams:    map[string]interface{}{"frequency": "weekly", "amount": targetAmount / 12},
-				EstimatedImpact: floatPtr(targetAmount / 12),
+				ID:               uuid.New(),
+				StepOrder:        2,
+				Title:            "Set up automatic transfer",
+				Description:      stringPtr(fmt.Sprintf("Configure weekly transfer to savings goal")),
+				ActionType:       "goal_contribution",
+				ActionParams:     map[string]interface{}{"frequency": "weekly", "amount": targetAmount / 12},
+				EstimatedImpact:  floatPtr(targetAmount / 12),
 				RequiresApproval: true,
 			},
 			{
-				ID:              uuid.New(),
-				StepOrder:       3,
-				Title:           "Reduce discretionary spending",
-				Description:     stringPtr("Identify and reduce non-essential expenses by 10%"),
-				ActionType:      "budget_adjustment",
-				ActionParams:    map[string]interface{}{"category": "discretionary", "reduction_pct": 10},
-				EstimatedImpact: floatPtr(targetAmount * 0.1),
+				ID:               uuid.New(),
+				StepOrder:        3,
+				Title:            "Reduce discretionary spending",
+				Description:      stringPtr("Identify and reduce non-essential expenses by 10%"),
+				ActionType:       "budget_adjustment",
+				ActionParams:     map[string]interface{}{"category": "discretionary", "reduction_pct": 10},
+				EstimatedImpact:  floatPtr(targetAmount * 0.1),
 				RequiresApproval: true,
 			},
 		}
@@ -477,31 +495,31 @@ func (s *PlanningEngineService) generateDefaultSteps(goalType string, targetAmou
 	case "debt_payoff":
 		steps = []*model.PlanStep{
 			{
-				ID:              uuid.New(),
-				StepOrder:       1,
-				Title:           "List all debts",
-				Description:     stringPtr("Review and prioritize debts by interest rate"),
-				ActionType:      "recommendation",
-				ActionParams:    map[string]interface{}{"action": "debt_inventory"},
+				ID:               uuid.New(),
+				StepOrder:        1,
+				Title:            "List all debts",
+				Description:      stringPtr("Review and prioritize debts by interest rate"),
+				ActionType:       "recommendation",
+				ActionParams:     map[string]interface{}{"action": "debt_inventory"},
 				RequiresApproval: false,
 			},
 			{
-				ID:              uuid.New(),
-				StepOrder:       2,
-				Title:           "Extra payment to highest interest debt",
-				Description:     stringPtr("Make additional payment to the debt with highest interest rate"),
-				ActionType:      "debt_payment",
-				ActionParams:    map[string]interface{}{"strategy": "avalanche"},
-				EstimatedImpact: floatPtr(targetAmount * 0.15),
+				ID:               uuid.New(),
+				StepOrder:        2,
+				Title:            "Extra payment to highest interest debt",
+				Description:      stringPtr("Make additional payment to the debt with highest interest rate"),
+				ActionType:       "debt_payment",
+				ActionParams:     map[string]interface{}{"strategy": "avalanche"},
+				EstimatedImpact:  floatPtr(targetAmount * 0.15),
 				RequiresApproval: true,
 			},
 			{
-				ID:              uuid.New(),
-				StepOrder:       3,
-				Title:           "Set up bi-weekly payments",
-				Description:     stringPtr("Switch from monthly to bi-weekly payments for faster payoff"),
-				ActionType:      "recurring_update",
-				ActionParams:    map[string]interface{}{"frequency": "biweekly"},
+				ID:               uuid.New(),
+				StepOrder:        3,
+				Title:            "Set up bi-weekly payments",
+				Description:      stringPtr("Switch from monthly to bi-weekly payments for faster payoff"),
+				ActionType:       "recurring_update",
+				ActionParams:     map[string]interface{}{"frequency": "biweekly"},
 				RequiresApproval: true,
 			},
 		}
@@ -509,31 +527,31 @@ func (s *PlanningEngineService) generateDefaultSteps(goalType string, targetAmou
 	case "budget_optimization":
 		steps = []*model.PlanStep{
 			{
-				ID:              uuid.New(),
-				StepOrder:       1,
-				Title:           "Analyze spending patterns",
-				Description:     stringPtr("Review the last 3 months of transactions"),
-				ActionType:      "recommendation",
-				ActionParams:    map[string]interface{}{"action": "spending_analysis"},
+				ID:               uuid.New(),
+				StepOrder:        1,
+				Title:            "Analyze spending patterns",
+				Description:      stringPtr("Review the last 3 months of transactions"),
+				ActionType:       "recommendation",
+				ActionParams:     map[string]interface{}{"action": "spending_analysis"},
 				RequiresApproval: false,
 			},
 			{
-				ID:              uuid.New(),
-				StepOrder:       2,
-				Title:           "Review subscriptions",
-				Description:     stringPtr("Identify unused or underutilized subscriptions"),
-				ActionType:      "subscription_cancel",
-				ActionParams:    map[string]interface{}{"threshold_days": 30},
-				EstimatedImpact: floatPtr(50.00),
+				ID:               uuid.New(),
+				StepOrder:        2,
+				Title:            "Review subscriptions",
+				Description:      stringPtr("Identify unused or underutilized subscriptions"),
+				ActionType:       "subscription_cancel",
+				ActionParams:     map[string]interface{}{"threshold_days": 30},
+				EstimatedImpact:  floatPtr(50.00),
 				RequiresApproval: true,
 			},
 			{
-				ID:              uuid.New(),
-				StepOrder:       3,
-				Title:           "Set category budgets",
-				Description:     stringPtr("Create budgets for top spending categories"),
-				ActionType:      "budget_adjustment",
-				ActionParams:    map[string]interface{}{"categories": []string{"food", "entertainment", "shopping"}},
+				ID:               uuid.New(),
+				StepOrder:        3,
+				Title:            "Set category budgets",
+				Description:      stringPtr("Create budgets for top spending categories"),
+				ActionType:       "budget_adjustment",
+				ActionParams:     map[string]interface{}{"categories": []string{"food", "entertainment", "shopping"}},
 				RequiresApproval: true,
 			},
 		}
@@ -542,21 +560,21 @@ func (s *PlanningEngineService) generateDefaultSteps(goalType string, targetAmou
 		// Generic steps
 		steps = []*model.PlanStep{
 			{
-				ID:              uuid.New(),
-				StepOrder:       1,
-				Title:           "Review financial overview",
-				Description:     stringPtr("Analyze current financial status"),
-				ActionType:      "recommendation",
-				ActionParams:    map[string]interface{}{"action": "overview"},
+				ID:               uuid.New(),
+				StepOrder:        1,
+				Title:            "Review financial overview",
+				Description:      stringPtr("Analyze current financial status"),
+				ActionType:       "recommendation",
+				ActionParams:     map[string]interface{}{"action": "overview"},
 				RequiresApproval: false,
 			},
 			{
-				ID:              uuid.New(),
-				StepOrder:       2,
-				Title:           "Create action plan",
-				Description:     stringPtr("Define specific steps to achieve your goal"),
-				ActionType:      "recommendation",
-				ActionParams:    map[string]interface{}{"action": "planning"},
+				ID:               uuid.New(),
+				StepOrder:        2,
+				Title:            "Create action plan",
+				Description:      stringPtr("Define specific steps to achieve your goal"),
+				ActionType:       "recommendation",
+				ActionParams:     map[string]interface{}{"action": "planning"},
 				RequiresApproval: false,
 			},
 		}
@@ -644,4 +662,106 @@ func (s *PlanningEngineService) convertAutopilotResultToBriefing(result *model.D
 	}
 
 	return briefing, nil
+}
+
+// isValidAutopilotTime accepts the 24-hour time-of-day strings that the
+// `autopilot_time` column stores (Postgres `TIME` values). The frontend sends
+// HH:MM:SS but older clients may send HH:MM; both parse cleanly.
+func isValidAutopilotTime(s string) bool {
+	if _, err := time.Parse("15:04", s); err == nil {
+		return true
+	}
+	if _, err := time.Parse("15:04:05", s); err == nil {
+		return true
+	}
+	return false
+}
+
+// GetAutopilotStatus returns the consolidated autopilot state for the UI.
+// Missing config is treated as "disabled" rather than an error so the client
+// can render an onboarding state without special-casing 404s.
+func (s *PlanningEngineService) GetAutopilotStatus(ctx context.Context, userID uuid.UUID) (*model.AutopilotStatus, error) {
+	status := &model.AutopilotStatus{}
+
+	cfg, err := s.agentRepo.GetConfig(ctx, userID)
+	if err != nil && !errors.Is(err, repository.ErrConfigNotFound) {
+		return nil, fmt.Errorf("failed to get config: %w", err)
+	}
+	if cfg != nil {
+		status.Enabled = cfg.Enabled
+		status.DailyAutopilotEnabled = cfg.DailyAutopilotEnabled
+		status.AutopilotTime = cfg.AutopilotTime
+		status.AutopilotTimezone = cfg.AutopilotTimezone
+	}
+
+	if last, err := s.agentRepo.GetLatestAutopilotResult(ctx, userID); err == nil {
+		lastAt := last.CreatedAt
+		status.LastRunAt = &lastAt
+	}
+	// Any other error (including "never ran") is non-fatal — render without a last-run timestamp.
+
+	if cfg != nil && cfg.DailyAutopilotEnabled {
+		if next := computeNextAutopilotRun(cfg, status.LastRunAt); !next.IsZero() {
+			status.NextRunEstimate = &next
+		}
+	}
+
+	// Count open plans (draft + active). Capped at MaxActivePlans in practice
+	// so a full list scan is cheap; we don't need a dedicated COUNT query.
+	if plans, _, err := s.agentRepo.GetPlansByUser(ctx, userID, "", 100, 0); err == nil {
+		for _, p := range plans {
+			if p.Status == "draft" || p.Status == "active" {
+				status.PendingPlanCount++
+			}
+		}
+	}
+
+	if approvals, err := s.agentRepo.GetPendingApprovals(ctx, userID); err == nil {
+		status.PendingApprovalCount = len(approvals)
+	}
+
+	return status, nil
+}
+
+// computeNextAutopilotRun estimates when the scheduler will next fire for the
+// user, given their preferred time-of-day, timezone, and last-run timestamp.
+// Returns zero-value time on unparseable timezone/time (UI hides the field).
+//
+// This mirrors — but does not enforce — the scheduler's dueGap window
+// (20h). The scheduler is the source of truth; this is only a display hint.
+func computeNextAutopilotRun(cfg *model.AgentConfig, lastRunAt *time.Time) time.Time {
+	tz := cfg.AutopilotTimezone
+	if tz == "" {
+		tz = "UTC"
+	}
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		return time.Time{}
+	}
+
+	timeStr := cfg.AutopilotTime
+	if timeStr == "" {
+		timeStr = "09:00:00"
+	}
+	parsed, err := time.Parse("15:04:05", timeStr)
+	if err != nil {
+		parsed, err = time.Parse("15:04", timeStr)
+		if err != nil {
+			return time.Time{}
+		}
+	}
+
+	now := time.Now().In(loc)
+	candidate := time.Date(now.Year(), now.Month(), now.Day(), parsed.Hour(), parsed.Minute(), 0, 0, loc)
+	if !candidate.After(now) {
+		candidate = candidate.AddDate(0, 0, 1)
+	}
+
+	// If we ran recently, push the estimate past the due-gap window so the
+	// UI doesn't promise a run that the scheduler will skip.
+	if lastRunAt != nil && candidate.Sub(*lastRunAt) < 20*time.Hour {
+		candidate = candidate.AddDate(0, 0, 1)
+	}
+
+	return candidate.UTC()
 }

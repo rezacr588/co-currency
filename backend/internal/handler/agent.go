@@ -9,8 +9,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/rezacr588/currency-converter/internal/middleware"
 	"github.com/rezacr588/currency-converter/internal/model"
+	"github.com/rezacr588/currency-converter/internal/repository"
 	"github.com/rezacr588/currency-converter/internal/service"
 	ws "github.com/rezacr588/currency-converter/internal/websocket"
 	"github.com/rezacr588/currency-converter/pkg/httputil"
@@ -21,14 +23,26 @@ import (
 type AgentHandler struct {
 	planningEngine *service.PlanningEngineService
 	actionExecutor *service.ActionExecutor
+	autopilot      *service.DailyAutopilotService
+	agentRepo      *repository.AgentPlanRepository
 	wsPublisher    *ws.Publisher
 }
 
-// NewAgentHandler creates a new agent handler
-func NewAgentHandler(planningEngine *service.PlanningEngineService, actionExecutor *service.ActionExecutor, wsPublisher *ws.Publisher) *AgentHandler {
+// NewAgentHandler creates a new agent handler. `autopilot` and `agentRepo` are
+// optional — they enable the /agent/autopilot/run and /agent/autopilot/result
+// endpoints. Pass nil to have those endpoints return 503.
+func NewAgentHandler(
+	planningEngine *service.PlanningEngineService,
+	actionExecutor *service.ActionExecutor,
+	autopilot *service.DailyAutopilotService,
+	agentRepo *repository.AgentPlanRepository,
+	wsPublisher *ws.Publisher,
+) *AgentHandler {
 	return &AgentHandler{
 		planningEngine: planningEngine,
 		actionExecutor: actionExecutor,
+		autopilot:      autopilot,
+		agentRepo:      agentRepo,
 		wsPublisher:    wsPublisher,
 	}
 }
@@ -453,6 +467,12 @@ func (h *AgentHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	config, err := h.planningEngine.UpdateConfig(ctx, userID, &req)
 	if err != nil {
+		// Surface validation errors as 400s so the client gets an actionable
+		// message. Everything else is a 500.
+		if errors.Is(err, service.ErrInvalidTimezone) || errors.Is(err, service.ErrInvalidAutopilotTime) {
+			httputil.BadRequestWithContext(ctx, w, err.Error())
+			return
+		}
 		httputil.InternalServerErrorWithContext(ctx, w, "Failed to update config", err)
 		return
 	}
@@ -548,4 +568,90 @@ func (h *AgentHandler) GenerateAIPlan(w http.ResponseWriter, r *http.Request) {
 		"title":   plan.Title,
 		"status":  plan.Status,
 	})
+}
+
+// TriggerAutopilot handles POST /api/v1/agent/autopilot/run.
+// Runs a daily autopilot scan on-demand for the authenticated user and returns
+// the analysis. Side effects (plan creation, notifications) fire asynchronously
+// via the scheduler pipeline if the scheduler is running; this endpoint is for
+// immediate feedback in the UI.
+func (h *AgentHandler) TriggerAutopilot(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userID, ok := middleware.GetUserIDFromContext(ctx)
+	if !ok {
+		httputil.UnauthorizedWithContext(ctx, w, "User not authenticated")
+		return
+	}
+
+	if h.autopilot == nil {
+		httputil.ServiceUnavailableWithContext(ctx, w, "Autopilot service is not available")
+		return
+	}
+
+	analysis, err := h.autopilot.RunDailyScan(ctx, userID)
+	if err != nil {
+		httputil.InternalServerErrorWithContext(ctx, w, "Failed to run autopilot scan", err)
+		return
+	}
+
+	// Wrap in { "result": ... } so the response shape matches the existing
+	// AutopilotResponse type on the client (app/src/api/agent.ts).
+	httputil.JSON(w, http.StatusOK, map[string]interface{}{"result": analysis})
+	h.publishAgentUpdate(ctx, userID, "autopilot_run", map[string]interface{}{
+		"requires_attention": analysis.RequiresAttention,
+		"bills":              len(analysis.UpcomingBills),
+		"opportunities":      len(analysis.GoalOpportunities),
+		"recommendations":    len(analysis.Recommendations),
+	})
+}
+
+// GetAutopilotStatus handles GET /api/v1/agent/autopilot/status.
+// Returns the consolidated autopilot state for rendering the AutopilotCard
+// header: enabled flags, preferred time + timezone, last/next run timestamps,
+// pending plan and approval counts.
+func (h *AgentHandler) GetAutopilotStatus(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userID, ok := middleware.GetUserIDFromContext(ctx)
+	if !ok {
+		httputil.UnauthorizedWithContext(ctx, w, "User not authenticated")
+		return
+	}
+
+	status, err := h.planningEngine.GetAutopilotStatus(ctx, userID)
+	if err != nil {
+		httputil.InternalServerErrorWithContext(ctx, w, "Failed to load autopilot status", err)
+		return
+	}
+
+	httputil.JSON(w, http.StatusOK, status)
+}
+
+// GetAutopilotResult handles GET /api/v1/agent/autopilot/result.
+// Returns the most recent persisted daily autopilot result for the user.
+// Returns 404 if the user has never run an autopilot scan.
+func (h *AgentHandler) GetAutopilotResult(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userID, ok := middleware.GetUserIDFromContext(ctx)
+	if !ok {
+		httputil.UnauthorizedWithContext(ctx, w, "User not authenticated")
+		return
+	}
+
+	if h.agentRepo == nil {
+		httputil.ServiceUnavailableWithContext(ctx, w, "Autopilot storage is not available")
+		return
+	}
+
+	result, err := h.agentRepo.GetLatestAutopilotResult(ctx, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			httputil.NotFoundWithContext(ctx, w, "No autopilot runs yet — trigger one to generate results")
+			return
+		}
+		httputil.InternalServerErrorWithContext(ctx, w, "Failed to fetch autopilot result", err)
+		return
+	}
+
+	// Wrap to match AutopilotResponse on the client.
+	httputil.JSON(w, http.StatusOK, map[string]interface{}{"result": result})
 }

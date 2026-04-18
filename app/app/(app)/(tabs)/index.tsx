@@ -7,6 +7,7 @@ import {
   ArrowLeftRight,
   ArrowRight,
   BarChart3,
+  Bot,
   MessageCircle,
   Plus,
   Wallet,
@@ -316,6 +317,57 @@ export default function WalletHomeScreen() {
           </View>
         ))}
       </View>
+
+      {/* Autopilot discovery — surfaces the feature to users who never visit
+          the /agent route. Deliberately lightweight (no data fetch) so it
+          doesn't add latency to the main dashboard load. */}
+      <Pressable
+        onPress={() => router.push('/(app)/agent' as any)}
+        accessibilityRole="button"
+        accessibilityLabel={t('autopilotDiscoveryLabel') || 'Open CoAI Autopilot'}
+        style={({ pressed }) => [
+          {
+            marginBottom: theme.spacing.xl,
+            borderRadius: theme.radii.lg,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            backgroundColor: theme.alpha(theme.colors.accent, 0.08),
+            padding: theme.spacing.lg,
+            flexDirection: 'row',
+            alignItems: 'center',
+          },
+          pressed && { opacity: 0.8 },
+        ]}
+      >
+        <View
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: theme.radii.full,
+            backgroundColor: theme.alpha(theme.colors.accent, 0.18),
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginEnd: theme.spacing.md,
+          }}
+        >
+          <Bot size={20} color={theme.colors.accent} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text
+            style={{
+              color: theme.colors.foreground,
+              fontSize: 15,
+              fontFamily: theme.typography.bodyMedium.fontFamily,
+            }}
+          >
+            {t('autopilotDiscoveryTitle') || 'Meet CoAI Autopilot'}
+          </Text>
+          <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginTop: 2 }}>
+            {t('autopilotDiscoverySubtitle') || 'Daily scans, smart priorities, actions ready for your approval.'}
+          </Text>
+        </View>
+        <ArrowRight size={18} color={theme.colors.accent} />
+      </Pressable>
 
       <SectionBlock
         title={t('balances') || 'Balances'}

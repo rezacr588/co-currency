@@ -54,7 +54,7 @@ type ActionApproval struct {
 	ID              uuid.UUID              `json:"id"`
 	StepID          uuid.UUID              `json:"step_id"`
 	UserID          uuid.UUID              `json:"user_id"`
-	ApprovalStatus  string                 `json:"approval_status"` // pending, approved, rejected, auto_approved, expired
+	ApprovalStatus  string                 `json:"approval_status"`           // pending, approved, rejected, auto_approved, expired
 	ApprovalMethod  *string                `json:"approval_method,omitempty"` // manual, biometric, auto, voice
 	ApprovedAt      *time.Time             `json:"approved_at,omitempty"`
 	ExpiresAt       time.Time              `json:"expires_at"`
@@ -195,15 +195,15 @@ type RejectActionRequest struct {
 
 // UpdateConfigRequest is the request body for updating agent config
 type UpdateConfigRequest struct {
-	Enabled                 *bool                   `json:"enabled,omitempty"`
-	AutoApproveThreshold    *float64                `json:"auto_approve_threshold,omitempty"`
-	AutoApproveCurrency     *string                 `json:"auto_approve_currency,omitempty"`
-	RequireBiometricAbove   *float64                `json:"require_biometric_above,omitempty"`
-	DailyAutopilotEnabled   *bool                   `json:"daily_autopilot_enabled,omitempty"`
-	AutopilotTime           *string                 `json:"autopilot_time,omitempty"`
-	AutopilotTimezone       *string                 `json:"autopilot_timezone,omitempty"`
-	AllowedActionTypes      []string                `json:"allowed_action_types,omitempty"`
-	NotificationPreferences map[string]interface{}  `json:"notification_preferences,omitempty"`
+	Enabled                 *bool                  `json:"enabled,omitempty"`
+	AutoApproveThreshold    *float64               `json:"auto_approve_threshold,omitempty"`
+	AutoApproveCurrency     *string                `json:"auto_approve_currency,omitempty"`
+	RequireBiometricAbove   *float64               `json:"require_biometric_above,omitempty"`
+	DailyAutopilotEnabled   *bool                  `json:"daily_autopilot_enabled,omitempty"`
+	AutopilotTime           *string                `json:"autopilot_time,omitempty"`
+	AutopilotTimezone       *string                `json:"autopilot_timezone,omitempty"`
+	AllowedActionTypes      []string               `json:"allowed_action_types,omitempty"`
+	NotificationPreferences map[string]interface{} `json:"notification_preferences,omitempty"`
 }
 
 // PlanSummary is a lightweight plan representation for lists
@@ -224,13 +224,13 @@ type PlanSummary struct {
 
 // PendingApprovalSummary is the response for pending approvals list
 type PendingApprovalSummary struct {
-	ID              uuid.UUID  `json:"id"`
-	PlanTitle       string     `json:"plan_title"`
-	StepTitle       string     `json:"step_title"`
-	ActionType      string     `json:"action_type"`
-	EstimatedImpact *float64   `json:"estimated_impact,omitempty"`
-	ExpiresAt       time.Time  `json:"expires_at"`
-	CreatedAt       time.Time  `json:"created_at"`
+	ID              uuid.UUID `json:"id"`
+	PlanTitle       string    `json:"plan_title"`
+	StepTitle       string    `json:"step_title"`
+	ActionType      string    `json:"action_type"`
+	EstimatedImpact *float64  `json:"estimated_impact,omitempty"`
+	ExpiresAt       time.Time `json:"expires_at"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 // DailyBriefing is the response for the daily autopilot summary
@@ -247,13 +247,13 @@ type DailyBriefing struct {
 
 // UpcomingBill represents an upcoming recurring transaction
 type UpcomingBill struct {
-	ID          uuid.UUID `json:"id"`
-	Title       string    `json:"title"`
-	Amount      float64   `json:"amount"`
-	Currency    string    `json:"currency"`
-	DueDate     time.Time `json:"due_date"`
-	DaysUntil   int       `json:"days_until"`
-	CanAfford   bool      `json:"can_afford"`
+	ID        uuid.UUID `json:"id"`
+	Title     string    `json:"title"`
+	Amount    float64   `json:"amount"`
+	Currency  string    `json:"currency"`
+	DueDate   time.Time `json:"due_date"`
+	DaysUntil int       `json:"days_until"`
+	CanAfford bool      `json:"can_afford"`
 }
 
 // BalanceHealth represents the health of user's balances
@@ -283,4 +283,18 @@ type AgentRecommendedAction struct {
 	Impact      float64 `json:"impact"`
 	Currency    string  `json:"currency"`
 	Urgency     string  `json:"urgency"` // low, medium, high
+}
+
+// AutopilotStatus is the consolidated response for GET /agent/autopilot/status.
+// Covers both config state and live scheduling data so the UI can render the
+// AutopilotCard header ("last scan X ago · next scan at Y") in one call.
+type AutopilotStatus struct {
+	Enabled               bool       `json:"enabled"`
+	DailyAutopilotEnabled bool       `json:"daily_autopilot_enabled"`
+	AutopilotTime         string     `json:"autopilot_time,omitempty"`
+	AutopilotTimezone     string     `json:"autopilot_timezone,omitempty"`
+	LastRunAt             *time.Time `json:"last_run_at,omitempty"`
+	NextRunEstimate       *time.Time `json:"next_run_estimate,omitempty"`
+	PendingPlanCount      int        `json:"pending_plan_count"`
+	PendingApprovalCount  int        `json:"pending_approval_count"`
 }

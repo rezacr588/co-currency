@@ -25,6 +25,7 @@ import type {
   ActionApproval,
   ActionLog,
   AutopilotResult,
+  AutopilotStatus,
   PlanStatus,
   CreatePlanRequest,
   UpdatePlanRequest,
@@ -54,6 +55,7 @@ export const agentKeys = {
     [...agentKeys.all, 'logs', filters] as const,
   briefing: () => [...agentKeys.all, 'briefing'] as const,
   autopilot: () => [...agentKeys.all, 'autopilot'] as const,
+  autopilotStatus: () => [...agentKeys.all, 'autopilot', 'status'] as const,
 };
 
 // ============================================================================
@@ -368,8 +370,23 @@ export function useTriggerAutopilot(
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: agentKeys.briefing() });
       queryClient.invalidateQueries({ queryKey: agentKeys.autopilot() });
+      queryClient.invalidateQueries({ queryKey: agentKeys.autopilotStatus() });
     },
     ...options,
+  });
+}
+
+/**
+ * Hook for the consolidated autopilot status — drives AutopilotCard header.
+ */
+export function useAutopilotStatus(
+  queryOptions?: Omit<UseQueryOptions<AutopilotStatus, Error>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery({
+    queryKey: agentKeys.autopilotStatus(),
+    queryFn: () => api.agent.getAutopilotStatus(),
+    staleTime: STALE_FREQUENT,
+    ...queryOptions,
   });
 }
 
@@ -462,6 +479,7 @@ export default {
   useDailyBriefing,
   useTriggerAutopilot,
   useAutopilotResult,
+  useAutopilotStatus,
   // Combined
   useAgentDashboard,
   useAgentStatus,

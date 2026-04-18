@@ -30,38 +30,40 @@ type databases struct {
 
 // services holds all initialized services.
 type services struct {
-	exchange       *service.ExchangeService
-	auth           *service.AuthService
-	linkedInAuth   *service.LinkedInOAuthService
-	googleAuth     *service.GoogleOAuthService
-	wallet         *service.WalletService
-	coai           *service.CoAIService
-	ai             *service.AIService
-	aiChat         *service.AIChatService
-	goal           *service.GoalService
-	task           *service.TaskService
-	todo           *service.TodoService
-	planner        *service.PlannerService
-	tag            *service.TagService
-	category       *service.CategoryService
-	budget         *service.BudgetService
-	recurring      *service.RecurringService
-	reports        *service.ReportsService
-	subscription   *service.SubscriptionService
-	badge          *service.BadgeService
-	note           *service.NoteService
-	loan           *service.LoanService
-	notification   *service.NotificationService
-	challenge      *service.ChallengeService
-	xp             *service.XPService
-	advice         *service.AdviceService
-	wealth         *service.WealthService
-	news           *service.NewsService
-	mlForecaster   *service.MLForecasterService
-	mlAnomalies    *service.AnomalyDetectorService
-	planEngine     *service.PlanningEngineService
-	actionExecutor *service.ActionExecutor
-	agentRepo      *repository.AgentPlanRepository
+	exchange           *service.ExchangeService
+	auth               *service.AuthService
+	linkedInAuth       *service.LinkedInOAuthService
+	googleAuth         *service.GoogleOAuthService
+	wallet             *service.WalletService
+	coai               *service.CoAIService
+	ai                 *service.AIService
+	aiChat             *service.AIChatService
+	goal               *service.GoalService
+	task               *service.TaskService
+	todo               *service.TodoService
+	planner            *service.PlannerService
+	tag                *service.TagService
+	category           *service.CategoryService
+	budget             *service.BudgetService
+	recurring          *service.RecurringService
+	reports            *service.ReportsService
+	subscription       *service.SubscriptionService
+	badge              *service.BadgeService
+	note               *service.NoteService
+	loan               *service.LoanService
+	notification       *service.NotificationService
+	challenge          *service.ChallengeService
+	xp                 *service.XPService
+	advice             *service.AdviceService
+	wealth             *service.WealthService
+	news               *service.NewsService
+	mlForecaster       *service.MLForecasterService
+	mlAnomalies        *service.AnomalyDetectorService
+	planEngine         *service.PlanningEngineService
+	actionExecutor     *service.ActionExecutor
+	agentRepo          *repository.AgentPlanRepository
+	dailyAutopilot     *service.DailyAutopilotService
+	autopilotScheduler *service.AutopilotScheduler
 
 	// Shutdown handles
 	memoryService  *service.MemoryService
@@ -199,6 +201,37 @@ func initServices(cfg *config.Config, db *databases) *services {
 			svc.actionExecutor.SetLoanService(svc.loan)
 		}
 		log.Info().Msg("Action executor service initialized")
+
+		// Daily autopilot service scans user finances; scheduler drives it on a
+		// fixed interval and wires in notifications + plan creation from
+		// recommendations. Both nil-check their optional deps internally.
+		svc.dailyAutopilot = service.NewDailyAutopilotService(
+			svc.agentRepo,
+			svc.wallet,
+			svc.goal,
+			svc.budget,
+			svc.recurring,
+			svc.subscription,
+			svc.loan,
+			svc.planEngine,
+		)
+		log.Info().Msg("Daily autopilot service initialized")
+
+		if cfg.AutopilotEnabled {
+			svc.autopilotScheduler = service.NewAutopilotScheduler(
+				svc.dailyAutopilot,
+				svc.agentRepo,
+				svc.notification,
+				svc.planEngine,
+				cfg.AutopilotTickInterval,
+			)
+			svc.autopilotScheduler.Start()
+			log.Info().
+				Dur("tick_interval", cfg.AutopilotTickInterval).
+				Msg("Autopilot scheduler started (honors per-user autopilot_time + timezone)")
+		} else {
+			log.Info().Msg("Autopilot scheduler disabled via AUTOPILOT_ENABLED=false")
+		}
 	}
 
 	return svc
@@ -435,7 +468,7 @@ func initAIServices(cfg *config.Config, db *databases, svc *services) {
 	}
 	// Wire up agent tool executor if planning engine is available
 	if svc.planEngine != nil && svc.agentRepo != nil {
-		agentToolExec := service.NewAIAgentToolExecutor(svc.agentRepo, svc.planEngine, nil, svc.actionExecutor)
+		agentToolExec := service.NewAIAgentToolExecutor(svc.agentRepo, svc.planEngine, svc.dailyAutopilot, svc.actionExecutor)
 		svc.aiChat.SetAgentToolExecutor(agentToolExec)
 		log.Info().Msg("Agent tools integrated with AI Chat")
 	}
@@ -637,7 +670,7 @@ func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Hand
 
 	var agentHandler *handler.AgentHandler
 	if svc.planEngine != nil && svc.actionExecutor != nil {
-		agentHandler = handler.NewAgentHandler(svc.planEngine, svc.actionExecutor, wsPublisher)
+		agentHandler = handler.NewAgentHandler(svc.planEngine, svc.actionExecutor, svc.dailyAutopilot, svc.agentRepo, wsPublisher)
 	}
 
 	// Financial DNA handler
