@@ -49,9 +49,12 @@ func publicSitemapURLs() []sitemapURL {
 // registerPublicRoutes registers health endpoints, exchange rate routes,
 // news routes, swagger documentation, SEO files, and static file serving.
 func registerPublicRoutes(r *chi.Mux, h *Handlers, staticFS fs.FS) {
-	// Health check (no rate limiting)
+	// Health check (no rate limiting). Accept HEAD as well so uptime
+	// monitors that default to HEAD (UptimeRobot, Pingdom) don't get 405.
 	r.Get("/health", h.Exchange.Health)
+	r.Head("/health", h.Exchange.Health)
 	r.Get("/health/detailed", h.Exchange.HealthDetailed)
+	r.Head("/health/detailed", h.Exchange.HealthDetailed)
 
 	// Swagger documentation
 	r.Get("/swagger/*", httpSwagger.Handler(

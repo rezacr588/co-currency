@@ -242,7 +242,7 @@ export function MultiStepWizardScreen({
                                 >
                                   <Text
                                     style={{
-                                      color: active ? colors.accentForeground : completed ? '#fff' : colors.mutedForeground,
+                                      color: active ? colors.accentForeground : completed ? colors.primaryForeground : colors.mutedForeground,
                                       fontSize: 11,
                                       fontFamily: 'Inter_700Bold',
                                     }}
@@ -308,7 +308,7 @@ export function MultiStepWizardScreen({
                               >
                                 <Text
                                   style={{
-                                    color: active ? colors.accentForeground : completed ? '#fff' : colors.mutedForeground,
+                                    color: active ? colors.accentForeground : completed ? colors.primaryForeground : colors.mutedForeground,
                                     fontSize: 11,
                                     fontFamily: 'Inter_700Bold',
                                   }}

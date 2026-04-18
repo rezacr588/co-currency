@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, Alert, Platform, KeyboardAvoidingView } from 'react-native';
-import styled from 'styled-components/native';
+import styled, { useTheme } from 'styled-components/native';
 import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Wallet, Check } from 'lucide-react-native';
@@ -10,6 +10,7 @@ import { useLanguage } from '@/src/context/LanguageContext';
 import { useColors } from '@/src/context/ThemeContext';
 import { useToast } from '@/src/components/ui/Toast';
 import { cryptoApi, AddWalletRequest, BlockchainNetwork } from '@/src/api/crypto';
+import { spacing } from '@/src/theme';
 
 const Container = styled.View<{ $bg: string }>`
   flex: 1;
@@ -19,15 +20,15 @@ const Container = styled.View<{ $bg: string }>`
 const Header = styled.View<{ $pt: number; $borderColor: string }>`
   flex-direction: row;
   align-items: center;
-  padding: 16px;
-  padding-top: ${(props) => props.$pt + 16}px;
+  padding: ${spacing.lg}px;
+  padding-top: ${(props) => props.$pt + spacing.lg}px;
   border-bottom-width: 1px;
   border-bottom-color: ${(props) => props.$borderColor};
 `;
 
 const BackButton = styled.TouchableOpacity`
-  padding: 8px;
-  margin-right: 8px;
+  padding: ${spacing.sm}px;
+  margin-right: ${spacing.sm}px;
 `;
 
 const HeaderTitle = styled.Text<{ $color: string }>`
@@ -38,18 +39,18 @@ const HeaderTitle = styled.Text<{ $color: string }>`
 
 const Content = styled.ScrollView`
   flex: 1;
-  padding: 16px;
+  padding: ${spacing.lg}px;
 `;
 
 const FormGroup = styled.View`
-  margin-bottom: 20px;
+  margin-bottom: ${spacing.xl}px;
 `;
 
 const Label = styled.Text<{ $color: string }>`
   font-size: 14px;
   font-weight: 600;
   color: ${(props) => props.$color};
-  margin-bottom: 8px;
+  margin-bottom: ${spacing.sm}px;
 `;
 
 const Input = styled.TextInput<{ $bg: string; $color: string; $borderColor: string }>`
@@ -58,22 +59,22 @@ const Input = styled.TextInput<{ $bg: string; $color: string; $borderColor: stri
   border-width: 1px;
   border-color: ${(props) => props.$borderColor};
   border-radius: 12px;
-  padding: 14px 16px;
+  padding: 14px ${spacing.lg}px;
   font-size: 16px;
 `;
 
 const NetworkGrid = styled.View`
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: ${spacing.sm}px;
 `;
 
-const NetworkOption = styled.TouchableOpacity<{ $bg: string; $selected: boolean; $borderColor: string }>`
-  background-color: ${(props) => (props.$selected ? props.$borderColor + '20' : props.$bg)};
+const NetworkOption = styled.TouchableOpacity<{ $bg: string; $selected: boolean; $borderColor: string; $selectedBg: string }>`
+  background-color: ${(props) => (props.$selected ? props.$selectedBg : props.$bg)};
   border-width: 2px;
   border-color: ${(props) => (props.$selected ? props.$borderColor : 'transparent')};
   border-radius: 12px;
-  padding: 12px 16px;
+  padding: ${spacing.md}px ${spacing.lg}px;
   flex-direction: row;
   align-items: center;
   min-width: 45%;
@@ -118,7 +119,7 @@ const CheckMark = styled.View<{ $bg: string }>`
 const PrimaryToggle = styled.TouchableOpacity<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   border-radius: 12px;
-  padding: 16px;
+  padding: ${spacing.lg}px;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
@@ -129,45 +130,45 @@ const ToggleText = styled.Text<{ $color: string }>`
   color: ${(props) => props.$color};
 `;
 
-const ToggleSwitch = styled.View<{ $active: boolean; $bg: string }>`
+const ToggleSwitch = styled.View<{ $active: boolean; $bg: string; $inactiveBg: string }>`
   width: 48px;
   height: 28px;
   border-radius: 14px;
-  background-color: ${(props) => (props.$active ? props.$bg : '#4b5563')};
+  background-color: ${(props) => (props.$active ? props.$bg : props.$inactiveBg)};
   padding: 2px;
   justify-content: center;
 `;
 
-const ToggleKnob = styled.View<{ $active: boolean }>`
+const ToggleKnob = styled.View<{ $active: boolean; $bg: string }>`
   width: 24px;
   height: 24px;
   border-radius: 12px;
-  background-color: white;
+  background-color: ${(props) => props.$bg};
   align-self: ${(props) => (props.$active ? 'flex-end' : 'flex-start')};
 `;
 
 const SubmitButton = styled.TouchableOpacity<{ $bg: string; $disabled: boolean }>`
   background-color: ${(props) => props.$bg};
   border-radius: 12px;
-  padding: 16px;
+  padding: ${spacing.lg}px;
   align-items: center;
   justify-content: center;
   flex-direction: row;
   opacity: ${(props) => (props.$disabled ? 0.5 : 1)};
-  margin-top: 16px;
+  margin-top: ${spacing.lg}px;
 `;
 
 const SubmitText = styled.Text<{ $color: string }>`
   font-size: 16px;
   font-weight: 600;
   color: ${(props) => props.$color};
-  margin-left: 8px;
+  margin-left: ${spacing.sm}px;
 `;
 
-const ErrorText = styled.Text`
+const ErrorText = styled.Text<{ $color: string }>`
   font-size: 12px;
-  color: #ef4444;
-  margin-top: 4px;
+  color: ${(props) => props.$color};
+  margin-top: ${spacing.xs}px;
 `;
 
 const networks: BlockchainNetwork[] = [
@@ -184,6 +185,7 @@ const networks: BlockchainNetwork[] = [
 export default function AddWalletScreen() {
   const { t } = useLanguage();
   const colors = useColors();
+  const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
@@ -243,7 +245,12 @@ export default function AddWalletScreen() {
   return (
     <Container $bg={colors.background}>
       <Header $pt={insets.top} $borderColor={colors.border}>
-        <BackButton onPress={() => router.back()}>
+        <BackButton
+          onPress={() => router.back()}
+          accessibilityLabel={t('a11yBack') || 'Back'}
+          accessibilityRole="button"
+          hitSlop={8}
+        >
           <ArrowLeft size={24} color={colors.foreground} />
         </BackButton>
         <HeaderTitle $color={colors.foreground}>{t('addWallet') || 'Add Wallet'}</HeaderTitle>
@@ -259,7 +266,7 @@ export default function AddWalletScreen() {
             <Input
               $bg={colors.card}
               $color={colors.foreground}
-              $borderColor={errors.address ? '#ef4444' : colors.border}
+              $borderColor={errors.address ? colors.danger : colors.border}
               placeholder={t('enterWalletAddress') || 'Enter wallet address (0x...)'}
               placeholderTextColor={colors.mutedForeground}
               value={address}
@@ -270,7 +277,7 @@ export default function AddWalletScreen() {
               autoCapitalize="none"
               autoCorrect={false}
             />
-            {errors.address && <ErrorText>{errors.address}</ErrorText>}
+            {errors.address && <ErrorText $color={colors.danger}>{errors.address}</ErrorText>}
           </FormGroup>
 
           <FormGroup>
@@ -282,9 +289,10 @@ export default function AddWalletScreen() {
                   $bg={colors.card}
                   $selected={selectedNetwork === network.id}
                   $borderColor={colors.primary}
+                  $selectedBg={theme.alpha(colors.primary, 0.125)}
                   onPress={() => setSelectedNetwork(network.id)}
                 >
-                  <NetworkIcon $bg={colors.primary + '20'}>
+                  <NetworkIcon $bg={theme.alpha(colors.primary, 0.125)}>
                     <NetworkSymbol $color={colors.primary}>{network.symbol}</NetworkSymbol>
                   </NetworkIcon>
                   <NetworkInfo>
@@ -292,7 +300,7 @@ export default function AddWalletScreen() {
                   </NetworkInfo>
                   {selectedNetwork === network.id && (
                     <CheckMark $bg={colors.primary}>
-                      <Check size={12} color="#fff" />
+                      <Check size={12} color={colors.primaryForeground} />
                     </CheckMark>
                   )}
                 </NetworkOption>
@@ -316,8 +324,8 @@ export default function AddWalletScreen() {
           <FormGroup>
             <PrimaryToggle $bg={colors.card} onPress={() => setIsPrimary(!isPrimary)}>
               <ToggleText $color={colors.foreground}>{t('setPrimary') || 'Set as primary wallet'}</ToggleText>
-              <ToggleSwitch $active={isPrimary} $bg={colors.primary}>
-                <ToggleKnob $active={isPrimary} />
+              <ToggleSwitch $active={isPrimary} $bg={colors.primary} $inactiveBg={colors.borderStrong}>
+                <ToggleKnob $active={isPrimary} $bg={colors.primaryForeground} />
               </ToggleSwitch>
             </PrimaryToggle>
           </FormGroup>
@@ -328,8 +336,8 @@ export default function AddWalletScreen() {
             onPress={handleSubmit}
             disabled={!isValid || addMutation.isPending}
           >
-            <Wallet size={20} color="#fff" />
-            <SubmitText $color="#fff">
+            <Wallet size={20} color={colors.primaryForeground} />
+            <SubmitText $color={colors.primaryForeground}>
               {addMutation.isPending ? 'Adding...' : t('connectWallet') || 'Connect Wallet'}
             </SubmitText>
           </SubmitButton>

@@ -14,7 +14,7 @@ import { api } from '../../api';
 import { getCurrencyDisplay } from '../../utils/format';
 import { LoadingSpinner } from './LoadingSpinner';
 import { HIT_SLOP_SM } from '../../constants/hitSlop';
-import { ICON_SIZES, ICON_COLOR_MUTED } from '../../constants/icons';
+import { ICON_SIZES, useIconColors } from '../../constants/icons';
 import { haptics } from '../../utils/haptics';
 import { useTheme } from 'styled-components/native';
 
@@ -35,6 +35,7 @@ export function CurrencyPicker({
 }: CurrencyPickerProps) {
   const theme = useTheme();
   const colors = theme.colors;
+  const iconColors = useIconColors();
   const [search, setSearch] = useState('');
 
   const { data: currencies, isPending } = useQuery({
@@ -62,14 +63,14 @@ export function CurrencyPicker({
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
           <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{title}</Text>
           <Pressable onPress={onClose} hitSlop={HIT_SLOP_SM} style={{ padding: 8 }}>
-            <X size={ICON_SIZES.default} color={ICON_COLOR_MUTED} />
+            <X size={ICON_SIZES.default} color={iconColors.muted} />
           </Pressable>
         </View>
 
         {/* Search */}
         <View style={{ padding: 16 }}>
           <View style={{ backgroundColor: colors.card, borderRadius: 12, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
-            <Search size={ICON_SIZES.md} color={ICON_COLOR_MUTED} />
+            <Search size={ICON_SIZES.md} color={iconColors.muted} />
             <TextInput
               style={{ flex: 1, paddingVertical: 12, paddingHorizontal: 12, color: colors.foreground }}
               placeholder="Search currency..."

@@ -21,8 +21,9 @@ function WalletDetailsScreen() {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
+  const { alpha } = theme;
   const insets = useSafeAreaInsets();
-  const { width, isCompactPhone, isDesktop, isTablet } = useScreenLayout();
+  const { isCompactPhone, isDesktop, isTablet } = useScreenLayout();
   const bottomPadding = isDesktop || isTablet ? insets.bottom : insets.bottom + 96;
 
   // Balance cards: 3 cols on desktop, 2 cols on tablet/mobile
@@ -199,7 +200,7 @@ function WalletDetailsScreen() {
               style={({ pressed }) => [{
                 flexDirection: 'row',
                 alignItems: 'center',
-                backgroundColor: showRealValue ? colors.accent + '20' : colors.muted,
+                backgroundColor: showRealValue ? alpha(colors.accent, 0.125) : colors.muted,
                 paddingHorizontal: 10,
                 paddingVertical: 5,
                 borderRadius: 16,
@@ -252,7 +253,7 @@ function WalletDetailsScreen() {
                           top: 0,
                           bottom: 0,
                           width: 3,
-                          backgroundColor: accentColor + '80',
+                          backgroundColor: alpha(accentColor, 0.5),
                           borderTopLeftRadius: 12,
                           borderBottomLeftRadius: 12,
                         }}
@@ -261,7 +262,7 @@ function WalletDetailsScreen() {
                         <Text style={{ fontSize: 24, marginEnd: 8 }}>{display.flag || '🌐'}</Text>
                         <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 14 }}>{balance.currency}</Text>
                         {showRealValue && exposure && (
-                          <View style={{ backgroundColor: accentColor + '20', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginStart: 6 }}>
+                          <View style={{ backgroundColor: alpha(accentColor, 0.125), paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginStart: 6 }}>
                             <Text style={{ fontSize: 9, color: accentColor, fontFamily: 'Inter_500Medium' }}>
                               {inflationRate.toFixed(1)}%
                             </Text>

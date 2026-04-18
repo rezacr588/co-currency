@@ -16,7 +16,7 @@ import { haptics } from '../../../utils/haptics';
 import { readJSON, removeStorage, writeJSON } from '../../../utils/storage';
 import { isValidPlannerDueDate, normalizePlannerDueDate } from '../../../utils/plannerDate';
 import type { Goal } from '../../../types/goal';
-import { COLUMN_ORDER, PRIORITY_COLORS, getStatusLabel } from '../../../utils/plannerConstants';
+import { COLUMN_ORDER, getStatusLabel, usePriorityColors } from '../../../utils/plannerConstants';
 import type {
   PlannerStatus,
   Task,
@@ -98,6 +98,7 @@ export function TaskWizardModal({
 }: TaskWizardModalProps) {
   const theme = useTheme();
   const colors = theme.colors;
+  const priorityColors = usePriorityColors();
   const { t } = useLanguage();
   const { isCompactPhone, isPhone } = useScreenLayout();
   const isEditMode = mode === 'edit';
@@ -438,8 +439,8 @@ export function TaskWizardModal({
               <View
                 style={{
                   borderWidth: 1,
-                  borderColor: colors.accent + '44',
-                  backgroundColor: colors.accent + '12',
+                  borderColor: theme.alpha(colors.accent, 0.27),
+                  backgroundColor: theme.alpha(colors.accent, 0.07),
                   borderRadius: 16,
                   padding: 14,
                   gap: 10,
@@ -512,7 +513,7 @@ export function TaskWizardModal({
                     placeholderTextColor={colors.placeholder}
                     maxLength={200}
                     style={{
-                      borderWidth: 1, borderColor: title.trim() ? colors.accent + '44' : colors.border,
+                      borderWidth: 1, borderColor: title.trim() ? theme.alpha(colors.accent, 0.27) : colors.border,
                       backgroundColor: colors.card,
                       borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: colors.foreground,
                       fontSize: 15, fontFamily: 'Inter_500Medium',
@@ -546,10 +547,13 @@ export function TaskWizardModal({
                       <Pressable
                         key={s}
                         onPress={() => setSelectedStatus(s)}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: selectedStatus === s }}
+                        accessibilityLabel={statusLabel(s)}
                         style={({ pressed }) => [{
                           paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, borderWidth: 1,
                           borderColor: selectedStatus === s ? colors.accent : colors.border,
-                          backgroundColor: selectedStatus === s ? colors.accent + '22' : colors.card,
+                          backgroundColor: selectedStatus === s ? theme.alpha(colors.accent, 0.13) : colors.card,
                         }, pressed && { opacity: 0.72 }]}
                       >
                         <Text style={{
@@ -573,9 +577,11 @@ export function TaskWizardModal({
                   </Text>
                   <Pressable
                     onPress={() => setShowDatePicker(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('plannerSelectDueDate') || 'Select due date'}
                     style={({ pressed }) => [{
                       borderWidth: 1,
-                      borderColor: dueDateValidationError ? colors.danger : dueDate ? colors.accent + '44' : colors.border,
+                      borderColor: dueDateValidationError ? colors.danger : dueDate ? theme.alpha(colors.accent, 0.27) : colors.border,
                       backgroundColor: colors.card,
                       borderRadius: 12,
                       paddingHorizontal: 14,
@@ -591,7 +597,7 @@ export function TaskWizardModal({
                     </Text>
                     <View style={{
                       paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
-                      backgroundColor: colors.accent + '18',
+                      backgroundColor: theme.alpha(colors.accent, 0.1),
                       alignSelf: isCompactPhone ? 'flex-start' : 'auto',
                     }}>
                       <Text style={{ color: colors.accent, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>
@@ -612,7 +618,7 @@ export function TaskWizardModal({
                   </Text>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     {(['low', 'medium', 'high'] as const).map((p) => {
-                      const badge = PRIORITY_COLORS[p];
+                      const badge = priorityColors[p];
                       return (
                         <Pressable
                           key={p}
@@ -620,9 +626,12 @@ export function TaskWizardModal({
                             setSelectedPriority(p);
                             void haptics.selection();
                           }}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected: selectedPriority === p }}
+                          accessibilityLabel={t(`priority${p.charAt(0).toUpperCase() + p.slice(1)}` as any) || p}
                           style={({ pressed }) => [{
                             flex: 1, alignItems: 'center', borderRadius: 10, borderWidth: 1,
-                            borderColor: selectedPriority === p ? badge.text + '55' : colors.border,
+                            borderColor: selectedPriority === p ? theme.alpha(badge.text, 0.33) : colors.border,
                             backgroundColor: selectedPriority === p ? badge.bg : colors.card,
                             paddingVertical: 12, minHeight: 44, justifyContent: 'center',
                           }, pressed && { opacity: 0.72 }]}
@@ -648,10 +657,12 @@ export function TaskWizardModal({
                       <Pressable
                         key={mode}
                         onPress={() => setReminderMode(mode)}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: reminderMode === mode }}
                         style={({ pressed }) => [{
                           flex: 1, alignItems: 'center', borderRadius: 10, borderWidth: 1,
                           borderColor: reminderMode === mode ? colors.accent : colors.border,
-                          backgroundColor: reminderMode === mode ? colors.accent + '22' : colors.card,
+                          backgroundColor: reminderMode === mode ? theme.alpha(colors.accent, 0.13) : colors.card,
                           paddingVertical: 10,
                         }, pressed && { opacity: 0.72 }]}
                       >
@@ -702,6 +713,8 @@ export function TaskWizardModal({
                         <Pressable
                           key={tag.id}
                           onPress={() => setSelectedTagIDs((prev) => prev.filter((id) => id !== tag.id))}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${tag.name} — ${t('a11yDelete') || 'Remove'}`}
                           style={({ pressed }) => [{
                             flexDirection: 'row',
                             alignItems: 'center',
@@ -711,7 +724,7 @@ export function TaskWizardModal({
                             borderRadius: 999,
                             borderWidth: 1,
                             borderColor: colors.accent,
-                            backgroundColor: colors.accent + '24',
+                            backgroundColor: theme.alpha(colors.accent, 0.14),
                           }, pressed && { opacity: 0.78 }]}
                         >
                           <Text style={{ color: colors.accent, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>
@@ -758,7 +771,7 @@ export function TaskWizardModal({
                         gap: 10,
                         borderWidth: 1,
                         borderColor: colors.accent,
-                        backgroundColor: colors.accent + '14',
+                        backgroundColor: theme.alpha(colors.accent, 0.08),
                         borderRadius: 14,
                         paddingHorizontal: 12,
                         paddingVertical: 10,
@@ -772,7 +785,12 @@ export function TaskWizardModal({
                           {Math.round(selectedGoal.progress)}% {(t('plannerDone') || 'Done').toLowerCase()}
                         </Text>
                       </View>
-                      <Pressable onPress={() => setSelectedGoalID(undefined)} hitSlop={6}>
+                      <Pressable
+                        onPress={() => setSelectedGoalID(undefined)}
+                        hitSlop={6}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('a11yClearFilter') || 'Clear'}
+                      >
                         <X size={14} color={colors.accent} />
                       </Pressable>
                     </View>
@@ -830,10 +848,13 @@ export function TaskWizardModal({
               <View style={{ gap: contentGap }}>
                 <Pressable
                   onPress={() => setAutoLedgerEnabled((prev) => !prev)}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: autoLedgerEnabled }}
+                  accessibilityLabel={t('plannerAutoLedger') || 'Auto-ledger on completion'}
                   style={({ pressed }) => [{
                     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
                     borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 10,
-                    backgroundColor: autoLedgerEnabled ? colors.accent + '18' : colors.card,
+                    backgroundColor: autoLedgerEnabled ? theme.alpha(colors.accent, 0.1) : colors.card,
                   }, pressed && { opacity: 0.76 }]}
                 >
                   <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>
@@ -851,11 +872,14 @@ export function TaskWizardModal({
                         <Pressable
                           key={type}
                           onPress={() => setLedgerType(type)}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected: ledgerType === type }}
+                          accessibilityLabel={type.toUpperCase()}
                           style={({ pressed }) => [{
                             flex: 1, borderWidth: 1,
                             borderColor: ledgerType === type ? colors.accent : colors.border,
                             borderRadius: 10, paddingVertical: 8, alignItems: 'center',
-                            backgroundColor: ledgerType === type ? colors.accent + '22' : colors.background,
+                            backgroundColor: ledgerType === type ? theme.alpha(colors.accent, 0.13) : colors.background,
                           }, pressed && { opacity: 0.72 }]}
                         >
                           <Text style={{ color: ledgerType === type ? colors.accent : colors.foreground }}>
@@ -946,7 +970,7 @@ export function TaskWizardModal({
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('plannerReviewPriority') || 'Priority:'}</Text>
                       {(() => {
-                        const badge = PRIORITY_COLORS[selectedPriority];
+                        const badge = priorityColors[selectedPriority];
                         return (
                           <View style={{ backgroundColor: badge.bg, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 1 }}>
                             <Text style={{ color: badge.text, fontSize: 11, fontFamily: 'Inter_600SemiBold' }}>

@@ -1,4 +1,4 @@
-import { View, Text, Pressable, ActivityIndicator, FlatList } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, AlertCircle, AlertOctagon, Bell, RefreshCw, CheckCircle, ArrowRight } from 'lucide-react-native';
 import { api } from '../../../api';
@@ -6,6 +6,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { haptics } from '../../../utils/haptics';
 import { Card } from '../../ui';
+import { HIT_SLOP_SM } from '../../../constants/hitSlop';
 import type { Anomaly, AnomalyDetectionResponse } from '../../../api/forecasting';
 
 interface AnomalyCardProps {
@@ -16,33 +17,25 @@ interface AnomalyCardProps {
   onAcknowledge?: (anomaly: Anomaly) => void;
 }
 
-const severityConfig = {
-  low: {
-    icon: Bell,
-    color: '#3b82f6', // blue
-    label: 'Low',
-  },
-  medium: {
-    icon: AlertCircle,
-    color: '#f59e0b', // amber
-    label: 'Medium',
-  },
-  high: {
-    icon: AlertTriangle,
-    color: '#f97316', // orange
-    label: 'High',
-  },
-  critical: {
-    icon: AlertOctagon,
-    color: '#ef4444', // red
-    label: 'Critical',
-  },
-};
+type SeverityLevel = 'low' | 'medium' | 'high' | 'critical';
+
+// Severity colors map to semantic + palette tokens. Called as a hook so
+// refreshed theme colors (dark/light) propagate automatically.
+function useSeverityConfig(): Record<SeverityLevel, { icon: typeof Bell; color: string; label: string }> {
+  const theme = useTheme();
+  return {
+    low: { icon: Bell, color: theme.colors.info, label: 'Low' },
+    medium: { icon: AlertCircle, color: theme.colors.warning, label: 'Medium' },
+    high: { icon: AlertTriangle, color: theme.colors.palette.orange, label: 'High' },
+    critical: { icon: AlertOctagon, color: theme.colors.danger, label: 'Critical' },
+  };
+}
 
 function AnomalyItem({ anomaly, onPress }: { anomaly: Anomaly; onPress?: () => void }) {
   const theme = useTheme();
   const colors = theme.colors;
-  const config = severityConfig[anomaly.severity];
+  const severityConfig = useSeverityConfig();
+  const config = severityConfig[anomaly.severity as SeverityLevel];
   const Icon = config.icon;
 
   const formatCurrency = (amount: number) => {
@@ -65,11 +58,12 @@ function AnomalyItem({ anomaly, onPress }: { anomaly: Anomaly; onPress?: () => v
         haptics.light();
         onPress?.();
       }}
+      accessibilityRole="button"
       style={{
         flexDirection: 'row',
         alignItems: 'center',
         padding: theme.spacing.md,
-        backgroundColor: `${config.color}10`,
+        backgroundColor: theme.alpha(config.color, 0.06),
         borderRadius: theme.radii.md,
         borderLeftWidth: 3,
         borderLeftColor: config.color,
@@ -81,7 +75,7 @@ function AnomalyItem({ anomaly, onPress }: { anomaly: Anomaly; onPress?: () => v
           width: 36,
           height: 36,
           borderRadius: 18,
-          backgroundColor: `${config.color}20`,
+          backgroundColor: theme.alpha(config.color, 0.125),
           alignItems: 'center',
           justifyContent: 'center',
         }}
@@ -112,6 +106,7 @@ export function AnomalyCard({ threshold = 2.5, compact = false, maxItems = 5, on
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
+  const severityConfig = useSeverityConfig();
 
   const { data, isLoading, isError, error, refetch } = useQuery<AnomalyDetectionResponse>({
     queryKey: ['forecasting', 'anomalies', { threshold }],
@@ -178,7 +173,7 @@ export function AnomalyCard({ threshold = 2.5, compact = false, maxItems = 5, on
     const highSeverityCount = anomalies.filter((a) => a.severity === 'high' || a.severity === 'critical').length;
 
     return (
-      <Pressable onPress={onViewAll}>
+      <Pressable onPress={onViewAll} accessibilityRole="button">
         <Card style={{ padding: theme.spacing.md }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -187,7 +182,7 @@ export function AnomalyCard({ threshold = 2.5, compact = false, maxItems = 5, on
                   width: 40,
                   height: 40,
                   borderRadius: 20,
-                  backgroundColor: highSeverityCount > 0 ? `${colors.danger}20` : `${colors.warning}20`,
+                  backgroundColor: highSeverityCount > 0 ? theme.alpha(colors.danger, 0.125) : theme.alpha(colors.warning, 0.125),
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
@@ -223,15 +218,20 @@ export function AnomalyCard({ threshold = 2.5, compact = false, maxItems = 5, on
             style={{
               backgroundColor: colors.danger,
               borderRadius: 10,
-              paddingHorizontal: 8,
+              paddingHorizontal: theme.spacing.sm,
               paddingVertical: 2,
               marginLeft: theme.spacing.sm,
             }}
           >
-            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>{anomalies.length}</Text>
+            <Text style={{ color: colors.primaryForeground, fontSize: 12, fontWeight: '600' }}>{anomalies.length}</Text>
           </View>
         </View>
-        <Pressable onPress={handleRefresh} hitSlop={8}>
+        <Pressable
+          onPress={handleRefresh}
+          accessibilityRole="button"
+          accessibilityLabel={t('a11yRefresh') || 'Refresh'}
+          hitSlop={HIT_SLOP_SM}
+        >
           <RefreshCw size={18} color={colors.mutedForeground} />
         </Pressable>
       </View>
@@ -273,6 +273,7 @@ export function AnomalyCard({ threshold = 2.5, compact = false, maxItems = 5, on
             haptics.light();
             onViewAll();
           }}
+          accessibilityRole="button"
           style={{
             marginTop: theme.spacing.md,
             flexDirection: 'row',

@@ -83,6 +83,8 @@ export function PlannerStatusSheet({
             <Pressable
               onPress={onClose}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('a11yClose') || 'Close'}
               style={{
                 width: 36,
                 height: 36,
@@ -109,6 +111,9 @@ export function PlannerStatusSheet({
                   }
                 }}
                 disabled={selected}
+                accessibilityRole="radio"
+                accessibilityState={{ selected, disabled: selected }}
+                accessibilityLabel={getStatusLabel(status, t as (key: string) => string | undefined)}
                 style={({ pressed }) => [
                   {
                     flexDirection: 'row',
@@ -116,7 +121,7 @@ export function PlannerStatusSheet({
                     justifyContent: 'space-between',
                     borderWidth: 1,
                     borderColor: selected ? colors.accent : colors.border,
-                    backgroundColor: selected ? colors.accent + '14' : colors.card,
+                    backgroundColor: selected ? theme.alpha(colors.accent, 0.08) : colors.card,
                     borderRadius: 14,
                     paddingHorizontal: 14,
                     paddingVertical: 14,

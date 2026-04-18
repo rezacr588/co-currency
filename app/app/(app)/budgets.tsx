@@ -25,6 +25,7 @@ import { useToast } from '../../src/components/ui/Toast';
 import { Button } from '../../src/components/ui/Button';
 import { FormError } from '../../src/components/ui/FormError';
 import { SkeletonCard, SkeletonList } from '../../src/components/ui/Skeleton';
+import { EmptyState } from '../../src/components/ui/EmptyState';
 import { haptics } from '../../src/utils/haptics';
 import { COMMON_CURRENCIES } from '../../src/constants/currencies';
 import type { Budget, CreateBudgetRequest, UpdateBudgetRequest } from '../../src/types/goal';
@@ -159,11 +160,11 @@ export default function BudgetsScreen() {
         keyboardDismissMode="on-drag"
       >
         {isError ? (
-          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger + '33', padding: theme.spacing.xxl, borderRadius: 12, alignItems: 'center', maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
-            <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium', marginBottom: 8 }}>{t('failedToLoadBudgets') || 'Failed to load budgets'}</Text>
+          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: theme.alpha(colors.danger, 0.2), padding: theme.spacing.xxl, borderRadius: theme.radii.md, alignItems: 'center', maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
+            <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium', marginBottom: theme.spacing.sm }}>{t('failedToLoadBudgets') || 'Failed to load budgets'}</Text>
             <Pressable
               onPress={() => refetch()}
-              style={{ backgroundColor: colors.danger + '33', paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.sm, borderRadius: 8, cursor: 'pointer' }}
+              style={{ backgroundColor: theme.alpha(colors.danger, 0.2), paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.sm, borderRadius: theme.radii.sm, cursor: 'pointer' }}
             >
               <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium' }}>{t('retry') || 'Retry'}</Text>
             </Pressable>
@@ -171,16 +172,20 @@ export default function BudgetsScreen() {
         ) : isPending ? (
           <SkeletonList count={3} ItemComponent={SkeletonCard} />
         ) : budgets.length === 0 ? (
-          <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: theme.spacing.xxl, borderRadius: 12, alignItems: 'center', maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
-            <PieChart size={48} color={colors.placeholder} />
-            <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginTop: theme.spacing.lg }}>{t('noBudgets')}</Text>
-            <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: theme.spacing.sm }}>{t('noBudgetsDescription')}</Text>
+          <View style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
+            <EmptyState
+              icon={PieChart}
+              title={t('emptyNoBudgetsTitle') || 'No budgets created'}
+              description={t('emptyNoBudgetsDesc') || 'Create a budget to manage your spending.'}
+              actionLabel={t('emptyNoBudgetsCta') || 'Create budget'}
+              onAction={() => { haptics.light(); setShowForm(true); }}
+            />
           </View>
         ) : (
           <View style={{
             flexDirection: 'row',
             flexWrap: 'wrap',
-            gap: 16,
+            gap: theme.spacing.lg,
           }}>
             {budgets.map((budget) => (
               <View key={budget.id} style={{
@@ -216,16 +221,16 @@ function BudgetCard({ budget, onEdit, onDelete }: { budget: Budget; onEdit: () =
   const categoryColor = CATEGORY_COLORS[budget.category.toLowerCase()] || colors.accent;
 
   return (
-    <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: theme.spacing.lg, borderRadius: 12 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+    <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: theme.spacing.lg, borderRadius: theme.radii.md }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
           {budget.is_over_budget || budget.is_near_limit ? (
             <View
               style={{
-                padding: 8,
-                borderRadius: 8,
-                marginEnd: 12,
-                backgroundColor: budget.is_over_budget ? `${colors.danger}26` : `${colors.accent}26`,
+                padding: theme.spacing.sm,
+                borderRadius: theme.radii.sm,
+                marginEnd: theme.spacing.md,
+                backgroundColor: budget.is_over_budget ? theme.alpha(colors.danger, 0.15) : theme.alpha(colors.accent, 0.15),
               }}
             >
               <AlertTriangle
@@ -234,7 +239,7 @@ function BudgetCard({ budget, onEdit, onDelete }: { budget: Budget; onEdit: () =
               />
             </View>
           ) : (
-            <View style={{ marginEnd: 12 }}>
+            <View style={{ marginEnd: theme.spacing.md }}>
               <StyledCategoryIcon
                 category={budget.category}
                 size={22}
@@ -249,16 +254,16 @@ function BudgetCard({ budget, onEdit, onDelete }: { budget: Budget; onEdit: () =
             <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>{t(budget.period)}</Text>
           </View>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
           {budget.is_over_budget && (
-            <View style={{ backgroundColor: colors.danger + '33', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, marginEnd: 4 }}>
+            <View style={{ backgroundColor: theme.alpha(colors.danger, 0.2), paddingHorizontal: theme.spacing.sm, paddingVertical: theme.spacing.xs, borderRadius: theme.radii.sm, marginEnd: theme.spacing.xs }}>
               <Text style={{ color: colors.danger, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>{t('overBudget')}</Text>
             </View>
           )}
           <Pressable
             onPress={onEdit}
             style={({ pressed }) => [
-              { padding: 8, borderRadius: 8, backgroundColor: colors.secondary, cursor: 'pointer' },
+              { padding: theme.spacing.sm, borderRadius: theme.radii.sm, backgroundColor: colors.secondary, cursor: 'pointer' },
               pressed && { opacity: 0.7 },
             ]}
             accessibilityLabel={t('editBudget') || 'Edit Budget'}
@@ -270,7 +275,7 @@ function BudgetCard({ budget, onEdit, onDelete }: { budget: Budget; onEdit: () =
           <Pressable
             onPress={onDelete}
             style={({ pressed }) => [
-              { padding: 8, borderRadius: 8, backgroundColor: colors.danger + '1A', cursor: 'pointer' },
+              { padding: theme.spacing.sm, borderRadius: theme.radii.sm, backgroundColor: theme.alpha(colors.danger, 0.1), cursor: 'pointer' },
               pressed && { opacity: 0.7 },
             ]}
             accessibilityLabel={t('delete') || 'Delete'}
@@ -283,11 +288,11 @@ function BudgetCard({ budget, onEdit, onDelete }: { budget: Budget; onEdit: () =
       </View>
 
       {/* Progress Bar */}
-      <View style={{ height: 12, backgroundColor: colors.secondary, borderRadius: 9999, marginBottom: 8, overflow: 'hidden' }}>
+      <View style={{ height: 12, backgroundColor: colors.secondary, borderRadius: theme.radii.full, marginBottom: theme.spacing.sm, overflow: 'hidden' }}>
         <View
           style={{
             height: '100%',
-            borderRadius: 9999,
+            borderRadius: theme.radii.full,
             width: `${Math.min(progressPercent, 100)}%`,
             backgroundColor: budget.is_over_budget
               ? colors.danger
@@ -307,7 +312,7 @@ function BudgetCard({ budget, onEdit, onDelete }: { budget: Budget; onEdit: () =
         </Text>
       </View>
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: theme.spacing.md, paddingTop: theme.spacing.md, borderTopWidth: 1, borderTopColor: colors.border }}>
         <View>
           <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('remaining')}</Text>
           <Text style={{ fontFamily: 'Inter_600SemiBold', color: budget.remaining >= 0 ? colors.success : colors.danger }}>
@@ -478,9 +483,9 @@ function BudgetFormModal({
         >
           <FormError message={error} />
 
-          <View style={{ marginBottom: 24 }}>
-            <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>{t('category')}</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          <View style={{ marginBottom: theme.spacing.xxl }}>
+            <Text style={{ color: colors.mutedForeground, marginBottom: theme.spacing.sm }}>{t('category')}</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
               {CATEGORIES.map((cat) => {
                 const isSelected = category === cat;
                 const catColor = CATEGORY_COLORS[cat.toLowerCase()] || colors.placeholder;
@@ -503,21 +508,23 @@ function BudgetFormModal({
                       borderColor: isSelected ? 'transparent' : getCategoryBackground(cat, 0.25),
                       paddingHorizontal: theme.spacing.lg,
                       paddingVertical: theme.spacing.sm,
-                      borderRadius: 12,
+                      borderRadius: theme.radii.md,
                       flexDirection: 'row',
                       alignItems: 'center',
-                      gap: 8,
+                      gap: theme.spacing.sm,
                       opacity: isEditing && !isSelected ? 0.4 : 1,
                     }}
+                    accessibilityLabel={t(cat) || cat}
+                    accessibilityRole="button"
                   >
                     <CategoryIcon
                       category={cat}
                       size={16}
-                      color={isSelected ? '#ffffff' : catColor}
+                      color={isSelected ? colors.primaryForeground : catColor}
                     />
                     <Text
                       style={{
-                        color: isSelected ? '#ffffff' : catColor,
+                        color: isSelected ? colors.primaryForeground : catColor,
                         fontFamily: isSelected ? 'Inter_600SemiBold' : 'Inter_500Medium',
                       }}
                     >
@@ -530,9 +537,9 @@ function BudgetFormModal({
           </View>
 
           <View style={{ marginBottom: theme.spacing.xxl }}>
-            <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>{t('amount')}</Text>
+            <Text style={{ color: colors.mutedForeground, marginBottom: theme.spacing.sm }}>{t('amount')}</Text>
             <TextInput
-              style={{ backgroundColor: colors.card, padding: theme.spacing.lg, borderRadius: 12, color: colors.foreground, fontSize: 18, outlineStyle: 'none' } as any}
+              style={{ backgroundColor: colors.card, padding: theme.spacing.lg, borderRadius: theme.radii.md, color: colors.foreground, fontSize: 18, outlineStyle: 'none' } as any}
               value={amount}
               onChangeText={setAmount}
               keyboardType="decimal-pad"
@@ -542,10 +549,10 @@ function BudgetFormModal({
           </View>
 
           {/* Currency Picker */}
-          <View style={{ marginBottom: 24 }}>
-            <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>{t('currency') || 'Currency'}</Text>
+          <View style={{ marginBottom: theme.spacing.xxl }}>
+            <Text style={{ color: colors.mutedForeground, marginBottom: theme.spacing.sm }}>{t('currency') || 'Currency'}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
                 {COMMON_CURRENCIES.map((code) => {
                   const display = getCurrencyDisplay(code);
                   const isSelected = currency === code;
@@ -566,7 +573,7 @@ function BudgetFormModal({
                           gap: 6,
                           paddingHorizontal: theme.spacing.lg,
                           paddingVertical: 10,
-                          borderRadius: 12,
+                          borderRadius: theme.radii.md,
                           backgroundColor: isSelected ? colors.accent : colors.card,
                           borderWidth: 1,
                           borderColor: isSelected ? colors.accent : colors.border,
@@ -575,6 +582,8 @@ function BudgetFormModal({
                         },
                         pressed && !isEditing && { opacity: 0.7 },
                       ]}
+                      accessibilityLabel={code}
+                      accessibilityRole="button"
                     >
                       <Text style={{ fontSize: 16 }}>{display.flag || ''}</Text>
                       <Text style={{
@@ -592,13 +601,15 @@ function BudgetFormModal({
           </View>
 
           <View style={{ marginBottom: theme.spacing.xxl }}>
-            <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>{t('period')}</Text>
-            <View style={{ flexDirection: 'row', gap: 12 }}>
+            <Text style={{ color: colors.mutedForeground, marginBottom: theme.spacing.sm }}>{t('period')}</Text>
+            <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
               {PERIODS.map((p) => (
                 <Pressable
                   key={p}
                   onPress={() => { haptics.selection(); setPeriod(p); }}
-                  style={{ flex: 1, padding: theme.spacing.lg, borderRadius: 12, alignItems: 'center', backgroundColor: period === p ? colors.accent : colors.card, cursor: 'pointer' }}
+                  accessibilityLabel={t(p) || p}
+                  accessibilityRole="button"
+                  style={{ flex: 1, padding: theme.spacing.lg, borderRadius: theme.radii.md, alignItems: 'center', backgroundColor: period === p ? colors.accent : colors.card, cursor: 'pointer' }}
                 >
                   <Text style={{ color: period === p ? colors.accentForeground : colors.foreground, fontFamily: period === p ? 'Inter_600SemiBold' : undefined }}>
                     {t(p)}

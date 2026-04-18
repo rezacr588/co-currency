@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, RefreshControl, Alert, Linking } from 'react-native';
-import styled from 'styled-components/native';
+import styled, { useTheme } from 'styled-components/native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, RefreshCw, Trash2, Copy, ExternalLink, Send, ArrowDownLeft, ArrowUpRight, Repeat } from 'lucide-react-native';
@@ -13,6 +13,7 @@ import { useToast } from '@/src/components/ui/Toast';
 import { cryptoApi, WalletResponse, CryptoTransaction } from '@/src/api/crypto';
 import { LoadingSpinner } from '@/src/components/ui/LoadingSpinner';
 import { formatCurrency } from '@/src/utils/format';
+import { spacing } from '@/src/theme';
 
 const Container = styled.View<{ $bg: string }>`
   flex: 1;
@@ -23,8 +24,8 @@ const Header = styled.View<{ $pt: number; $borderColor: string }>`
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
-  padding-top: ${(props) => props.$pt + 16}px;
+  padding: ${spacing.lg}px;
+  padding-top: ${(props) => props.$pt + spacing.lg}px;
   border-bottom-width: 1px;
   border-bottom-color: ${(props) => props.$borderColor};
 `;
@@ -35,8 +36,8 @@ const HeaderLeft = styled.View`
 `;
 
 const BackButton = styled.TouchableOpacity`
-  padding: 8px;
-  margin-right: 8px;
+  padding: ${spacing.sm}px;
+  margin-right: ${spacing.sm}px;
 `;
 
 const HeaderTitle = styled.Text<{ $color: string }>`
@@ -47,7 +48,7 @@ const HeaderTitle = styled.Text<{ $color: string }>`
 
 const HeaderActions = styled.View`
   flex-direction: row;
-  gap: 8px;
+  gap: ${spacing.sm}px;
 `;
 
 const IconButton = styled.TouchableOpacity<{ $bg: string }>`
@@ -64,15 +65,15 @@ const Content = styled.ScrollView`
 `;
 
 const WalletHeader = styled.View`
-  padding: 20px;
+  padding: ${spacing.xl}px;
   align-items: center;
 `;
 
 const NetworkBadge = styled.View<{ $bg: string }>`
-  padding: 6px 12px;
+  padding: 6px ${spacing.md}px;
   border-radius: 20px;
   background-color: ${(props) => props.$bg};
-  margin-bottom: 8px;
+  margin-bottom: ${spacing.sm}px;
 `;
 
 const NetworkText = styled.Text<{ $color: string }>`
@@ -85,7 +86,7 @@ const NetworkText = styled.Text<{ $color: string }>`
 const AddressRow = styled.TouchableOpacity`
   flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: ${spacing.sm}px;
 `;
 
 const AddressText = styled.Text<{ $color: string }>`
@@ -98,18 +99,18 @@ const TotalValue = styled.Text<{ $color: string }>`
   font-size: 36px;
   font-weight: 700;
   color: ${(props) => props.$color};
-  margin-top: 16px;
+  margin-top: ${spacing.lg}px;
 `;
 
 const Section = styled.View`
-  padding: 16px;
+  padding: ${spacing.lg}px;
 `;
 
 const SectionHeader = styled.View`
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: ${spacing.md}px;
 `;
 
 const SectionTitle = styled.Text<{ $color: string }>`
@@ -122,7 +123,7 @@ const TokenCard = styled.View<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   border-radius: 12px;
   padding: 14px;
-  margin-bottom: 8px;
+  margin-bottom: ${spacing.sm}px;
   flex-direction: row;
   align-items: center;
 `;
@@ -134,7 +135,7 @@ const TokenIcon = styled.View<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   justify-content: center;
   align-items: center;
-  margin-right: 12px;
+  margin-right: ${spacing.md}px;
 `;
 
 const TokenSymbol = styled.Text<{ $color: string }>`
@@ -169,9 +170,9 @@ const TokenValueText = styled.Text<{ $color: string }>`
   color: ${(props) => props.$color};
 `;
 
-const TokenChange = styled.Text<{ $positive: boolean }>`
+const TokenChange = styled.Text<{ $color: string }>`
   font-size: 12px;
-  color: ${(props) => (props.$positive ? '#22c55e' : '#ef4444')};
+  color: ${(props) => props.$color};
   margin-top: 2px;
 `;
 
@@ -179,7 +180,7 @@ const TransactionCard = styled.TouchableOpacity<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   border-radius: 12px;
   padding: 14px;
-  margin-bottom: 8px;
+  margin-bottom: ${spacing.sm}px;
   flex-direction: row;
   align-items: center;
 `;
@@ -191,7 +192,7 @@ const TxIcon = styled.View<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   justify-content: center;
   align-items: center;
-  margin-right: 12px;
+  margin-right: ${spacing.md}px;
 `;
 
 const TxInfo = styled.View`
@@ -211,14 +212,14 @@ const TxDate = styled.Text<{ $color: string }>`
   margin-top: 2px;
 `;
 
-const TxAmount = styled.Text<{ $color: string; $type: string }>`
+const TxAmount = styled.Text<{ $color: string }>`
   font-size: 15px;
   font-weight: 600;
-  color: ${(props) => (props.$type === 'receive' ? '#22c55e' : props.$type === 'send' ? '#ef4444' : props.$color)};
+  color: ${(props) => props.$color};
 `;
 
 const EmptySection = styled.View`
-  padding: 24px;
+  padding: ${spacing.xxl}px;
   align-items: center;
 `;
 
@@ -245,11 +246,11 @@ const getExplorerUrl = (network: string, address: string) => {
 const getTxIcon = (type: string, colors: any) => {
   switch (type) {
     case 'receive':
-      return <ArrowDownLeft size={20} color="#22c55e" />;
+      return <ArrowDownLeft size={20} color={colors.success} />;
     case 'send':
-      return <ArrowUpRight size={20} color="#ef4444" />;
+      return <ArrowUpRight size={20} color={colors.danger} />;
     case 'swap':
-      return <Repeat size={20} color="#8b5cf6" />;
+      return <Repeat size={20} color={colors.palette.purple} />;
     default:
       return <Send size={20} color={colors.mutedForeground} />;
   }
@@ -259,6 +260,7 @@ export default function WalletDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useLanguage();
   const colors = useColors();
+  const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
@@ -357,7 +359,12 @@ export default function WalletDetailScreen() {
     <Container $bg={colors.background}>
       <Header $pt={insets.top} $borderColor={colors.border}>
         <HeaderLeft>
-          <BackButton onPress={() => router.back()}>
+          <BackButton
+            onPress={() => router.back()}
+            accessibilityLabel={t('a11yBack') || 'Back'}
+            accessibilityRole="button"
+            hitSlop={8}
+          >
             <ArrowLeft size={24} color={colors.foreground} />
           </BackButton>
           <HeaderTitle $color={colors.foreground}>
@@ -365,11 +372,23 @@ export default function WalletDetailScreen() {
           </HeaderTitle>
         </HeaderLeft>
         <HeaderActions>
-          <IconButton $bg={colors.card} onPress={() => syncMutation.mutate()}>
+          <IconButton
+            $bg={colors.card}
+            onPress={() => syncMutation.mutate()}
+            accessibilityLabel={t('a11yRefresh') || 'Refresh'}
+            accessibilityRole="button"
+            hitSlop={8}
+          >
             <RefreshCw size={18} color={colors.foreground} />
           </IconButton>
-          <IconButton $bg="#ef444420" onPress={confirmDelete}>
-            <Trash2 size={18} color="#ef4444" />
+          <IconButton
+            $bg={theme.alpha(colors.danger, 0.125)}
+            onPress={confirmDelete}
+            accessibilityLabel={t('a11yDelete') || 'Delete'}
+            accessibilityRole="button"
+            hitSlop={8}
+          >
+            <Trash2 size={18} color={colors.danger} />
           </IconButton>
         </HeaderActions>
       </Header>
@@ -381,7 +400,7 @@ export default function WalletDetailScreen() {
         contentContainerStyle={{ paddingBottom: 100 }}
       >
         <WalletHeader>
-          <NetworkBadge $bg={colors.primary + '20'}>
+          <NetworkBadge $bg={theme.alpha(colors.primary, 0.125)}>
             <NetworkText $color={colors.primary}>{wallet?.network}</NetworkText>
           </NetworkBadge>
           <AddressRow onPress={copyAddress}>
@@ -393,7 +412,14 @@ export default function WalletDetailScreen() {
           <TotalValue $color={colors.foreground}>
             {formatCurrency(walletData?.total_value_usd ?? 0, 'USD')}
           </TotalValue>
-          <IconButton $bg={colors.card} onPress={openExplorer} style={{ marginTop: 12 }}>
+          <IconButton
+            $bg={colors.card}
+            onPress={openExplorer}
+            style={{ marginTop: spacing.md }}
+            accessibilityLabel="Open in block explorer"
+            accessibilityRole="button"
+            hitSlop={8}
+          >
             <ExternalLink size={18} color={colors.foreground} />
           </IconButton>
         </WalletHeader>
@@ -412,7 +438,7 @@ export default function WalletDetailScreen() {
           ) : (
             balances.map((token) => (
               <TokenCard key={token.id} $bg={colors.card}>
-                <TokenIcon $bg={colors.primary + '20'}>
+                <TokenIcon $bg={theme.alpha(colors.primary, 0.125)}>
                   <TokenSymbol $color={colors.primary}>
                     {token.token_symbol.substring(0, 3)}
                   </TokenSymbol>
@@ -427,7 +453,7 @@ export default function WalletDetailScreen() {
                   <TokenValueText $color={colors.foreground}>
                     {formatCurrency(token.balance_usd, 'USD')}
                   </TokenValueText>
-                  <TokenChange $positive={token.price_change_24h >= 0}>
+                  <TokenChange $color={token.price_change_24h >= 0 ? colors.success : colors.danger}>
                     {token.price_change_24h >= 0 ? '+' : ''}
                     {token.price_change_24h.toFixed(2)}%
                   </TokenChange>
@@ -455,14 +481,30 @@ export default function WalletDetailScreen() {
                 $bg={colors.card}
                 onPress={() => Linking.openURL(getExplorerUrl(wallet?.network || 'ethereum', tx.tx_hash))}
               >
-                <TxIcon $bg={tx.tx_type === 'receive' ? '#22c55e20' : tx.tx_type === 'send' ? '#ef444420' : colors.card}>
+                <TxIcon
+                  $bg={
+                    tx.tx_type === 'receive'
+                      ? theme.alpha(colors.success, 0.125)
+                      : tx.tx_type === 'send'
+                        ? theme.alpha(colors.danger, 0.125)
+                        : colors.card
+                  }
+                >
                   {getTxIcon(tx.tx_type, colors)}
                 </TxIcon>
                 <TxInfo>
                   <TxType $color={colors.foreground}>{tx.tx_type}</TxType>
                   <TxDate $color={colors.mutedForeground}>{formatDate(tx.timestamp)}</TxDate>
                 </TxInfo>
-                <TxAmount $color={colors.foreground} $type={tx.tx_type}>
+                <TxAmount
+                  $color={
+                    tx.tx_type === 'receive'
+                      ? colors.success
+                      : tx.tx_type === 'send'
+                        ? colors.danger
+                        : colors.foreground
+                  }
+                >
                   {tx.tx_type === 'receive' ? '+' : tx.tx_type === 'send' ? '-' : ''}
                   {parseFloat(tx.amount).toFixed(4)} {tx.token_symbol}
                 </TxAmount>

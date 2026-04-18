@@ -5,7 +5,7 @@ import { useTheme } from 'styled-components/native';
 import { SwipeableRow } from '../../ui/SwipeableRow';
 import { useLanguage } from '../../../context/LanguageContext';
 import { normalizePlannerDueDate } from '../../../utils/plannerDate';
-import { PRIORITY_COLORS } from '../../../utils/plannerConstants';
+import { lookupPriority, usePriorityColors } from '../../../utils/plannerConstants';
 import type { PlannerPendingMarker, TodoItem } from '../../../types/planner';
 
 function isOverdue(dueDate?: string): boolean {
@@ -39,13 +39,14 @@ export const PlannerPhoneTaskRow = memo(function PlannerPhoneTaskRow({
 }: PlannerPhoneTaskRowProps) {
   const theme = useTheme();
   const colors = theme.colors;
+  const priorityColors = usePriorityColors();
   const { t } = useLanguage();
 
   const isTask = item.type === 'task';
   const canCompleteTask = isTask && item.status !== 'done' && item.status !== 'archived';
   const normalizedDueDate = normalizePlannerDueDate(item.due_date);
   const overdue = isOverdue(normalizedDueDate);
-  const priorityInfo = item.priority ? PRIORITY_COLORS[item.priority] : undefined;
+  const priorityInfo = lookupPriority(priorityColors, item.priority);
   const subtaskText = useMemo(() => {
     if (item.subtask_total && item.subtask_total > 0) {
       return `${item.subtask_done ?? 0}/${item.subtask_total}`;
@@ -66,9 +67,9 @@ export const PlannerPhoneTaskRow = memo(function PlannerPhoneTaskRow({
         borderRadius: 14,
         borderWidth: 1,
         borderColor: marker?.sync_error
-          ? colors.danger + '44'
+          ? theme.alpha(colors.danger, 0.27)
           : marker?.pending_verification || marker?.is_pending_sync
-            ? colors.warning + '44'
+            ? theme.alpha(colors.warning, 0.27)
             : colors.border,
         paddingHorizontal: 12,
         paddingVertical: 10,
@@ -88,7 +89,7 @@ export const PlannerPhoneTaskRow = memo(function PlannerPhoneTaskRow({
                 borderRadius: 16,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: colors.success + '16',
+                backgroundColor: theme.alpha(colors.success, 0.09),
               },
               pressed && { opacity: 0.72 },
             ]}
@@ -103,7 +104,7 @@ export const PlannerPhoneTaskRow = memo(function PlannerPhoneTaskRow({
               borderRadius: 16,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: isTask ? colors.muted : colors.warning + '18',
+              backgroundColor: isTask ? colors.muted : theme.alpha(colors.warning, 0.1),
             }}
           >
             {isTask ? (
@@ -162,7 +163,7 @@ export const PlannerPhoneTaskRow = memo(function PlannerPhoneTaskRow({
                   borderRadius: 999,
                   paddingHorizontal: 8,
                   paddingVertical: 3,
-                  backgroundColor: overdue ? colors.danger + '14' : colors.muted,
+                  backgroundColor: overdue ? theme.alpha(colors.danger, 0.08) : colors.muted,
                 }}
               >
                 <Calendar size={10} color={overdue ? colors.danger : colors.mutedForeground} />
@@ -187,7 +188,7 @@ export const PlannerPhoneTaskRow = memo(function PlannerPhoneTaskRow({
             ) : null}
 
             {!isTask ? (
-              <View style={{ backgroundColor: colors.warning + '14', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
+              <View style={{ backgroundColor: theme.alpha(colors.warning, 0.08), borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
                 <Text style={{ color: colors.warning, fontSize: 10, fontFamily: 'Inter_600SemiBold' }}>
                   {t('goal') || 'Goal'}
                 </Text>
@@ -195,7 +196,7 @@ export const PlannerPhoneTaskRow = memo(function PlannerPhoneTaskRow({
             ) : null}
 
             {item.tag_names?.slice(0, 1).map((tagName) => (
-              <View key={tagName} style={{ backgroundColor: colors.accent + '12', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
+              <View key={tagName} style={{ backgroundColor: theme.alpha(colors.accent, 0.07), borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
                 <Text style={{ color: colors.accent, fontSize: 10, fontFamily: 'Inter_500Medium' }}>
                   {tagName}
                 </Text>
@@ -245,7 +246,7 @@ export const PlannerPhoneTaskRow = memo(function PlannerPhoneTaskRow({
         {
           icon: 'delete' as const,
           color: colors.danger,
-          backgroundColor: colors.danger + '16',
+          backgroundColor: theme.alpha(colors.danger, 0.09),
           onPress: () => onDeleteTask(item.id),
         },
       ]

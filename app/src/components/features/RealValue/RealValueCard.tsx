@@ -17,11 +17,12 @@ function ShieldGauge({ score }: { score: number }) {
   const theme = useTheme();
   const colors = theme.colors;
 
+  // Palette-coded thresholds for a gradient score scale (high→low).
   const getColor = (s: number): string => {
-    if (s >= 80) return colors.success;
-    if (s >= 60) return '#84cc16';
+    if (s >= 80) return colors.palette.green;
+    if (s >= 60) return colors.palette.lime;
     if (s >= 40) return colors.warning;
-    if (s >= 20) return '#f97316';
+    if (s >= 20) return colors.palette.orange;
     return colors.danger;
   };
 
@@ -33,11 +34,11 @@ function ShieldGauge({ score }: { score: number }) {
         style={{
           width: 88,
           height: 88,
-          borderRadius: 9999,
+          borderRadius: theme.radii.full,
           alignItems: 'center',
           justifyContent: 'center',
           borderWidth: 7,
-          borderColor: `${color}30`,
+          borderColor: theme.alpha(color, 0.19),
           backgroundColor: 'transparent',
         }}
       >
@@ -46,7 +47,7 @@ function ShieldGauge({ score }: { score: number }) {
             position: 'absolute',
             width: 88,
             height: 88,
-            borderRadius: 9999,
+            borderRadius: theme.radii.full,
             borderWidth: 7,
             borderColor: 'transparent',
             borderLeftColor: score > 0 ? color : 'transparent',
@@ -56,7 +57,7 @@ function ShieldGauge({ score }: { score: number }) {
           }}
         />
         <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 26, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
+          <Text style={{ fontSize: 26, fontFamily: theme.typography.h1.fontFamily, color: colors.foreground }}>
             {score}
           </Text>
           <Text style={{ fontSize: 10, color: colors.mutedForeground }}>/100</Text>
@@ -83,19 +84,19 @@ function ExposureBar({ exposure, maxBalance }: { exposure: CurrencyExposure; max
     <View style={{ marginBottom: 10 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={{ fontSize: 13, fontFamily: 'Inter_500Medium', color: colors.foreground }}>
+          <Text style={{ fontSize: 13, fontFamily: theme.typography.bodyMedium.fontFamily, color: colors.foreground }}>
             {exposure.currency}
           </Text>
           <View
             style={{
-              backgroundColor: inflationColor + '25',
+              backgroundColor: theme.alpha(inflationColor, 0.15),
               paddingHorizontal: 6,
               paddingVertical: 1,
               borderRadius: 4,
               marginStart: 6,
             }}
           >
-            <Text style={{ fontSize: 10, color: inflationColor, fontFamily: 'Inter_500Medium' }}>
+            <Text style={{ fontSize: 10, color: inflationColor, fontFamily: theme.typography.bodyMedium.fontFamily }}>
               {exposure.annual_inflation.toFixed(1)}%
             </Text>
           </View>
@@ -104,11 +105,11 @@ function ExposureBar({ exposure, maxBalance }: { exposure: CurrencyExposure; max
           {exposure.share_percentage.toFixed(0)}%
         </Text>
       </View>
-      <View style={{ height: 5, backgroundColor: colors.muted, borderRadius: 9999, overflow: 'hidden' }}>
+      <View style={{ height: 5, backgroundColor: colors.muted, borderRadius: theme.radii.full, overflow: 'hidden' }}>
         <View
           style={{
             height: '100%',
-            borderRadius: 9999,
+            borderRadius: theme.radii.full,
             width: `${Math.min(100, barWidth)}%`,
             backgroundColor: inflationColor,
           }}
@@ -151,9 +152,10 @@ export function RealValueCard({ compact = false }: RealValueCardProps) {
     }
   };
 
+  // Palette-coded thresholds for the compact gauge.
   const getScoreColor = (score: number): string => {
-    if (score >= 80) return colors.success;
-    if (score >= 60) return '#84cc16';
+    if (score >= 80) return colors.palette.green;
+    if (score >= 60) return colors.palette.lime;
     if (score >= 40) return colors.warning;
     return colors.danger;
   };
@@ -169,17 +171,17 @@ export function RealValueCard({ compact = false }: RealValueCardProps) {
               style={{
                 width: 40,
                 height: 40,
-                borderRadius: 9999,
-                backgroundColor: scoreColor + '25',
+                borderRadius: theme.radii.full,
+                backgroundColor: theme.alpha(scoreColor, 0.15),
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginEnd: 12,
+                marginEnd: theme.spacing.md,
               }}
             >
               <Shield size={20} color={scoreColor} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>
+              <Text style={{ color: colors.foreground, fontFamily: theme.typography.h2.fontFamily, fontSize: 14 }}>
                 {t('realValue') || 'Real Value'}
               </Text>
               {isPending ? (
@@ -190,7 +192,7 @@ export function RealValueCard({ compact = false }: RealValueCardProps) {
                     <Text
                       style={{
                         fontSize: 22,
-                        fontFamily: 'Inter_700Bold',
+                        fontFamily: theme.typography.h1.fontFamily,
                         color: colors.foreground,
                         marginEnd: 6,
                       }}
@@ -223,14 +225,14 @@ export function RealValueCard({ compact = false }: RealValueCardProps) {
 
   // Full mode
   return (
-    <Card style={{ padding: 20 }}>
+    <Card style={{ padding: theme.spacing.xl }}>
       {/* Header */}
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: 16,
+          marginBottom: theme.spacing.lg,
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
@@ -238,17 +240,17 @@ export function RealValueCard({ compact = false }: RealValueCardProps) {
             style={{
               width: 40,
               height: 40,
-              borderRadius: 9999,
-              backgroundColor: colors.accent + '25',
+              borderRadius: theme.radii.full,
+              backgroundColor: theme.alpha(colors.accent, 0.15),
               alignItems: 'center',
               justifyContent: 'center',
-              marginEnd: 12,
+              marginEnd: theme.spacing.md,
             }}
           >
             <Shield size={20} color={colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 16, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
+            <Text style={{ fontSize: 16, fontFamily: theme.typography.h2.fontFamily, color: colors.foreground }}>
               {t('wealthShieldScore') || 'Wealth Shield Score'}
             </Text>
             <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
@@ -256,7 +258,14 @@ export function RealValueCard({ compact = false }: RealValueCardProps) {
             </Text>
           </View>
         </View>
-        <Pressable onPress={handleRefresh} disabled={isRefetching} hitSlop={HIT_SLOP_SM} style={{ padding: 8 }}>
+        <Pressable
+          onPress={handleRefresh}
+          disabled={isRefetching}
+          accessibilityRole="button"
+          accessibilityLabel={t('a11yRefresh') || 'Refresh'}
+          hitSlop={HIT_SLOP_SM}
+          style={{ padding: theme.spacing.sm }}
+        >
           <RefreshCw
             size={18}
             color={colors.mutedForeground}
@@ -266,30 +275,30 @@ export function RealValueCard({ compact = false }: RealValueCardProps) {
       </View>
 
       {isPending || isRefetching ? (
-        <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+        <View style={{ alignItems: 'center', paddingVertical: theme.spacing.xxxl }}>
           <ActivityIndicator color={colors.accent} />
-          <Text style={{ color: colors.mutedForeground, fontSize: 14, marginTop: 8 }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 14, marginTop: theme.spacing.sm }}>
             {t('calculatingScore') || 'Analyzing purchasing power...'}
           </Text>
         </View>
       ) : wealthData ? (
         <>
           {/* Score + Balance Comparison */}
-          <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          <View style={{ alignItems: 'center', marginBottom: theme.spacing.xl }}>
             <ShieldGauge score={wealthData.shield_score} />
             <Text
               style={{
                 fontSize: 16,
-                fontFamily: 'Inter_700Bold',
+                fontFamily: theme.typography.h1.fontFamily,
                 color: colors.foreground,
-                marginTop: 8,
+                marginTop: theme.spacing.sm,
               }}
             >
               {t(`wealthShield${wealthData.shield_label}` as any) || wealthData.shield_label}
             </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: theme.spacing.xs }}>
               {getTrendIcon(wealthData.shield_trend)}
-              <Text style={{ fontSize: 13, color: colors.mutedForeground, marginStart: 4 }}>
+              <Text style={{ fontSize: 13, color: colors.mutedForeground, marginStart: theme.spacing.xs }}>
                 {wealthData.shield_trend === 'improving'
                   ? (t('improving') || 'Improving')
                   : wealthData.shield_trend === 'declining'
@@ -302,13 +311,13 @@ export function RealValueCard({ compact = false }: RealValueCardProps) {
           {/* Nominal vs Real */}
           <View
             style={{
-              backgroundColor: colors.muted + '80',
-              padding: 16,
+              backgroundColor: theme.alpha(colors.muted, 0.5),
+              padding: theme.spacing.lg,
               borderRadius: 10,
-              marginBottom: 16,
+              marginBottom: theme.spacing.lg,
             }}
           >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: theme.spacing.sm }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 11, color: colors.mutedForeground }}>
                   {t('nominalBalance') || 'Nominal'}
@@ -316,7 +325,7 @@ export function RealValueCard({ compact = false }: RealValueCardProps) {
                 <Text
                   style={{
                     fontSize: 16,
-                    fontFamily: 'Inter_600SemiBold',
+                    fontFamily: theme.typography.h2.fontFamily,
                     color: colors.mutedForeground,
                     textDecorationLine: 'line-through',
                   }}
@@ -331,7 +340,7 @@ export function RealValueCard({ compact = false }: RealValueCardProps) {
                 <Text
                   style={{
                     fontSize: 18,
-                    fontFamily: 'Inter_700Bold',
+                    fontFamily: theme.typography.h1.fontFamily,
                     color: colors.foreground,
                   }}
                 >
@@ -342,14 +351,14 @@ export function RealValueCard({ compact = false }: RealValueCardProps) {
             {wealthData.erosion_amount > 0 && (
               <View
                 style={{
-                  backgroundColor: colors.danger + '15',
+                  backgroundColor: theme.alpha(colors.danger, 0.08),
                   paddingHorizontal: 10,
                   paddingVertical: 6,
                   borderRadius: 6,
                   alignItems: 'center',
                 }}
               >
-                <Text style={{ fontSize: 13, color: colors.danger, fontFamily: 'Inter_500Medium' }}>
+                <Text style={{ fontSize: 13, color: colors.danger, fontFamily: theme.typography.bodyMedium.fontFamily }}>
                   -{wealthData.erosion_amount.toFixed(2)} {wealthData.currency} (-{wealthData.erosion_rate.toFixed(2)}%)
                 </Text>
               </View>
@@ -360,17 +369,17 @@ export function RealValueCard({ compact = false }: RealValueCardProps) {
           {wealthData.currency_breakdown && wealthData.currency_breakdown.length > 0 && (
             <View
               style={{
-                backgroundColor: colors.muted + '80',
-                padding: 16,
+                backgroundColor: theme.alpha(colors.muted, 0.5),
+                padding: theme.spacing.lg,
                 borderRadius: 10,
               }}
             >
               <Text
                 style={{
                   fontSize: 14,
-                  fontFamily: 'Inter_500Medium',
+                  fontFamily: theme.typography.bodyMedium.fontFamily,
                   color: colors.foreground,
-                  marginBottom: 12,
+                  marginBottom: theme.spacing.md,
                 }}
               >
                 {t('inflationExposure') || 'Inflation Exposure'}
@@ -393,14 +402,14 @@ export function RealValueCard({ compact = false }: RealValueCardProps) {
       ) : (
         <View
           style={{
-            backgroundColor: colors.muted + '80',
-            padding: 24,
-            borderRadius: 8,
+            backgroundColor: theme.alpha(colors.muted, 0.5),
+            padding: theme.spacing.xxl,
+            borderRadius: theme.radii.sm,
             alignItems: 'center',
           }}
         >
           <Shield size={32} color={colors.mutedForeground} />
-          <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 8 }}>
+          <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: theme.spacing.sm }}>
             {t('addTransactionsForScore') || 'Add balances to see your purchasing power analysis'}
           </Text>
         </View>

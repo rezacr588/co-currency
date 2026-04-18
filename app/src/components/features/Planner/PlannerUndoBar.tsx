@@ -44,7 +44,13 @@ export const PlannerUndoBar = memo(function PlannerUndoBar({
       <Text style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_500Medium' }}>
         {t('plannerTaskCompleted') || 'Task completed'}
       </Text>
-      <Pressable onPress={onUndo} hitSlop={8} style={{ minHeight: 36, justifyContent: 'center' }}>
+      <Pressable
+        onPress={onUndo}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={t('plannerUndo') || 'Undo'}
+        style={{ minHeight: 36, justifyContent: 'center' }}
+      >
         <Text style={{ color: colors.accent, fontSize: 13, fontFamily: 'Inter_700Bold' }}>
           {t('plannerUndo') || 'Undo'}
         </Text>

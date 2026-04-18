@@ -66,8 +66,6 @@ export const CHALLENGE_ICONS: Record<string, string> = {
   'shopping-bag': 'shopping-bag',
 };
 
-export const DIFFICULTY_COLORS: Record<ChallengeDifficulty, string> = {
-  easy: '#22c55e',
-  medium: '#f59e0b',
-  hard: '#ef4444',
-};
+// Difficulty colors must come from the theme (semantic: success/warning/danger).
+// Use the `useDifficultyColors()` hook (defined in `app/(app)/challenges.tsx`) or
+// derive locally via `{ easy: colors.success, medium: colors.warning, hard: colors.danger }`.

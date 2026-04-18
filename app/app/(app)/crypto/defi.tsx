@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, RefreshControl } from 'react-native';
-import styled from 'styled-components/native';
+import styled, { useTheme } from 'styled-components/native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, AlertTriangle, TrendingUp, Wallet, DollarSign, Gift, Percent } from 'lucide-react-native';
@@ -9,8 +9,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '@/src/context/LanguageContext';
 import { useColors } from '@/src/context/ThemeContext';
 import { cryptoApi, DeFiOverview } from '@/src/api/crypto';
+import { EmptyState } from '@/src/components/ui/EmptyState';
 import { LoadingSpinner } from '@/src/components/ui/LoadingSpinner';
 import { formatCurrency } from '@/src/utils/format';
+import { spacing } from '@/src/theme';
 
 const Container = styled.View<{ $bg: string }>`
   flex: 1;
@@ -20,15 +22,15 @@ const Container = styled.View<{ $bg: string }>`
 const Header = styled.View<{ $pt: number; $borderColor: string }>`
   flex-direction: row;
   align-items: center;
-  padding: 16px;
-  padding-top: ${(props) => props.$pt + 16}px;
+  padding: ${spacing.lg}px;
+  padding-top: ${(props) => props.$pt + spacing.lg}px;
   border-bottom-width: 1px;
   border-bottom-color: ${(props) => props.$borderColor};
 `;
 
 const BackButton = styled.TouchableOpacity`
-  padding: 8px;
-  margin-right: 8px;
+  padding: ${spacing.sm}px;
+  margin-right: ${spacing.sm}px;
 `;
 
 const HeaderTitle = styled.Text<{ $color: string }>`
@@ -39,14 +41,14 @@ const HeaderTitle = styled.Text<{ $color: string }>`
 
 const Content = styled.ScrollView`
   flex: 1;
-  padding: 16px;
+  padding: ${spacing.lg}px;
 `;
 
 const StatsGrid = styled.View`
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: ${spacing.md}px;
+  margin-bottom: ${spacing.xl}px;
 `;
 
 const StatCard = styled.View<{ $bg: string }>`
@@ -54,7 +56,7 @@ const StatCard = styled.View<{ $bg: string }>`
   min-width: 45%;
   background-color: ${(props) => props.$bg};
   border-radius: 12px;
-  padding: 16px;
+  padding: ${spacing.lg}px;
 `;
 
 const StatIcon = styled.View<{ $bg: string }>`
@@ -64,13 +66,13 @@ const StatIcon = styled.View<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   justify-content: center;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: ${spacing.sm}px;
 `;
 
 const StatLabel = styled.Text<{ $color: string }>`
   font-size: 12px;
   color: ${(props) => props.$color};
-  margin-bottom: 4px;
+  margin-bottom: ${spacing.xs}px;
 `;
 
 const StatValue = styled.Text<{ $color: string }>`
@@ -83,21 +85,21 @@ const SectionTitle = styled.Text<{ $color: string }>`
   font-size: 18px;
   font-weight: 600;
   color: ${(props) => props.$color};
-  margin-bottom: 12px;
-  margin-top: 8px;
+  margin-bottom: ${spacing.md}px;
+  margin-top: ${spacing.sm}px;
 `;
 
 const PositionCard = styled.View<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
+  padding: ${spacing.lg}px;
+  margin-bottom: ${spacing.md}px;
 `;
 
 const PositionHeader = styled.View`
   flex-direction: row;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: ${spacing.md}px;
 `;
 
 const ProtocolIcon = styled.View<{ $bg: string }>`
@@ -107,7 +109,7 @@ const ProtocolIcon = styled.View<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   justify-content: center;
   align-items: center;
-  margin-right: 12px;
+  margin-right: ${spacing.md}px;
 `;
 
 const ProtocolName = styled.Text<{ $color: string }>`
@@ -136,7 +138,7 @@ const PositionNetwork = styled.Text<{ $color: string }>`
 const PositionDetails = styled.View`
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: ${spacing.lg}px;
 `;
 
 const DetailItem = styled.View``;
@@ -153,39 +155,27 @@ const DetailValue = styled.Text<{ $color: string }>`
   color: ${(props) => props.$color};
 `;
 
-const HealthWarning = styled.View`
+const HealthWarning = styled.View<{ $bg: string }>`
   flex-direction: row;
   align-items: center;
-  background-color: #ef444420;
+  background-color: ${(props) => props.$bg};
   border-radius: 8px;
   padding: 10px;
-  margin-top: 12px;
+  margin-top: ${spacing.md}px;
 `;
 
-const WarningText = styled.Text`
+const WarningText = styled.Text<{ $color: string }>`
   font-size: 12px;
-  color: #ef4444;
-  margin-left: 8px;
-  flex: 1;
-`;
-
-const EmptySection = styled.View`
-  padding: 40px;
-  align-items: center;
-`;
-
-const EmptyText = styled.Text<{ $color: string }>`
-  font-size: 14px;
   color: ${(props) => props.$color};
-  text-align: center;
-  margin-top: 12px;
+  margin-left: ${spacing.sm}px;
+  flex: 1;
 `;
 
 const ProtocolBreakdownCard = styled.View<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   border-radius: 12px;
   padding: 14px;
-  margin-bottom: 8px;
+  margin-bottom: ${spacing.sm}px;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
@@ -211,6 +201,7 @@ const ProtocolBreakdownValue = styled.Text<{ $color: string }>`
 export default function DeFiScreen() {
   const { t } = useLanguage();
   const colors = useColors();
+  const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -254,7 +245,12 @@ export default function DeFiScreen() {
   return (
     <Container $bg={colors.background}>
       <Header $pt={insets.top} $borderColor={colors.border}>
-        <BackButton onPress={() => router.back()}>
+        <BackButton
+          onPress={() => router.back()}
+          accessibilityLabel={t('a11yBack') || 'Back'}
+          accessibilityRole="button"
+          hitSlop={8}
+        >
           <ArrowLeft size={24} color={colors.foreground} />
         </BackButton>
         <HeaderTitle $color={colors.foreground}>{t('defiOverview') || 'DeFi Overview'}</HeaderTitle>
@@ -269,8 +265,8 @@ export default function DeFiScreen() {
         {/* Stats */}
         <StatsGrid>
           <StatCard $bg={colors.card}>
-            <StatIcon $bg="#22c55e20">
-              <TrendingUp size={18} color="#22c55e" />
+            <StatIcon $bg={theme.alpha(colors.success, 0.125)}>
+              <TrendingUp size={18} color={colors.success} />
             </StatIcon>
             <StatLabel $color={colors.mutedForeground}>{t('totalSupplied') || 'Total Supplied'}</StatLabel>
             <StatValue $color={colors.foreground}>
@@ -279,8 +275,8 @@ export default function DeFiScreen() {
           </StatCard>
 
           <StatCard $bg={colors.card}>
-            <StatIcon $bg="#ef444420">
-              <DollarSign size={18} color="#ef4444" />
+            <StatIcon $bg={theme.alpha(colors.danger, 0.125)}>
+              <DollarSign size={18} color={colors.danger} />
             </StatIcon>
             <StatLabel $color={colors.mutedForeground}>{t('totalBorrowed') || 'Total Borrowed'}</StatLabel>
             <StatValue $color={colors.foreground}>
@@ -289,8 +285,8 @@ export default function DeFiScreen() {
           </StatCard>
 
           <StatCard $bg={colors.card}>
-            <StatIcon $bg="#8b5cf620">
-              <Gift size={18} color="#8b5cf6" />
+            <StatIcon $bg={theme.alpha(colors.palette.purple, 0.125)}>
+              <Gift size={18} color={colors.palette.purple} />
             </StatIcon>
             <StatLabel $color={colors.mutedForeground}>{t('totalRewards') || 'Total Rewards'}</StatLabel>
             <StatValue $color={colors.foreground}>
@@ -299,7 +295,7 @@ export default function DeFiScreen() {
           </StatCard>
 
           <StatCard $bg={colors.card}>
-            <StatIcon $bg={colors.primary + '20'}>
+            <StatIcon $bg={theme.alpha(colors.primary, 0.125)}>
               <Percent size={18} color={colors.primary} />
             </StatIcon>
             <StatLabel $color={colors.mutedForeground}>{t('avgAPY') || 'Avg APY'}</StatLabel>
@@ -310,7 +306,7 @@ export default function DeFiScreen() {
         </StatsGrid>
 
         {/* Net Worth */}
-        <StatCard $bg={colors.card} style={{ marginBottom: 20 }}>
+        <StatCard $bg={colors.card} style={{ marginBottom: spacing.xl }}>
           <StatLabel $color={colors.mutedForeground}>{t('cryptoNetWorth') || 'Net Worth'}</StatLabel>
           <StatValue $color={colors.foreground} style={{ fontSize: 28 }}>
             {formatCurrency(overview?.net_worth_usd ?? 0, 'USD')}
@@ -324,7 +320,7 @@ export default function DeFiScreen() {
             {overview.protocol_breakdown.map((protocol) => (
               <ProtocolBreakdownCard key={protocol.protocol} $bg={colors.card}>
                 <ProtocolBreakdownInfo>
-                  <ProtocolIcon $bg={colors.primary + '20'}>
+                  <ProtocolIcon $bg={theme.alpha(colors.primary, 0.125)}>
                     <ProtocolName $color={colors.primary}>
                       {protocol.protocol.substring(0, 2).toUpperCase()}
                     </ProtocolName>
@@ -342,17 +338,16 @@ export default function DeFiScreen() {
         {/* Positions */}
         <SectionTitle $color={colors.foreground}>{t('defiPositions') || 'Positions'}</SectionTitle>
         {!hasPositions ? (
-          <EmptySection>
-            <Wallet size={48} color={colors.mutedForeground} />
-            <EmptyText $color={colors.mutedForeground}>
-              {t('noDefiPositionsDesc') || 'Your lending, staking, and liquidity positions will appear here.'}
-            </EmptyText>
-          </EmptySection>
+          <EmptyState
+            icon={Wallet}
+            title={t('emptyNoDefiTitle') || 'No DeFi positions'}
+            description={t('emptyNoDefiDesc') || 'Connect a wallet to see your DeFi holdings.'}
+          />
         ) : (
           overview?.positions.map((position) => (
             <PositionCard key={position.id} $bg={colors.card}>
               <PositionHeader>
-                <ProtocolIcon $bg={colors.primary + '20'}>
+                <ProtocolIcon $bg={theme.alpha(colors.primary, 0.125)}>
                   {getPositionTypeIcon(position.position_type)}
                 </ProtocolIcon>
                 <PositionInfo>
@@ -382,14 +377,14 @@ export default function DeFiScreen() {
                 </DetailItem>
                 <DetailItem>
                   <DetailLabel $color={colors.mutedForeground}>APY</DetailLabel>
-                  <DetailValue $color="#22c55e">{position.apy.toFixed(2)}%</DetailValue>
+                  <DetailValue $color={colors.success}>{position.apy.toFixed(2)}%</DetailValue>
                 </DetailItem>
               </PositionDetails>
 
               {position.health_factor && position.health_factor < 1.5 && (
-                <HealthWarning>
-                  <AlertTriangle size={16} color="#ef4444" />
-                  <WarningText>
+                <HealthWarning $bg={theme.alpha(colors.danger, 0.125)}>
+                  <AlertTriangle size={16} color={colors.danger} />
+                  <WarningText $color={colors.danger}>
                     {t('healthFactorWarning') || 'Low health factor - risk of liquidation'}
                     {' '}({position.health_factor.toFixed(2)})
                   </WarningText>

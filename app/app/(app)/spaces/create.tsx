@@ -5,6 +5,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components/native';
 import { Check } from 'lucide-react-native';
 
+import { useTheme } from 'styled-components/native';
+
 import { api } from '@/src/api';
 import { SpaceType, CreateSpaceRequest } from '@/src/api/social';
 import { useLanguage } from '@/src/context/LanguageContext';
@@ -18,38 +20,38 @@ const Container = styled.View<{ $bg: string }>`
 
 const Content = styled.ScrollView`
   flex: 1;
-  padding: 16px;
+  padding: ${({ theme }) => theme.spacing.lg}px;
 `;
 
 const Section = styled.View`
-  margin-bottom: 24px;
+  margin-bottom: ${({ theme }) => theme.spacing.xxl}px;
 `;
 
 const SectionTitle = styled.Text<{ $color: string }>`
   font-size: 14px;
   font-weight: 600;
   color: ${(p) => p.$color};
-  margin-bottom: 12px;
+  margin-bottom: ${({ theme }) => theme.spacing.md}px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
 
 const InputContainer = styled.View`
-  margin-bottom: 16px;
+  margin-bottom: ${({ theme }) => theme.spacing.lg}px;
 `;
 
 const InputLabel = styled.Text<{ $color: string }>`
   font-size: 14px;
   font-weight: 600;
   color: ${(p) => p.$color};
-  margin-bottom: 8px;
+  margin-bottom: ${({ theme }) => theme.spacing.sm}px;
 `;
 
 const StyledInput = styled.TextInput<{ $bg: string; $color: string; $border: string }>`
   background-color: ${(p) => p.$bg};
   color: ${(p) => p.$color};
-  border-radius: 12px;
-  padding: 14px 16px;
+  border-radius: ${({ theme }) => theme.radii.md}px;
+  padding: 14px ${({ theme }) => theme.spacing.lg}px;
   font-size: 16px;
   border-width: 1px;
   border-color: ${(p) => p.$border};
@@ -58,14 +60,14 @@ const StyledInput = styled.TextInput<{ $bg: string; $color: string; $border: str
 const TypeGrid = styled.View`
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: ${({ theme }) => theme.spacing.md}px;
 `;
 
 const TypeCard = styled.TouchableOpacity<{ $bg: string; $selected: boolean; $selectedBg: string }>`
   width: 30%;
   aspect-ratio: 1;
   background-color: ${(p) => (p.$selected ? p.$selectedBg : p.$bg)};
-  border-radius: 16px;
+  border-radius: ${({ theme }) => theme.radii.lg}px;
   align-items: center;
   justify-content: center;
   border-width: 2px;
@@ -74,7 +76,7 @@ const TypeCard = styled.TouchableOpacity<{ $bg: string; $selected: boolean; $sel
 
 const TypeIcon = styled.Text`
   font-size: 32px;
-  margin-bottom: 4px;
+  margin-bottom: ${({ theme }) => theme.spacing.xs}px;
 `;
 
 const TypeName = styled.Text<{ $color: string; $selected: boolean }>`
@@ -86,24 +88,24 @@ const TypeName = styled.Text<{ $color: string; $selected: boolean }>`
 const CurrencyGrid = styled.View`
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: ${({ theme }) => theme.spacing.sm}px;
 `;
 
 const CurrencyChip = styled.TouchableOpacity<{ $bg: string; $selected: boolean; $selectedBg: string }>`
-  padding: 10px 16px;
-  border-radius: 20px;
+  padding: 10px ${({ theme }) => theme.spacing.lg}px;
+  border-radius: ${({ theme }) => theme.radii.xl}px;
   background-color: ${(p) => (p.$selected ? p.$selectedBg : p.$bg)};
 `;
 
 const CurrencyText = styled.Text<{ $color: string; $selected: boolean }>`
   font-size: 14px;
   font-weight: ${(p) => (p.$selected ? '700' : '500')};
-  color: ${(p) => (p.$selected ? '#fff' : p.$color)};
+  color: ${({ theme, $color, $selected }) => ($selected ? theme.colors.primaryForeground : $color)};
 `;
 
 const ColorGrid = styled.View`
   flex-direction: row;
-  gap: 12px;
+  gap: ${({ theme }) => theme.spacing.md}px;
 `;
 
 const ColorCircle = styled.TouchableOpacity<{ $color: string; $selected: boolean }>`
@@ -114,11 +116,11 @@ const ColorCircle = styled.TouchableOpacity<{ $color: string; $selected: boolean
   align-items: center;
   justify-content: center;
   border-width: ${(p) => (p.$selected ? '3px' : '0')};
-  border-color: #fff;
+  border-color: ${({ theme }) => theme.colors.primaryForeground};
 `;
 
 const Footer = styled.View<{ $bg: string }>`
-  padding: 16px;
+  padding: ${({ theme }) => theme.spacing.lg}px;
   border-top-width: 1px;
   border-top-color: ${(p) => p.$bg};
 `;
@@ -134,18 +136,31 @@ const SPACE_TYPES: { type: SpaceType; icon: string; name: string }[] = [
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'INR', 'IRR'];
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+function useSpaceColors() {
+  const theme = useTheme();
+  return [
+    theme.colors.palette.blue,
+    theme.colors.palette.green,
+    theme.colors.palette.yellow,
+    theme.colors.palette.red,
+    theme.colors.palette.purple,
+    theme.colors.palette.pink,
+    theme.colors.palette.cyan,
+    theme.colors.palette.lime,
+  ];
+}
 
 export default function CreateSpaceScreen() {
   const { t } = useLanguage();
   const colors = useColors();
+  const spaceColors = useSpaceColors();
   const queryClient = useQueryClient();
-  
+
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [spaceType, setSpaceType] = useState<SpaceType>('family');
   const [currency, setCurrency] = useState('USD');
-  const [color, setColor] = useState(COLORS[0]);
+  const [color, setColor] = useState(spaceColors[0]);
   
   const createMutation = useMutation({
     mutationFn: (data: CreateSpaceRequest) => api.social.createSpace(data),
@@ -205,7 +220,7 @@ export default function CreateSpaceScreen() {
                 >
                   <TypeIcon>{item.icon}</TypeIcon>
                   <TypeName
-                    $color={spaceType === item.type ? '#fff' : colors.foreground}
+                    $color={spaceType === item.type ? colors.primaryForeground : colors.foreground}
                     $selected={spaceType === item.type}
                   >
                     {getSpaceTypeName(item.type)}
@@ -280,14 +295,17 @@ export default function CreateSpaceScreen() {
               {t('spaceColor') || 'Color'}
             </SectionTitle>
             <ColorGrid>
-              {COLORS.map((c) => (
+              {spaceColors.map((c) => (
                 <ColorCircle
                   key={c}
                   $color={c}
                   $selected={color === c}
                   onPress={() => setColor(c)}
+                  accessibilityLabel={`${t('spaceColor') || 'Color'} ${c}`}
+                  accessibilityRole="button"
+                  hitSlop={8}
                 >
-                  {color === c && <Check size={20} color="#fff" />}
+                  {color === c && <Check size={20} color={colors.primaryForeground} />}
                 </ColorCircle>
               ))}
             </ColorGrid>

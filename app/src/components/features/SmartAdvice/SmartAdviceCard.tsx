@@ -12,13 +12,16 @@ import { getTodaysTip } from '../../../data/financialTips';
 
 const DISMISSED_KEY = '@smart_advice_dismissed';
 
-const categoryColors: Record<string, string> = {
-  spending: '#f59e0b',
-  saving: '#22c55e',
-  budgeting: '#3b82f6',
-  investing: '#8b5cf6',
-  general: '#71717a',
-};
+function useCategoryColors(): Record<string, string> {
+  const theme = useTheme();
+  return {
+    spending: theme.colors.warning,
+    saving: theme.colors.success,
+    budgeting: theme.colors.info,
+    investing: theme.colors.palette.purple,
+    general: theme.colors.mutedForeground,
+  };
+}
 
 export function SmartAdviceCard() {
   const { t, language } = useLanguage();
@@ -35,6 +38,8 @@ export function SmartAdviceCard() {
     staleTime: 6 * 60 * 60 * 1000, // 6 hours
     retry: 1,
   });
+
+  const categoryColors = useCategoryColors();
 
   // Check dismissal
   const checkDismissed = async () => {

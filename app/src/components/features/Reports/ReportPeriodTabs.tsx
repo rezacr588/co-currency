@@ -23,20 +23,20 @@ export function ReportPeriodTabs({ selected, onSelect }: ReportPeriodTabsProps) 
   ];
 
   return (
-    <View style={{ marginBottom: 16 }} accessibilityRole="tablist">
+    <View style={{ marginBottom: theme.spacing.lg }} accessibilityRole="tablist">
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 8 }}
+        contentContainerStyle={{ gap: theme.spacing.sm }}
       >
         {tabs.map((tab) => (
           <Pressable
             key={tab.key}
             onPress={() => onSelect(tab.key)}
             style={{
-              paddingHorizontal: 20,
-              paddingVertical: 10,
-              borderRadius: 9999,
+              paddingHorizontal: theme.spacing.xl,
+              paddingVertical: theme.spacing.sm + 2,
+              borderRadius: theme.radii.full,
               backgroundColor: selected === tab.key ? colors.accent : colors.secondary,
               borderWidth: selected === tab.key ? 0 : 1,
               borderColor: colors.border,

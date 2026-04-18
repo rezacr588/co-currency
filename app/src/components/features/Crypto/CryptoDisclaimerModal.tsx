@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, ScrollView, Pressable } from 'react-native';
-import styled from 'styled-components/native';
+import styled, { useTheme } from 'styled-components/native';
 import { AlertTriangle, X } from 'lucide-react-native';
 import { useColors } from '@/src/context/ThemeContext';
 import { useLanguage } from '@/src/context/LanguageContext';
@@ -156,6 +156,7 @@ export const CryptoDisclaimerModal: React.FC<CryptoDisclaimerModalProps> = ({
   onDecline,
 }) => {
   const colors = useColors();
+  const theme = useTheme();
   const { t } = useLanguage();
 
   return (
@@ -169,8 +170,8 @@ export const CryptoDisclaimerModal: React.FC<CryptoDisclaimerModalProps> = ({
         <ModalContent $bg={colors.card} $border={colors.border}>
           <ModalHeader $border={colors.border}>
             <HeaderLeft>
-              <IconWrapper $bg="#f59e0b20">
-                <AlertTriangle size={20} color="#f59e0b" />
+              <IconWrapper $bg={theme.alpha(colors.warning, 0.125)}>
+                <AlertTriangle size={20} color={colors.warning} />
               </IconWrapper>
               <Title $color={colors.foreground}>
                 {t('cryptoDisclaimer') || 'Crypto Disclaimer'}
@@ -182,7 +183,7 @@ export const CryptoDisclaimerModal: React.FC<CryptoDisclaimerModalProps> = ({
           </ModalHeader>
 
           <ModalBody>
-            <HighlightBox $bg="#ef444420" $border="#ef4444">
+            <HighlightBox $bg={theme.alpha(colors.danger, 0.125)} $border={colors.danger}>
               <HighlightText $color={colors.foreground}>
                 {t('cryptoDisclaimerHighlight') || 'CoAI is a read-only crypto tracker. We do not hold, custody, or have access to your assets. This is not financial advice.'}
               </HighlightText>
@@ -278,7 +279,7 @@ export const CryptoDisclaimerModal: React.FC<CryptoDisclaimerModalProps> = ({
               <ButtonText $color={colors.foreground}>{t('decline') || 'Decline'}</ButtonText>
             </SecondaryButton>
             <Button $bg={colors.primary} onPress={onAccept}>
-              <ButtonText $color="#fff">{t('iUnderstand') || 'I Understand'}</ButtonText>
+              <ButtonText $color={colors.primaryForeground}>{t('iUnderstand') || 'I Understand'}</ButtonText>
             </Button>
           </ButtonContainer>
         </ModalContent>

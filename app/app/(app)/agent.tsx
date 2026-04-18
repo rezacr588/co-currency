@@ -19,6 +19,7 @@ import { useAgentDashboard, useAgentStatus } from '@/src/hooks/useAgent';
 import { BriefingCard, PlanCard, ApprovalCard } from '@/src/components/features/Agent';
 import { LoadingSpinner, EmptyState } from '@/src/components/ui';
 import { haptics } from '@/src/utils/haptics';
+import { spacing, radii } from '@/src/theme';
 
 export default function AgentDashboardScreen() {
   const theme = useTheme();
@@ -73,59 +74,61 @@ export default function AgentDashboardScreen() {
             flexGrow: 1,
             justifyContent: 'center',
             alignItems: 'center',
-            padding: 20,
+            padding: spacing.xl,
           }}
         >
-          <View 
-            style={{ 
-              width: 80, 
-              height: 80, 
-              borderRadius: 40, 
-              backgroundColor: `${colors.accent}20`,
+          <View
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: theme.alpha(colors.accent, 0.125),
               alignItems: 'center',
               justifyContent: 'center',
-              marginBottom: 24,
+              marginBottom: spacing.xxl,
             }}
           >
             <TrendingUp size={40} color={colors.accent} />
           </View>
-          <Text 
-            style={{ 
-              fontSize: 24, 
-              fontFamily: 'Inter_700Bold', 
+          <Text
+            style={{
+              fontSize: 24,
+              fontFamily: 'Inter_700Bold',
               color: colors.foreground,
               textAlign: 'center',
-              marginBottom: 12,
+              marginBottom: spacing.md,
             }}
           >
             {t('autonomousAgentTitle') || 'AI Financial Agent'}
           </Text>
-          <Text 
-            style={{ 
-              fontSize: 16, 
+          <Text
+            style={{
+              fontSize: 16,
               color: colors.mutedForeground,
               textAlign: 'center',
               lineHeight: 24,
-              marginBottom: 32,
+              marginBottom: spacing.xxxl,
               maxWidth: 400,
             }}
           >
-            {t('agentOnboardingDescription') || 
+            {t('agentOnboardingDescription') ||
               'Let AI manage your finances autonomously. Create plans, set approval thresholds, and let CoAI handle recurring optimizations for you.'}
           </Text>
           <Pressable
             onPress={handleViewConfig}
-            style={{ 
+            accessibilityRole="button"
+            accessibilityLabel={t('enableAgent') || 'Enable Agent'}
+            style={{
               backgroundColor: colors.accent,
-              paddingHorizontal: 32,
-              paddingVertical: 16,
-              borderRadius: 12,
+              paddingHorizontal: spacing.xxxl,
+              paddingVertical: spacing.lg,
+              borderRadius: radii.md,
             }}
           >
-            <Text 
-              style={{ 
-                color: colors.background, 
-                fontSize: 16, 
+            <Text
+              style={{
+                color: colors.accentForeground,
+                fontSize: 16,
                 fontFamily: 'Inter_600SemiBold',
               }}
             >
@@ -142,7 +145,7 @@ export default function AgentDashboardScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
         <LoadingSpinner />
-        <Text style={{ color: colors.mutedForeground, marginTop: 16 }}>
+        <Text style={{ color: colors.mutedForeground, marginTop: spacing.lg }}>
           {t('loadingAgent') || 'Loading agent...'}
         </Text>
       </View>
@@ -158,7 +161,7 @@ export default function AgentDashboardScreen() {
             flexGrow: 1,
             justifyContent: 'center',
             alignItems: 'center',
-            padding: 20,
+            padding: spacing.xl,
           }}
           refreshControl={
             <RefreshControl
@@ -186,11 +189,11 @@ export default function AgentDashboardScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
-      <View 
-        style={{ 
-          paddingTop: insets.top + 16,
-          paddingHorizontal: 20,
-          paddingBottom: 16,
+      <View
+        style={{
+          paddingTop: insets.top + spacing.lg,
+          paddingHorizontal: spacing.xl,
+          paddingBottom: spacing.lg,
           borderBottomWidth: 1,
           borderBottomColor: colors.border,
           backgroundColor: colors.card,
@@ -201,30 +204,36 @@ export default function AgentDashboardScreen() {
             <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
               {t('agentDashboard') || 'AI Agent'}
             </Text>
-            <Text style={{ fontSize: 14, color: colors.mutedForeground, marginTop: 4 }}>
+            <Text style={{ fontSize: 14, color: colors.mutedForeground, marginTop: spacing.xs }}>
               {t('autonomousFinancialManagement') || 'Autonomous Financial Management'}
             </Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Pressable
               onPress={handleCreatePlan}
-              style={{ 
-                width: 40, 
-                height: 40, 
+              accessibilityRole="button"
+              accessibilityLabel={t('a11yAdd') || 'Add'}
+              hitSlop={8}
+              style={{
+                width: 40,
+                height: 40,
                 borderRadius: 20,
                 backgroundColor: colors.accent,
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginRight: 12,
+                marginRight: spacing.md,
               }}
             >
-              <Plus size={20} color={colors.background} />
+              <Plus size={20} color={colors.accentForeground} />
             </Pressable>
             <Pressable
               onPress={handleViewConfig}
-              style={{ 
-                width: 40, 
-                height: 40, 
+              accessibilityRole="button"
+              accessibilityLabel={t('agentSettings') || 'Agent Settings'}
+              hitSlop={8}
+              style={{
+                width: 40,
+                height: 40,
                 borderRadius: 20,
                 backgroundColor: colors.muted,
                 alignItems: 'center',
@@ -239,7 +248,7 @@ export default function AgentDashboardScreen() {
 
       {/* Content */}
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 20 }}
+        contentContainerStyle={{ padding: spacing.xl, paddingBottom: insets.bottom + spacing.xl }}
         refreshControl={
           <RefreshControl
             refreshing={plans.isRefetching || briefing.isRefetching}
@@ -250,8 +259,8 @@ export default function AgentDashboardScreen() {
       >
         {/* Daily Briefing */}
         {briefing.data?.briefing && (
-          <View style={{ marginBottom: 20 }}>
-            <BriefingCard 
+          <View style={{ marginBottom: spacing.xl }}>
+            <BriefingCard
               onViewApprovals={handleViewApprovals}
             />
           </View>
@@ -259,19 +268,19 @@ export default function AgentDashboardScreen() {
 
         {/* Pending Approvals */}
         {approvals.length > 0 && (
-          <View style={{ marginBottom: 20 }}>
-            <Text 
-              style={{ 
-                fontSize: 18, 
-                fontFamily: 'Inter_600SemiBold', 
+          <View style={{ marginBottom: spacing.xl }}>
+            <Text
+              style={{
+                fontSize: 18,
+                fontFamily: 'Inter_600SemiBold',
                 color: colors.foreground,
-                marginBottom: 12,
+                marginBottom: spacing.md,
               }}
             >
               {t('pendingApprovals') || 'Pending Approvals'} ({approvals.length})
             </Text>
             {approvals.slice(0, 3).map((approval) => (
-              <View key={approval.id} style={{ marginBottom: 12 }}>
+              <View key={approval.id} style={{ marginBottom: spacing.md }}>
                 <ApprovalCard
                   approval={approval}
                   planId={approval.metadata?.plan_id as string || ''}
@@ -287,9 +296,11 @@ export default function AgentDashboardScreen() {
             {approvals.length > 3 && (
               <Pressable
                 onPress={handleViewApprovals}
-                style={{ 
-                  alignItems: 'center', 
-                  paddingVertical: 12,
+                accessibilityRole="button"
+                accessibilityLabel={t('viewAllApprovals') || 'View all approvals'}
+                style={{
+                  alignItems: 'center',
+                  paddingVertical: spacing.md,
                   borderTopWidth: 1,
                   borderTopColor: colors.border,
                 }}
@@ -304,19 +315,19 @@ export default function AgentDashboardScreen() {
 
         {/* Active Plans */}
         {activePlans.length > 0 ? (
-          <View style={{ marginBottom: 20 }}>
-            <Text 
-              style={{ 
-                fontSize: 18, 
-                fontFamily: 'Inter_600SemiBold', 
+          <View style={{ marginBottom: spacing.xl }}>
+            <Text
+              style={{
+                fontSize: 18,
+                fontFamily: 'Inter_600SemiBold',
                 color: colors.foreground,
-                marginBottom: 12,
+                marginBottom: spacing.md,
               }}
             >
               {t('activePlans') || 'Active Plans'} ({activePlans.length})
             </Text>
             {activePlans.map((plan) => (
-              <View key={plan.id} style={{ marginBottom: 12 }}>
+              <View key={plan.id} style={{ marginBottom: spacing.md }}>
                 <PlanCard
                   plan={plan}
                   onViewDetails={handleViewPlan}
@@ -326,7 +337,7 @@ export default function AgentDashboardScreen() {
             ))}
           </View>
         ) : (
-          <View style={{ marginBottom: 20 }}>
+          <View style={{ marginBottom: spacing.xl }}>
             <EmptyState
               icon={TrendingUp}
               title={t('noActivePlans') || 'No Active Plans'}
@@ -339,24 +350,24 @@ export default function AgentDashboardScreen() {
 
         {/* Agent Status */}
         {config.data?.config && (
-          <View 
-            style={{ 
+          <View
+            style={{
               backgroundColor: colors.muted,
-              borderRadius: 12,
-              padding: 16,
+              borderRadius: radii.md,
+              padding: spacing.lg,
             }}
           >
-            <Text 
-              style={{ 
-                fontSize: 14, 
-                fontFamily: 'Inter_600SemiBold', 
+            <Text
+              style={{
+                fontSize: 14,
+                fontFamily: 'Inter_600SemiBold',
                 color: colors.foreground,
-                marginBottom: 12,
+                marginBottom: spacing.md,
               }}
             >
               {t('agentConfiguration') || 'Agent Configuration'}
             </Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
               <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>
                 {t('autoApproveBelow') || 'Auto-approve below'}
               </Text>
@@ -364,7 +375,7 @@ export default function AgentDashboardScreen() {
                 {config.data.config.auto_approve_threshold} {config.data.config.auto_approve_currency}
               </Text>
             </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
               <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>
                 {t('dailyAutopilot') || 'Daily autopilot'}
               </Text>
@@ -374,9 +385,11 @@ export default function AgentDashboardScreen() {
             </View>
             <Pressable
               onPress={handleViewConfig}
-              style={{ 
-                marginTop: 12,
-                paddingTop: 12,
+              accessibilityRole="button"
+              accessibilityLabel={t('editSettings') || 'Edit Settings'}
+              style={{
+                marginTop: spacing.md,
+                paddingTop: spacing.md,
                 borderTopWidth: 1,
                 borderTopColor: colors.border,
               }}

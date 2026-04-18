@@ -2,9 +2,11 @@ import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useCallback, useMemo } from 'react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
+import { alpha } from '../../../theme';
 import { haptics } from '../../../utils/haptics';
 import { formatCompactCurrency } from '../../../utils/format';
 import { LANGUAGE_LOCALES } from '../Reports/daily/constants';
+import type { ColorPalette } from '../../../constants/colors';
 
 interface DayData {
   date: string; // YYYY-MM-DD
@@ -22,22 +24,33 @@ interface CalendarHeatMapProps {
 const DAY_SIZE = 14;
 const DAY_GAP = 2;
 
-function getColor(amount: number, maxAmount: number, isDark: boolean, emptyColor: string): string {
+// 4-step density scale built on `colors.palette.green` with progressive alphas.
+// Dark mode deepens the shade by stacking alpha on top of the same hue; light
+// mode uses the same alpha ramp but starts lighter so the baseline stays legible
+// on a light surface.
+function getColor(
+  amount: number,
+  maxAmount: number,
+  isDark: boolean,
+  emptyColor: string,
+  palette: ColorPalette['palette'],
+): string {
   if (amount === 0) return emptyColor;
 
   const ratio = amount / maxAmount;
+  const green = palette.green;
 
   if (isDark) {
-    if (ratio <= 0.25) return '#14532d';
-    if (ratio <= 0.5) return '#166534';
-    if (ratio <= 0.75) return '#22c55e';
-    return '#86efac';
+    if (ratio <= 0.25) return alpha(green, 0.3);
+    if (ratio <= 0.5) return alpha(green, 0.5);
+    if (ratio <= 0.75) return alpha(green, 0.75);
+    return alpha(green, 0.95);
   }
 
-  if (ratio <= 0.25) return '#bbf7d0';
-  if (ratio <= 0.5) return '#86efac';
-  if (ratio <= 0.75) return '#22c55e';
-  return '#16a34a';
+  if (ratio <= 0.25) return alpha(green, 0.15);
+  if (ratio <= 0.5) return alpha(green, 0.35);
+  if (ratio <= 0.75) return alpha(green, 0.6);
+  return alpha(green, 0.9);
 }
 
 export function CalendarHeatMap({
@@ -145,10 +158,10 @@ export function CalendarHeatMap({
   );
 
   return (
-    <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12 }}>
+    <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: theme.spacing.lg, borderRadius: theme.radii.md }}>
       {/* Title */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Text style={{ fontSize: 16, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.lg }}>
+        <Text style={{ fontSize: 16, fontFamily: theme.typography.h2.fontFamily, color: colors.foreground }}>
           {t('spendingCalendar') || 'Spending Calendar'}
         </Text>
         <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
@@ -160,7 +173,7 @@ export function CalendarHeatMap({
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View>
           {/* Month labels */}
-          <View style={{ flexDirection: 'row', marginBottom: 4, paddingStart: 24 }}>
+          <View style={{ flexDirection: 'row', marginBottom: theme.spacing.xs, paddingStart: theme.spacing.xxl }}>
             {monthLabels.map((label, idx) => (
               <Text
                 key={idx}
@@ -176,9 +189,9 @@ export function CalendarHeatMap({
             ))}
           </View>
 
-          <View style={{ flexDirection: 'row', marginTop: 16 }}>
+          <View style={{ flexDirection: 'row', marginTop: theme.spacing.lg }}>
             {/* Weekday labels */}
-            <View style={{ marginEnd: 8 }}>
+            <View style={{ marginEnd: theme.spacing.sm }}>
               {weekdayLabels.map((label, idx) => (
                 <View
                   key={idx}
@@ -218,7 +231,7 @@ export function CalendarHeatMap({
                             marginBottom: DAY_GAP,
                             backgroundColor: isFuture
                               ? 'transparent'
-                              : getColor(amount, maxAmount, isDark, colors.muted),
+                              : getColor(amount, maxAmount, isDark, colors.muted, colors.palette),
                           },
                           isToday && {
                             borderWidth: 1,
@@ -234,8 +247,8 @@ export function CalendarHeatMap({
           </View>
 
           {/* Legend */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 16 }}>
-            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginEnd: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: theme.spacing.lg }}>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginEnd: theme.spacing.sm }}>
               {t('heatmapLess') || 'Less'}
             </Text>
             {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => (
@@ -246,11 +259,11 @@ export function CalendarHeatMap({
                   height: DAY_SIZE,
                   borderRadius: 2,
                   marginEnd: 2,
-                  backgroundColor: getColor(ratio * maxAmount, maxAmount, isDark, colors.muted),
+                  backgroundColor: getColor(ratio * maxAmount, maxAmount, isDark, colors.muted, colors.palette),
                 }}
               />
             ))}
-            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginStart: 4 }}>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginStart: theme.spacing.xs }}>
               {t('heatmapMore') || 'More'}
             </Text>
           </View>
@@ -258,9 +271,9 @@ export function CalendarHeatMap({
       </ScrollView>
 
       {/* Summary */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: theme.spacing.lg, paddingTop: theme.spacing.lg, borderTopWidth: 1, borderTopColor: colors.border }}>
         <View style={{ alignItems: 'center', flex: 1 }}>
-          <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
+          <Text style={{ fontSize: 24, fontFamily: theme.typography.h1.fontFamily, color: colors.foreground }}>
             {data.reduce((sum, d) => sum + d.count, 0)}
           </Text>
           <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
@@ -268,7 +281,7 @@ export function CalendarHeatMap({
           </Text>
         </View>
         <View style={{ alignItems: 'center', flex: 1 }}>
-          <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
+          <Text style={{ fontSize: 24, fontFamily: theme.typography.h1.fontFamily, color: colors.foreground }}>
             {formatCompactCurrency(data.reduce((sum, d) => sum + d.amount, 0), currency)}
           </Text>
           <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
@@ -276,7 +289,7 @@ export function CalendarHeatMap({
           </Text>
         </View>
         <View style={{ alignItems: 'center', flex: 1 }}>
-          <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
+          <Text style={{ fontSize: 24, fontFamily: theme.typography.h1.fontFamily, color: colors.foreground }}>
             {data.filter((d) => d.amount > 0).length}
           </Text>
           <Text style={{ fontSize: 12, color: colors.mutedForeground }}>

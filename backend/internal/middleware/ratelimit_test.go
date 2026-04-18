@@ -218,12 +218,12 @@ func TestNewRateLimiterWithConfig_Defaults(t *testing.T) {
 
 	rl := NewRateLimiterWithConfig(cfg)
 
-	if rl.cleanupInterval != 10*time.Minute {
-		t.Errorf("Expected default cleanup interval 10 minutes, got %v", rl.cleanupInterval)
+	if rl.cleanupInterval != 5*time.Minute {
+		t.Errorf("Expected default cleanup interval 5 minutes, got %v", rl.cleanupInterval)
 	}
 
-	if rl.entryTTL != 30*time.Minute {
-		t.Errorf("Expected default entry TTL 30 minutes, got %v", rl.entryTTL)
+	if rl.entryTTL != 15*time.Minute {
+		t.Errorf("Expected default entry TTL 15 minutes, got %v", rl.entryTTL)
 	}
 
 	// LoginAttemptsPerMinute should default to 5

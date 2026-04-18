@@ -9,6 +9,7 @@ import { haptics } from '../../../utils/haptics';
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 import { Card } from '../../ui';
 import { BottomSheet } from '../../ui/BottomSheet';
+import { HIT_SLOP_SM, HIT_SLOP_MD } from '../../../constants/hitSlop';
 
 interface HealthScoreData {
   score: number;
@@ -31,12 +32,12 @@ interface HealthScoreCardProps {
 function ScoreGauge({ score }: { score: number }) {
   const theme = useTheme();
   const colors = theme.colors;
-  // Calculate color based on score
+  // Palette-coded thresholds for a gradient score scale (high→low).
   const getColor = (score: number): string => {
-    if (score >= 80) return colors.success;
-    if (score >= 60) return '#84cc16'; // Lime (no direct mapping, keep as is)
+    if (score >= 80) return colors.palette.green;
+    if (score >= 60) return colors.palette.lime;
     if (score >= 40) return colors.warning;
-    if (score >= 20) return '#f97316'; // Orange (no direct mapping, keep as is)
+    if (score >= 20) return colors.palette.orange;
     return colors.danger;
   };
 
@@ -49,11 +50,11 @@ function ScoreGauge({ score }: { score: number }) {
         style={{
           width: 96,
           height: 96,
-          borderRadius: 9999,
+          borderRadius: theme.radii.full,
           alignItems: 'center',
           justifyContent: 'center',
           borderWidth: 8,
-          borderColor: `${color}30`,
+          borderColor: theme.alpha(color, 0.19),
           backgroundColor: 'transparent',
         }}
       >
@@ -63,7 +64,7 @@ function ScoreGauge({ score }: { score: number }) {
             position: 'absolute',
             width: 96,
             height: 96,
-            borderRadius: 9999,
+            borderRadius: theme.radii.full,
             borderWidth: 8,
             borderColor: 'transparent',
             borderLeftColor: score > 0 ? color : 'transparent',
@@ -74,7 +75,7 @@ function ScoreGauge({ score }: { score: number }) {
         />
         {/* Score text */}
         <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 30, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{score}</Text>
+          <Text style={{ fontSize: 30, fontFamily: theme.typography.h1.fontFamily, color: colors.foreground }}>{score}</Text>
           <Text style={{ fontSize: 12, color: colors.mutedForeground }}>/100</Text>
         </View>
       </View>
@@ -86,16 +87,16 @@ function ComponentBar({ label, value, color }: { label: string; value: number; c
   const theme = useTheme();
   const colors = theme.colors;
   return (
-    <View style={{ marginBottom: 8 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+    <View style={{ marginBottom: theme.spacing.sm }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: theme.spacing.xs }}>
         <Text style={{ fontSize: 12, color: colors.mutedForeground }}>{label}</Text>
-        <Text style={{ fontSize: 12, color: colors.foreground, fontFamily: 'Inter_500Medium' }}>{Math.round(value)}%</Text>
+        <Text style={{ fontSize: 12, color: colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily }}>{Math.round(value)}%</Text>
       </View>
-      <View style={{ height: 6, backgroundColor: colors.muted, borderRadius: 9999, overflow: 'hidden' }}>
+      <View style={{ height: 6, backgroundColor: colors.muted, borderRadius: theme.radii.full, overflow: 'hidden' }}>
         <View
           style={{
             height: '100%',
-            borderRadius: 9999,
+            borderRadius: theme.radii.full,
             width: `${Math.min(100, value)}%`,
             backgroundColor: color,
           }}
@@ -200,18 +201,18 @@ export function HealthScoreCard({ compact = false, onViewDetails }: HealthScoreC
       <Card>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={{ width: 40, height: 40, borderRadius: 9999, backgroundColor: colors.success + '33', alignItems: 'center', justifyContent: 'center', marginEnd: 12 }}>
+            <View style={{ width: 40, height: 40, borderRadius: theme.radii.full, backgroundColor: theme.alpha(colors.success, 0.2), alignItems: 'center', justifyContent: 'center', marginEnd: theme.spacing.md }}>
               <Heart size={20} color={colors.success} />
             </View>
             <View>
-              <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
+              <Text style={{ color: colors.foreground, fontFamily: theme.typography.h2.fontFamily }}>
                 {t('financialHealth') || 'Financial Health'}
               </Text>
               {isPending ? (
                 <ActivityIndicator size="small" color={colors.mutedForeground} />
               ) : healthScore ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground, marginEnd: 8 }}>
+                  <Text style={{ fontSize: 24, fontFamily: theme.typography.h1.fontFamily, color: colors.foreground, marginEnd: theme.spacing.sm }}>
                     {healthScore.score}
                   </Text>
                   {getTrendIcon(healthScore.trend)}
@@ -227,9 +228,9 @@ export function HealthScoreCard({ compact = false, onViewDetails }: HealthScoreC
             <Pressable
               onPress={handleViewDetails}
               accessibilityRole="button"
-              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingStart: 12 }}
+              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: theme.spacing.sm, paddingStart: theme.spacing.md }}
             >
-              <Text style={{ color: colors.mutedForeground, fontSize: 13, fontFamily: 'Inter_500Medium', marginEnd: 4 }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 13, fontFamily: theme.typography.bodyMedium.fontFamily, marginEnd: theme.spacing.xs }}>
                 {t('viewFinancialHealthDetails')}
               </Text>
               <ArrowRight size={14} color={colors.mutedForeground} />
@@ -242,15 +243,15 @@ export function HealthScoreCard({ compact = false, onViewDetails }: HealthScoreC
 
   return (
     <>
-      <Card style={{ padding: 20 }}>
+      <Card style={{ padding: theme.spacing.xl }}>
         {/* Header */}
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: theme.spacing.lg }}>
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-start' }}>
-            <View style={{ width: 40, height: 40, borderRadius: 9999, backgroundColor: colors.success + '33', alignItems: 'center', justifyContent: 'center', marginEnd: 12, marginTop: 2 }}>
+            <View style={{ width: 40, height: 40, borderRadius: theme.radii.full, backgroundColor: theme.alpha(colors.success, 0.2), alignItems: 'center', justifyContent: 'center', marginEnd: theme.spacing.md, marginTop: 2 }}>
               <Heart size={20} color={colors.success} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 16, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
+              <Text style={{ fontSize: 16, fontFamily: theme.typography.h2.fontFamily, color: colors.foreground }}>
                 {t('financialHealth') || 'Financial Health Score'}
               </Text>
               <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
@@ -259,20 +260,24 @@ export function HealthScoreCard({ compact = false, onViewDetails }: HealthScoreC
               <Pressable
                 onPress={handleOpenMethodology}
                 accessibilityRole="button"
+                hitSlop={HIT_SLOP_MD}
                 style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', marginTop: 10 }}
               >
                 <Info size={14} color={colors.info} style={{ marginEnd: 6 }} />
-                <Text style={{ fontSize: 12, fontFamily: 'Inter_500Medium', color: colors.info }}>
+                <Text style={{ fontSize: 12, fontFamily: theme.typography.bodyMedium.fontFamily, color: colors.info }}>
                   {t('healthScoreHowItWorksAction')}
                 </Text>
               </Pressable>
             </View>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginStart: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginStart: theme.spacing.md }}>
             <Pressable
               onPress={handleRefresh}
               disabled={isRefetching}
-              style={{ cursor: 'pointer', padding: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={t('a11yRefresh') || 'Refresh'}
+              hitSlop={HIT_SLOP_SM}
+              style={{ cursor: 'pointer', padding: theme.spacing.sm }}
             >
               <RefreshCw
                 size={18}
@@ -283,16 +288,16 @@ export function HealthScoreCard({ compact = false, onViewDetails }: HealthScoreC
           </View>
         </View>
 
-        <View style={{ backgroundColor: colors.info + '12', borderRadius: 10, padding: 12, marginBottom: 16 }}>
+        <View style={{ backgroundColor: theme.alpha(colors.info, 0.07), borderRadius: 10, padding: theme.spacing.md, marginBottom: theme.spacing.lg }}>
           <Text style={{ fontSize: 13, lineHeight: 18, color: colors.foreground }}>
             {t('healthScoreInlineExplainer')}
           </Text>
         </View>
 
         {isPending || isRefetching ? (
-          <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+          <View style={{ alignItems: 'center', paddingVertical: theme.spacing.xxxl }}>
             <ActivityIndicator color={colors.accent} />
-            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginTop: 8 }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginTop: theme.spacing.sm }}>
               {t('calculatingScore')}
             </Text>
           </View>
@@ -304,17 +309,17 @@ export function HealthScoreCard({ compact = false, onViewDetails }: HealthScoreC
                 flexDirection: shouldStackScore ? 'column' : 'row',
                 alignItems: shouldStackScore ? 'flex-start' : 'center',
                 justifyContent: 'space-between',
-                marginBottom: 24,
+                marginBottom: theme.spacing.xxl,
               }}
             >
               <ScoreGauge score={healthScore.score} />
-              <View style={{ flex: shouldStackScore ? undefined : 1, marginStart: shouldStackScore ? 0 : 24, marginTop: shouldStackScore ? 16 : 0, width: shouldStackScore ? '100%' : undefined }}>
-                <Text style={{ fontSize: 18, fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 4 }}>
+              <View style={{ flex: shouldStackScore ? undefined : 1, marginStart: shouldStackScore ? 0 : theme.spacing.xxl, marginTop: shouldStackScore ? theme.spacing.lg : 0, width: shouldStackScore ? '100%' : undefined }}>
+                <Text style={{ fontSize: 18, fontFamily: theme.typography.h1.fontFamily, color: colors.foreground, marginBottom: theme.spacing.xs }}>
                   {getScoreLabel(healthScore.score)}
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   {getTrendIcon(healthScore.trend)}
-                  <Text style={{ fontSize: 14, color: colors.mutedForeground, marginStart: 4 }}>
+                  <Text style={{ fontSize: 14, color: colors.mutedForeground, marginStart: theme.spacing.xs }}>
                     {getTrendLabel(healthScore.trend)}
                   </Text>
                 </View>
@@ -322,8 +327,8 @@ export function HealthScoreCard({ compact = false, onViewDetails }: HealthScoreC
             </View>
 
             {/* Component Breakdown */}
-            <View style={{ backgroundColor: colors.muted + '80', padding: 16, borderRadius: 8, marginBottom: 16 }}>
-              <Text style={{ fontSize: 14, fontFamily: 'Inter_500Medium', color: colors.foreground, marginBottom: 12 }}>
+            <View style={{ backgroundColor: theme.alpha(colors.muted, 0.5), padding: theme.spacing.lg, borderRadius: theme.radii.sm, marginBottom: theme.spacing.lg }}>
+              <Text style={{ fontSize: 14, fontFamily: theme.typography.bodyMedium.fontFamily, color: colors.foreground, marginBottom: theme.spacing.md }}>
                 {t('scoreBreakdown')}
               </Text>
               <ComponentBar
@@ -339,7 +344,7 @@ export function HealthScoreCard({ compact = false, onViewDetails }: HealthScoreC
               <ComponentBar
                 label={t('goalProgress')}
                 value={healthScore.components.goal_progress}
-                color="#8b5cf6"
+                color={colors.palette.purple}
               />
               <ComponentBar
                 label={t('consistency')}
@@ -349,22 +354,22 @@ export function HealthScoreCard({ compact = false, onViewDetails }: HealthScoreC
               <ComponentBar
                 label={t('billTiming')}
                 value={healthScore.components.bill_timing}
-                color="#06b6d4"
+                color={colors.palette.cyan}
               />
             </View>
 
             {/* Tips */}
             {healthScore.tips && healthScore.tips.length > 0 && (
               <View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.sm }}>
                   <Info size={14} color={colors.mutedForeground} />
-                  <Text style={{ fontSize: 12, color: colors.mutedForeground, marginStart: 4, fontFamily: 'Inter_500Medium' }}>
+                  <Text style={{ fontSize: 12, color: colors.mutedForeground, marginStart: theme.spacing.xs, fontFamily: theme.typography.bodyMedium.fontFamily }}>
                     {t('tipsToImprove')}
                   </Text>
                 </View>
                 {healthScore.tips.slice(0, 2).map((tip, idx) => (
-                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 }}>
-                    <Text style={{ color: colors.accent, marginEnd: 8 }}>•</Text>
+                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: theme.spacing.xs }}>
+                    <Text style={{ color: colors.accent, marginEnd: theme.spacing.sm }}>•</Text>
                     <Text style={{ color: colors.foreground, fontSize: 14, flex: 1 }}>{tip}</Text>
                   </View>
                 ))}
@@ -372,9 +377,9 @@ export function HealthScoreCard({ compact = false, onViewDetails }: HealthScoreC
             )}
           </>
         ) : (
-          <View style={{ backgroundColor: colors.muted + '80', padding: 24, borderRadius: 8, alignItems: 'center' }}>
+          <View style={{ backgroundColor: theme.alpha(colors.muted, 0.5), padding: theme.spacing.xxl, borderRadius: theme.radii.sm, alignItems: 'center' }}>
             <Heart size={32} color={colors.mutedForeground} />
-            <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 8 }}>
+            <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: theme.spacing.sm }}>
               {t('addTransactionsForScore')}
             </Text>
           </View>
@@ -385,36 +390,36 @@ export function HealthScoreCard({ compact = false, onViewDetails }: HealthScoreC
         ref={methodologySheetRef}
         title={t('healthScoreHowItWorksTitle')}
       >
-        <Text style={{ color: colors.mutedForeground, fontSize: 14, lineHeight: 20, marginBottom: 16 }}>
+        <Text style={{ color: colors.mutedForeground, fontSize: 14, lineHeight: 20, marginBottom: theme.spacing.lg }}>
           {t('healthScoreMethodologySummary')}
         </Text>
 
-        <View style={{ marginBottom: 16 }}>
-          <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold', marginBottom: 8 }}>
+        <View style={{ marginBottom: theme.spacing.lg }}>
+          <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: theme.typography.h2.fontFamily, marginBottom: theme.spacing.sm }}>
             {t('healthScoreWeightsTitle')}
           </Text>
         </View>
         {scoreWeights.map((item) => (
-          <View key={item} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 }}>
-            <Text style={{ color: colors.info, marginEnd: 8 }}>•</Text>
+          <View key={item} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: theme.spacing.sm }}>
+            <Text style={{ color: colors.info, marginEnd: theme.spacing.sm }}>•</Text>
             <Text style={{ flex: 1, color: colors.foreground, fontSize: 14, lineHeight: 20 }}>{item}</Text>
           </View>
         ))}
 
-        <View style={{ marginTop: 8, marginBottom: 16 }}>
-          <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold', marginBottom: 8 }}>
+        <View style={{ marginTop: theme.spacing.sm, marginBottom: theme.spacing.lg }}>
+          <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: theme.typography.h2.fontFamily, marginBottom: theme.spacing.sm }}>
             {t('healthScoreWindowsTitle')}
           </Text>
           {scoreWindows.map((item) => (
-            <View key={item} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 }}>
-              <Text style={{ color: colors.info, marginEnd: 8 }}>•</Text>
+            <View key={item} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: theme.spacing.sm }}>
+              <Text style={{ color: colors.info, marginEnd: theme.spacing.sm }}>•</Text>
               <Text style={{ flex: 1, color: colors.foreground, fontSize: 14, lineHeight: 20 }}>{item}</Text>
             </View>
           ))}
         </View>
 
-        <View style={{ marginBottom: 16 }}>
-          <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold', marginBottom: 8 }}>
+        <View style={{ marginBottom: theme.spacing.lg }}>
+          <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: theme.typography.h2.fontFamily, marginBottom: theme.spacing.sm }}>
             {t('healthScoreTrendTitle')}
           </Text>
           <Text style={{ color: colors.foreground, fontSize: 14, lineHeight: 20 }}>
@@ -422,8 +427,8 @@ export function HealthScoreCard({ compact = false, onViewDetails }: HealthScoreC
           </Text>
         </View>
 
-        <View style={{ backgroundColor: colors.warning + '15', borderRadius: 10, padding: 12 }}>
-          <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold', marginBottom: 6 }}>
+        <View style={{ backgroundColor: theme.alpha(colors.warning, 0.08), borderRadius: 10, padding: theme.spacing.md }}>
+          <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: theme.typography.h2.fontFamily, marginBottom: 6 }}>
             {t('healthScoreProxyNoteTitle')}
           </Text>
           <Text style={{ color: colors.foreground, fontSize: 14, lineHeight: 20 }}>

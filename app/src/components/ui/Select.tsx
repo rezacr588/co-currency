@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, Pressable, Modal, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronDown, X, Check } from 'lucide-react-native';
-import { ICON_SIZES, ICON_COLOR_MUTED } from '../../constants/icons';
+import { ICON_SIZES, useIconColors } from '../../constants/icons';
 import { useTheme } from 'styled-components/native';
 import { HIT_SLOP_SM } from '../../constants/hitSlop';
 
@@ -34,6 +34,7 @@ export function Select({
 }: SelectProps) {
   const theme = useTheme();
   const colors = theme.colors;
+  const iconColors = useIconColors();
   const [isOpen, setIsOpen] = useState(false);
 
   const selectedOption = options.find((opt) => opt.value === value);
@@ -65,7 +66,7 @@ export function Select({
         <Text style={{ color: selectedOption ? colors.foreground : colors.mutedForeground }}>
           {selectedOption?.label || placeholder}
         </Text>
-        <ChevronDown size={ICON_SIZES.md} color={ICON_COLOR_MUTED} />
+        <ChevronDown size={ICON_SIZES.md} color={iconColors.muted} />
       </Pressable>
       {error && (
         <Text style={{ color: colors.danger, fontSize: 14, marginTop: 4 }}>{error}</Text>
@@ -78,7 +79,7 @@ export function Select({
               {label || 'Select'}
             </Text>
             <Pressable onPress={() => setIsOpen(false)} hitSlop={HIT_SLOP_SM} style={{ padding: 8 }}>
-              <X size={ICON_SIZES.default} color={ICON_COLOR_MUTED} />
+              <X size={ICON_SIZES.default} color={iconColors.muted} />
             </Pressable>
           </View>
 

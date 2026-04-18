@@ -14,18 +14,12 @@ import { usePendingApprovals } from '@/src/hooks/useAgent';
 import { LoadingSpinner } from '@/src/components/ui/LoadingSpinner';
 import { EmptyState } from '@/src/components/ui/EmptyState';
 import { haptics } from '@/src/utils/haptics';
+import { spacing, radii } from '@/src/theme';
 import type { ActionApproval } from '@/src/api/agent';
 
 type FilterType = 'all' | 'pending' | 'expired';
 
-const FILTERS: { value: FilterType; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'expired', label: 'Expired' },
-];
-
 function ApprovalCard({ approval }: { approval: ActionApproval }) {
-  const router = useRouter();
   const theme = useTheme();
   const colors = theme.colors;
   const { t } = useLanguage();
@@ -35,36 +29,36 @@ function ApprovalCard({ approval }: { approval: ActionApproval }) {
   const expiresAt = approval.expires_at ? new Date(approval.expires_at) : null;
   const isExpiringSoon = expiresAt && isPending && (expiresAt.getTime() - Date.now() < 3600000); // < 1 hour
 
-  const statusColor = isPending 
-    ? (isExpiringSoon ? colors.warning : colors.info) 
+  const statusColor = isPending
+    ? (isExpiringSoon ? colors.warning : colors.info)
     : isExpired ? colors.danger : colors.success;
 
-  const statusLabel = isPending 
+  const statusLabel = isPending
     ? (t('pending') || 'Pending')
     : approval.approval_status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   return (
-    <View style={{ backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: isExpiringSoon ? colors.warning : colors.border, marginBottom: 12, overflow: 'hidden' }}>
+    <View style={{ backgroundColor: colors.card, borderRadius: radii.md, borderWidth: 1, borderColor: isExpiringSoon ? colors.warning : colors.border, marginBottom: spacing.md, overflow: 'hidden' }}>
       {isExpiringSoon && (
-        <View style={{ backgroundColor: colors.warning + '20', flexDirection: 'row', alignItems: 'center', padding: 8, gap: 6 }}>
+        <View style={{ backgroundColor: theme.alpha(colors.warning, 0.125), flexDirection: 'row', alignItems: 'center', padding: spacing.sm, gap: 6 }}>
           <AlertTriangle size={14} color={colors.warning} />
           <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', color: colors.warning }}>
             {t('expiringSoon') || 'Expiring Soon'}
           </Text>
         </View>
       )}
-      
-      <View style={{ padding: 16 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+
+      <View style={{ padding: spacing.lg }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: spacing.md }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 16, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginBottom: 4 }}>
+            <Text style={{ fontSize: 16, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginBottom: spacing.xs }}>
               {t('stepApproval') || 'Step Approval'}
             </Text>
-            <Text style={{ fontSize: 13, color: colors.muted }}>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
               ID: {approval.step_id.slice(0, 8)}...
             </Text>
           </View>
-          <View style={{ backgroundColor: statusColor + '20', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 }}>
+          <View style={{ backgroundColor: theme.alpha(statusColor, 0.125), borderRadius: 6, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs }}>
             <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', color: statusColor }}>
               {statusLabel}
             </Text>
@@ -72,16 +66,16 @@ function ApprovalCard({ approval }: { approval: ActionApproval }) {
         </View>
 
         {expiresAt && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 12 }}>
-            <Clock size={14} color={colors.muted} />
-            <Text style={{ fontSize: 12, color: colors.muted }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.md }}>
+            <Clock size={14} color={colors.mutedForeground} />
+            <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
               {isPending ? (t('expiresAt') || 'Expires at') : (t('expiredAt') || 'Expired at')}: {expiresAt.toLocaleString()}
             </Text>
           </View>
         )}
 
         {approval.rejection_reason && (
-          <View style={{ backgroundColor: colors.danger + '10', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+          <View style={{ backgroundColor: theme.alpha(colors.danger, 0.08), borderRadius: radii.sm, padding: spacing.md, marginBottom: spacing.md }}>
             <Text style={{ fontSize: 12, color: colors.danger }}>
               {t('rejectionReason') || 'Rejection Reason'}: {approval.rejection_reason}
             </Text>
@@ -89,7 +83,7 @@ function ApprovalCard({ approval }: { approval: ActionApproval }) {
         )}
 
         {isPending && (
-          <View style={{ backgroundColor: colors.info + '10', borderRadius: 8, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={{ backgroundColor: theme.alpha(colors.info, 0.08), borderRadius: radii.sm, padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <ExternalLink size={14} color={colors.info} />
             <Text style={{ fontSize: 12, color: colors.info, flex: 1 }}>
               {t('approveFromPlan') || 'Approve or reject from the plan detail screen'}
@@ -113,6 +107,12 @@ export default function ApprovalsScreen() {
 
   const approvals = approvalsData?.approvals ?? [];
 
+  const filters: { value: FilterType; label: string }[] = useMemo(() => [
+    { value: 'all', label: t('filterAll') || 'All' },
+    { value: 'pending', label: t('pending') || 'Pending' },
+    { value: 'expired', label: t('expired') || 'Expired' },
+  ], [t]);
+
   const filteredApprovals = useMemo(() => {
     if (filter === 'all') return approvals;
     if (filter === 'pending') return approvals.filter(a => a.approval_status === 'pending');
@@ -132,16 +132,22 @@ export default function ApprovalsScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <Pressable onPress={() => router.back()} style={({ pressed }) => [{ padding: 8, marginEnd: 8 }, pressed && { opacity: 0.7 }]} hitSlop={8}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel={t('a11yBack') || 'Back'}
+          hitSlop={8}
+          style={({ pressed }) => [{ padding: spacing.sm, marginEnd: spacing.sm }, pressed && { opacity: 0.7 }]}
+        >
           <ArrowLeft size={24} color={colors.foreground} />
         </Pressable>
         <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground, flex: 1 }}>
           {t('approvals') || 'Approvals'}
         </Text>
         {pendingCount > 0 && (
-          <View style={{ backgroundColor: colors.warning, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2 }}>
-            <Text style={{ fontSize: 13, fontFamily: 'Inter_600SemiBold', color: colors.background }}>
+          <View style={{ backgroundColor: colors.warning, borderRadius: radii.md, paddingHorizontal: spacing.sm, paddingVertical: 2 }}>
+            <Text style={{ fontSize: 13, fontFamily: 'Inter_600SemiBold', color: colors.primaryForeground }}>
               {pendingCount} {t('pending') || 'pending'}
             </Text>
           </View>
@@ -151,23 +157,26 @@ export default function ApprovalsScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ padding: 16, gap: 8 }}
+        contentContainerStyle={{ padding: spacing.lg, gap: spacing.sm }}
         style={{ flexGrow: 0 }}
       >
-        {FILTERS.map((f) => (
+        {filters.map((f) => (
           <Pressable
             key={f.value}
             onPress={() => { setFilter(f.value); haptics.light(); }}
+            accessibilityRole="button"
+            accessibilityLabel={f.label}
+            accessibilityState={{ selected: filter === f.value }}
             style={({ pressed }) => [{
               backgroundColor: filter === f.value ? colors.accent : colors.card,
               borderWidth: 1,
               borderColor: filter === f.value ? colors.accent : colors.border,
-              borderRadius: 20,
-              paddingHorizontal: 16,
-              paddingVertical: 8,
+              borderRadius: radii.xl,
+              paddingHorizontal: spacing.lg,
+              paddingVertical: spacing.sm,
             }, pressed && { opacity: 0.7 }]}
           >
-            <Text style={{ fontSize: 14, fontFamily: 'Inter_500Medium', color: filter === f.value ? colors.background : colors.foreground }}>
+            <Text style={{ fontSize: 14, fontFamily: 'Inter_500Medium', color: filter === f.value ? colors.accentForeground : colors.foreground }}>
               {f.label}
             </Text>
           </Pressable>
@@ -176,7 +185,7 @@ export default function ApprovalsScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ padding: spacing.lg }}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}

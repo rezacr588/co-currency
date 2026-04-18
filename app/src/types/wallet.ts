@@ -144,17 +144,37 @@ export interface Category {
   is_default?: boolean;
 }
 
-// Icon names correspond to keys in CATEGORY_ICONS from constants/icons.tsx
-export const DEFAULT_CATEGORIES: Category[] = [
-  { name: 'food', icon: 'food', color: '#ef4444', is_default: true },
-  { name: 'transportation', icon: 'transportation', color: '#f97316', is_default: true },
-  { name: 'entertainment', icon: 'entertainment', color: '#eab308', is_default: true },
-  { name: 'shopping', icon: 'shopping', color: '#22c55e', is_default: true },
-  { name: 'bills', icon: 'bills', color: '#3b82f6', is_default: true },
-  { name: 'income', icon: 'income', color: '#10b981', is_default: true },
-  { name: 'transfer', icon: 'transfer', color: '#8b5cf6', is_default: true },
-  { name: 'other', icon: 'other', color: '#6b7280', is_default: true },
-];
+// Icon names correspond to keys in CATEGORY_ICONS from constants/icons.tsx.
+// Category colors are sourced from the theme palette so they adapt to light/dark mode.
+// Use `getDefaultCategories(theme)` with a styled-components theme object.
+export type CategoryPaletteSource = {
+  colors: {
+    palette: {
+      red: string;
+      orange: string;
+      yellow: string;
+      green: string;
+      blue: string;
+      teal: string;
+      purple: string;
+      gray: string;
+    };
+  };
+};
+
+export function getDefaultCategories(source: CategoryPaletteSource): Category[] {
+  const { palette } = source.colors;
+  return [
+    { name: 'food', icon: 'food', color: palette.red, is_default: true },
+    { name: 'transportation', icon: 'transportation', color: palette.orange, is_default: true },
+    { name: 'entertainment', icon: 'entertainment', color: palette.yellow, is_default: true },
+    { name: 'shopping', icon: 'shopping', color: palette.green, is_default: true },
+    { name: 'bills', icon: 'bills', color: palette.blue, is_default: true },
+    { name: 'income', icon: 'income', color: palette.teal, is_default: true },
+    { name: 'transfer', icon: 'transfer', color: palette.purple, is_default: true },
+    { name: 'other', icon: 'other', color: palette.gray, is_default: true },
+  ];
+}
 
 export interface WalletConvertRequest {
   from_currency: string;

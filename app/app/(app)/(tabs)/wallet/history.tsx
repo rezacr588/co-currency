@@ -26,32 +26,25 @@ import {
   X,
   Pencil,
   Download,
-  Check,
-  TrendingUp,
-  TrendingDown,
-  Calendar,
   StickyNote,
   Plus,
+  History as HistoryIcon,
+  Search,
 } from 'lucide-react-native';
-import { api, getAuthToken, API_BASE } from '../../../../src/api';
+import { api, getAuthToken } from '../../../../src/api';
 import { useAuth } from '../../../../src/context/AuthContext';
 import { useLanguage } from '../../../../src/context/LanguageContext';
-import { useTheme } from '../../../../src/context/ThemeContext';
 import { useTheme as useStyledTheme } from 'styled-components/native';
-import { formatDate, getCurrencyDisplay, formatTransactionAmount } from '../../../../src/utils/format';
-import { StyledCategoryIcon, CATEGORY_ICONS, CategoryIcon } from '../../../../src/constants/icons';
-import { SkeletonTransaction, SkeletonList } from '../../../../src/components/ui/Skeleton';
-import { SwipeableRow, type SwipeAction } from '../../../../src/components/ui';
-import { COMMON_CURRENCIES } from '../../../../src/constants/currencies';
+import { formatDate, formatTransactionAmount } from '../../../../src/utils/format';
+import { StyledCategoryIcon } from '../../../../src/constants/icons';
+import { SkeletonTransaction } from '../../../../src/components/ui/Skeleton';
+import { SwipeableRow, type SwipeAction, EmptyState } from '../../../../src/components/ui';
 import type { Transaction, TransactionFilter, UpdateTransactionRequest } from '../../../../src/types/wallet';
 import type { Note, CreateNoteRequest } from '../../../../src/types/note';
 import { removeNoteBackup, upsertNoteBackup } from '../../../../src/offline/noteBackup';
 import { haptics } from '../../../../src/utils/haptics';
 import { HistoryFilterModal } from '../../../../src/components/features/History/HistoryFilterModal';
 import { HistoryEditModal } from '../../../../src/components/features/History/HistoryEditModal';
-
-const CATEGORIES = Object.keys(CATEGORY_ICONS);
-const CURRENCIES = [...COMMON_CURRENCIES];
 
 type HistoryColors = {
   accent: string;
@@ -232,9 +225,9 @@ export default function TransactionHistoryScreen() {
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { isDark } = useTheme();
   const styledTheme = useStyledTheme();
   const colors = styledTheme.colors;
+  const { spacing, radii, alpha } = styledTheme;
   const userID = user?.id ?? '';
 
   const isDesktop = width >= 1024;
@@ -564,25 +557,25 @@ export default function TransactionHistoryScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
       {/* Header */}
       <View
-        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, maxWidth: 1400, width: '100%', alignSelf: 'center' }}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border, maxWidth: 1400, width: '100%', alignSelf: 'center' }}
       >
         <Pressable
           onPress={() => router.back()}
           hitSlop={12}
-          style={({ pressed }) => [{ padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
-          accessibilityLabel={t('back') || 'Go back'}
+          style={({ pressed }) => [{ padding: spacing.sm, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+          accessibilityLabel={t('a11yBack') || 'Back'}
           accessibilityRole="button"
         >
           <ArrowLeft size={24} color={iconColor} />
         </Pressable>
         <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('transactionHistory')}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
           {/* Export Button */}
           <Pressable
             onPress={handleExport}
             disabled={isExporting || transactions.length === 0}
             hitSlop={8}
-            style={({ pressed }) => [{ padding: 8, cursor: 'pointer', opacity: isExporting || transactions.length === 0 ? 0.5 : 1 }, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [{ padding: spacing.sm, cursor: 'pointer', opacity: isExporting || transactions.length === 0 ? 0.5 : 1 }, pressed && { opacity: 0.7 }]}
             accessibilityLabel={t('export') || 'Export transactions'}
             accessibilityRole="button"
           >
@@ -596,8 +589,8 @@ export default function TransactionHistoryScreen() {
           <Pressable
             onPress={() => setShowFilterModal(true)}
             hitSlop={8}
-            style={({ pressed }) => [{ padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
-            accessibilityLabel={t('filters') || 'Filter transactions'}
+            style={({ pressed }) => [{ padding: spacing.sm, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+            accessibilityLabel={t('a11yFilter') || 'Filter'}
             accessibilityRole="button"
           >
             <Filter
@@ -610,27 +603,39 @@ export default function TransactionHistoryScreen() {
 
       {/* Active Filters Badge */}
       {hasActiveFilters && (
-        <View style={{ paddingHorizontal: 16, paddingVertical: 8, maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <View style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
             {filterCategory && (
-              <View style={{ backgroundColor: colors.accent + '33', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 9999, flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ color: colors.accent, fontSize: 14, marginEnd: 4 }}>{filterCategory}</Text>
-                <Pressable onPress={() => setFilterCategory(null)} hitSlop={12} style={{ padding: 4 }}>
+              <View style={{ backgroundColor: alpha(colors.accent, 0.2), paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radii.full, flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ color: colors.accent, fontSize: 14, marginEnd: spacing.xs }}>{filterCategory}</Text>
+                <Pressable
+                  onPress={() => setFilterCategory(null)}
+                  hitSlop={12}
+                  style={{ padding: spacing.xs }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('a11yClearFilter') || 'Clear filter'}
+                >
                   <X size={14} color={colors.accent} />
                 </Pressable>
               </View>
             )}
             {filterType && (
-              <View style={{ backgroundColor: colors.accent + '33', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 9999, flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ color: colors.accent, fontSize: 14, marginEnd: 4 }}>{t(filterType)}</Text>
-                <Pressable onPress={() => setFilterType(null)} hitSlop={12} style={{ padding: 4 }}>
+              <View style={{ backgroundColor: alpha(colors.accent, 0.2), paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radii.full, flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ color: colors.accent, fontSize: 14, marginEnd: spacing.xs }}>{t(filterType)}</Text>
+                <Pressable
+                  onPress={() => setFilterType(null)}
+                  hitSlop={12}
+                  style={{ padding: spacing.xs }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('a11yClearFilter') || 'Clear filter'}
+                >
                   <X size={14} color={colors.accent} />
                 </Pressable>
               </View>
             )}
             {(filterFromDate || filterToDate) && (
-              <View style={{ backgroundColor: colors.accent + '33', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 9999, flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ color: colors.accent, fontSize: 14, marginEnd: 4 }}>
+              <View style={{ backgroundColor: alpha(colors.accent, 0.2), paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radii.full, flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ color: colors.accent, fontSize: 14, marginEnd: spacing.xs }}>
                   {filterFromDate || '...'} - {filterToDate || '...'}
                 </Text>
                 <Pressable
@@ -639,13 +644,15 @@ export default function TransactionHistoryScreen() {
                     setFilterToDate('');
                   }}
                   hitSlop={12}
-                  style={{ padding: 4 }}
+                  style={{ padding: spacing.xs }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('a11yClearFilter') || 'Clear filter'}
                 >
                   <X size={14} color={colors.accent} />
                 </Pressable>
               </View>
             )}
-            <Pressable onPress={clearFilters} style={{ paddingHorizontal: 12, paddingVertical: 4, minHeight: 44, justifyContent: 'center' }}>
+            <Pressable onPress={clearFilters} style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.xs, minHeight: 44, justifyContent: 'center' }}>
               <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>{t('clearFilters')}</Text>
             </Pressable>
           </View>
@@ -664,7 +671,7 @@ export default function TransactionHistoryScreen() {
         contentContainerStyle={[
           historyStyles.listContent,
           {
-            padding: isDesktop ? 32 : 16,
+            padding: isDesktop ? spacing.xxxl : spacing.lg,
             paddingBottom: bottomPadding,
             flexGrow: !isPending && transactions.length === 0 ? 1 : undefined,
           },
@@ -672,10 +679,24 @@ export default function TransactionHistoryScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListEmptyComponent={
           !isPending ? (
-            <View
-              style={[historyStyles.emptyContainer, { backgroundColor: colors.card, maxWidth: isDesktop ? 600 : '100%' }]}
-            >
-              <Text style={{ color: colors.mutedForeground }}>{t('noTransactions')}</Text>
+            <View style={{ maxWidth: isDesktop ? 600 : '100%', width: '100%', alignSelf: 'center' }}>
+              {hasActiveFilters ? (
+                <EmptyState
+                  icon={Search}
+                  title={t('noTransactions') || 'No transactions'}
+                  description={t('clearFilters') || 'Try clearing active filters'}
+                  actionLabel={t('clearFilters') || 'Clear filters'}
+                  onAction={clearFilters}
+                />
+              ) : (
+                <EmptyState
+                  icon={HistoryIcon}
+                  title={t('emptyNoTransactionsTitle') || 'No transactions yet'}
+                  description={t('emptyNoTransactionsDesc') || 'Add your first transaction to start tracking.'}
+                  actionLabel={t('emptyNoTransactionsCta') || 'Add transaction'}
+                  onAction={() => router.push('/transaction-create' as any)}
+                />
+              )}
             </View>
           ) : null
         }
@@ -735,55 +756,55 @@ export default function TransactionHistoryScreen() {
               onPress={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
                     {t('transactionNotes') || 'Transaction Notes'}
                   </Text>
                   {selectedTransactionForNotes && (
-                    <Text style={{ color: colors.mutedForeground, fontSize: 14, marginTop: 4 }} numberOfLines={1}>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 14, marginTop: spacing.xs }} numberOfLines={1}>
                       {selectedTransactionForNotes.description || selectedTransactionForNotes.category || 'Transaction'}
                     </Text>
                   )}
                 </View>
-                <Pressable onPress={handleCloseNotesModal} hitSlop={8} style={({ pressed }) => [{ padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('close') || 'Close'} accessibilityRole="button">
+                <Pressable onPress={handleCloseNotesModal} hitSlop={8} style={({ pressed }) => [{ padding: spacing.sm, cursor: 'pointer' }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('a11yClose') || 'Close'} accessibilityRole="button">
                   <X size={24} color={colors.placeholder} />
                 </Pressable>
               </View>
 
-              <ScrollView 
-                showsVerticalScrollIndicator={false} 
+              <ScrollView
+                showsVerticalScrollIndicator={false}
                 style={{ flex: 1 }}
-                contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) }}
+                contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, spacing.lg) }}
               >
                 {/* Existing Notes */}
                 {isLoadingNotes ? (
-                  <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+                  <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
                     <ActivityIndicator color={colors.accent} />
                   </View>
                 ) : transactionNotes.length > 0 ? (
-                  <View style={{ marginBottom: 16 }}>
-                    <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>
+                  <View style={{ marginBottom: spacing.lg }}>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: spacing.sm }}>
                       {t('existingNotes') || 'Existing Notes'} ({transactionNotes.length})
                     </Text>
                     {transactionNotes.map((note: Note) => (
                       <View
                         key={note.id}
-                        style={{ backgroundColor: colors.muted, padding: 12, borderRadius: 8, marginBottom: 8, flexDirection: 'row', alignItems: 'flex-start' }}
+                        style={{ backgroundColor: colors.muted, padding: spacing.md, borderRadius: radii.sm, marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'flex-start' }}
                       >
                         <View style={{ flex: 1 }}>
                           <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>{note.title}</Text>
                           {note.content && (
-                            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginTop: 4 }}>{note.content}</Text>
+                            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginTop: spacing.xs }}>{note.content}</Text>
                           )}
-                          <Text style={{ color: colors.mutedForeground + '99', fontSize: 12, marginTop: 8 }}>
+                          <Text style={{ color: alpha(colors.mutedForeground, 0.6), fontSize: 12, marginTop: spacing.sm }}>
                             {formatDate(note.created_at)}
                           </Text>
                         </View>
                         <Pressable
                           onPress={() => handleDeleteNote(note.id)}
                           hitSlop={10}
-                          style={({ pressed }) => [{ padding: 8, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
+                          style={({ pressed }) => [{ padding: spacing.sm, cursor: 'pointer' }, pressed && { opacity: 0.7 }]}
                           accessibilityLabel={t('deleteNote') || 'Delete note'}
                           accessibilityRole="button"
                         >
@@ -793,17 +814,17 @@ export default function TransactionHistoryScreen() {
                     ))}
                   </View>
                 ) : (
-                  <View style={{ backgroundColor: colors.muted + '80', padding: 16, borderRadius: 8, marginBottom: 16, alignItems: 'center' }}>
+                  <View style={{ backgroundColor: alpha(colors.muted, 0.5), padding: spacing.lg, borderRadius: radii.sm, marginBottom: spacing.lg, alignItems: 'center' }}>
                     <StickyNote size={32} color={colors.placeholder} />
-                    <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 8 }}>
+                    <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: spacing.sm }}>
                       {t('noNotesForTransaction') || 'No notes for this transaction yet'}
                     </Text>
                   </View>
                 )}
 
                 {/* Add New Note */}
-                <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 16 }}>
-                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>
+                <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.lg }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: spacing.sm }}>
                     {t('addNewNote') || 'Add New Note'}
                   </Text>
                   <TextInput
@@ -811,14 +832,14 @@ export default function TransactionHistoryScreen() {
                     onChangeText={setNewNoteTitle}
                     placeholder={t('noteTitle') || 'Note title...'}
                     placeholderTextColor={colors.mutedForeground}
-                    style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 8, color: colors.foreground, marginBottom: 8, outlineStyle: 'none' } as any}
+                    style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: spacing.md, borderRadius: radii.sm, color: colors.foreground, marginBottom: spacing.sm, outlineStyle: 'none' } as any}
                   />
                   <TextInput
                     value={newNoteContent}
                     onChangeText={setNewNoteContent}
                     placeholder={t('noteContent') || 'Note content (optional)...'}
                     placeholderTextColor={colors.mutedForeground}
-                    style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 8, color: colors.foreground, marginBottom: 12, minHeight: 80, outlineStyle: 'none' } as any}
+                    style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: spacing.md, borderRadius: radii.sm, color: colors.foreground, marginBottom: spacing.md, minHeight: 80, outlineStyle: 'none' } as any}
                     multiline
                     textAlignVertical="top"
                   />
@@ -827,8 +848,8 @@ export default function TransactionHistoryScreen() {
                     disabled={createNoteMutation.isPending || !newNoteTitle.trim()}
                     style={{
                       backgroundColor: colors.accent,
-                      padding: 12,
-                      borderRadius: 8,
+                      padding: spacing.md,
+                      borderRadius: radii.sm,
                       flexDirection: 'row',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -841,7 +862,7 @@ export default function TransactionHistoryScreen() {
                     ) : (
                       <>
                         <Plus size={18} color={colors.primaryForeground} />
-                        <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginStart: 8 }}>
+                        <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_600SemiBold', marginStart: spacing.sm }}>
                           {t('addNote') || 'Add Note'}
                         </Text>
                       </>

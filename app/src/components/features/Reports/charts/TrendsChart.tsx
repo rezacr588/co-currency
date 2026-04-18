@@ -16,14 +16,14 @@ function TrendsChartComponent({ data, t }: TrendsChartProps) {
 
   return (
     <View>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, height: 100 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: theme.spacing.sm, height: 100 }}>
         {data.slice(-6).map((item, index) => {
           const incomeHeight = maxValue > 0 ? (item.income / maxValue) * 80 : 0;
           const expenseHeight = maxValue > 0 ? (item.expenses / maxValue) * 80 : 0;
 
           return (
             <View key={index} style={{ flex: 1, alignItems: 'center' }}>
-              <View style={{ flexDirection: 'row', gap: 4, alignItems: 'flex-end', height: 80 }}>
+              <View style={{ flexDirection: 'row', gap: theme.spacing.xs, alignItems: 'flex-end', height: 80 }}>
                 <View
                   style={{ width: 8, borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: colors.success, height: Math.max(incomeHeight, 2) }}
                   accessibilityLabel={`${item.period} income`}
@@ -33,20 +33,20 @@ function TrendsChartComponent({ data, t }: TrendsChartProps) {
                   accessibilityLabel={`${item.period} expenses`}
                 />
               </View>
-              <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 4 }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: theme.spacing.xs }}>
                 {item.period.split('-')[1] || item.period}
               </Text>
             </View>
           );
         })}
       </View>
-      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 12 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: theme.spacing.lg, marginTop: theme.spacing.md }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.success, marginEnd: 4 }} />
+          <View style={{ width: 8, height: 8, borderRadius: theme.radii.full, backgroundColor: colors.success, marginEnd: theme.spacing.xs }} />
           <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('income')}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.danger, marginEnd: 4 }} />
+          <View style={{ width: 8, height: 8, borderRadius: theme.radii.full, backgroundColor: colors.danger, marginEnd: theme.spacing.xs }} />
           <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('expenses')}</Text>
         </View>
       </View>

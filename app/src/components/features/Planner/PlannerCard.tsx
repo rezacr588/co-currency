@@ -16,7 +16,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { haptics } from '../../../utils/haptics';
 import { normalizePlannerDueDate } from '../../../utils/plannerDate';
 import { readStorage, writeStorage } from '../../../utils/storage';
-import { COLUMN_ORDER, PRIORITY_COLORS } from '../../../utils/plannerConstants';
+import { COLUMN_ORDER, lookupPriority, usePriorityColors } from '../../../utils/plannerConstants';
 import type { PlannerPendingMarker, PlannerStatus, TodoItem } from '../../../types/planner';
 
 type DragDirection = 'left' | 'right' | null;
@@ -76,6 +76,7 @@ function PlannerCardInner({
 }: PlannerCardProps) {
   const theme = useTheme();
   const colors = theme.colors;
+  const priorityColors = usePriorityColors();
   const { t } = useLanguage();
 
   const translateX = useSharedValue(0);
@@ -88,7 +89,7 @@ function PlannerCardInner({
   const canCompleteTask = isTask && item.status !== 'done' && item.status !== 'archived';
   const normalizedDueDate = normalizePlannerDueDate(item.due_date);
   const overdue = isOverdue(normalizedDueDate);
-  const priorityInfo = item.priority ? PRIORITY_COLORS[item.priority] : undefined;
+  const priorityInfo = lookupPriority(priorityColors, item.priority);
   const allowGestures = interactionMode === 'gesture';
   const previousStatus = columnIndex > 0 ? COLUMN_ORDER[columnIndex - 1] : null;
   const nextStatus = columnIndex < COLUMN_ORDER.length - 1 ? COLUMN_ORDER[columnIndex + 1] : null;
@@ -198,7 +199,7 @@ function PlannerCardInner({
       actions.push({
         icon: 'edit' as const,
         color: colors.accent,
-        backgroundColor: colors.accent + '20',
+        backgroundColor: theme.alpha(colors.accent, 0.125),
         onPress: () => onEdit(item),
       });
     }
@@ -206,12 +207,12 @@ function PlannerCardInner({
       actions.push({
         icon: 'delete' as const,
         color: colors.danger,
-        backgroundColor: colors.danger + '18',
+        backgroundColor: theme.alpha(colors.danger, 0.1),
         onPress: () => onDeleteTask(item.id),
       });
     }
     return actions;
-  }, [allowGestures, isTask, onEdit, onDeleteTask, item, colors]);
+  }, [allowGestures, isTask, onEdit, onDeleteTask, item, colors, theme]);
 
   const subtaskText = useMemo(() => {
     if (item.subtask_total && item.subtask_total > 0) {
@@ -227,12 +228,12 @@ function PlannerCardInner({
           backgroundColor: isTask ? colors.card : colors.cardElevated,
           borderWidth: 1,
           borderColor: marker?.sync_error
-            ? colors.danger + '66'
+            ? theme.alpha(colors.danger, 0.4)
             : marker?.is_pending_sync
-              ? colors.warning + '66'
+              ? theme.alpha(colors.warning, 0.4)
               : isTask
                 ? colors.border
-                : colors.accent + '55',
+                : theme.alpha(colors.accent, 0.33),
           borderRadius: 16,
           padding: 12,
           marginBottom: 10,
@@ -270,8 +271,10 @@ function PlannerCardInner({
                   borderRadius: 10,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: colors.success + '18',
+                  backgroundColor: theme.alpha(colors.success, 0.1),
                 }, pressed && { opacity: 0.72 }]}
+                accessibilityRole="button"
+                accessibilityLabel={t('plannerTaskCompleted') || 'Complete task'}
               >
                 <Check size={16} color={colors.success} />
               </Pressable>
@@ -286,8 +289,10 @@ function PlannerCardInner({
                   borderRadius: 10,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: colors.accent + '16',
+                  backgroundColor: theme.alpha(colors.accent, 0.09),
                 }, pressed && { opacity: 0.72 }]}
+                accessibilityRole="button"
+                accessibilityLabel={t('a11yEdit') || 'Edit'}
               >
                 <Pencil size={15} color={colors.accent} />
               </Pressable>
@@ -317,7 +322,7 @@ function PlannerCardInner({
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 3,
-                backgroundColor: overdue ? colors.danger + '18' : colors.muted,
+                backgroundColor: overdue ? theme.alpha(colors.danger, 0.1) : colors.muted,
                 borderRadius: 6,
                 paddingHorizontal: 7,
                 paddingVertical: 2,
@@ -339,7 +344,7 @@ function PlannerCardInner({
           )}
 
           {item.tag_names?.slice(0, 2).map((tagName) => (
-            <View key={tagName} style={{ backgroundColor: colors.accent + '14', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
+            <View key={tagName} style={{ backgroundColor: theme.alpha(colors.accent, 0.08), borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
               <Text style={{ color: colors.accent, fontSize: 10, fontFamily: 'Inter_500Medium' }}>
                 {tagName}
               </Text>
@@ -360,12 +365,14 @@ function PlannerCardInner({
                 justifyContent: 'center',
                 gap: 8,
                 borderWidth: 1,
-                borderColor: colors.accent + '44',
-                backgroundColor: colors.accent + '12',
+                borderColor: theme.alpha(colors.accent, 0.27),
+                backgroundColor: theme.alpha(colors.accent, 0.07),
                 borderRadius: 999,
                 paddingHorizontal: 12,
                 paddingVertical: 8,
               }, pressed && { opacity: 0.72 }]}
+              accessibilityRole="button"
+              accessibilityLabel={t('plannerMoveTo') || 'Move to'}
             >
               <Text
                 style={{ color: colors.accent, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}
@@ -389,21 +396,21 @@ function PlannerCardInner({
               </View>
             )}
             {marker?.is_pending_sync ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.warning + '18', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, alignSelf: 'flex-start' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.alpha(colors.warning, 0.1), borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, alignSelf: 'flex-start' }}>
                 <Text style={{ color: colors.warning, fontSize: 10, fontFamily: 'Inter_600SemiBold' }}>
                   {t('plannerPendingSync') || 'Pending sync'}
                 </Text>
               </View>
             ) : null}
             {marker?.pending_verification ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.warning + '18', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, alignSelf: 'flex-start' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.alpha(colors.warning, 0.1), borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, alignSelf: 'flex-start' }}>
                 <Text style={{ color: colors.warning, fontSize: 10, fontFamily: 'Inter_600SemiBold' }}>
                   {t('plannerGoalFunding') || 'Pending funding verification'}
                 </Text>
               </View>
             ) : null}
             {marker?.sync_error ? (
-              <View style={{ backgroundColor: colors.danger + '14', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, alignSelf: 'flex-start' }}>
+              <View style={{ backgroundColor: theme.alpha(colors.danger, 0.08), borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, alignSelf: 'flex-start' }}>
                 <Text style={{ color: colors.danger, fontSize: 10 }} numberOfLines={2}>
                   {marker.sync_error}
                 </Text>

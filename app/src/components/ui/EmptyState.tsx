@@ -2,6 +2,7 @@ import { View, Text } from 'react-native';
 import { LucideIcon } from 'lucide-react-native';
 import { ICON_SIZES } from '../../constants/icons';
 import { useTheme } from 'styled-components/native';
+import { spacing } from '../../theme';
 import { Button } from './Button';
 
 type EmptyStateVariant = 'default' | 'compact' | 'fullscreen';
@@ -21,9 +22,9 @@ interface EmptyStateProps {
 }
 
 const variantPadding: Record<EmptyStateVariant, number> = {
-  default: 32,
-  compact: 20,
-  fullscreen: 32,
+  default: spacing.xxxl,
+  compact: spacing.xl,
+  fullscreen: spacing.xxxl,
 };
 
 export function EmptyState({
@@ -44,7 +45,7 @@ export function EmptyState({
     <View
       style={{
         backgroundColor: colors.card,
-        borderRadius: 12,
+        borderRadius: theme.radii.md,
         alignItems: 'center',
         justifyContent: 'center',
         padding: variantPadding[variant],
@@ -54,9 +55,9 @@ export function EmptyState({
       <View
         style={{
           backgroundColor: colors.muted,
-          borderRadius: 16,
-          padding: variant === 'compact' ? 10 : 14,
-          marginBottom: variant === 'compact' ? 12 : 16,
+          borderRadius: theme.radii.lg,
+          padding: variant === 'compact' ? theme.spacing.sm + 2 : theme.spacing.md + 2,
+          marginBottom: variant === 'compact' ? theme.spacing.md : theme.spacing.lg,
         }}
       >
         <Icon size={size} color={colors.mutedForeground} />
@@ -72,13 +73,13 @@ export function EmptyState({
         {title}
       </Text>
       {description && (
-        <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 8, fontSize: 14 }}>
+        <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: theme.spacing.sm, fontSize: 14 }}>
           {description}
         </Text>
       )}
-      {action && <View style={{ marginTop: 20, width: '100%' }}>{action}</View>}
+      {action && <View style={{ marginTop: theme.spacing.xl, width: '100%' }}>{action}</View>}
       {!action && actionLabel && onAction && (
-        <View style={{ marginTop: 20 }}>
+        <View style={{ marginTop: theme.spacing.xl }}>
           <Button variant="accent" size="sm" onPress={onAction}>
             {actionLabel}
           </Button>

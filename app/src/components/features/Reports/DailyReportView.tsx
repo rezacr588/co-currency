@@ -134,37 +134,37 @@ export function DailyReportView({ isTablet = false, onOpenHistory }: DailyReport
         truncated={report.truncated}
       />
 
-      <View style={{ marginBottom: 24, flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-        <View style={{ backgroundColor: colors.success + '1a', borderWidth: 1, borderColor: colors.success + '4d', borderRadius: 12, padding: 16, width: isTablet ? '48.5%' : '48%' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+      <View style={{ marginBottom: theme.spacing.xxl, flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.md }}>
+        <View style={{ backgroundColor: theme.alpha(colors.success, 0.1), borderWidth: 1, borderColor: theme.alpha(colors.success, 0.3), borderRadius: theme.radii.md, padding: theme.spacing.lg, width: isTablet ? '48.5%' : '48%' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.xs }}>
             <TrendingUp size={16} color={colors.success} />
-            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginStart: 8 }}>{t('totalIncome')}</Text>
+            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginStart: theme.spacing.sm }}>{t('totalIncome')}</Text>
           </View>
           <Text style={{ color: colors.success, fontSize: 18, fontFamily: 'Inter_700Bold' }}>
             {formatCompactCurrency(report.totals.income, report.reportCurrency)}
           </Text>
         </View>
 
-        <View style={{ backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', borderRadius: 12, padding: 16, width: isTablet ? '48.5%' : '48%' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+        <View style={{ backgroundColor: theme.alpha(colors.danger, 0.1), borderWidth: 1, borderColor: theme.alpha(colors.danger, 0.3), borderRadius: theme.radii.md, padding: theme.spacing.lg, width: isTablet ? '48.5%' : '48%' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.xs }}>
             <TrendingDown size={16} color={colors.danger} />
-            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginStart: 8 }}>{t('totalExpenses')}</Text>
+            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginStart: theme.spacing.sm }}>{t('totalExpenses')}</Text>
           </View>
           <Text style={{ color: colors.danger, fontSize: 18, fontFamily: 'Inter_700Bold' }}>
             {formatCompactCurrency(report.totals.expenses, report.reportCurrency)}
           </Text>
         </View>
 
-        <View style={{ backgroundColor: colors.secondary + '73', borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 16, width: isTablet ? '48.5%' : '48%' }}>
-          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>{t('net')}</Text>
+        <View style={{ backgroundColor: theme.alpha(colors.secondary, 0.45), borderWidth: 1, borderColor: colors.border, borderRadius: theme.radii.md, padding: theme.spacing.lg, width: isTablet ? '48.5%' : '48%' }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: theme.spacing.xs }}>{t('net')}</Text>
           <Text style={{ fontSize: 18, fontFamily: 'Inter_700Bold', color: report.totals.net >= 0 ? colors.success : colors.danger }}>
             {report.totals.net >= 0 ? '+' : ''}
             {formatCompactCurrency(report.totals.net, report.reportCurrency)}
           </Text>
         </View>
 
-        <View style={{ backgroundColor: colors.accent + '1a', borderWidth: 1, borderColor: colors.accent + '40', borderRadius: 12, padding: 16, width: isTablet ? '48.5%' : '48%' }}>
-          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
+        <View style={{ backgroundColor: theme.alpha(colors.accent, 0.1), borderWidth: 1, borderColor: theme.alpha(colors.accent, 0.25), borderRadius: theme.radii.md, padding: theme.spacing.lg, width: isTablet ? '48.5%' : '48%' }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: theme.spacing.xs }}>
             {t('avgDailyNet') || `${t('avgDaily')} ${t('net')}`}
           </Text>
           <Text style={{ fontSize: 18, fontFamily: 'Inter_700Bold', color: report.averageDailyNet >= 0 ? colors.success : colors.danger }}>
@@ -176,19 +176,19 @@ export function DailyReportView({ isTablet = false, onOpenHistory }: DailyReport
 
       {/* Period Comparison & Top Categories */}
       {(report.comparedToLast !== 0 || report.topCategories.length > 0) && (
-        <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 20, borderRadius: 12, marginBottom: 24 }}>
+        <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: theme.spacing.xl, borderRadius: theme.radii.md, marginBottom: theme.spacing.xxl }}>
           {report.comparedToLast !== 0 && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
               {report.comparedToLast <= 0 ? (
-                <TrendingDown size={16} color="#22c55e" />
+                <TrendingDown size={16} color={colors.success} />
               ) : (
-                <TrendingUp size={16} color="#ef4444" />
+                <TrendingUp size={16} color={colors.danger} />
               )}
               <Text
                 style={{
                   fontSize: 14,
                   fontFamily: 'Inter_600SemiBold',
-                  marginStart: 8,
+                  marginStart: theme.spacing.sm,
                   color: report.comparedToLast <= 0 ? colors.success : colors.danger,
                 }}
               >
@@ -199,9 +199,9 @@ export function DailyReportView({ isTablet = false, onOpenHistory }: DailyReport
 
           {report.topCategories.length > 0 && (
             <View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                <PieChart size={14} color="#a1a1aa" />
-                <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_500Medium', marginStart: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
+                <PieChart size={14} color={colors.mutedForeground} />
+                <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_500Medium', marginStart: theme.spacing.sm }}>
                   {t('topCategories') || 'Top Categories'}
                 </Text>
               </View>
@@ -220,7 +220,7 @@ export function DailyReportView({ isTablet = false, onOpenHistory }: DailyReport
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    marginBottom: 8,
+                    marginBottom: theme.spacing.sm,
                     opacity: pressed ? 0.82 : 1,
                   })}
                   accessibilityRole={onOpenHistory ? 'button' : undefined}
@@ -234,10 +234,10 @@ export function DailyReportView({ isTablet = false, onOpenHistory }: DailyReport
                       borderRadius={4}
                       padding={4}
                     />
-                    <Text style={{ color: colors.foreground, fontSize: 14, marginStart: 8, textTransform: 'capitalize' }}>{cat.category}</Text>
+                    <Text style={{ color: colors.foreground, fontSize: 14, marginStart: theme.spacing.sm, textTransform: 'capitalize' }}>{cat.category}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold', marginEnd: 8 }}>
+                    <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold', marginEnd: theme.spacing.sm }}>
                       {formatCompactCurrency(cat.amount, report.reportCurrency)}
                     </Text>
                     <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>

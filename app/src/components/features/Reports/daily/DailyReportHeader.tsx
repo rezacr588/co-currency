@@ -39,48 +39,50 @@ export function DailyReportHeader({
   const colors = theme.colors;
 
   return (
-    <View style={{ backgroundColor: colors.card, padding: 20, borderRadius: 12, marginBottom: 24 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+    <View style={{ backgroundColor: colors.card, padding: theme.spacing.xl, borderRadius: theme.radii.md, marginBottom: theme.spacing.xxl }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.md }}>
         <Pressable
           onPress={onPreviousWindow}
-          style={{ padding: 12, borderRadius: 12, backgroundColor: colors.secondary }}
+          style={{ padding: theme.spacing.md, borderRadius: theme.radii.md, backgroundColor: colors.secondary }}
           accessibilityRole="button"
           accessibilityLabel={t('previousPeriod')}
           accessibilityHint="Show previous date range"
+          hitSlop={8}
         >
-          <ChevronLeft size={20} color="#a1a1aa" />
+          <ChevronLeft size={20} color={colors.mutedForeground} />
         </Pressable>
 
-        <View style={{ flex: 1, backgroundColor: colors.secondary + '66', borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}>
+        <View style={{ flex: 1, backgroundColor: theme.alpha(colors.secondary, 0.4), borderWidth: 1, borderColor: colors.border, paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.md, borderRadius: theme.radii.md, alignItems: 'center' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Calendar size={16} color={colors.accent} />
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginStart: 8 }}>{timelineLabel}</Text>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginStart: theme.spacing.sm }}>{timelineLabel}</Text>
           </View>
-          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 4 }}>{rangeLabel}</Text>
-          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 4 }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: theme.spacing.xs }}>{rangeLabel}</Text>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: theme.spacing.xs }}>
             {(t('reportCurrency') || 'Report currency') + `: ${reportCurrency}`}
           </Text>
           {isCurrentWindow ? (
-            <Text style={{ color: colors.accent, fontSize: 12, marginTop: 4 }}>{t('currentPeriod')}</Text>
+            <Text style={{ color: colors.accent, fontSize: 12, marginTop: theme.spacing.xs }}>{t('currentPeriod')}</Text>
           ) : null}
         </View>
 
         <Pressable
           onPress={onNextWindow}
-          style={{ padding: 12, borderRadius: 12, backgroundColor: isCurrentWindow ? colors.secondary + '4d' : colors.secondary, opacity: isCurrentWindow ? 0.5 : 1 }}
+          style={{ padding: theme.spacing.md, borderRadius: theme.radii.md, backgroundColor: isCurrentWindow ? theme.alpha(colors.secondary, 0.3) : colors.secondary, opacity: isCurrentWindow ? 0.5 : 1 }}
           disabled={isCurrentWindow}
           accessibilityRole="button"
           accessibilityLabel={t('nextPeriod')}
           accessibilityHint="Show next date range"
+          hitSlop={8}
         >
-          <ChevronRight size={20} color="#a1a1aa" />
+          <ChevronRight size={20} color={colors.mutedForeground} />
         </Pressable>
       </View>
 
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 8, paddingTop: 12, paddingBottom: 2 }}
+        contentContainerStyle={{ gap: theme.spacing.sm, paddingTop: theme.spacing.md, paddingBottom: 2 }}
       >
         {TIMELINE_PRESETS.map((preset) => {
           const isSelected = preset === timelinePreset;
@@ -89,9 +91,9 @@ export function DailyReportHeader({
               key={preset}
               onPress={() => onTimelinePresetChange(preset)}
               style={{
-                paddingHorizontal: 12,
-                paddingVertical: 8,
-                borderRadius: 9999,
+                paddingHorizontal: theme.spacing.md,
+                paddingVertical: theme.spacing.sm,
+                borderRadius: theme.radii.full,
                 borderWidth: 1,
                 backgroundColor: isSelected ? colors.accent : colors.secondary,
                 borderColor: isSelected ? colors.accent : colors.border,
@@ -112,24 +114,24 @@ export function DailyReportHeader({
       {!isCurrentWindow ? (
         <Pressable
           onPress={onCurrentWindow}
-          style={{ marginTop: 12, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, backgroundColor: colors.accent + '26', borderWidth: 1, borderColor: colors.accent + '4d', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
+          style={{ marginTop: theme.spacing.md, paddingVertical: theme.spacing.sm + 2, paddingHorizontal: theme.spacing.lg, borderRadius: theme.radii.sm, backgroundColor: theme.alpha(colors.accent, 0.15), borderWidth: 1, borderColor: theme.alpha(colors.accent, 0.3), flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
           accessibilityRole="button"
           accessibilityLabel={t('goToCurrentPeriod')}
           accessibilityHint="Jump back to current date range"
         >
           <RotateCcw size={14} color={colors.accent} />
-          <Text style={{ color: colors.accent, fontFamily: 'Inter_500Medium', marginStart: 8 }}>{t('goToCurrentPeriod')}</Text>
+          <Text style={{ color: colors.accent, fontFamily: 'Inter_500Medium', marginStart: theme.spacing.sm }}>{t('goToCurrentPeriod')}</Text>
         </Pressable>
       ) : null}
 
       {excludedTransactionCount > 0 ? (
-        <Text style={{ color: colors.accent, fontSize: 12, marginTop: 12 }}>
+        <Text style={{ color: colors.accent, fontSize: 12, marginTop: theme.spacing.md }}>
           {`${t('excludedFromTotalsNotice')}: ${excludedTransactionCount} (${excludedCurrencies.join(', ')})`}
         </Text>
       ) : null}
 
       {truncated ? (
-        <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 4 }}>
+        <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: theme.spacing.xs }}>
           {t('dataLimitedNotice') || 'Large data range limited for performance.'}
         </Text>
       ) : null}

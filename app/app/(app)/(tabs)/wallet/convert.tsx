@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, ScrollView, useWindowDimensions } from 'react-native';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
-import { useTheme } from '../../../../src/context/ThemeContext';
 import { useTheme as useStyledTheme } from 'styled-components/native';
 import { CurrencyConverter } from '../../../../src/components/features/CurrencyConverter';
 import { useToast } from '../../../../src/components/ui/Toast';
@@ -19,9 +18,9 @@ export default function WalletConvertScreen() {
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { isDark } = useTheme();
   const styledTheme = useStyledTheme();
   const colors = styledTheme.colors;
+  const { spacing, radii, alpha } = styledTheme;
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
@@ -97,11 +96,13 @@ export default function WalletConvertScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
       {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, maxWidth: 800, width: '100%', alignSelf: 'center' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border, maxWidth: 800, width: '100%', alignSelf: 'center' }}>
         <Pressable
           onPress={() => router.back()}
-          style={{ padding: 8, marginEnd: 8, cursor: 'pointer' }}
+          style={{ padding: spacing.sm, marginEnd: spacing.sm, cursor: 'pointer' }}
           hitSlop={12}
+          accessibilityLabel={t('a11yBack') || 'Back'}
+          accessibilityRole="button"
         >
           <ArrowLeft size={24} color={iconColor} />
         </Pressable>
@@ -112,7 +113,7 @@ export default function WalletConvertScreen() {
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
-          padding: isDesktop ? 32 : 24,
+          padding: isDesktop ? spacing.xxxl : spacing.xxl,
           maxWidth: 600,
           width: '100%',
           alignSelf: 'center',
@@ -120,30 +121,30 @@ export default function WalletConvertScreen() {
         }}
       >
         {error ? (
-          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger + '33', padding: 16, borderRadius: 12, marginBottom: 16 }}>
+          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: alpha(colors.danger, 0.2), padding: spacing.lg, borderRadius: radii.md, marginBottom: spacing.lg }}>
             <Text style={{ color: colors.danger }}>{error}</Text>
           </View>
         ) : null}
 
         {isBalancesError && (
-          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger + '33', padding: 16, borderRadius: 12, marginBottom: 16 }}>
-            <Text style={{ color: colors.danger, marginBottom: 8 }}>{t('failedToLoadBalances') || 'Failed to load balances'}</Text>
-            <Pressable onPress={() => refetchBalances()} style={{ backgroundColor: colors.danger + '33', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, alignSelf: 'flex-start', cursor: 'pointer' }}>
+          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: alpha(colors.danger, 0.2), padding: spacing.lg, borderRadius: radii.md, marginBottom: spacing.lg }}>
+            <Text style={{ color: colors.danger, marginBottom: spacing.sm }}>{t('failedToLoadBalances') || 'Failed to load balances'}</Text>
+            <Pressable onPress={() => refetchBalances()} style={{ backgroundColor: alpha(colors.danger, 0.2), paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radii.sm, alignSelf: 'flex-start', cursor: 'pointer' }}>
               <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium' }}>{t('retry') || 'Retry'}</Text>
             </Pressable>
           </View>
         )}
 
         {(balances?.balances?.length ?? 0) === 0 && (
-          <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, borderRadius: 12, marginBottom: 24 }}>
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium', marginBottom: 8 }}>
+          <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, borderRadius: radii.md, marginBottom: spacing.xxl }}>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium', marginBottom: spacing.sm }}>
               {t('noWalletBalances') || 'No wallet balances yet'}
             </Text>
-            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 12 }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: spacing.md }}>
               {t('noWalletBalancesDescription') || 'Add a transaction to create a wallet balance before converting.'}
             </Text>
             <Link href={'/transaction-create' as any} asChild>
-              <Pressable style={{ cursor: 'pointer', backgroundColor: colors.accent, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, alignSelf: 'flex-start' }}>
+              <Pressable style={{ cursor: 'pointer', backgroundColor: colors.accent, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radii.sm, alignSelf: 'flex-start' }}>
                 <Text style={{ color: colors.accentForeground, fontFamily: 'Inter_500Medium', fontSize: 14 }}>{t('addTransaction') || 'Add Transaction'}</Text>
               </Pressable>
             </Link>
@@ -162,12 +163,12 @@ export default function WalletConvertScreen() {
 
         {/* Balance Warning */}
         {isLoadingBalances && parsedAmount > 0 && (
-          <View style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 12, marginBottom: 16 }}>
+          <View style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: spacing.md, borderRadius: radii.md, marginBottom: spacing.lg }}>
             <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>{t('loadingBalances') || 'Loading balances...'}</Text>
           </View>
         )}
         {hasInsufficientBalance && !isLoadingBalances && (
-          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger + '33', padding: 12, borderRadius: 12, marginBottom: 16 }}>
+          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: alpha(colors.danger, 0.2), padding: spacing.md, borderRadius: radii.md, marginBottom: spacing.lg }}>
             <Text style={{ color: colors.danger, fontSize: 14 }}>
               {t('insufficientBalance') || 'Insufficient balance'}: {fromBalance ? `${fromBalance.balance} ${fromCurrency}` : `0 ${fromCurrency}`}
             </Text>

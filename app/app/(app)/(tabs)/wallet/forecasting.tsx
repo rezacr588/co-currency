@@ -5,9 +5,9 @@ import { ChevronLeft, TrendingUp, AlertTriangle, Info } from 'lucide-react-nativ
 import { useTheme } from 'styled-components/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../../../src/context/LanguageContext';
-import { useScreenLayout } from '../../../../src/hooks/useScreenLayout';
 import { useForecast, useAnomalies, useForecastingHealth } from '../../../../src/hooks/useForecasting';
 import { ForecastCard, AnomalyCard } from '../../../../src/components/features/Forecasting';
+import { EmptyState } from '../../../../src/components/ui';
 import { formatCompactCurrency } from '../../../../src/utils/format';
 import type { ForecastPrediction } from '../../../../src/api/forecasting';
 
@@ -15,56 +15,56 @@ export default function ForecastingScreen() {
   const router = useRouter();
   const theme = useTheme();
   const colors = theme.colors;
+  const { spacing, radii, alpha } = theme;
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
-  const { isTablet } = useScreenLayout();
-  
-  const [currency, setCurrency] = useState('USD');
+
+  const [currency] = useState('USD');
   const [days, setDays] = useState(30);
-  
-  const { data: healthData, isLoading: healthLoading } = useForecastingHealth();
-  const { data: forecastData, isLoading: forecastLoading, error: forecastError, refetch: refetchForecast } = useForecast({ days, currency });
-  const { data: anomalyData, isLoading: anomalyLoading, error: anomalyError, refetch: refetchAnomalies } = useAnomalies({});
-  
-  const isLoading = healthLoading || forecastLoading || anomalyLoading;
+
+  const { data: healthData } = useForecastingHealth();
+  const { data: forecastData, refetch: refetchForecast } = useForecast({ days, currency });
+  const { refetch: refetchAnomalies } = useAnomalies({});
+
   const isServiceAvailable = healthData?.status === 'healthy';
-  
+
   const [refreshing, setRefreshing] = useState(false);
-  
+
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([refetchForecast(), refetchAnomalies()]);
     setRefreshing(false);
   }, [refetchForecast, refetchAnomalies]);
-  
+
   const dayOptions = [7, 14, 30, 60, 90];
+  const hasPredictions = !!forecastData?.predictions && forecastData.predictions.length > 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
       <View
         style={{
-          paddingTop: insets.top + 8,
-          paddingHorizontal: 16,
-          paddingBottom: 16,
+          paddingTop: insets.top + spacing.sm,
+          paddingHorizontal: spacing.lg,
+          paddingBottom: spacing.lg,
           backgroundColor: colors.background,
           borderBottomWidth: 1,
           borderBottomColor: colors.border,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
           <Pressable
             onPress={() => router.back()}
             style={{
               width: 40,
               height: 40,
-              borderRadius: 20,
+              borderRadius: radii.full,
               backgroundColor: colors.secondary,
               justifyContent: 'center',
               alignItems: 'center',
             }}
             accessibilityRole="button"
-            accessibilityLabel={t('back') || 'Back'}
+            accessibilityLabel={t('a11yBack') || 'Back'}
           >
             <ChevronLeft size={24} color={colors.foreground} />
           </Pressable>
@@ -84,10 +84,10 @@ export default function ForecastingScreen() {
           </View>
           <View
             style={{
-              backgroundColor: isServiceAvailable ? colors.success + '20' : colors.danger + '20',
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-              borderRadius: 12,
+              backgroundColor: isServiceAvailable ? alpha(colors.success, 0.125) : alpha(colors.danger, 0.125),
+              paddingHorizontal: spacing.sm + 2,
+              paddingVertical: spacing.xs,
+              borderRadius: radii.md,
             }}
           >
             <Text
@@ -106,8 +106,8 @@ export default function ForecastingScreen() {
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
-          padding: 16,
-          paddingBottom: insets.bottom + 32,
+          padding: spacing.lg,
+          paddingBottom: insets.bottom + spacing.xxxl,
         }}
         refreshControl={
           <RefreshControl
@@ -118,36 +118,37 @@ export default function ForecastingScreen() {
         }
       >
         {/* Forecast Period Selector */}
-        <View style={{ marginBottom: 20 }}>
+        <View style={{ marginBottom: spacing.xl }}>
           <Text
             style={{
               fontSize: 13,
               fontFamily: 'Inter_600SemiBold',
               color: colors.mutedForeground,
-              marginBottom: 10,
+              marginBottom: spacing.sm + 2,
             }}
           >
             Forecast Period
           </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
             {dayOptions.map((d) => (
               <Pressable
                 key={d}
                 onPress={() => setDays(d)}
                 style={{
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                  borderRadius: 20,
+                  paddingHorizontal: spacing.lg,
+                  paddingVertical: spacing.sm,
+                  borderRadius: radii.xl,
                   backgroundColor: days === d ? colors.primary : colors.secondary,
                   borderWidth: days === d ? 0 : 1,
                   borderColor: colors.border,
                 }}
+                accessibilityRole="button"
               >
                 <Text
                   style={{
                     fontSize: 14,
                     fontFamily: 'Inter_600SemiBold',
-                    color: days === d ? colors.background : colors.foreground,
+                    color: days === d ? colors.primaryForeground : colors.foreground,
                   }}
                 >
                   {d} days
@@ -157,16 +158,24 @@ export default function ForecastingScreen() {
           </View>
         </View>
 
-        {/* Main Forecast Card */}
-        <ForecastCard
-          currency={currency}
-          days={days}
-          compact={false}
-        />
+        {/* Main Forecast Card or Empty State */}
+        {hasPredictions ? (
+          <ForecastCard
+            currency={currency}
+            days={days}
+            compact={false}
+          />
+        ) : (
+          <EmptyState
+            icon={TrendingUp}
+            title={t('emptyNoForecastTitle') || 'No forecast available'}
+            description={t('emptyNoForecastDesc') || 'Add more transactions to unlock forecasting.'}
+          />
+        )}
 
         {/* Anomaly Alerts */}
-        <View style={{ marginTop: 24 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        <View style={{ marginTop: spacing.xxl }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg }}>
             <AlertTriangle size={18} color={colors.warning} />
             <Text
               style={{
@@ -182,9 +191,9 @@ export default function ForecastingScreen() {
         </View>
 
         {/* Daily Breakdown */}
-        {forecastData?.predictions && forecastData.predictions.length > 0 && (
-          <View style={{ marginTop: 24 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        {hasPredictions && (
+          <View style={{ marginTop: spacing.xxl }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg }}>
               <TrendingUp size={18} color={colors.primary} />
               <Text
                 style={{
@@ -199,7 +208,7 @@ export default function ForecastingScreen() {
             <View
               style={{
                 backgroundColor: colors.card,
-                borderRadius: 16,
+                borderRadius: radii.lg,
                 borderWidth: 1,
                 borderColor: colors.border,
                 overflow: 'hidden',
@@ -209,8 +218,8 @@ export default function ForecastingScreen() {
               <View
                 style={{
                   flexDirection: 'row',
-                  paddingHorizontal: 16,
-                  paddingVertical: 12,
+                  paddingHorizontal: spacing.lg,
+                  paddingVertical: spacing.md,
                   backgroundColor: colors.secondary,
                   borderBottomWidth: 1,
                   borderBottomColor: colors.border,
@@ -262,13 +271,13 @@ export default function ForecastingScreen() {
               </View>
 
               {/* Table Rows - Show first 7 days */}
-              {forecastData.predictions.slice(0, 7).map((prediction: ForecastPrediction, index: number) => (
+              {forecastData!.predictions.slice(0, 7).map((prediction: ForecastPrediction, index: number) => (
                 <View
                   key={prediction.date}
                   style={{
                     flexDirection: 'row',
-                    paddingHorizontal: 16,
-                    paddingVertical: 14,
+                    paddingHorizontal: spacing.lg,
+                    paddingVertical: spacing.md + 2,
                     borderBottomWidth: index < 6 ? 1 : 0,
                     borderBottomColor: colors.border,
                   }}
@@ -320,10 +329,10 @@ export default function ForecastingScreen() {
               ))}
 
               {/* Show more indicator */}
-              {forecastData.predictions.length > 7 && (
+              {forecastData!.predictions.length > 7 && (
                 <View
                   style={{
-                    paddingVertical: 12,
+                    paddingVertical: spacing.md,
                     alignItems: 'center',
                     backgroundColor: colors.secondary,
                   }}
@@ -334,7 +343,7 @@ export default function ForecastingScreen() {
                       color: colors.mutedForeground,
                     }}
                   >
-                    +{forecastData.predictions.length - 7} more days
+                    +{forecastData!.predictions.length - 7} more days
                   </Text>
                 </View>
               )}
@@ -345,12 +354,12 @@ export default function ForecastingScreen() {
         {/* Info Section */}
         <View
           style={{
-            marginTop: 24,
-            backgroundColor: colors.primary + '10',
-            borderRadius: 12,
-            padding: 16,
+            marginTop: spacing.xxl,
+            backgroundColor: alpha(colors.primary, 0.08),
+            borderRadius: radii.md,
+            padding: spacing.lg,
             flexDirection: 'row',
-            gap: 12,
+            gap: spacing.md,
           }}
         >
           <Info size={20} color={colors.primary} style={{ marginTop: 2 }} />
@@ -360,7 +369,7 @@ export default function ForecastingScreen() {
                 fontSize: 14,
                 fontFamily: 'Inter_600SemiBold',
                 color: colors.foreground,
-                marginBottom: 6,
+                marginBottom: spacing.xs + 2,
               }}
             >
               How it works

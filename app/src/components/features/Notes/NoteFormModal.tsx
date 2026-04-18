@@ -6,7 +6,6 @@ import {
   Pressable,
   TextInput,
   ScrollView,
-  ActivityIndicator,
   useWindowDimensions,
   KeyboardAvoidingView,
   Platform,
@@ -17,21 +16,25 @@ import type { Note, CreateNoteRequest, UpdateNoteRequest, NoteColor } from '../.
 import { NOTE_COLORS } from '../../../types/note';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
+import { spacing, radii } from '../../../theme';
 import { Button } from '../../ui/Button';
 import { Toggle } from '../../ui/Toggle';
 import { HIT_SLOP_SM } from '../../../constants/hitSlop';
 
-// Color display mapping
-const COLOR_DISPLAY: Record<string, { bg: string; name: string }> = {
-  default: { bg: '#27272a', name: 'Default' },
-  red: { bg: '#ef4444', name: 'Red' },
-  orange: { bg: '#f97316', name: 'Orange' },
-  yellow: { bg: '#eab308', name: 'Yellow' },
-  green: { bg: '#22c55e', name: 'Green' },
-  blue: { bg: '#3b82f6', name: 'Blue' },
-  purple: { bg: '#a855f7', name: 'Purple' },
-  pink: { bg: '#ec4899', name: 'Pink' },
-};
+function useNoteColorSwatches(): Record<string, { bg: string; name: string }> {
+  const theme = useTheme();
+  const { colors } = theme;
+  return {
+    default: { bg: colors.secondary, name: 'Default' },
+    red: { bg: colors.palette.red, name: 'Red' },
+    orange: { bg: colors.palette.orange, name: 'Orange' },
+    yellow: { bg: colors.palette.yellow, name: 'Yellow' },
+    green: { bg: colors.palette.green, name: 'Green' },
+    blue: { bg: colors.palette.blue, name: 'Blue' },
+    purple: { bg: colors.palette.purple, name: 'Purple' },
+    pink: { bg: colors.palette.pink, name: 'Pink' },
+  };
+}
 
 interface NoteFormModalProps {
   visible: boolean;
@@ -54,6 +57,7 @@ export function NoteFormModal({
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
   const insets = useSafeAreaInsets();
+  const colorSwatches = useNoteColorSwatches();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -100,18 +104,18 @@ export function NoteFormModal({
       onRequestClose={onClose}
     >
       <Pressable
-        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
+        style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}
         onPress={onClose}
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : spacing.xl}
         >
           <Pressable
             style={{
               backgroundColor: colors.card,
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
+              borderTopLeftRadius: radii.xxl,
+              borderTopRightRadius: radii.xxl,
               maxHeight: '90%',
               width: isDesktop ? 500 : '100%',
               alignSelf: 'center',
@@ -120,28 +124,30 @@ export function NoteFormModal({
           >
             <ScrollView
               keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ 
-                padding: 20,
-                paddingBottom: Math.max(insets.bottom, 20),
+              contentContainerStyle={{
+                padding: spacing.xl,
+                paddingBottom: Math.max(insets.bottom, spacing.xl),
               }}
             >
             {/* Header */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xxl }}>
               <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>
                 {isEditing ? (t('editNote') || 'Edit Note') : (t('newNote') || 'New Note')}
               </Text>
               <Pressable
                 onPress={onClose}
                 hitSlop={HIT_SLOP_SM}
-                style={{ cursor: 'pointer', padding: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={t('a11yClose') || 'Close'}
+                style={{ cursor: 'pointer', padding: spacing.sm }}
               >
                 <X size={24} color={colors.placeholder} />
               </Pressable>
             </View>
 
             {/* Title Input */}
-            <View style={{ marginBottom: 16 }}>
-              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>
+            <View style={{ marginBottom: spacing.lg }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: spacing.sm }}>
                 {t('title') || 'Title'} *
               </Text>
               <TextInput
@@ -156,7 +162,7 @@ export function NoteFormModal({
                   backgroundColor: colors.secondary,
                   borderWidth: 1,
                   borderColor: colors.borderStrong,
-                  borderRadius: 8,
+                  borderRadius: radii.sm,
                   padding: 14,
                   color: colors.foreground,
                   fontSize: 16,
@@ -166,8 +172,8 @@ export function NoteFormModal({
             </View>
 
             {/* Content Input */}
-            <View style={{ marginBottom: 16 }}>
-              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>
+            <View style={{ marginBottom: spacing.lg }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: spacing.sm }}>
                 {t('content') || 'Content'}
               </Text>
               <TextInput
@@ -184,7 +190,7 @@ export function NoteFormModal({
                   backgroundColor: colors.secondary,
                   borderWidth: 1,
                   borderColor: colors.borderStrong,
-                  borderRadius: 8,
+                  borderRadius: radii.sm,
                   padding: 14,
                   color: colors.foreground,
                   fontSize: 16,
@@ -195,22 +201,25 @@ export function NoteFormModal({
             </View>
 
             {/* Color Picker */}
-            <View style={{ marginBottom: 16 }}>
-              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 8 }}>
+            <View style={{ marginBottom: spacing.lg }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: spacing.sm }}>
                 {t('color') || 'Color'}
               </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
                 {NOTE_COLORS.map((c) => (
                   <Pressable
                     key={c}
                     onPress={() => setColor(c)}
-                    hitSlop={4}
+                    hitSlop={HIT_SLOP_SM}
+                    accessibilityRole="button"
+                    accessibilityLabel={colorSwatches[c].name}
+                    accessibilityState={{ selected: color === c }}
                     style={{
                       cursor: 'pointer',
                       width: 44,
                       height: 44,
                       borderRadius: 22,
-                      backgroundColor: COLOR_DISPLAY[c].bg,
+                      backgroundColor: colorSwatches[c].bg,
                       borderWidth: color === c ? 3 : 1,
                       borderColor: color === c ? colors.accent : colors.borderStrong,
                       alignItems: 'center',
@@ -218,7 +227,7 @@ export function NoteFormModal({
                     }}
                   >
                     {color === c && (
-                      <Check size={18} color={c === 'default' ? '#fff' : '#000'} />
+                      <Check size={18} color={c === 'default' ? colors.foreground : colors.primaryForeground} />
                     )}
                   </Pressable>
                 ))}
@@ -231,10 +240,10 @@ export function NoteFormModal({
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: 16,
-                borderRadius: 8,
-                marginBottom: 24,
-                backgroundColor: isPinned ? colors.primary + '33' : colors.muted,
+                padding: spacing.lg,
+                borderRadius: radii.sm,
+                marginBottom: spacing.xxl,
+                backgroundColor: isPinned ? theme.alpha(colors.primary, 0.2) : colors.muted,
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -243,7 +252,7 @@ export function NoteFormModal({
                   color={isPinned ? colors.accent : colors.placeholder}
                   fill={isPinned ? colors.accent : 'transparent'}
                 />
-                <Text style={{ color: colors.foreground, marginStart: 12 }}>
+                <Text style={{ color: colors.foreground, marginStart: spacing.md }}>
                   {t('pinNote') || 'Pin this note'}
                 </Text>
               </View>
@@ -251,7 +260,7 @@ export function NoteFormModal({
             </View>
 
             {/* Action Buttons */}
-            <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ flexDirection: 'row', gap: spacing.md }}>
               <Button
                 variant="outline"
                 style={{ flex: 1 }}

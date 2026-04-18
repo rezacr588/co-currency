@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, PieChart } from 'lucide-react-native';
+import { Calendar, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, PieChart, BarChart3 } from 'lucide-react-native';
 import { api } from '../../../api';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
@@ -10,6 +10,7 @@ import { buildDateKey, getMonthLabelAnchor, getTimeZoneDateParts, safeMax } from
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 import { HorizontalBarChart } from './charts';
 import { ReportHeadlineCard } from './ReportHeadlineCard';
+import { EmptyState } from '../../ui/EmptyState';
 import { ReportErrorCard } from '../../ui';
 import { SkeletonCard, SkeletonList } from '../../ui/Skeleton';
 import { REPORT_LAYOUT } from './reportConstants';
@@ -48,29 +49,31 @@ const YearSelector = memo(function YearSelector({
   const colors = theme.colors;
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 24, gap: 16 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: theme.spacing.xxl, gap: theme.spacing.lg }}>
       <Pressable
         onPress={onPreviousYear}
-        style={{ padding: 12, borderRadius: 12, backgroundColor: colors.secondary }}
+        style={{ padding: theme.spacing.md, borderRadius: theme.radii.md, backgroundColor: colors.secondary }}
         accessibilityRole="button"
         accessibilityLabel={previousLabel}
         accessibilityHint="Show previous year report"
+        hitSlop={8}
       >
-        <ChevronLeft size={20} color="#a1a1aa" />
+        <ChevronLeft size={20} color={colors.mutedForeground} />
       </Pressable>
-      <View style={{ backgroundColor: colors.card, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center' }}>
+      <View style={{ backgroundColor: colors.card, paddingHorizontal: theme.spacing.xxl, paddingVertical: theme.spacing.md, borderRadius: theme.radii.md, flexDirection: 'row', alignItems: 'center' }}>
         <Calendar size={18} color={colors.accent} />
-        <Text style={{ color: colors.foreground, fontSize: 20, fontFamily: 'Inter_700Bold', marginStart: 8 }}>{selectedYear}</Text>
+        <Text style={{ color: colors.foreground, fontSize: 20, fontFamily: 'Inter_700Bold', marginStart: theme.spacing.sm }}>{selectedYear}</Text>
       </View>
       <Pressable
         onPress={onNextYear}
-        style={{ padding: 12, borderRadius: 12, backgroundColor: selectedYear >= currentYear ? colors.secondary + '4d' : colors.secondary, opacity: selectedYear >= currentYear ? 0.5 : 1 }}
+        style={{ padding: theme.spacing.md, borderRadius: theme.radii.md, backgroundColor: selectedYear >= currentYear ? theme.alpha(colors.secondary, 0.3) : colors.secondary, opacity: selectedYear >= currentYear ? 0.5 : 1 }}
         disabled={selectedYear >= currentYear}
         accessibilityRole="button"
         accessibilityLabel={nextLabel}
         accessibilityHint="Show next year report"
+        hitSlop={8}
       >
-        <ChevronRight size={20} color="#a1a1aa" />
+        <ChevronRight size={20} color={colors.mutedForeground} />
       </Pressable>
     </View>
   );
@@ -224,25 +227,25 @@ export function YearlyReportView({
         <>
           {/* Annual Summary Card */}
           <View style={{ backgroundColor: colors.card, padding: REPORT_LAYOUT.cardPadding, borderRadius: REPORT_LAYOUT.cardRadius, marginBottom: REPORT_LAYOUT.sectionSpacing }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-              <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginEnd: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.lg }}>
+              <View style={{ backgroundColor: theme.alpha(colors.accent, 0.2), padding: theme.spacing.sm, borderRadius: theme.radii.sm, marginEnd: theme.spacing.md }}>
                 <Calendar size={20} color={colors.accent} />
               </View>
               <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('annualSummary')}</Text>
             </View>
-            <Text style={{ color: colors.mutedForeground, fontSize: 13, marginBottom: 12 }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 13, marginBottom: theme.spacing.md }}>
               {yearFrameLabel}
             </Text>
 
             <View style={{
               flexDirection: isTablet ? 'row' : 'column',
-              gap: 12,
+              gap: theme.spacing.md,
             }}>
               {/* Total Income */}
-              <View style={{ flex: 1, backgroundColor: colors.success + '1a', borderWidth: 1, borderColor: colors.success + '4d', padding: 16, borderRadius: 12 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <View style={{ flex: 1, backgroundColor: theme.alpha(colors.success, 0.1), borderWidth: 1, borderColor: theme.alpha(colors.success, 0.3), padding: theme.spacing.lg, borderRadius: theme.radii.md }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.sm }}>
                   <TrendingUp size={16} color={colors.success} />
-                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginStart: 8 }}>{t('totalIncome')}</Text>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginStart: theme.spacing.sm }}>{t('totalIncome')}</Text>
                 </View>
                 <Text style={{ color: colors.success, fontSize: 24, fontFamily: 'Inter_700Bold' }}>
                   {formatCompactCurrency(yearlyReport.income, yearlyReport.currency)}
@@ -250,10 +253,10 @@ export function YearlyReportView({
               </View>
 
               {/* Total Expenses */}
-              <View style={{ flex: 1, backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', padding: 16, borderRadius: 12 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <View style={{ flex: 1, backgroundColor: theme.alpha(colors.danger, 0.1), borderWidth: 1, borderColor: theme.alpha(colors.danger, 0.3), padding: theme.spacing.lg, borderRadius: theme.radii.md }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.sm }}>
                   <TrendingDown size={16} color={colors.danger} />
-                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginStart: 8 }}>{t('totalExpenses')}</Text>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 14, marginStart: theme.spacing.sm }}>{t('totalExpenses')}</Text>
                 </View>
                 <Text style={{ color: colors.danger, fontSize: 24, fontFamily: 'Inter_700Bold' }}>
                   {formatCompactCurrency(yearlyReport.expenses, yearlyReport.currency)}
@@ -262,9 +265,9 @@ export function YearlyReportView({
             </View>
 
             {/* Net and Savings Rate */}
-            <View style={{ flexDirection: 'row', gap: 16, marginTop: 16 }}>
-              <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
-                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>{t('net')}</Text>
+            <View style={{ flexDirection: 'row', gap: theme.spacing.lg, marginTop: theme.spacing.lg }}>
+              <View style={{ flex: 1, backgroundColor: theme.alpha(colors.secondary, 0.5), padding: theme.spacing.md, borderRadius: theme.radii.sm }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: theme.spacing.xs }}>{t('net')}</Text>
                 <Text
                   style={{
                     fontSize: 18,
@@ -275,8 +278,8 @@ export function YearlyReportView({
                   {`${yearlyReport.net >= 0 ? '+' : '-'}${formatCompactCurrency(Math.abs(yearlyReport.net), yearlyReport.currency)}`}
                 </Text>
               </View>
-              <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
-                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>{t('savingsRate')}</Text>
+              <View style={{ flex: 1, backgroundColor: theme.alpha(colors.secondary, 0.5), padding: theme.spacing.md, borderRadius: theme.radii.sm }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: theme.spacing.xs }}>{t('savingsRate')}</Text>
                 <Text
                   style={{
                     fontSize: 18,
@@ -289,17 +292,17 @@ export function YearlyReportView({
               </View>
             </View>
 
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
-              <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: colors.secondary + '80', padding: REPORT_LAYOUT.tilePadding, borderRadius: 8 }}>
-                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.md, marginTop: theme.spacing.lg }}>
+              <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: theme.alpha(colors.secondary, 0.5), padding: REPORT_LAYOUT.tilePadding, borderRadius: theme.radii.sm }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: theme.spacing.xs }}>
                   {t('avgMonthlyIncome') || 'Avg Monthly Income'}
                 </Text>
                 <Text style={{ color: colors.success, fontSize: 18, fontFamily: 'Inter_700Bold' }}>
                   {formatCompactCurrency(averageMonthlyIncome, yearlyReport.currency)}
                 </Text>
               </View>
-              <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: colors.secondary + '80', padding: REPORT_LAYOUT.tilePadding, borderRadius: 8 }}>
-                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
+              <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: theme.alpha(colors.secondary, 0.5), padding: REPORT_LAYOUT.tilePadding, borderRadius: theme.radii.sm }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: theme.spacing.xs }}>
                   {t('avgMonthlyExpenses') || 'Avg Monthly Expenses'}
                 </Text>
                 <Text style={{ color: colors.danger, fontSize: 18, fontFamily: 'Inter_700Bold' }}>
@@ -307,8 +310,8 @@ export function YearlyReportView({
                 </Text>
               </View>
               {bestNetMonth && (
-                <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: colors.secondary + '80', padding: REPORT_LAYOUT.tilePadding, borderRadius: 8 }}>
-                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
+                <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: theme.alpha(colors.secondary, 0.5), padding: REPORT_LAYOUT.tilePadding, borderRadius: theme.radii.sm }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: theme.spacing.xs }}>
                     {t('bestMonth') || 'Best Month'}
                   </Text>
                   <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold', marginBottom: 2 }}>
@@ -320,8 +323,8 @@ export function YearlyReportView({
                 </View>
               )}
               {highestExpenseMonth && (
-                <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: colors.secondary + '80', padding: REPORT_LAYOUT.tilePadding, borderRadius: 8 }}>
-                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
+                <View style={{ width: isTablet ? '48.5%' : '48%', backgroundColor: theme.alpha(colors.secondary, 0.5), padding: REPORT_LAYOUT.tilePadding, borderRadius: theme.radii.sm }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: theme.spacing.xs }}>
                     {t('highestSpendingMonth') || 'Highest Spending Month'}
                   </Text>
                   <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_600SemiBold', marginBottom: 2 }}>
@@ -338,14 +341,14 @@ export function YearlyReportView({
           {/* 12-Month Bar Chart */}
           {monthsInScope.length > 0 && (
             <View style={{ backgroundColor: colors.card, padding: REPORT_LAYOUT.cardPadding, borderRadius: REPORT_LAYOUT.cardRadius, marginBottom: REPORT_LAYOUT.sectionSpacing }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-                <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginEnd: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.lg }}>
+                <View style={{ backgroundColor: colors.secondary, padding: theme.spacing.sm, borderRadius: theme.radii.sm, marginEnd: theme.spacing.md }}>
                   <Calendar size={20} color={colors.mutedForeground} />
                 </View>
                 <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('incomeVsExpenses')}</Text>
               </View>
 
-              <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 4, height: REPORT_LAYOUT.chartHeightLarge }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: theme.spacing.xs, height: REPORT_LAYOUT.chartHeightLarge }}>
                 {monthLabels.map((monthLabel, index) => {
                   const monthData = monthsInScope.find((m) => m.month === index + 1);
                   const incomeHeight = maxMonthlyValue > 0 && monthData
@@ -365,7 +368,7 @@ export function YearlyReportView({
                           style={{ width: REPORT_LAYOUT.barWidthSmall, borderTopLeftRadius: REPORT_LAYOUT.barRadius, borderTopRightRadius: REPORT_LAYOUT.barRadius, backgroundColor: colors.danger, height: Math.max(expenseHeight, 2) }}
                         />
                       </View>
-                      <Text style={{ color: colors.mutedForeground, fontSize: 10, marginTop: 4 }}>
+                      <Text style={{ color: colors.mutedForeground, fontSize: 10, marginTop: theme.spacing.xs }}>
                         {monthLabel}
                       </Text>
                     </View>
@@ -398,13 +401,13 @@ export function YearlyReportView({
               </View>
 
               {/* Legend */}
-              <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 16 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'center', gap: theme.spacing.lg, marginTop: theme.spacing.lg }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.success, marginEnd: 4 }} />
+                  <View style={{ width: 8, height: 8, borderRadius: theme.radii.full, backgroundColor: colors.success, marginEnd: theme.spacing.xs }} />
                   <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('income')}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.danger, marginEnd: 4 }} />
+                  <View style={{ width: 8, height: 8, borderRadius: theme.radii.full, backgroundColor: colors.danger, marginEnd: theme.spacing.xs }} />
                   <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('expenses')}</Text>
                 </View>
               </View>
@@ -424,8 +427,8 @@ export function YearlyReportView({
 
           {categoryReport && categoryReport.categories.length > 0 && (
             <View style={{ backgroundColor: colors.card, padding: REPORT_LAYOUT.cardPadding, borderRadius: REPORT_LAYOUT.cardRadius, marginBottom: REPORT_LAYOUT.sectionSpacing }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-                <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginEnd: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.lg }}>
+                <View style={{ backgroundColor: colors.secondary, padding: theme.spacing.sm, borderRadius: theme.radii.sm, marginEnd: theme.spacing.md }}>
                   <PieChart size={20} color={colors.mutedForeground} />
                 </View>
                 <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
@@ -457,33 +460,33 @@ export function YearlyReportView({
           {/* Monthly Breakdown List */}
           {monthsInScope.length > 0 && (
             <View style={{ backgroundColor: colors.card, padding: REPORT_LAYOUT.cardPadding, borderRadius: REPORT_LAYOUT.cardRadius }}>
-              <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginBottom: 16 }}>{t('monthlySummary')}</Text>
-              <View style={{ gap: 12 }}>
+              <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginBottom: theme.spacing.lg }}>{t('monthlySummary')}</Text>
+              <View style={{ gap: theme.spacing.md }}>
                 {monthsInScope.map((month) => {
                   const rowContent = (
                     <>
                       <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>
                         {monthLabels[month.month - 1]}
                       </Text>
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-                        <View style={{ width: isTablet ? '31%' : '48%', backgroundColor: colors.success + '14', padding: REPORT_LAYOUT.tilePadding, borderRadius: 8 }}>
-                          <Text style={{ color: colors.mutedForeground, fontSize: 11, marginBottom: 4 }}>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm, marginTop: theme.spacing.md }}>
+                        <View style={{ width: isTablet ? '31%' : '48%', backgroundColor: theme.alpha(colors.success, 0.08), padding: REPORT_LAYOUT.tilePadding, borderRadius: theme.radii.sm }}>
+                          <Text style={{ color: colors.mutedForeground, fontSize: 11, marginBottom: theme.spacing.xs }}>
                             {t('income')}
                           </Text>
                           <Text style={{ color: colors.success, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>
                             +{formatCompactCurrency(month.income, month.currency)}
                           </Text>
                         </View>
-                        <View style={{ width: isTablet ? '31%' : '48%', backgroundColor: colors.danger + '14', padding: REPORT_LAYOUT.tilePadding, borderRadius: 8 }}>
-                          <Text style={{ color: colors.mutedForeground, fontSize: 11, marginBottom: 4 }}>
+                        <View style={{ width: isTablet ? '31%' : '48%', backgroundColor: theme.alpha(colors.danger, 0.08), padding: REPORT_LAYOUT.tilePadding, borderRadius: theme.radii.sm }}>
+                          <Text style={{ color: colors.mutedForeground, fontSize: 11, marginBottom: theme.spacing.xs }}>
                             {t('expenses')}
                           </Text>
                           <Text style={{ color: colors.danger, fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>
                             -{formatCompactCurrency(month.expenses, month.currency)}
                           </Text>
                         </View>
-                        <View style={{ width: isTablet ? '31%' : '48%', backgroundColor: colors.secondary + '80', padding: REPORT_LAYOUT.tilePadding, borderRadius: 8 }}>
-                          <Text style={{ color: colors.mutedForeground, fontSize: 11, marginBottom: 4 }}>
+                        <View style={{ width: isTablet ? '31%' : '48%', backgroundColor: theme.alpha(colors.secondary, 0.5), padding: REPORT_LAYOUT.tilePadding, borderRadius: theme.radii.sm }}>
+                          <Text style={{ color: colors.mutedForeground, fontSize: 11, marginBottom: theme.spacing.xs }}>
                             {t('net')}
                           </Text>
                           <Text
@@ -504,7 +507,7 @@ export function YearlyReportView({
                     return (
                       <View
                         key={month.month}
-                        style={{ backgroundColor: colors.secondary + '4d', padding: REPORT_LAYOUT.tilePadding, borderRadius: 8 }}
+                        style={{ backgroundColor: theme.alpha(colors.secondary, 0.3), padding: REPORT_LAYOUT.tilePadding, borderRadius: theme.radii.sm }}
                       >
                         {rowContent}
                       </View>
@@ -516,9 +519,9 @@ export function YearlyReportView({
                       key={month.month}
                       onPress={() => onSelectMonth({ year: selectedYear, month: month.month })}
                       style={({ pressed }) => ({
-                        backgroundColor: colors.secondary + '4d',
+                        backgroundColor: theme.alpha(colors.secondary, 0.3),
                         padding: REPORT_LAYOUT.tilePadding,
-                        borderRadius: 8,
+                        borderRadius: theme.radii.sm,
                         opacity: pressed ? 0.84 : 1,
                       })}
                       accessibilityRole="button"
@@ -533,13 +536,11 @@ export function YearlyReportView({
           )}
         </>
       ) : (
-        <View style={{ backgroundColor: colors.card, padding: 32, borderRadius: 12, alignItems: 'center' }}>
-          <Calendar size={48} color={colors.mutedForeground} />
-          <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginTop: 16, fontSize: 18 }}>{t('noDataAvailable')}</Text>
-          <Text style={{ color: colors.mutedForeground, marginTop: 8, textAlign: 'center' }}>
-            {t('addTransaction')}
-          </Text>
-        </View>
+        <EmptyState
+          icon={BarChart3}
+          title={t('emptyNoReportsTitle') || 'No data for this period'}
+          description={t('emptyNoReportsDesc') || 'Add transactions in this range to see reports.'}
+        />
       )}
     </View>
   );

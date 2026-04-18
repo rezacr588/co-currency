@@ -525,6 +525,7 @@ export default function AIChatScreen() {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
+  const { alpha } = theme;
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -1572,7 +1573,7 @@ export default function AIChatScreen() {
               padding: 12,
               borderRadius: 12,
               marginBottom: 4,
-              backgroundColor: conv.id === activeConversationId ? colors.primary + '33' : 'transparent',
+              backgroundColor: conv.id === activeConversationId ? alpha(colors.primary, 0.2) : 'transparent',
             }, pressed && { opacity: 0.7 }]}
           >
             <MessageCircle
@@ -1646,9 +1647,9 @@ export default function AIChatScreen() {
             width: 74,
             height: 74,
             borderRadius: 24,
-            backgroundColor: colors.primary + '22',
+            backgroundColor: alpha(colors.primary, 0.133),
             borderWidth: 1,
-            borderColor: colors.primary + '44',
+            borderColor: alpha(colors.primary, 0.267),
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: 14,
@@ -1725,7 +1726,7 @@ export default function AIChatScreen() {
                 style={{
                   backgroundColor: colors.card,
                   borderWidth: 1,
-                  borderColor: streamInterrupted ? colors.danger + '44' : colors.border,
+                  borderColor: streamInterrupted ? alpha(colors.danger, 0.267) : colors.border,
                   paddingHorizontal: 13,
                   paddingVertical: 9,
                   borderRadius: 18,
@@ -1754,9 +1755,9 @@ export default function AIChatScreen() {
                     paddingHorizontal: 10,
                     paddingVertical: 5,
                     borderRadius: 8,
-                    backgroundColor: colors.danger + '15',
+                    backgroundColor: alpha(colors.danger, 0.08),
                     borderWidth: 1,
-                    borderColor: colors.danger + '33',
+                    borderColor: alpha(colors.danger, 0.2),
                     alignSelf: 'flex-start',
                   }, pressed && { opacity: 0.7 }]}
                 >
@@ -1884,7 +1885,7 @@ export default function AIChatScreen() {
                         paddingHorizontal: 16,
                         paddingVertical: 8,
                         borderRadius: 9999,
-                        backgroundColor: conv.id === activeConversationId ? colors.primary + '33' : colors.card,
+                        backgroundColor: conv.id === activeConversationId ? alpha(colors.primary, 0.2) : colors.card,
                         borderWidth: conv.id === activeConversationId ? 1 : 0,
                         borderColor: conv.id === activeConversationId ? colors.accent : undefined,
                       }, pressed && { opacity: 0.7 }]}
@@ -1964,8 +1965,13 @@ export default function AIChatScreen() {
                   {tableModalContent?.title || 'Table'}
                 </Text>
               </View>
-              <Pressable onPress={() => setTableModalContent(null)}>
-                <Text style={{ color: colors.mutedForeground }}>Close</Text>
+              <Pressable
+                onPress={() => setTableModalContent(null)}
+                accessibilityRole="button"
+                accessibilityLabel={t('a11yClose') || 'Close'}
+                hitSlop={8}
+              >
+                <Text style={{ color: colors.mutedForeground }}>{t('close') || 'Close'}</Text>
               </Pressable>
             </View>
             <ScrollView horizontal style={{ flex: 1 }}>

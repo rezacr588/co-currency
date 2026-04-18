@@ -42,8 +42,8 @@ type RateLimiterConfig struct {
 	AuthRequestsPerMinute  int           // Limit for authenticated users (0 = use default)
 	LoginAttemptsPerMinute int           // Limit for login endpoint (0 = use 5)
 	AIRequestsPerMinute    int           // Limit for AI endpoints per user (0 = use 20)
-	CleanupInterval        time.Duration // How often to clean up stale entries (0 = 10 minutes)
-	EntryTTL               time.Duration // How long to keep inactive entries (0 = 30 minutes)
+	CleanupInterval        time.Duration // How often to clean up stale entries (0 = 5 minutes)
+	EntryTTL               time.Duration // How long to keep inactive entries (0 = 15 minutes)
 }
 
 // NewRateLimiter creates a new rate limiter with cleanup goroutine

@@ -20,17 +20,21 @@ function timeAgo(dateStr: string): string {
   return `${diffDays}d`;
 }
 
-const categoryColors: Record<string, string> = {
-  markets: '#3b82f6',
-  finance: '#22c55e',
-  economy: '#f59e0b',
-  crypto: '#8b5cf6',
-};
+function useCategoryColors(): Record<string, string> {
+  const theme = useTheme();
+  return {
+    markets: theme.colors.info,
+    finance: theme.colors.success,
+    economy: theme.colors.warning,
+    crypto: theme.colors.palette.purple,
+  };
+}
 
 export function FinancialNewsCard() {
   const { t } = useLanguage();
   const theme = useTheme();
   const colors = theme.colors;
+  const categoryColors = useCategoryColors();
 
   const { data: newsItems, isPending } = useQuery({
     queryKey: ['news'],

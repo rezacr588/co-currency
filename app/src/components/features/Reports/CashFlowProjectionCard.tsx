@@ -156,9 +156,9 @@ export function CashFlowProjectionCard({ report: providedReport = null }: CashFl
   }
 
   return (
-    <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, marginBottom: 24 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-        <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginEnd: 12 }}>
+    <View style={{ backgroundColor: colors.card, padding: theme.spacing.xxl, borderRadius: theme.radii.md, marginBottom: theme.spacing.xxl }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.lg }}>
+        <View style={{ backgroundColor: theme.alpha(colors.accent, 0.2), padding: theme.spacing.sm, borderRadius: theme.radii.sm, marginEnd: theme.spacing.md }}>
           <TrendingUp size={20} color={colors.accent} />
         </View>
         <View style={{ flex: 1 }}>
@@ -171,7 +171,7 @@ export function CashFlowProjectionCard({ report: providedReport = null }: CashFl
         </View>
       </View>
 
-      <View style={{ height: chartData.chartHeight, marginBottom: 8 }}>
+      <View style={{ height: chartData.chartHeight, marginBottom: theme.spacing.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: '100%', gap: 2 }}>
           {chartData.sampledPoints.map((point, index) => {
             const normalizedHeight =
@@ -205,7 +205,7 @@ export function CashFlowProjectionCard({ report: providedReport = null }: CashFl
             );
           })}
         </View>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: theme.spacing.xs }}>
           <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
             {formatReportDateKey(projections[0]?.date || report.lowest_date, language, reportTimeZone)}
           </Text>
@@ -215,46 +215,46 @@ export function CashFlowProjectionCard({ report: providedReport = null }: CashFl
         </View>
       </View>
 
-      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginBottom: 16 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: theme.spacing.lg, marginBottom: theme.spacing.lg }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.success, marginEnd: 4 }} />
+          <View style={{ width: 8, height: 8, borderRadius: theme.radii.full, backgroundColor: colors.success, marginEnd: theme.spacing.xs }} />
           <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('healthy') || 'Healthy'}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 8, height: 8, borderRadius: 9999, marginEnd: 4, backgroundColor: colors.warning }} />
+          <View style={{ width: 8, height: 8, borderRadius: theme.radii.full, marginEnd: theme.spacing.xs, backgroundColor: colors.warning }} />
           <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('low') || 'Low'}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.danger, marginEnd: 4 }} />
+          <View style={{ width: 8, height: 8, borderRadius: theme.radii.full, backgroundColor: colors.danger, marginEnd: theme.spacing.xs }} />
           <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('negative') || 'Negative'}</Text>
         </View>
       </View>
 
       {report.danger_zone && report.danger_date && (
-        <View style={{ backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+        <View style={{ backgroundColor: theme.alpha(colors.danger, 0.1), borderWidth: 1, borderColor: theme.alpha(colors.danger, 0.3), padding: theme.spacing.lg, borderRadius: theme.radii.md, flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.lg }}>
           <AlertTriangle size={20} color={colors.danger} />
-          <View style={{ marginStart: 12, flex: 1 }}>
+          <View style={{ marginStart: theme.spacing.md, flex: 1 }}>
             <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium', fontSize: 14 }}>
               {t('dangerZone') || 'Danger Zone'}
             </Text>
-            <Text style={{ color: colors.danger + 'cc', fontSize: 12, marginTop: 2 }}>
+            <Text style={{ color: theme.alpha(colors.danger, 0.8), fontSize: 12, marginTop: 2 }}>
               {`${t('closestRiskDay') || 'Closest risk day'}: ${dangerDateLabel} (${formatReportDateKey(report.danger_date, language, reportTimeZone)})`}
             </Text>
           </View>
         </View>
       )}
 
-      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
-        <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
-          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
+      <View style={{ flexDirection: 'row', gap: theme.spacing.md, marginBottom: theme.spacing.lg }}>
+        <View style={{ flex: 1, backgroundColor: theme.alpha(colors.secondary, 0.5), padding: theme.spacing.md, borderRadius: theme.radii.sm }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: theme.spacing.xs }}>
             {t('expectedIncome') || 'Expected Income'}
           </Text>
           <Text style={{ color: colors.success, fontFamily: 'Inter_700Bold' }}>
             {formatCompactCurrency(report.summary.expected_income, report.currency)}
           </Text>
         </View>
-        <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
-          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
+        <View style={{ flex: 1, backgroundColor: theme.alpha(colors.secondary, 0.5), padding: theme.spacing.md, borderRadius: theme.radii.sm }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: theme.spacing.xs }}>
             {t('expectedExpenses') || 'Expected Expenses'}
           </Text>
           <Text style={{ color: colors.danger, fontFamily: 'Inter_700Bold' }}>
@@ -263,9 +263,9 @@ export function CashFlowProjectionCard({ report: providedReport = null }: CashFl
         </View>
       </View>
 
-      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
-        <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
-          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
+      <View style={{ flexDirection: 'row', gap: theme.spacing.md, marginBottom: theme.spacing.lg }}>
+        <View style={{ flex: 1, backgroundColor: theme.alpha(colors.secondary, 0.5), padding: theme.spacing.md, borderRadius: theme.radii.sm }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: theme.spacing.xs }}>
             {t('lowestBalance') || 'Lowest Balance'}
           </Text>
           <Text
@@ -277,8 +277,8 @@ export function CashFlowProjectionCard({ report: providedReport = null }: CashFl
             {`${lowestBalanceLabel} (${formatReportDateKey(report.lowest_date, language, reportTimeZone)})`}
           </Text>
         </View>
-        <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
-          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>
+        <View style={{ flex: 1, backgroundColor: theme.alpha(colors.secondary, 0.5), padding: theme.spacing.md, borderRadius: theme.radii.sm }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: theme.spacing.xs }}>
             {t('netProjected') || 'Net Projected'}
           </Text>
           <Text
@@ -293,12 +293,12 @@ export function CashFlowProjectionCard({ report: providedReport = null }: CashFl
       {(report.summary.recurring_income > 0 ||
         report.summary.recurring_expense > 0 ||
         report.summary.subscription_cost > 0) && (
-        <View style={{ backgroundColor: colors.secondary + '4d', padding: 12, borderRadius: 8, marginBottom: 16 }}>
-          <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: 8 }}>
+        <View style={{ backgroundColor: theme.alpha(colors.secondary, 0.3), padding: theme.spacing.md, borderRadius: theme.radii.sm, marginBottom: theme.spacing.lg }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: theme.spacing.sm }}>
             {t('recurringBreakdown') || 'Recurring Breakdown'}
           </Text>
           {report.summary.recurring_income > 0 && (
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: theme.spacing.xs }}>
               <Text style={{ color: colors.foreground, fontSize: 14 }}>
                 {t('recurringIncome') || 'Recurring Income'}
               </Text>
@@ -308,7 +308,7 @@ export function CashFlowProjectionCard({ report: providedReport = null }: CashFl
             </View>
           )}
           {report.summary.recurring_expense > 0 && (
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: theme.spacing.xs }}>
               <Text style={{ color: colors.foreground, fontSize: 14 }}>
                 {t('recurringExpense') || 'Recurring Expenses'}
               </Text>
@@ -332,7 +332,7 @@ export function CashFlowProjectionCard({ report: providedReport = null }: CashFl
 
       {upcomingEvents.length > 0 && (
         <View>
-          <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: 10 }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: theme.spacing.sm + 2 }}>
             {hasMixedDirections
               ? (t('upcomingEvents') || 'Upcoming Events')
               : groupedCreditEvents.length > 0
@@ -358,9 +358,9 @@ export function CashFlowProjectionCard({ report: providedReport = null }: CashFl
           ]
             .filter((section) => section.visible)
             .map((section) => (
-              <View key={section.key} style={{ marginBottom: section.key === 'debits' ? 0 : 16 }}>
+              <View key={section.key} style={{ marginBottom: section.key === 'debits' ? 0 : theme.spacing.lg }}>
                 {section.title ? (
-                  <Text style={{ color: section.tone, fontFamily: 'Inter_600SemiBold', marginBottom: 10 }}>
+                  <Text style={{ color: section.tone, fontFamily: 'Inter_600SemiBold', marginBottom: theme.spacing.sm + 2 }}>
                     {section.title}
                   </Text>
                 ) : null}
@@ -369,15 +369,15 @@ export function CashFlowProjectionCard({ report: providedReport = null }: CashFl
                   <View
                     key={`${section.key}-${group.date}`}
                     style={{
-                      backgroundColor: colors.secondary + '40',
+                      backgroundColor: theme.alpha(colors.secondary, 0.25),
                       borderWidth: 1,
                       borderColor: colors.border,
-                      borderRadius: 12,
-                      padding: 12,
-                      marginBottom: 10,
+                      borderRadius: theme.radii.md,
+                      padding: theme.spacing.md,
+                      marginBottom: theme.spacing.sm + 2,
                     }}
                   >
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: theme.spacing.sm + 2 }}>
                       <View>
                         <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
                           {group.relativeLabel}
@@ -416,12 +416,12 @@ export function CashFlowProjectionCard({ report: providedReport = null }: CashFl
                             flexDirection: 'row',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            paddingVertical: 8,
+                            paddingVertical: theme.spacing.sm,
                             borderBottomWidth: index === group.events.length - 1 ? 0 : 1,
-                            borderBottomColor: colors.border + '80',
+                            borderBottomColor: theme.alpha(colors.border, 0.5),
                           }}
                         >
-                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingEnd: 12 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingEnd: theme.spacing.md }}>
                             <View
                               style={{
                                 width: 26,
@@ -429,8 +429,8 @@ export function CashFlowProjectionCard({ report: providedReport = null }: CashFl
                                 borderRadius: 6,
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                marginEnd: 10,
-                                backgroundColor: event.type === 'subscription' ? colors.accent + '20' : eventTint + '20',
+                                marginEnd: theme.spacing.sm + 2,
+                                backgroundColor: event.type === 'subscription' ? theme.alpha(colors.accent, 0.125) : theme.alpha(eventTint, 0.125),
                               }}
                             >
                               {event.type === 'subscription' ? (
@@ -445,12 +445,12 @@ export function CashFlowProjectionCard({ report: providedReport = null }: CashFl
                               <Text style={{ color: colors.foreground, fontSize: 14 }} numberOfLines={1}>
                                 {event.description}
                               </Text>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: theme.spacing.xs }}>
                                 <View
                                   style={{
-                                    backgroundColor: eventTint + '14',
-                                    borderRadius: 9999,
-                                    paddingHorizontal: 8,
+                                    backgroundColor: theme.alpha(eventTint, 0.08),
+                                    borderRadius: theme.radii.full,
+                                    paddingHorizontal: theme.spacing.sm,
                                     paddingVertical: 3,
                                   }}
                                 >
