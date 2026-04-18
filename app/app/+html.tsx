@@ -15,12 +15,12 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="color-scheme" content="dark light" />
 
         {/* Default SEO */}
-        <title>CoAI - Your Personal Finance Copilot</title>
+        <title>CoAI — AI Financial Advisor in Your Language</title>
         <meta
           name="description"
-          content="CoAI helps you understand your money, track across currencies, and take guided action on budgets, goals, and spending."
+          content="CoAI is the AI financial advisor for global users — multi-currency, multilingual (English, Farsi, Arabic, Turkish), and remembers every conversation. Free forever."
         />
-        <meta name="keywords" content="coai, personal finance copilot, ai finance assistant, currency converter, budget tracker, savings goals, multi-currency wallet, expense tracker" />
+        <meta name="keywords" content="coai, ai financial advisor, ai money advisor, ai budget app, multi-currency wallet, multilingual finance app, farsi finance app, arabic finance app, turkish finance app, ai with memory, personal finance ai, budget tracker, savings goals, expense tracker" />
         <meta name="author" content="Reza Zeraat" />
         <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
         <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
@@ -40,24 +40,27 @@ export default function Root({ children }: PropsWithChildren) {
         <meta property="og:site_name" content="CoAI" />
         <meta property="og:type" content="website" />
         <meta property="og:locale" content="en_US" />
-        <meta property="og:title" content="CoAI - Your Personal Finance Copilot" />
+        <meta property="og:locale:alternate" content="fa_IR" />
+        <meta property="og:locale:alternate" content="ar" />
+        <meta property="og:locale:alternate" content="tr_TR" />
+        <meta property="og:title" content="CoAI — AI Financial Advisor in Your Language" />
         <meta
           property="og:description"
-          content="CoAI helps you understand your money, track across currencies, and take guided action on budgets, goals, and spending."
+          content="Your AI financial advisor — in any currency, in your language. Works in English, Farsi, Arabic, and Turkish. Remembers every conversation. Free forever."
         />
         <meta property="og:url" content="https://coai.koyeb.app" />
         <meta property="og:image" content="https://coai.koyeb.app/assets/images/icon.png" />
-        <meta property="og:image:alt" content="CoAI personal finance copilot" />
+        <meta property="og:image:alt" content="CoAI — the AI financial advisor for global users" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="CoAI - Your Personal Finance Copilot" />
+        <meta name="twitter:title" content="CoAI — AI Financial Advisor in Your Language" />
         <meta
           name="twitter:description"
-          content="CoAI helps you understand your money, track across currencies, and take guided action on budgets, goals, and spending."
+          content="Your AI financial advisor — in any currency, in your language. English, Farsi, Arabic, Turkish. Remembers every conversation. Free forever."
         />
         <meta name="twitter:image" content="https://coai.koyeb.app/assets/images/icon.png" />
-        <meta name="twitter:image:alt" content="CoAI personal finance copilot" />
+        <meta name="twitter:image:alt" content="CoAI — the AI financial advisor for global users" />
 
         {/* Preconnect */}
         <link rel="preconnect" href="https://coai.koyeb.app" />
@@ -85,9 +88,10 @@ export default function Root({ children }: PropsWithChildren) {
                   name: 'Reza Zeraat',
                 },
                 description:
-                  'Personal finance copilot with multi-currency wallet, budgets, goals, reports, and guided AI actions.',
+                  'AI financial advisor for global users — multi-currency, multilingual (English, Farsi, Arabic, Turkish), and remembers every conversation. Free forever.',
                 featureList:
-                  'CoAI Home, Multi-Currency Wallet, Currency Converter, Budgets, Savings Goals, Reports & Analytics, Purchasing Power Protection',
+                  'AI Financial Advisor with Memory, Multi-Currency Wallet (160+ currencies), Currency Converter, Smart Budgets, Savings Goals, Reports & Analytics, Purchasing Power Protection, Multi-Language (English, Farsi, Arabic, Turkish), Offline Sync',
+                inLanguage: ['en', 'fa', 'ar', 'tr'],
               },
               {
                 '@context': 'https://schema.org',
@@ -103,7 +107,8 @@ export default function Root({ children }: PropsWithChildren) {
                 name: 'CoAI',
                 url: 'https://coai.koyeb.app',
                 description:
-                  'CoAI helps you understand your money, track across currencies, and take guided action on budgets, goals, and spending.',
+                  'The AI financial advisor for global users — multi-currency, multilingual, remembers every conversation. Free forever.',
+                inLanguage: ['en', 'fa', 'ar', 'tr'],
               },
             ]),
           }}

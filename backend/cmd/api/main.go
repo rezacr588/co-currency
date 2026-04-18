@@ -218,6 +218,9 @@ func main() {
 
 	// Cleanup background resources
 	log.Info().Msg("Cleaning up background resources")
+	if svc.autopilotScheduler != nil {
+		svc.autopilotScheduler.Stop()
+	}
 	if svc.wsFanoutCancel != nil {
 		svc.wsFanoutCancel()
 	}

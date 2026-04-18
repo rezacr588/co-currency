@@ -1,13 +1,13 @@
 /**
  * Agent Feature Components
- * 
+ *
  * Components for the Autonomous AI Financial Agent feature:
- * - BriefingCard: Daily financial briefing summary
+ * - AutopilotCard: 4-stage autopilot view (Onramp / Roadmap / Daily Plan / Actions)
  * - PlanCard: Individual plan display with steps
  * - ApprovalCard: Pending action approval interface
  */
 
-export { BriefingCard } from './BriefingCard';
+export { AutopilotCard } from './AutopilotCard';
 export { PlanCard } from './PlanCard';
 export { ApprovalCard } from './ApprovalCard';
 

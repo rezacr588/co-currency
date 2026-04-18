@@ -117,6 +117,15 @@ app/
 
 **Theme system (`src/theme/index.ts`):** `buildTheme(colors, isDark, isRTL)` returns `AppTheme`. Dark mode default. Font: Inter + Vazirmatn (RTL). Type declarations in `src/theme/styled.d.ts`.
 
+**Design tokens — no hardcoded hex or spacing literals** (enforced via repo convention, not lint — audit added 2026-04-18):
+- Semantic colors: `colors.{primary, primaryForeground, success, successMuted, danger, dangerMuted, warning, warningMuted, info, infoMuted, accent, accentForeground, foreground, mutedForeground, subtleForeground, background, card, border, ...}` in `src/constants/colors.ts` (light + dark).
+- Brand/category palette: `colors.palette.{red, orange, yellow, green, blue, purple, pink, teal, lime, cyan, gray}` each with a `*Muted` variant. Use for note colors, badge rarities, priority chips, category icons, heatmap — anywhere the intent isn't semantic success/danger/warning.
+- Alpha helper: `theme.alpha(color, opacity)` for flat transparency. **Never** use `colors.X + '20'` hex-suffix concat (replaced in the 2026-04-18 sweep). Prefer pre-built `*Muted` tokens for theme-consistent pill backgrounds; use `alpha()` only when a specific opacity is required.
+- Spacing: `theme.spacing.{xs:4, sm:8, md:12, lg:16, xl:20, xxl:24, xxxl:32}`. Exported as module-level `spacing` from `src/theme/index.ts` so it works inside `StyleSheet.create({ row: { padding: spacing.lg } })` without `useTheme`.
+- Radii: `theme.radii.{sm:8, md:12, lg:16, xl:20, xxl:24, full:9999}`. `lg` and `xl` are distinct — don't collapse them.
+- Icon colors via hook: `const iconColors = useIconColors()` returns theme-reactive `{muted, subtle, accent, success, danger, warning, info, foreground, secondary}`. Don't import `ICON_COLOR_*` constants — they were removed.
+- Legitimate exceptions for raw hex: RN `shadowColor` strings (RN requires `'#000'` etc.), splash screen (`AnimatedSplash.tsx`, renders pre-theme), external brand colors (LinkedIn `#0077B5`, Android green `#3ddc84`, Google brand colors). Module-level meta tags in `app/+html.tsx`.
+
 **Offline support:** AsyncStorage-based offline queue (max 100 items, 3 retries, auto-sync on reconnect). Planner has dedicated cache/outbox/sync engine in `src/offline/`:
 - `plannerOutbox.ts`: Outbox queue with promise-based mutex (`withOutboxLock`) serializing all writes to prevent AsyncStorage race conditions. **All mutations** (`enqueuePlannerOp`, `updatePlannerOutboxOp`, `removePlannerOutboxOp`, `retryFailedPlannerOps`, `discardFailedPlannerOps`) must use the mutex. Compaction only targets `'pending'` ops, never in-flight `'syncing'` ops. Max 500 ops. Includes temp-ID map with automatic cleanup after sync.
 - `plannerSyncEngine.ts`: Processes outbox ops with ID-based while-loop (not index-based for-loop) and exponential backoff (max 6 attempts, up to 60s). Re-reads ops from storage after each write. Normalizes stuck `'syncing'` ops to `'pending'` on startup (crash recovery). Uses `processedOpIDs` set to prevent infinite loops.
@@ -149,6 +158,8 @@ app/
 - Always include all captured state variables in `useCallback` dependency arrays. Common misses: `undoOriginalStatus`, translation function `t`, boolean flags like `isOnline`.
 - Clean up `setTimeout`/`setInterval` refs in a `useEffect` cleanup function to prevent timer leaks on unmount.
 - When `due_date` or similar optional fields are empty strings, send `undefined` instead of `""` to the API (`value.trim() || undefined`).
+- Hooks that return theme-dependent values (e.g. `useIconColors()`, `useCategoryColors()`, `usePriorityColors()`) must be called at the **top** of the component body, before any early return. ESLint will flag conditional hook calls — don't work around it by moving derivations around.
+- Don't leave unused derivations in the codebase suppressed with `void varName;`. If a feature isn't wired up yet, delete the computation; re-add it when you wire the UI.
 
 ### Backend Error Handling
 - Use `pkg/httputil` methods: `BadRequestWithContext()`, `UnauthorizedWithContext()`, `NotFoundWithContext()`, `InternalServerErrorWithContext()`, `ServiceUnavailableWithContext()`
@@ -206,11 +217,12 @@ koyeb services logs coai/co-currency -t runtime
 
 **CI/CD:**
 - Push to main → pre-deploy DB backup → Docker build → ghcr.io → Koyeb deploy
-- PRs → Go tests + app typecheck
+- PRs → backend `go test` + app typecheck + app `npm run lint` + app `npm test --ci` (all blocking). Aligned with mobile-build.yml post-merge checks so lint/jest failures block merge, not the OTA push.
 - Mobile: push to main (app/** paths) → OTA update to `production` + non-fatal OTA updates to `internal`/`development`/`preview` + publish latest APK to GitHub Releases; APK rebuilt when native files change or `[build-apk]` in commit
 - APK download URL: `https://github.com/rezacr588/co-currency/releases/download/latest/coai.apk`
 - **No pre-push hook**: the `.githooks/pre-push` hook was removed on 2026-04-18 in favor of CI. Use plain `git push` — never prefix with `SKIP_DEPLOY=1` / `SKIP_BUILD=1` / `SKIP_EAS=1`.
 - **Koyeb keepalive**: UptimeRobot (5-min HTTP monitor) is primary. `.github/workflows/koyeb-keepalive.yml` is the backup, cron on odd minute offsets (`3,13,23,33,43,53`) to avoid GitHub's crowded round-minute cron slots; failures exit 0 with a warning so a single cold-start miss doesn't turn the workflow red.
+- `/health` and `/health/detailed` accept both GET and HEAD so HEAD-by-default monitors (UptimeRobot free tier) don't hit 405. Don't remove the `r.Head(...)` registrations in `internal/router/routes_public.go`.
 
 ## Database
 

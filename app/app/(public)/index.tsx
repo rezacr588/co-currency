@@ -181,6 +181,7 @@ export default function HomeScreen() {
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.xl, marginTop: theme.spacing.xxl }}>
             <TrustBadge icon={<Shield size={14} color={theme.colors.success} />} label={t('landingTrustFree') || 'Free Forever'} />
             <TrustBadge icon={<Globe size={14} color={theme.colors.info} />} label={t('landingTrustCurrencies') || '160+ Currencies'} />
+            <TrustBadge icon={<Sparkles size={14} color={theme.colors.accent} />} label={t('landingTrustMemory') || 'AI with Memory'} />
             <TrustBadge icon={<Zap size={14} color={theme.colors.warning} />} label={t('landingTrustRates') || 'Real-Time Rates'} />
             <TrustBadge icon={<Lock size={14} color={theme.colors.mutedForeground} />} label={t('landingTrustPrivacy') || 'Privacy First'} />
           </View>
@@ -265,10 +266,10 @@ export default function HomeScreen() {
                 </View>
               </View>
               <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
-                <View style={{ width: 28, height: 28, borderRadius: 9999, backgroundColor: theme.colors.accent + '30', alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ width: 28, height: 28, borderRadius: 9999, backgroundColor: theme.colors.accentMuted, alignItems: 'center', justifyContent: 'center' }}>
                   <Sparkles size={14} color={theme.colors.accent} />
                 </View>
-                <View style={{ flex: 1, backgroundColor: theme.colors.accent + '15', borderRadius: theme.radii.md, padding: theme.spacing.md }}>
+                <View style={{ flex: 1, backgroundColor: theme.alpha(theme.colors.accent, 0.1), borderRadius: theme.radii.md, padding: theme.spacing.md }}>
                   <Text style={{ color: theme.colors.foreground, fontSize: 14, lineHeight: 20 }}>
                     {t('landingAIChatBot') || 'Your dining spend is 34% of this month’s outflow and trending above last month. Moving two meals a week home would save roughly $180/month. Want me to turn that into a food budget?'}
                   </Text>

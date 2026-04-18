@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -190,6 +191,27 @@ func (r *AgentPlanRepository) GetActivePlansCount(ctx context.Context, userID uu
 		userID,
 	).Scan(&count)
 	return count, err
+}
+
+// ArchiveActiveAutopilotPlans cancels any still-open plans that were created
+// by the daily autopilot pipeline for the given user. Used to prevent plan
+// sprawl: each daily scan archives its predecessor before creating a fresh
+// plan. Returns the number of plans archived.
+//
+// Autopilot-created plans are identified by the metadata marker
+// {"source": "autopilot"}; the service layer sets this when inserting.
+func (r *AgentPlanRepository) ArchiveActiveAutopilotPlans(ctx context.Context, userID uuid.UUID) (int64, error) {
+	tag, err := r.db.Exec(ctx, `
+		UPDATE agent_plans
+		SET status = 'cancelled', updated_at = NOW()
+		WHERE user_id = $1
+		  AND status IN ('draft', 'active', 'paused')
+		  AND metadata ->> 'source' = 'autopilot'
+	`, userID)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
 }
 
 // =========================================
@@ -794,4 +816,140 @@ func (r *AgentPlanRepository) UpdateAutopilotResult(ctx context.Context, result 
 		result.ID,
 	)
 	return err
+}
+
+// GetLatestAutopilotResult returns the most recent autopilot result for a user.
+// Returns ErrNoRows wrapped if the user has never run an autopilot scan.
+func (r *AgentPlanRepository) GetLatestAutopilotResult(ctx context.Context, userID uuid.UUID) (*model.DailyAutopilotResult, error) {
+	query := `
+		SELECT id, user_id, run_date, status, upcoming_bills, balance_predictions,
+			goal_opportunities, subscription_insights, anomalies_detected,
+			proposed_actions, auto_approved_actions, pending_approvals,
+			analysis_duration_ms, error_message, created_at, completed_at
+		FROM daily_autopilot_results
+		WHERE user_id = $1
+		ORDER BY run_date DESC, created_at DESC
+		LIMIT 1`
+
+	result := &model.DailyAutopilotResult{}
+	err := r.db.QueryRow(ctx, query, userID).Scan(
+		&result.ID,
+		&result.UserID,
+		&result.RunDate,
+		&result.Status,
+		&result.UpcomingBills,
+		&result.BalancePredictions,
+		&result.GoalOpportunities,
+		&result.SubscriptionInsights,
+		&result.AnomaliesDetected,
+		&result.ProposedActions,
+		&result.AutoApprovedActions,
+		&result.PendingApprovals,
+		&result.AnalysisDurationMS,
+		&result.ErrorMessage,
+		&result.CreatedAt,
+		&result.CompletedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// GetUsersWithDailyAutopilotEnabled returns user IDs that have opted in to
+// the daily autopilot scheduler — regardless of whether they're due now.
+// Kept for admin/reporting use; the scheduler itself uses
+// GetUsersDueForAutopilot which also applies the timezone + dedup filters.
+func (r *AgentPlanRepository) GetUsersWithDailyAutopilotEnabled(ctx context.Context) ([]uuid.UUID, error) {
+	query := `
+		SELECT user_id
+		FROM agent_config
+		WHERE enabled = TRUE AND daily_autopilot_enabled = TRUE`
+
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	users := []uuid.UUID{}
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		users = append(users, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+// GetUsersDueForAutopilot returns users whose daily autopilot should fire now.
+// A user is "due" when:
+//  1. They have autopilot + daily_autopilot enabled
+//  2. The current wall-clock time in their configured timezone has reached
+//     or passed their preferred autopilot_time (time-of-day)
+//  3. They have not had an autopilot result recorded in the last `minGap`.
+//     This dedup is gap-based rather than calendar-date-based because
+//     daily_autopilot_results.run_date is stored as a UTC-midnight date, which
+//     doesn't align cleanly with per-user local days. A 20h gap guarantees
+//     at most one run per ~day without risking day-skip near boundaries.
+//
+// The query handles malformed timezones gracefully — Postgres raises an error
+// for unknown timezone strings, so callers should ensure agent_config.autopilot_timezone
+// is a valid IANA zone (e.g. "America/New_York"). Unknown zones cause the row
+// to be skipped via a WHERE clause guard.
+func (r *AgentPlanRepository) GetUsersDueForAutopilot(ctx context.Context, minGap time.Duration) ([]uuid.UUID, error) {
+	// Build the interval as a string so pgx sends a normal parameter; Postgres
+	// parses "<n> seconds" reliably even for sub-minute gaps in tests.
+	gapSeconds := int64(minGap.Seconds())
+	if gapSeconds < 1 {
+		gapSeconds = 1
+	}
+	gapStr := fmt.Sprintf("%d seconds", gapSeconds)
+
+	// The pg_timezone_names join is defensive — the HTTP handler already
+	// rejects invalid zones on save, but a bad row (imported, manual edit,
+	// dropped OS tzdata entry) would otherwise raise and abort the whole
+	// scheduler tick. Filtering here silently skips the offending user;
+	// they'll surface next tick if their zone comes back.
+	query := `
+		SELECT ac.user_id
+		FROM agent_config ac
+		LEFT JOIN LATERAL (
+			SELECT created_at
+			FROM daily_autopilot_results
+			WHERE user_id = ac.user_id
+			ORDER BY created_at DESC
+			LIMIT 1
+		) last_run ON TRUE
+		WHERE ac.enabled = TRUE
+		  AND ac.daily_autopilot_enabled = TRUE
+		  AND (last_run.created_at IS NULL OR last_run.created_at < NOW() - $1::interval)
+		  AND COALESCE(NULLIF(ac.autopilot_timezone, ''), 'UTC') IN (
+		    SELECT name FROM pg_timezone_names
+		  )
+		  AND (NOW() AT TIME ZONE COALESCE(NULLIF(ac.autopilot_timezone, ''), 'UTC'))::time
+		      >= COALESCE(ac.autopilot_time, '09:00:00'::time)`
+
+	rows, err := r.db.Query(ctx, query, gapStr)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	users := []uuid.UUID{}
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		users = append(users, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return users, nil
 }

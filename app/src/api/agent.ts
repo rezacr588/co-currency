@@ -166,6 +166,17 @@ export interface AutopilotResult {
   completed_at?: string;
 }
 
+export interface AutopilotStatus {
+  enabled: boolean;
+  daily_autopilot_enabled: boolean;
+  autopilot_time?: string;
+  autopilot_timezone?: string;
+  last_run_at?: string;
+  next_run_estimate?: string;
+  pending_plan_count: number;
+  pending_approval_count: number;
+}
+
 // Request types
 export interface CreatePlanRequest {
   title: string;
@@ -401,6 +412,13 @@ export const agent = {
     fetchAPI<AutopilotResponse>('/agent/autopilot/run', {
       method: 'POST',
     }),
+
+  /**
+   * Get consolidated autopilot status — config + last/next run + counts.
+   * Drives the AutopilotCard header.
+   */
+  getAutopilotStatus: () =>
+    fetchAPI<AutopilotStatus>('/agent/autopilot/status'),
 
   /**
    * Get latest autopilot result

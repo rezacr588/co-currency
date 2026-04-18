@@ -16,7 +16,7 @@ import { useTheme } from 'styled-components/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '@/src/context/LanguageContext';
 import { useAgentDashboard, useAgentStatus } from '@/src/hooks/useAgent';
-import { BriefingCard, PlanCard, ApprovalCard } from '@/src/components/features/Agent';
+import { AutopilotCard, PlanCard, ApprovalCard } from '@/src/components/features/Agent';
 import { LoadingSpinner, EmptyState } from '@/src/components/ui';
 import { haptics } from '@/src/utils/haptics';
 import { spacing, radii } from '@/src/theme';
@@ -257,14 +257,10 @@ export default function AgentDashboardScreen() {
           />
         }
       >
-        {/* Daily Briefing */}
-        {briefing.data?.briefing && (
-          <View style={{ marginBottom: spacing.xl }}>
-            <BriefingCard
-              onViewApprovals={handleViewApprovals}
-            />
-          </View>
-        )}
+        {/* Autopilot — 4-stage framework (Onramp → Roadmap → Daily Plan → Actions) */}
+        <View style={{ marginBottom: spacing.xl }}>
+          <AutopilotCard onViewApprovals={handleViewApprovals} />
+        </View>
 
         {/* Pending Approvals */}
         {approvals.length > 0 && (

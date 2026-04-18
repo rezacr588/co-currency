@@ -28,6 +28,7 @@ export {
   useDailyBriefing,
   useTriggerAutopilot,
   useAutopilotResult,
+  useAutopilotStatus,
   useAgentDashboard,
   useAgentStatus,
   agentKeys,

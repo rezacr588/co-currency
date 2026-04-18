@@ -3,11 +3,15 @@
  * Configure AI agent behavior, thresholds, and permissions
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, Switch, TextInput, Pressable } from 'react-native';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { View, Text, ScrollView, Switch, TextInput, Pressable, Platform } from 'react-native';
+import DateTimePicker, {
+  DateTimePickerAndroid,
+  type DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Shield, Zap, Clock, Save } from 'lucide-react-native';
+import { ArrowLeft, Shield, Zap, Clock, Globe, Save } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
 import { useLanguage } from '@/src/context/LanguageContext';
 import { useAgentConfig, useUpdateAgentConfig } from '@/src/hooks/useAgent';
@@ -88,9 +92,76 @@ export default function AgentSettingsScreen() {
   const [requireBiometricAbove, setRequireBiometricAbove] = useState('100');
   const [dailyAutopilotEnabled, setDailyAutopilotEnabled] = useState(false);
   const [autopilotTime, setAutopilotTime] = useState('09:00:00');
+  const [autopilotTimezone, setAutopilotTimezone] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
+  const [showIOSTimePicker, setShowIOSTimePicker] = useState(false);
 
-  // Sync state when config loads
+  // Convert the stored "HH:MM:SS" string into a Date anchored to today so
+  // DateTimePicker has a valid value handle. Only the H/M parts are used on save.
+  const pickerValue = useMemo(() => {
+    const [hhRaw = '9', mmRaw = '0'] = autopilotTime.split(':');
+    const hh = Math.min(23, Math.max(0, parseInt(hhRaw, 10) || 9));
+    const mm = Math.min(59, Math.max(0, parseInt(mmRaw, 10) || 0));
+    const d = new Date();
+    d.setHours(hh, mm, 0, 0);
+    return d;
+  }, [autopilotTime]);
+
+  const applyPickedTime = useCallback(
+    (value: Date) => {
+      const hh = String(value.getHours()).padStart(2, '0');
+      const mm = String(value.getMinutes()).padStart(2, '0');
+      setAutopilotTime(`${hh}:${mm}:00`);
+      setHasChanges(true);
+      haptics.light();
+    },
+    [],
+  );
+
+  const handleTimePickerChange = useCallback(
+    (event: DateTimePickerEvent, value?: Date) => {
+      if (Platform.OS === 'android') {
+        if (event.type === 'dismissed' || !value) return;
+        applyPickedTime(value);
+        return;
+      }
+      // iOS inline — we keep the picker open; the user dismisses by tapping elsewhere.
+      if (value) applyPickedTime(value);
+    },
+    [applyPickedTime],
+  );
+
+  const openTimePicker = useCallback(() => {
+    if (!dailyAutopilotEnabled) return;
+    if (Platform.OS === 'android') {
+      try {
+        DateTimePickerAndroid.open({
+          value: pickerValue,
+          mode: 'time',
+          is24Hour: true,
+          onChange: handleTimePickerChange,
+        });
+      } catch {
+        // Fall through to text-entry fallback if native module missing.
+      }
+      return;
+    }
+    setShowIOSTimePicker((open) => !open);
+  }, [dailyAutopilotEnabled, pickerValue, handleTimePickerChange]);
+
+  // Detect the device's IANA timezone once per mount. Falls back to UTC on
+  // platforms that don't expose a valid `timeZone` via Intl (rare, but
+  // observed on some older Android webviews).
+  const detectedTimezone = (() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    } catch {
+      return 'UTC';
+    }
+  })();
+
+  // Sync state when config loads. If the backend has no timezone stored yet,
+  // seed from the device so the very first save captures the user's zone.
   useEffect(() => {
     if (config) {
       setEnabled(config.enabled ?? true);
@@ -99,8 +170,9 @@ export default function AgentSettingsScreen() {
       setRequireBiometricAbove(String(config.require_biometric_above ?? 100));
       setDailyAutopilotEnabled(config.daily_autopilot_enabled ?? false);
       setAutopilotTime(config.autopilot_time ?? '09:00:00');
+      setAutopilotTimezone(config.autopilot_timezone || detectedTimezone);
     }
-  }, [config]);
+  }, [config, detectedTimezone]);
 
   const handleSave = useCallback(async () => {
     haptics.medium();
@@ -112,6 +184,7 @@ export default function AgentSettingsScreen() {
         require_biometric_above: parseFloat(requireBiometricAbove) || 100,
         daily_autopilot_enabled: dailyAutopilotEnabled,
         autopilot_time: autopilotTime,
+        autopilot_timezone: autopilotTimezone.trim() || detectedTimezone,
       });
       haptics.success();
       showToast(t('settingsSaved') || 'Settings saved', 'success');
@@ -120,7 +193,7 @@ export default function AgentSettingsScreen() {
       haptics.error();
       showToast(err?.message || t('failedToSaveSettings') || 'Failed to save settings', 'error');
     }
-  }, [enabled, autoApproveThreshold, autoApproveCurrency, requireBiometricAbove, dailyAutopilotEnabled, autopilotTime, updateConfig, showToast, t]);
+  }, [enabled, autoApproveThreshold, autoApproveCurrency, requireBiometricAbove, dailyAutopilotEnabled, autopilotTime, autopilotTimezone, detectedTimezone, updateConfig, showToast, t]);
 
   const markChanged = () => setHasChanges(true);
 
@@ -237,16 +310,102 @@ export default function AgentSettingsScreen() {
           <SettingsRow
             label={t('autopilotTime') || 'Autopilot time'}
             description={t('autopilotTimeDesc') || 'When to run daily tasks (HH:MM)'}
+          >
+            {Platform.OS === 'web' ? (
+              <TextInput
+                style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 6, paddingHorizontal: spacing.md, paddingVertical: 6, width: 100, textAlign: 'center', color: colors.foreground }}
+                value={autopilotTime.slice(0, 5)}
+                onChangeText={(v) => { setAutopilotTime(v + ':00'); markChanged(); }}
+                placeholder="09:00"
+                placeholderTextColor={colors.placeholder}
+                editable={dailyAutopilotEnabled}
+              />
+            ) : (
+              <Pressable
+                onPress={openTimePicker}
+                disabled={!dailyAutopilotEnabled}
+                accessibilityRole="button"
+                accessibilityLabel={t('autopilotTimePicker') || 'Pick autopilot time'}
+                style={({ pressed }) => [
+                  {
+                    backgroundColor: colors.background,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    borderRadius: 6,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: 8,
+                    minWidth: 100,
+                    alignItems: 'center',
+                    opacity: dailyAutopilotEnabled ? 1 : 0.5,
+                  },
+                  pressed && { opacity: 0.72 },
+                ]}
+              >
+                <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium', fontSize: 14 }}>
+                  {autopilotTime.slice(0, 5)}
+                </Text>
+              </Pressable>
+            )}
+          </SettingsRow>
+          {Platform.OS === 'ios' && showIOSTimePicker && dailyAutopilotEnabled ? (
+            <View style={{ backgroundColor: colors.card, borderTopWidth: 1, borderTopColor: colors.border }}>
+              <DateTimePicker
+                value={pickerValue}
+                mode="time"
+                display="spinner"
+                is24Hour
+                onChange={handleTimePickerChange}
+              />
+            </View>
+          ) : null}
+          <SettingsRow
+            label={t('autopilotTimezone') || 'Timezone'}
+            description={t('autopilotTimezoneDesc') || 'Used to interpret autopilot time (IANA zone)'}
             last
           >
-            <TextInput
-              style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 6, paddingHorizontal: spacing.md, paddingVertical: 6, width: 100, textAlign: 'center', color: colors.foreground }}
-              value={autopilotTime.slice(0, 5)}
-              onChangeText={(v) => { setAutopilotTime(v + ':00'); markChanged(); }}
-              placeholder="09:00"
-              placeholderTextColor={colors.placeholder}
-              editable={dailyAutopilotEnabled}
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TextInput
+                style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 6, paddingHorizontal: spacing.md, paddingVertical: 6, minWidth: 160, textAlign: 'left', color: colors.foreground }}
+                value={autopilotTimezone}
+                onChangeText={(v) => { setAutopilotTimezone(v); markChanged(); }}
+                placeholder={detectedTimezone}
+                placeholderTextColor={colors.placeholder}
+                editable={dailyAutopilotEnabled}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <Pressable
+                onPress={() => {
+                  setAutopilotTimezone(detectedTimezone);
+                  markChanged();
+                  haptics.light();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t('autopilotDetectTimezone') || 'Detect device timezone'}
+                disabled={!dailyAutopilotEnabled}
+                hitSlop={8}
+                style={({ pressed }) => [
+                  {
+                    marginStart: spacing.sm,
+                    paddingHorizontal: spacing.sm,
+                    paddingVertical: 6,
+                    borderRadius: 6,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    backgroundColor: colors.card,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    opacity: dailyAutopilotEnabled ? 1 : 0.5,
+                  },
+                  pressed && { opacity: 0.72 },
+                ]}
+              >
+                <Globe size={14} color={colors.accent} />
+                <Text style={{ marginStart: spacing.xs, fontSize: 12, color: colors.foreground, fontFamily: 'Inter_500Medium' }}>
+                  {t('autopilotDetect') || 'Detect'}
+                </Text>
+              </Pressable>
+            </View>
           </SettingsRow>
         </SettingsSection>
 
