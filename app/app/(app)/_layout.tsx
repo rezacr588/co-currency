@@ -58,6 +58,11 @@ export default function AppLayout() {
         <Stack.Screen name="transaction-create" />
         <Stack.Screen name="notes" />
         <Stack.Screen name="note/[id]" />
+        <Stack.Screen name="agent" />
+        <Stack.Screen name="agent/approvals" />
+        <Stack.Screen name="agent/create-plan" />
+        <Stack.Screen name="agent/settings" />
+        <Stack.Screen name="agent/plans/[id]" />
         <Stack.Screen name="loans" />
         <Stack.Screen name="notification-settings" />
         <Stack.Screen name="challenges" />
