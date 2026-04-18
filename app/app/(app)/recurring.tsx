@@ -25,6 +25,7 @@ import { useToast } from '../../src/components/ui/Toast';
 import { Button } from '../../src/components/ui/Button';
 import { FormError } from '../../src/components/ui/FormError';
 import { SkeletonCard, SkeletonList } from '../../src/components/ui/Skeleton';
+import { EmptyState } from '../../src/components/ui/EmptyState';
 import { COMMON_CURRENCIES } from '../../src/constants/currencies';
 import { haptics } from '../../src/utils/haptics';
 import type { CreateRecurringRequest, RecurringTransaction, UpdateRecurringRequest } from '../../src/types/goal';
@@ -65,14 +66,14 @@ export default function RecurringScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
       {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: theme.spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border, maxWidth: 1400, width: '100%', alignSelf: 'center' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Pressable onPress={() => router.back()} style={({ pressed }) => [{ cursor: 'pointer', padding: 8, marginEnd: 8 }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('back') || 'Go back'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Pressable onPress={() => router.back()} style={({ pressed }) => [{ cursor: 'pointer', padding: theme.spacing.sm, marginEnd: theme.spacing.sm }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('a11yBack') || t('back') || 'Go back'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <ArrowLeft size={24} color={colors.foreground} />
           </Pressable>
           <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }}>{t('recurring')}</Text>
         </View>
-        <Pressable onPress={() => setShowForm(true)} style={({ pressed }) => [{ cursor: 'pointer', backgroundColor: colors.primary, padding: 10, borderRadius: 9999 }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('createRecurring') || 'Create Recurring'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Pressable onPress={() => setShowForm(true)} style={({ pressed }) => [{ cursor: 'pointer', backgroundColor: colors.primary, padding: 10, borderRadius: theme.radii.full }, pressed && { opacity: 0.7 }]} accessibilityLabel={t('createRecurring') || 'Create Recurring'} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Plus size={22} color={colors.primaryForeground} />
         </Pressable>
       </View>
@@ -80,7 +81,7 @@ export default function RecurringScreen() {
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
-          padding: isDesktop ? 32 : 16,
+          padding: isDesktop ? theme.spacing.xxxl : theme.spacing.lg,
           maxWidth: 1400,
           width: '100%',
           alignSelf: 'center',
@@ -89,11 +90,13 @@ export default function RecurringScreen() {
         keyboardDismissMode="on-drag"
       >
         {isError ? (
-          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger + '33', padding: 24, borderRadius: 12, alignItems: 'center', maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
-            <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium', marginBottom: 8 }}>{t('failedToLoadRecurring') || 'Failed to load recurring transactions'}</Text>
+          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: theme.alpha(colors.danger, 0.2), padding: theme.spacing.xxl, borderRadius: theme.radii.md, alignItems: 'center', maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
+            <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium', marginBottom: theme.spacing.sm }}>{t('failedToLoadRecurring') || 'Failed to load recurring transactions'}</Text>
             <Pressable
               onPress={() => refetch()}
-              style={{ cursor: 'pointer', backgroundColor: colors.danger + '33', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+              style={{ cursor: 'pointer', backgroundColor: theme.alpha(colors.danger, 0.2), paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.sm, borderRadius: theme.radii.sm }}
+              accessibilityLabel={t('retry') || 'Retry'}
+              accessibilityRole="button"
             >
               <Text style={{ color: colors.danger, fontFamily: 'Inter_500Medium' }}>{t('retry') || 'Retry'}</Text>
             </Pressable>
@@ -101,22 +104,26 @@ export default function RecurringScreen() {
         ) : isPending ? (
           <SkeletonList count={3} ItemComponent={SkeletonCard} />
         ) : transactions.length === 0 ? (
-          <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 24, borderRadius: 12, alignItems: 'center', maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
-            <RefreshCw size={48} color={colors.placeholder} />
-            <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginTop: 16 }}>{t('noRecurring')}</Text>
-            <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 8 }}>{t('noRecurringDescription')}</Text>
+          <View style={{ maxWidth: isDesktop ? 600 : '100%', alignSelf: 'center', width: '100%' }}>
+            <EmptyState
+              icon={RefreshCw}
+              title={t('emptyNoRecurringTitle') || 'No recurring items'}
+              description={t('emptyNoRecurringDesc') || 'Set up recurring transactions that happen on a schedule.'}
+              actionLabel={t('emptyNoRecurringCta') || 'Add recurring'}
+              onAction={() => setShowForm(true)}
+            />
           </View>
         ) : (
           <>
             {activeTransactions.length > 0 && (
-              <View style={{ marginBottom: 24 }}>
-                <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginBottom: 16 }}>
+              <View style={{ marginBottom: theme.spacing.xxl }}>
+                <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground, marginBottom: theme.spacing.lg }}>
                   {t('active')} ({activeTransactions.length})
                 </Text>
                 <View style={{
                   flexDirection: 'row',
                   flexWrap: 'wrap',
-                  gap: 12,
+                  gap: theme.spacing.md,
                 }}>
                   {activeTransactions.map((tx) => (
                     <View key={tx.id} style={{
@@ -132,13 +139,13 @@ export default function RecurringScreen() {
 
             {pausedTransactions.length > 0 && (
               <View>
-                <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.mutedForeground, marginBottom: 16 }}>
+                <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.mutedForeground, marginBottom: theme.spacing.lg }}>
                   {t('paused')} ({pausedTransactions.length})
                 </Text>
                 <View style={{
                   flexDirection: 'row',
                   flexWrap: 'wrap',
-                  gap: 12,
+                  gap: theme.spacing.md,
                 }}>
                   {pausedTransactions.map((tx) => (
                     <View key={tx.id} style={{
@@ -483,8 +490,8 @@ function RecurringFormModal({ visible, onClose, editTransaction }: { visible: bo
                 onPress={() => setType('debit')}
                 style={{ cursor: 'pointer', flex: 1, padding: 16, borderRadius: 12, alignItems: 'center', backgroundColor: type === 'debit' ? colors.danger : colors.card }}
               >
-                <TrendingDown size={20} color={type === 'debit' ? '#ffffff' : colors.danger} />
-                <Text style={{ marginTop: 4, color: type === 'debit' ? '#ffffff' : colors.foreground, fontFamily: type === 'debit' ? 'Inter_600SemiBold' : undefined }}>
+                <TrendingDown size={20} color={type === 'debit' ? colors.primaryForeground : colors.danger} />
+                <Text style={{ marginTop: 4, color: type === 'debit' ? colors.primaryForeground : colors.foreground, fontFamily: type === 'debit' ? 'Inter_600SemiBold' : undefined }}>
                   {t('expense')}
                 </Text>
               </Pressable>
@@ -492,8 +499,8 @@ function RecurringFormModal({ visible, onClose, editTransaction }: { visible: bo
                 onPress={() => setType('credit')}
                 style={{ cursor: 'pointer', flex: 1, padding: 16, borderRadius: 12, alignItems: 'center', backgroundColor: type === 'credit' ? colors.success : colors.card }}
               >
-                <TrendingUp size={20} color={type === 'credit' ? '#ffffff' : colors.success} />
-                <Text style={{ marginTop: 4, color: type === 'credit' ? '#ffffff' : colors.foreground, fontFamily: type === 'credit' ? 'Inter_600SemiBold' : undefined }}>
+                <TrendingUp size={20} color={type === 'credit' ? colors.primaryForeground : colors.success} />
+                <Text style={{ marginTop: 4, color: type === 'credit' ? colors.primaryForeground : colors.foreground, fontFamily: type === 'credit' ? 'Inter_600SemiBold' : undefined }}>
                   {t('income')}
                 </Text>
               </Pressable>
@@ -596,11 +603,11 @@ function RecurringFormModal({ visible, onClose, editTransaction }: { visible: bo
                     <CategoryIcon
                       category={cat}
                       size={16}
-                      color={isSelected ? '#ffffff' : catColor}
+                      color={isSelected ? colors.primaryForeground : catColor}
                     />
                     <Text
                       style={{
-                        color: isSelected ? '#ffffff' : catColor,
+                        color: isSelected ? colors.primaryForeground : catColor,
                         fontFamily: isSelected ? 'Inter_600SemiBold' : 'Inter_500Medium',
                       }}
                     >

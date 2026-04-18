@@ -7,7 +7,7 @@ import { DatePickerModal } from './DatePickerModal';
 import { useLanguage } from '../../../context/LanguageContext';
 import { haptics } from '../../../utils/haptics';
 import { normalizePlannerDueDate } from '../../../utils/plannerDate';
-import { COLUMN_ORDER, PRIORITY_COLORS, getStatusLabel } from '../../../utils/plannerConstants';
+import { COLUMN_ORDER, getStatusLabel, usePriorityColors } from '../../../utils/plannerConstants';
 import type { PlannerStatus, Task, UpdateTaskRequest } from '../../../types/planner';
 
 interface TaskEditModalProps {
@@ -22,6 +22,7 @@ interface TaskEditModalProps {
 export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction, onDelete }: TaskEditModalProps) {
   const theme = useTheme();
   const colors = theme.colors;
+  const priorityColors = usePriorityColors();
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
 
@@ -169,6 +170,8 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
             <Pressable
               onPress={handleClose}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('a11yClose') || 'Close'}
               style={({ pressed }) => [{
                 paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
                 backgroundColor: colors.muted,
@@ -191,7 +194,7 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
                   placeholderTextColor={colors.placeholder}
                   maxLength={200}
                   style={{
-                    borderWidth: 1, borderColor: title.trim() ? colors.accent + '44' : colors.border,
+                    borderWidth: 1, borderColor: title.trim() ? theme.alpha(colors.accent, 0.27) : colors.border,
                     backgroundColor: colors.card,
                     borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: colors.foreground,
                     fontSize: 15, fontFamily: 'Inter_500Medium',
@@ -224,8 +227,10 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
                 </Text>
                 <Pressable
                   onPress={() => setShowDatePicker(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('plannerSelectDueDate') || 'Select due date'}
                   style={({ pressed }) => [{
-                    borderWidth: 1, borderColor: dueDate ? colors.accent + '44' : colors.border,
+                    borderWidth: 1, borderColor: dueDate ? theme.alpha(colors.accent, 0.27) : colors.border,
                     backgroundColor: colors.card,
                     borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14,
                     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -237,7 +242,7 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
                   </Text>
                   <View style={{
                     paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
-                    backgroundColor: colors.accent + '18',
+                    backgroundColor: theme.alpha(colors.accent, 0.1),
                   }}>
                     <Text style={{ color: colors.accent, fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>
                       {t('plannerSelectDate') || 'Pick'}
@@ -252,7 +257,7 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
                 </Text>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   {(['low', 'medium', 'high'] as const).map((p) => {
-                    const badge = PRIORITY_COLORS[p];
+                    const badge = priorityColors[p];
                     return (
                       <Pressable
                         key={p}
@@ -260,9 +265,12 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
                           setPriority(p);
                           void haptics.selection();
                         }}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: priority === p }}
+                        accessibilityLabel={t(`priority${p.charAt(0).toUpperCase() + p.slice(1)}` as any) || p}
                         style={({ pressed }) => [{
                           flex: 1, alignItems: 'center', borderRadius: 10, borderWidth: 1,
-                          borderColor: priority === p ? badge.text + '55' : colors.border,
+                          borderColor: priority === p ? theme.alpha(badge.text, 0.33) : colors.border,
                           backgroundColor: priority === p ? badge.bg : colors.card,
                           paddingVertical: 12, minHeight: 44,
                           justifyContent: 'center',
@@ -289,10 +297,13 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
                     <Pressable
                       key={s}
                       onPress={() => setStatus(s)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: status === s }}
+                      accessibilityLabel={getStatusLabel(s, t as (key: string) => string | undefined)}
                       style={({ pressed }) => [{
                         paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, borderWidth: 1,
                         borderColor: status === s ? colors.accent : colors.border,
-                        backgroundColor: status === s ? colors.accent + '22' : colors.card,
+                        backgroundColor: status === s ? theme.alpha(colors.accent, 0.13) : colors.card,
                         minHeight: 40,
                         justifyContent: 'center',
                       }, pressed && { opacity: 0.72 }]}
@@ -317,10 +328,12 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
                     <Pressable
                       key={mode}
                       onPress={() => setReminderMode(mode)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: reminderMode === mode }}
                       style={({ pressed }) => [{
                         flex: 1, alignItems: 'center', borderRadius: 10, borderWidth: 1,
                         borderColor: reminderMode === mode ? colors.accent : colors.border,
-                        backgroundColor: reminderMode === mode ? colors.accent + '22' : colors.card,
+                        backgroundColor: reminderMode === mode ? theme.alpha(colors.accent, 0.13) : colors.card,
                         paddingVertical: 10, minHeight: 44,
                         justifyContent: 'center',
                       }, pressed && { opacity: 0.72 }]}
@@ -342,9 +355,11 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
                     onClose();
                     onAddTransaction(task.id);
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('plannerLinkTransaction') || 'Link Transaction'}
                   style={({ pressed }) => [{
                     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    borderWidth: 1, borderColor: colors.accent + '44', backgroundColor: colors.accent + '12',
+                    borderWidth: 1, borderColor: theme.alpha(colors.accent, 0.27), backgroundColor: theme.alpha(colors.accent, 0.07),
                     borderRadius: 12, paddingVertical: 12,
                   }, pressed && { opacity: 0.72 }]}
                 >
@@ -368,8 +383,8 @@ export function TaskEditModal({ visible, task, onClose, onSave, onAddTransaction
                 accessibilityLabel={t('plannerDelete') || 'Delete'}
                 accessibilityRole="button"
                 style={({ pressed }) => [{
-                  borderRadius: 12, borderWidth: 1, borderColor: colors.danger + '44',
-                  backgroundColor: colors.danger + '10', alignItems: 'center', justifyContent: 'center',
+                  borderRadius: 12, borderWidth: 1, borderColor: theme.alpha(colors.danger, 0.27),
+                  backgroundColor: theme.alpha(colors.danger, 0.06), alignItems: 'center', justifyContent: 'center',
                   paddingVertical: 14, paddingHorizontal: 16, minWidth: 48, minHeight: 48,
                 }, pressed && { opacity: 0.72 }]}
               >

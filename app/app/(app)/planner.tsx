@@ -773,21 +773,21 @@ export function PlannerScreenContent() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1 }}>
             <Pressable
               onPress={() => router.back()}
-              style={({ pressed }) => [{ 
-                width: 40, height: 40, borderRadius: 12, 
-                alignItems: 'center', justifyContent: 'center', 
+              style={({ pressed }) => [{
+                width: 40, height: 40, borderRadius: 12,
+                alignItems: 'center', justifyContent: 'center',
                 backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
               }, pressed && { opacity: 0.72 }]}
               accessibilityRole="button"
-              accessibilityLabel={t('goBack') || 'Go Back'}
+              accessibilityLabel={t('a11yBack') || t('goBack') || 'Go Back'}
             >
               <ArrowLeft size={20} color={colors.foreground} />
             </Pressable>
             <View style={{ flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={{ 
-                width: 32, height: 32, borderRadius: 8, 
-                backgroundColor: colors.accent + '1A', 
-                alignItems: 'center', justifyContent: 'center' 
+              <View style={{
+                width: 32, height: 32, borderRadius: 8,
+                backgroundColor: theme.alpha(colors.accent, 0.1),
+                alignItems: 'center', justifyContent: 'center'
               }}>
                 <KanbanSquare size={16} color={colors.accent} />
               </View>
@@ -854,8 +854,8 @@ export function PlannerScreenContent() {
                     paddingVertical: 6,
                     borderRadius: 999,
                     borderWidth: 1,
-                    borderColor: colors.warning + '66',
-                    backgroundColor: colors.warning + '16',
+                    borderColor: theme.alpha(colors.warning, 0.4),
+                    backgroundColor: theme.alpha(colors.warning, 0.09),
                   }}
                 >
                   <AlertTriangle size={12} color={colors.warning} />
@@ -871,7 +871,7 @@ export function PlannerScreenContent() {
                   accessibilityLabel={t('plannerOffline') || 'Offline'}
                   style={{
                     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6,
-                    borderRadius: 999, borderWidth: 1, borderColor: colors.danger + '66', backgroundColor: colors.danger + '1A',
+                    borderRadius: 999, borderWidth: 1, borderColor: theme.alpha(colors.danger, 0.4), backgroundColor: theme.alpha(colors.danger, 0.1),
                   }}
                 >
                   <WifiOff size={12} color={colors.danger} />
@@ -900,7 +900,7 @@ export function PlannerScreenContent() {
                 <>
                   <View style={{
                     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999,
-                    borderWidth: 1, borderColor: colors.danger + '66', backgroundColor: colors.danger + '16',
+                    borderWidth: 1, borderColor: theme.alpha(colors.danger, 0.4), backgroundColor: theme.alpha(colors.danger, 0.09),
                   }}>
                     <Text style={{ color: colors.danger, fontSize: 11, fontFamily: 'Inter_600SemiBold' }}>
                       {t('plannerSyncFailed') || 'Some changes failed'}
@@ -910,6 +910,8 @@ export function PlannerScreenContent() {
                     <Pressable
                       onPress={retryFailed}
                       disabled={isSyncing}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('plannerRetry') || 'Retry'}
                       style={({ pressed }) => [{
                         flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border,
                         backgroundColor: colors.card, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6,
@@ -927,8 +929,10 @@ export function PlannerScreenContent() {
                     </Pressable>
                     <Pressable
                       onPress={discardFailed}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('plannerDiscard') || 'Discard'}
                       style={({ pressed }) => [{
-                        borderWidth: 1, borderColor: colors.danger + '66', backgroundColor: colors.danger + '14',
+                        borderWidth: 1, borderColor: theme.alpha(colors.danger, 0.4), backgroundColor: theme.alpha(colors.danger, 0.08),
                         borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6,
                       }, pressed && { opacity: 0.72 }]}
                     >
@@ -969,7 +973,12 @@ export function PlannerScreenContent() {
                 style={{ flex: 1, color: colors.foreground, fontSize: 13, paddingVertical: 2 }}
               />
               {searchText ? (
-                <Pressable onPress={() => setSearchText('')} hitSlop={6}>
+                <Pressable
+                  onPress={() => setSearchText('')}
+                  hitSlop={6}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('a11yClearFilter') || 'Clear search'}
+                >
                   <X size={14} color={colors.mutedForeground} />
                 </Pressable>
               ) : null}
@@ -979,11 +988,14 @@ export function PlannerScreenContent() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
             <Pressable
               onPress={() => setPriorityFilter(null)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: !priorityFilter }}
+              accessibilityLabel={t('plannerFilterAll') || 'All'}
               style={({ pressed }) => [{
                 paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, minHeight: 36,
                 justifyContent: 'center' as const,
                 borderColor: !priorityFilter ? colors.accent : colors.border,
-                backgroundColor: !priorityFilter ? colors.accent + '22' : colors.card,
+                backgroundColor: !priorityFilter ? theme.alpha(colors.accent, 0.13) : colors.card,
               }, pressed && { opacity: 0.72 }]}
             >
               <Text style={{ color: !priorityFilter ? colors.accent : colors.mutedForeground, fontSize: 11, fontFamily: 'Inter_600SemiBold' }}>
@@ -994,11 +1006,14 @@ export function PlannerScreenContent() {
               <Pressable
                 key={p}
                 onPress={() => setPriorityFilter(priorityFilter === p ? null : p)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: priorityFilter === p }}
+                accessibilityLabel={t(`priority${p.charAt(0).toUpperCase() + p.slice(1)}` as any) || p}
                 style={({ pressed }) => [{
                   paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, minHeight: 36,
                   justifyContent: 'center' as const,
                   borderColor: priorityFilter === p ? colors.accent : colors.border,
-                  backgroundColor: priorityFilter === p ? colors.accent + '22' : colors.card,
+                  backgroundColor: priorityFilter === p ? theme.alpha(colors.accent, 0.13) : colors.card,
                 }, pressed && { opacity: 0.72 }]}
               >
                 <Text style={{ color: priorityFilter === p ? colors.accent : colors.mutedForeground, fontSize: 11, fontFamily: 'Inter_600SemiBold' }}>
@@ -1015,8 +1030,8 @@ export function PlannerScreenContent() {
                 alignItems: 'center',
                 gap: 8,
                 borderWidth: 1,
-                borderColor: colors.accent + '33',
-                backgroundColor: colors.accent + '10',
+                borderColor: theme.alpha(colors.accent, 0.2),
+                backgroundColor: theme.alpha(colors.accent, 0.06),
                 borderRadius: 12,
                 paddingHorizontal: 12,
                 paddingVertical: 10,
@@ -1030,6 +1045,8 @@ export function PlannerScreenContent() {
                   setSearchText('');
                   setPriorityFilter(null);
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={t('a11yClearFilter') || 'Clear filters'}
                 style={({ pressed }) => [
                   {
                     paddingHorizontal: 10,
@@ -1057,6 +1074,9 @@ export function PlannerScreenContent() {
                 <Pressable
                   key={status}
                   onPress={() => jumpToColumn(status)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={columnLabel(status)}
                   style={({ pressed }) => [{
                     flexDirection: 'row', alignItems: 'center', borderRadius: 999,
                     paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, minHeight: 36,

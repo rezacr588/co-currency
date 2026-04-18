@@ -5,6 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components/native';
 import { User, Check } from 'lucide-react-native';
 
+import { useTheme } from 'styled-components/native';
+
 import { api } from '@/src/api';
 import { SplitMethod, CreateExpenseRequest, SpaceMember } from '@/src/api/social';
 import { useAuth } from '@/src/context/AuthContext';
@@ -21,38 +23,38 @@ const Container = styled.View<{ $bg: string }>`
 
 const Content = styled.ScrollView`
   flex: 1;
-  padding: 16px;
+  padding: ${({ theme }) => theme.spacing.lg}px;
 `;
 
 const Section = styled.View`
-  margin-bottom: 24px;
+  margin-bottom: ${({ theme }) => theme.spacing.xxl}px;
 `;
 
 const SectionTitle = styled.Text<{ $color: string }>`
   font-size: 14px;
   font-weight: 600;
   color: ${(p) => p.$color};
-  margin-bottom: 12px;
+  margin-bottom: ${({ theme }) => theme.spacing.md}px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
 
 const InputContainer = styled.View`
-  margin-bottom: 16px;
+  margin-bottom: ${({ theme }) => theme.spacing.lg}px;
 `;
 
 const InputLabel = styled.Text<{ $color: string }>`
   font-size: 14px;
   font-weight: 600;
   color: ${(p) => p.$color};
-  margin-bottom: 8px;
+  margin-bottom: ${({ theme }) => theme.spacing.sm}px;
 `;
 
 const StyledInput = styled.TextInput<{ $bg: string; $color: string; $border: string }>`
   background-color: ${(p) => p.$bg};
   color: ${(p) => p.$color};
-  border-radius: 12px;
-  padding: 14px 16px;
+  border-radius: ${({ theme }) => theme.radii.md}px;
+  padding: 14px ${({ theme }) => theme.spacing.lg}px;
   font-size: 16px;
   border-width: 1px;
   border-color: ${(p) => p.$border};
@@ -61,8 +63,8 @@ const StyledInput = styled.TextInput<{ $bg: string; $color: string; $border: str
 const AmountInput = styled.TextInput<{ $bg: string; $color: string }>`
   background-color: ${(p) => p.$bg};
   color: ${(p) => p.$color};
-  border-radius: 16px;
-  padding: 20px;
+  border-radius: ${({ theme }) => theme.radii.lg}px;
+  padding: ${({ theme }) => theme.spacing.xl}px;
   font-size: 32px;
   font-weight: 700;
   text-align: center;
@@ -71,14 +73,14 @@ const AmountInput = styled.TextInput<{ $bg: string; $color: string }>`
 const SplitMethodGrid = styled.View`
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: ${({ theme }) => theme.spacing.sm}px;
 `;
 
 const SplitMethodChip = styled.TouchableOpacity<{ $bg: string; $selected: boolean; $selectedBg: string }>`
   flex: 1;
   min-width: 45%;
   padding: 14px;
-  border-radius: 12px;
+  border-radius: ${({ theme }) => theme.radii.md}px;
   background-color: ${(p) => (p.$selected ? p.$selectedBg : p.$bg)};
   align-items: center;
 `;
@@ -86,16 +88,16 @@ const SplitMethodChip = styled.TouchableOpacity<{ $bg: string; $selected: boolea
 const SplitMethodText = styled.Text<{ $color: string; $selected: boolean }>`
   font-size: 14px;
   font-weight: ${(p) => (p.$selected ? '700' : '500')};
-  color: ${(p) => (p.$selected ? '#fff' : p.$color)};
+  color: ${({ theme, $color, $selected }) => ($selected ? theme.colors.primaryForeground : $color)};
 `;
 
 const MemberRow = styled.TouchableOpacity<{ $bg: string; $selected: boolean }>`
   flex-direction: row;
   align-items: center;
   background-color: ${(p) => p.$bg};
-  padding: 12px;
-  border-radius: 12px;
-  margin-bottom: 8px;
+  padding: ${({ theme }) => theme.spacing.md}px;
+  border-radius: ${({ theme }) => theme.radii.md}px;
+  margin-bottom: ${({ theme }) => theme.spacing.sm}px;
   opacity: ${(p) => (p.$selected ? 1 : 0.6)};
 `;
 
@@ -106,7 +108,7 @@ const MemberAvatar = styled.View<{ $bg: string }>`
   background-color: ${(p) => p.$bg};
   align-items: center;
   justify-content: center;
-  margin-right: 12px;
+  margin-right: ${({ theme }) => theme.spacing.md}px;
 `;
 
 const MemberInfo = styled.View`
@@ -128,7 +130,7 @@ const MemberShare = styled.Text<{ $color: string }>`
 const Checkbox = styled.View<{ $checked: boolean; $color: string }>`
   width: 24px;
   height: 24px;
-  border-radius: 12px;
+  border-radius: ${({ theme }) => theme.radii.md}px;
   border-width: 2px;
   border-color: ${(p) => p.$color};
   background-color: ${(p) => (p.$checked ? p.$color : 'transparent')};
@@ -137,7 +139,7 @@ const Checkbox = styled.View<{ $checked: boolean; $color: string }>`
 `;
 
 const Footer = styled.View<{ $bg: string }>`
-  padding: 16px;
+  padding: ${({ theme }) => theme.spacing.lg}px;
   border-top-width: 1px;
   border-top-color: ${(p) => p.$bg};
 `;
@@ -153,6 +155,7 @@ export default function AddExpenseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useLanguage();
   const colors = useColors();
+  const theme = useTheme();
   const { user } = useAuth();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
@@ -298,7 +301,7 @@ export default function AddExpenseScreen() {
               onChangeText={setAmount}
               keyboardType="decimal-pad"
             />
-            <InputLabel $color={colors.mutedForeground} style={{ textAlign: 'center', marginTop: 8 }}>
+            <InputLabel $color={colors.mutedForeground} style={{ textAlign: 'center', marginTop: theme.spacing.sm }}>
               {currency}
             </InputLabel>
           </Section>
@@ -346,7 +349,7 @@ export default function AddExpenseScreen() {
                 $selected={paidBy === member.user_id}
                 onPress={() => setPaidBy(member.user_id)}
               >
-                <MemberAvatar $bg={colors.primary + '20'}>
+                <MemberAvatar $bg={theme.alpha(colors.primary, 0.125)}>
                   <User size={18} color={colors.primary} />
                 </MemberAvatar>
                 <MemberInfo>
@@ -355,7 +358,7 @@ export default function AddExpenseScreen() {
                   </MemberName>
                 </MemberInfo>
                 <Checkbox $checked={paidBy === member.user_id} $color={colors.primary}>
-                  {paidBy === member.user_id && <Check size={16} color="#fff" />}
+                  {paidBy === member.user_id && <Check size={16} color={colors.primaryForeground} />}
                 </Checkbox>
               </MemberRow>
             ))}
@@ -399,7 +402,7 @@ export default function AddExpenseScreen() {
                   $selected={isSelected}
                   onPress={() => handleToggleMember(member.user_id)}
                 >
-                  <MemberAvatar $bg={colors.primary + '20'}>
+                  <MemberAvatar $bg={theme.alpha(colors.primary, 0.125)}>
                     <User size={18} color={colors.primary} />
                   </MemberAvatar>
                   <MemberInfo>
@@ -413,7 +416,7 @@ export default function AddExpenseScreen() {
                     )}
                   </MemberInfo>
                   <Checkbox $checked={isSelected} $color={colors.primary}>
-                    {isSelected && <Check size={16} color="#fff" />}
+                    {isSelected && <Check size={16} color={colors.primaryForeground} />}
                   </Checkbox>
                 </MemberRow>
               );

@@ -91,7 +91,7 @@ export function AllTimeReportView({
   }
 
   return (
-    <View style={{ gap: 24 }}>
+    <View style={{ gap: theme.spacing.xxl }}>
       <ReportHeadlineCard
         summary={
           firstTransactionLabel
@@ -104,7 +104,7 @@ export function AllTimeReportView({
       <View
         style={{
           flexDirection: isTablet ? 'row' : 'column',
-          gap: 16,
+          gap: theme.spacing.lg,
           alignItems: 'stretch',
         }}
       >
@@ -120,7 +120,7 @@ export function AllTimeReportView({
       </View>
 
       {isLoadingCoverage ? (
-        <View style={{ gap: 12 }}>
+        <View style={{ gap: theme.spacing.md }}>
           <SkeletonCard />
           <SkeletonList count={1} />
         </View>

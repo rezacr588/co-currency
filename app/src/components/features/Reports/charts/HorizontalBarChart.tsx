@@ -26,7 +26,7 @@ function HorizontalBarChartComponent({
   const colors = theme.colors;
   
   return (
-    <View style={{ gap: 12 }}>
+    <View style={{ gap: theme.spacing.md }}>
       {data.map((item, index) => {
         const value = item[valueKey];
         const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
@@ -34,17 +34,17 @@ function HorizontalBarChartComponent({
 
         const content = (
           <>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.xs }}>
               <Text style={{ color: colors.foreground, fontSize: 14, textTransform: 'capitalize' }}>{item[labelKey]}</Text>
               <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
                 {formatValue ? formatValue(value) : value}
               </Text>
             </View>
-            <View style={{ height: 12, backgroundColor: colors.secondary, borderRadius: 9999, overflow: 'hidden' }}>
+            <View style={{ height: 12, backgroundColor: colors.secondary, borderRadius: theme.radii.full, overflow: 'hidden' }}>
               <View
                 style={{
                   height: '100%',
-                  borderRadius: 9999,
+                  borderRadius: theme.radii.full,
                   width: `${Math.min(percentage, 100)}%`,
                   backgroundColor: color,
                 }}

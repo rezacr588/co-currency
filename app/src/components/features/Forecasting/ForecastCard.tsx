@@ -6,6 +6,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { haptics } from '../../../utils/haptics';
 import { Card } from '../../ui';
+import { HIT_SLOP_SM } from '../../../constants/hitSlop';
 import type { ForecastResponse } from '../../../api/forecasting';
 
 interface ForecastCardProps {
@@ -101,7 +102,7 @@ export function ForecastCard({ days = 30, currency = 'USD', compact = false, onV
 
   if (compact) {
     return (
-      <Pressable onPress={onViewDetails}>
+      <Pressable onPress={onViewDetails} accessibilityRole="button">
         <Card style={{ padding: theme.spacing.md }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -110,7 +111,7 @@ export function ForecastCard({ days = 30, currency = 'USD', compact = false, onV
                   width: 40,
                   height: 40,
                   borderRadius: 20,
-                  backgroundColor: isPositive ? `${colors.success}20` : `${colors.danger}20`,
+                  backgroundColor: isPositive ? theme.alpha(colors.success, 0.125) : theme.alpha(colors.danger, 0.125),
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
@@ -147,7 +148,12 @@ export function ForecastCard({ days = 30, currency = 'USD', compact = false, onV
             {t('forecasting.title') || `${days}-Day Forecast`}
           </Text>
         </View>
-        <Pressable onPress={handleRefresh} hitSlop={8}>
+        <Pressable
+          onPress={handleRefresh}
+          accessibilityRole="button"
+          accessibilityLabel={t('a11yRefresh') || 'Refresh'}
+          hitSlop={HIT_SLOP_SM}
+        >
           <RefreshCw size={18} color={colors.mutedForeground} />
         </Pressable>
       </View>
@@ -155,7 +161,7 @@ export function ForecastCard({ days = 30, currency = 'USD', compact = false, onV
       {/* Main Projection */}
       <View
         style={{
-          backgroundColor: isPositive ? `${colors.success}10` : `${colors.danger}10`,
+          backgroundColor: isPositive ? theme.alpha(colors.success, 0.06) : theme.alpha(colors.danger, 0.06),
           borderRadius: theme.radii.lg,
           padding: theme.spacing.lg,
           marginBottom: theme.spacing.lg,
@@ -222,6 +228,7 @@ export function ForecastCard({ days = 30, currency = 'USD', compact = false, onV
             haptics.light();
             onViewDetails();
           }}
+          accessibilityRole="button"
           style={{
             marginTop: theme.spacing.lg,
             flexDirection: 'row',

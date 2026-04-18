@@ -53,6 +53,7 @@ import {
 import React from 'react';
 import { View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { useTheme } from 'styled-components/native';
 
 // ============================================
 // Icon Size Constants for Consistency
@@ -72,14 +73,25 @@ export const ICON_SIZES = {
   xl: 48,
 } as const;
 
-// Default icon colors - Minimal Dark Mode Palette
-export const ICON_COLOR_MUTED = '#71717a';       // zinc-500 - secondary icons
-export const ICON_COLOR_SUBTLE = '#52525b';      // zinc-600 - tertiary icons
-export const ICON_COLOR_ACCENT = '#d4af37';      // gold - use sparingly!
-export const ICON_COLOR_SUCCESS = '#22c55e';     // green - only for positive values
-export const ICON_COLOR_DANGER = '#ef4444';      // red - only for negative values
-export const ICON_COLOR_FOREGROUND = '#fafafa';  // zinc-50 - primary icons
-export const ICON_COLOR_SECONDARY = '#a1a1aa';   // zinc-400 - standard icons
+// ============================================
+// Icon Color Hook
+// ============================================
+// Theme-aware icon colors. Prefer this over passing hex literals.
+// Returns an object with semantic names; values adapt to light/dark theme.
+export function useIconColors() {
+  const theme = useTheme();
+  return {
+    muted: theme.colors.mutedForeground,
+    subtle: theme.colors.subtleForeground,
+    accent: theme.colors.accent,
+    success: theme.colors.success,
+    danger: theme.colors.danger,
+    warning: theme.colors.warning,
+    info: theme.colors.info,
+    foreground: theme.colors.foreground,
+    secondary: theme.colors.mutedForeground,
+  };
+}
 
 interface IconProps {
   size?: number;
@@ -279,10 +291,11 @@ export function CategoryIcon({
   color,
   useColor = false,
 }: CategoryIconProps) {
+  const iconColors = useIconColors();
   const IconComponent = CATEGORY_ICONS[category.toLowerCase()] || Package;
   const iconColor = useColor
-    ? CATEGORY_COLORS[category.toLowerCase()] || color || ICON_COLOR_MUTED
-    : color || ICON_COLOR_MUTED;
+    ? CATEGORY_COLORS[category.toLowerCase()] || color || iconColors.muted
+    : color || iconColors.muted;
   return <IconComponent size={size} color={iconColor} />;
 }
 
@@ -311,23 +324,21 @@ export function StyledCategoryIcon({
   borderRadius = 8,
   padding = 8,
 }: StyledCategoryIconProps) {
+  const theme = useTheme();
+  const iconColors = useIconColors();
   const IconComponent = CATEGORY_ICONS[category.toLowerCase()] || Package;
-  // Use muted gray for all icons - minimal design
-  const iconColor = ICON_COLOR_SECONDARY;
-  // Subtle dark background - zinc-800
-  const backgroundColor = '#27272a';
 
   return (
     <View
       style={{
-        backgroundColor,
+        backgroundColor: theme.colors.secondary,
         borderRadius,
         padding,
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
-      <IconComponent size={size} color={iconColor} />
+      <IconComponent size={size} color={iconColors.secondary} />
     </View>
   );
 }
@@ -347,10 +358,11 @@ interface GoalIconProps extends IconProps {
 export function GoalIcon({
   category,
   size = ICON_SIZES.default,
-  color = ICON_COLOR_MUTED
+  color,
 }: GoalIconProps) {
+  const iconColors = useIconColors();
   const IconComponent = GOAL_ICONS[category.toLowerCase()] || Target;
-  return <IconComponent size={size} color={color} />;
+  return <IconComponent size={size} color={color ?? iconColors.muted} />;
 }
 
 interface FrequencyIconProps extends IconProps {
@@ -368,10 +380,11 @@ interface FrequencyIconProps extends IconProps {
 export function FrequencyIcon({
   frequency,
   size = ICON_SIZES.sm,
-  color = ICON_COLOR_MUTED
+  color,
 }: FrequencyIconProps) {
+  const iconColors = useIconColors();
   const IconComponent = FREQUENCY_ICONS[frequency.toLowerCase()] || Calendar;
-  return <IconComponent size={size} color={color} />;
+  return <IconComponent size={size} color={color ?? iconColors.muted} />;
 }
 
 /**
@@ -385,10 +398,11 @@ export function FrequencyIcon({
 export function FeatureIcon({
   feature,
   size = ICON_SIZES.default,
-  color = ICON_COLOR_ACCENT
+  color,
 }: { feature: string; size?: number; color?: string }) {
+  const iconColors = useIconColors();
   const IconComponent = FEATURE_ICONS[feature.toLowerCase()] || Zap;
-  return <IconComponent size={size} color={color} />;
+  return <IconComponent size={size} color={color ?? iconColors.accent} />;
 }
 
 // Re-export Globe for use as fallback flag

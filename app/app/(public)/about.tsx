@@ -199,8 +199,8 @@ export default function AboutScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={t('viewLinkedIn') || 'View LinkedIn'}
               >
-                <LinkedInIcon size={16} color="#ffffff" />
-                <Text style={{ color: '#ffffff', fontFamily: theme.typography.bodyMedium.fontFamily, fontSize: 14 }}>
+                <LinkedInIcon size={16} color={theme.colors.primaryForeground} />
+                <Text style={{ color: theme.colors.primaryForeground, fontFamily: theme.typography.bodyMedium.fontFamily, fontSize: 14 }}>
                   {t('viewLinkedIn') || 'View LinkedIn'}
                 </Text>
               </Pressable>

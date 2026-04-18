@@ -1,19 +1,25 @@
 import { View, Text, Pressable } from 'react-native';
 import { Pin } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
+import { spacing, radii } from '../../../theme';
 import type { Note } from '../../../types/note';
 
-// Color mapping for note backgrounds and borders
-const COLOR_STYLES: Record<string, { bg: string; border: string }> = {
-  default: { bg: 'transparent', border: 'transparent' },
-  red: { bg: '#ef44441a', border: '#ef44444d' },
-  orange: { bg: '#f973161a', border: '#f973164d' },
-  yellow: { bg: '#eab3081a', border: '#eab3084d' },
-  green: { bg: '#22c55e1a', border: '#22c55e4d' },
-  blue: { bg: '#3b82f61a', border: '#3b82f64d' },
-  purple: { bg: '#a855f71a', border: '#a855f74d' },
-  pink: { bg: '#ec48991a', border: '#ec48994d' },
-};
+type NoteColorStyle = { bg: string; border: string };
+
+function useNoteCardColorStyles(): Record<string, NoteColorStyle> {
+  const theme = useTheme();
+  const { colors, alpha } = theme;
+  return {
+    default: { bg: colors.card, border: colors.border },
+    red: { bg: alpha(colors.palette.red, 0.1), border: alpha(colors.palette.red, 0.3) },
+    orange: { bg: alpha(colors.palette.orange, 0.1), border: alpha(colors.palette.orange, 0.3) },
+    yellow: { bg: alpha(colors.palette.yellow, 0.1), border: alpha(colors.palette.yellow, 0.3) },
+    green: { bg: alpha(colors.palette.green, 0.1), border: alpha(colors.palette.green, 0.3) },
+    blue: { bg: alpha(colors.palette.blue, 0.1), border: alpha(colors.palette.blue, 0.3) },
+    purple: { bg: alpha(colors.palette.purple, 0.1), border: alpha(colors.palette.purple, 0.3) },
+    pink: { bg: alpha(colors.palette.pink, 0.1), border: alpha(colors.palette.pink, 0.3) },
+  };
+}
 
 interface NoteCardProps {
   note: Note;
@@ -24,7 +30,8 @@ interface NoteCardProps {
 export function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
   const theme = useTheme();
   const colors = theme.colors;
-  const colorStyle = COLOR_STYLES[note.color] || COLOR_STYLES.default;
+  const colorStyles = useNoteCardColorStyles();
+  const colorStyle = colorStyles[note.color] ?? colorStyles.default;
 
   return (
     <Pressable
@@ -33,24 +40,24 @@ export function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
       delayLongPress={500}
       style={({ pressed }) => ({
         cursor: 'pointer',
-        padding: 16,
-        borderRadius: 12,
+        padding: spacing.lg,
+        borderRadius: radii.md,
         borderWidth: 1,
-        backgroundColor: colorStyle.bg === 'transparent' ? colors.card : colorStyle.bg,
-        borderColor: colorStyle.border === 'transparent' ? colors.border : colorStyle.border,
+        backgroundColor: colorStyle.bg,
+        borderColor: colorStyle.border,
         opacity: pressed ? 0.7 : 1,
       })}
     >
       {/* Pin indicator */}
       {note.is_pinned && (
-        <View style={{ position: 'absolute', top: 8, right: 8 }}>
-          <Pin size={14} color="rgb(212, 175, 55)" fill="rgb(212, 175, 55)" />
+        <View style={{ position: 'absolute', top: spacing.sm, right: spacing.sm }}>
+          <Pin size={14} color={colors.accent} fill={colors.accent} />
         </View>
       )}
 
       {/* Title */}
       <Text
-        style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginBottom: 8 }}
+        style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginBottom: spacing.sm }}
         numberOfLines={2}
       >
         {note.title}
@@ -67,7 +74,7 @@ export function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
       )}
 
       {/* Date */}
-      <Text style={{ color: colors.mutedForeground + '99', fontSize: 12, marginTop: 12 }}>
+      <Text style={{ color: theme.alpha(colors.mutedForeground, 0.6), fontSize: 12, marginTop: spacing.md }}>
         {new Date(note.updated_at).toLocaleDateString()}
       </Text>
     </Pressable>

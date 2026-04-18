@@ -17,22 +17,22 @@ export function ReportHeadlineCard({ summary, caption }: ReportHeadlineCardProps
   return (
     <Card
       style={{
-        backgroundColor: colors.accent + '12',
-        borderColor: colors.accent + '33',
+        backgroundColor: theme.alpha(colors.accent, 0.07),
+        borderColor: theme.alpha(colors.accent, 0.2),
         padding: 18,
-        marginBottom: 20,
+        marginBottom: theme.spacing.xl,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.sm + 2 }}>
         <View
           style={{
             width: 34,
             height: 34,
-            borderRadius: 9999,
+            borderRadius: theme.radii.full,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: colors.accent + '26',
-            marginEnd: 10,
+            backgroundColor: theme.alpha(colors.accent, 0.15),
+            marginEnd: theme.spacing.sm + 2,
           }}
         >
           <Sparkles size={18} color={colors.accent} />
@@ -47,7 +47,7 @@ export function ReportHeadlineCard({ summary, caption }: ReportHeadlineCardProps
       </Text>
 
       {caption ? (
-        <Text style={{ color: colors.mutedForeground, fontSize: 13, lineHeight: 18, marginTop: 8 }}>
+        <Text style={{ color: colors.mutedForeground, fontSize: 13, lineHeight: 18, marginTop: theme.spacing.sm }}>
           {caption}
         </Text>
       ) : null}

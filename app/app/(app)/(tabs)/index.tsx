@@ -46,11 +46,14 @@ function QuickAction({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       style={({ pressed }) => [
         {
           flex: 1,
           alignItems: 'center',
-          gap: 8,
+          gap: theme.spacing.sm,
           opacity: pressed ? 0.72 : 1,
         },
       ]}
@@ -212,7 +215,7 @@ export default function WalletHomeScreen() {
           marginBottom: theme.spacing.xl,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.lg }}>
           <View style={{ flex: 1 }}>
             <Text style={{ color: theme.colors.mutedForeground, fontSize: 13 }}>
               {greeting + (user?.name ? `, ${user.name}` : '')}
@@ -221,7 +224,7 @@ export default function WalletHomeScreen() {
               style={{
                 color: theme.colors.mutedForeground,
                 fontSize: 14,
-                marginTop: 8,
+                marginTop: theme.spacing.sm,
                 fontFamily: theme.typography.bodyMedium.fontFamily,
               }}
             >
@@ -231,7 +234,7 @@ export default function WalletHomeScreen() {
               <ActivityIndicator
                 size="small"
                 color={theme.colors.mutedForeground}
-                style={{ marginTop: 8, alignSelf: 'flex-start' }}
+                style={{ marginTop: theme.spacing.sm, alignSelf: 'flex-start' }}
               />
             ) : (
               <Text
@@ -239,7 +242,7 @@ export default function WalletHomeScreen() {
                   color: theme.colors.foreground,
                   fontSize: isCompactPhone ? 30 : 34,
                   fontFamily: theme.typography.h1.fontFamily,
-                  marginTop: 4,
+                  marginTop: theme.spacing.xs,
                   lineHeight: isCompactPhone ? 38 : 42,
                 }}
               >
@@ -263,28 +266,28 @@ export default function WalletHomeScreen() {
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 18 }}>
           {snapshot?.recent_transaction_count ? (
-            <View style={{ backgroundColor: theme.colors.muted, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 }}>
+            <View style={{ backgroundColor: theme.colors.muted, borderRadius: theme.radii.full, paddingHorizontal: 10, paddingVertical: 6 }}>
               <Text style={{ color: theme.colors.mutedForeground, fontSize: 11 }}>
                 {(t('recentTransactions') || 'Recent Transactions') + ` · ${snapshot.recent_transaction_count}`}
               </Text>
             </View>
           ) : null}
           {snapshot?.active_goal_count ? (
-            <View style={{ backgroundColor: theme.colors.muted, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 }}>
+            <View style={{ backgroundColor: theme.colors.muted, borderRadius: theme.radii.full, paddingHorizontal: 10, paddingVertical: 6 }}>
               <Text style={{ color: theme.colors.mutedForeground, fontSize: 11 }}>
                 {(t('goals') || 'Goals') + ` · ${snapshot.active_goal_count}`}
               </Text>
             </View>
           ) : null}
           {snapshot?.active_budget_count ? (
-            <View style={{ backgroundColor: theme.colors.muted, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 }}>
+            <View style={{ backgroundColor: theme.colors.muted, borderRadius: theme.radii.full, paddingHorizontal: 10, paddingVertical: 6 }}>
               <Text style={{ color: theme.colors.mutedForeground, fontSize: 11 }}>
                 {(t('budgets') || 'Budgets') + ` · ${snapshot.active_budget_count}`}
               </Text>
             </View>
           ) : null}
           {snapshot?.balance_currency_count ? (
-            <View style={{ backgroundColor: theme.colors.muted, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 }}>
+            <View style={{ backgroundColor: theme.colors.muted, borderRadius: theme.radii.full, paddingHorizontal: 10, paddingVertical: 6 }}>
               <Text style={{ color: theme.colors.mutedForeground, fontSize: 11 }}>
                 {`${snapshot.balance_currency_count} ${(snapshot.balance_currency_count === 1 ? 'currency' : 'currencies')}`}
               </Text>
@@ -298,7 +301,7 @@ export default function WalletHomeScreen() {
           marginBottom: 28,
           flexDirection: 'row',
           flexWrap: 'wrap',
-          gap: 16,
+          gap: theme.spacing.lg,
         }}
       >
         {quickActions.map((action) => (
@@ -318,7 +321,7 @@ export default function WalletHomeScreen() {
         title={t('balances') || 'Balances'}
         subtitle={t('walletCardDesc') || 'Track balances and transactions'}
       >
-        <View testID="wallet-home-balances" style={{ gap: 14 }}>
+        <View testID="wallet-home-balances" style={{ gap: theme.spacing.md }}>
           {isLoadingBalances ? (
             <Card>
               <ActivityIndicator size="small" color={theme.colors.accent} />
@@ -344,15 +347,15 @@ export default function WalletHomeScreen() {
                         backgroundColor: theme.colors.card,
                         borderWidth: 1,
                         borderColor: theme.colors.border,
-                        borderRadius: 16,
+                        borderRadius: theme.radii.lg,
                         padding: 14,
                       }}
                     >
                       <Text style={{ fontSize: 20 }}>{display.flag || '🌐'}</Text>
-                      <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily, marginTop: 8 }}>
+                      <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily, marginTop: theme.spacing.sm }}>
                         {balance.currency}
                       </Text>
-                      <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginTop: 4 }}>
+                      <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginTop: theme.spacing.xs }}>
                         {formatCompactCurrency(balance.balance, balance.currency)}
                       </Text>
                     </View>
@@ -384,7 +387,7 @@ export default function WalletHomeScreen() {
                 <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily }}>
                   {t('homeAiUnavailable') || 'AI insight is unavailable right now.'}
                 </Text>
-                <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginTop: 4 }}>
+                <Text style={{ color: theme.colors.mutedForeground, fontSize: 13, marginTop: theme.spacing.xs }}>
                   {t('homeAiUnavailableDesc') || 'Chat is still available if you want to ask something directly.'}
                 </Text>
               </View>
@@ -392,13 +395,15 @@ export default function WalletHomeScreen() {
           ) : isLoadingBrief && !briefData ? (
             <ActivityIndicator size="small" color={theme.colors.accent} />
           ) : (
-            <View style={{ gap: 14 }}>
+            <View style={{ gap: theme.spacing.md }}>
               <Text style={{ color: theme.colors.foreground, fontSize: 15, lineHeight: 22 }}>
                 {briefData?.brief || (t('homeAiFallback') || 'Open CoAI chat to review your latest balances, spending, and priorities.')}
               </Text>
               {briefData?.priorities?.[0]?.target_route ? (
                 <Pressable
                   onPress={() => router.push(briefData.priorities[0].target_route as any)}
+                  accessibilityLabel={briefData.priorities[0].title}
+                  accessibilityRole="button"
                   style={({ pressed }) => [
                     {
                       flexDirection: 'row',
@@ -409,12 +414,12 @@ export default function WalletHomeScreen() {
                       borderColor: theme.colors.border,
                       backgroundColor: theme.colors.backgroundSecondary,
                       paddingHorizontal: 14,
-                      paddingVertical: 12,
+                      paddingVertical: theme.spacing.md,
                     },
                     pressed && { opacity: 0.78 },
                   ]}
                 >
-                  <View style={{ flex: 1, marginEnd: 12 }}>
+                  <View style={{ flex: 1, marginEnd: theme.spacing.md }}>
                     <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily }} numberOfLines={1}>
                       {briefData.priorities[0].title}
                     </Text>
@@ -427,6 +432,8 @@ export default function WalletHomeScreen() {
               ) : null}
               <Pressable
                 onPress={() => router.push({ pathname: '/(app)/coai-chat', params: recentConversation ? { conversationId: recentConversation.id } : undefined } as any)}
+                accessibilityLabel={recentConversation ? (recentConversation.title || (t('chat') || 'Chat')) : (t('chat') || 'Chat')}
+                accessibilityRole="button"
                 style={({ pressed }) => [
                   {
                     flexDirection: 'row',
@@ -435,12 +442,12 @@ export default function WalletHomeScreen() {
                     backgroundColor: theme.colors.secondary,
                     borderRadius: 14,
                     paddingHorizontal: 14,
-                    paddingVertical: 12,
+                    paddingVertical: theme.spacing.md,
                   },
                   pressed && { opacity: 0.78 },
                 ]}
               >
-                <View style={{ flex: 1, marginEnd: 12 }}>
+                <View style={{ flex: 1, marginEnd: theme.spacing.md }}>
                   <Text style={{ color: theme.colors.secondaryForeground, fontFamily: theme.typography.bodyMedium.fontFamily }}>
                     {recentConversation ? (recentConversation.title || (t('chat') || 'Chat')) : (t('chat') || 'Chat')}
                   </Text>
@@ -461,7 +468,7 @@ export default function WalletHomeScreen() {
         title={t('recentTransactions') || 'Recent Transactions'}
         subtitle={t('homeRecentActivitySubtitle') || 'Your latest activity at a glance.'}
       >
-        <View testID="wallet-home-transactions" style={{ gap: 12 }}>
+        <View testID="wallet-home-transactions" style={{ gap: theme.spacing.md }}>
           {isLoadingTransactions ? (
             <Card>
               <ActivityIndicator size="small" color={theme.colors.accent} />
@@ -475,7 +482,7 @@ export default function WalletHomeScreen() {
           ) : (
             transactions.slice(0, 5).map((tx) => (
               <Card key={tx.id}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
                   <StyledCategoryIcon category={tx.category || 'other'} size={18} />
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.bodyMedium.fontFamily }} numberOfLines={1}>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, RefreshControl, Alert, Modal } from 'react-native';
-import styled from 'styled-components/native';
+import styled, { useTheme } from 'styled-components/native';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Plus, Bell, BellOff, Trash2, TrendingUp, TrendingDown, X } from 'lucide-react-native';
@@ -10,8 +10,10 @@ import { useLanguage } from '@/src/context/LanguageContext';
 import { useColors } from '@/src/context/ThemeContext';
 import { useToast } from '@/src/components/ui/Toast';
 import { cryptoApi, CryptoAlert, CreateAlertRequest, BlockchainNetwork } from '@/src/api/crypto';
+import { EmptyState } from '@/src/components/ui/EmptyState';
 import { LoadingSpinner } from '@/src/components/ui/LoadingSpinner';
 import { formatCurrency } from '@/src/utils/format';
+import { spacing } from '@/src/theme';
 
 const Container = styled.View<{ $bg: string }>`
   flex: 1;
@@ -22,8 +24,8 @@ const Header = styled.View<{ $pt: number; $borderColor: string }>`
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
-  padding-top: ${(props) => props.$pt + 16}px;
+  padding: ${spacing.lg}px;
+  padding-top: ${(props) => props.$pt + spacing.lg}px;
   border-bottom-width: 1px;
   border-bottom-color: ${(props) => props.$borderColor};
 `;
@@ -34,8 +36,8 @@ const HeaderLeft = styled.View`
 `;
 
 const BackButton = styled.TouchableOpacity`
-  padding: 8px;
-  margin-right: 8px;
+  padding: ${spacing.sm}px;
+  margin-right: ${spacing.sm}px;
 `;
 
 const HeaderTitle = styled.Text<{ $color: string }>`
@@ -55,21 +57,21 @@ const AddButton = styled.TouchableOpacity<{ $bg: string }>`
 
 const Content = styled.ScrollView`
   flex: 1;
-  padding: 16px;
+  padding: ${spacing.lg}px;
 `;
 
 const AlertCard = styled.View<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
+  padding: ${spacing.lg}px;
+  margin-bottom: ${spacing.md}px;
 `;
 
 const AlertHeader = styled.View`
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: ${spacing.md}px;
 `;
 
 const AlertToken = styled.View`
@@ -84,7 +86,7 @@ const TokenIcon = styled.View<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   justify-content: center;
   align-items: center;
-  margin-right: 12px;
+  margin-right: ${spacing.md}px;
 `;
 
 const TokenSymbol = styled.Text<{ $color: string }>`
@@ -109,7 +111,7 @@ const AlertNetwork = styled.Text<{ $color: string }>`
 
 const AlertActions = styled.View`
   flex-direction: row;
-  gap: 8px;
+  gap: ${spacing.sm}px;
 `;
 
 const IconButton = styled.TouchableOpacity<{ $bg: string }>`
@@ -124,13 +126,13 @@ const IconButton = styled.TouchableOpacity<{ $bg: string }>`
 const AlertCondition = styled.View`
   flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: ${spacing.sm}px;
 `;
 
 const ConditionBadge = styled.View<{ $bg: string }>`
   flex-direction: row;
   align-items: center;
-  padding: 8px 12px;
+  padding: ${spacing.sm}px ${spacing.md}px;
   border-radius: 8px;
   background-color: ${(props) => props.$bg};
 `;
@@ -148,31 +150,19 @@ const TargetValue = styled.Text<{ $color: string }>`
   color: ${(props) => props.$color};
 `;
 
-const StatusBadge = styled.View<{ $active: boolean }>`
-  padding: 4px 8px;
+const StatusBadge = styled.View<{ $bg: string }>`
+  padding: ${spacing.xs}px ${spacing.sm}px;
   border-radius: 4px;
-  background-color: ${(props) => (props.$active ? '#22c55e20' : '#6b728020')};
-  margin-top: 8px;
+  background-color: ${(props) => props.$bg};
+  margin-top: ${spacing.sm}px;
   align-self: flex-start;
 `;
 
-const StatusText = styled.Text<{ $active: boolean }>`
+const StatusText = styled.Text<{ $color: string }>`
   font-size: 11px;
   font-weight: 600;
-  color: ${(props) => (props.$active ? '#22c55e' : '#6b7280')};
-  text-transform: uppercase;
-`;
-
-const EmptySection = styled.View`
-  padding: 60px 20px;
-  align-items: center;
-`;
-
-const EmptyText = styled.Text<{ $color: string }>`
-  font-size: 14px;
   color: ${(props) => props.$color};
-  text-align: center;
-  margin-top: 16px;
+  text-transform: uppercase;
 `;
 
 // Modal styles
@@ -186,7 +176,7 @@ const ModalContent = styled.View<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   border-top-left-radius: 24px;
   border-top-right-radius: 24px;
-  padding: 24px;
+  padding: ${spacing.xxl}px;
   padding-bottom: 40px;
 `;
 
@@ -194,7 +184,7 @@ const ModalHeader = styled.View`
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: ${spacing.xxl}px;
 `;
 
 const ModalTitle = styled.Text<{ $color: string }>`
@@ -204,18 +194,18 @@ const ModalTitle = styled.Text<{ $color: string }>`
 `;
 
 const CloseButton = styled.TouchableOpacity`
-  padding: 4px;
+  padding: ${spacing.xs}px;
 `;
 
 const FormGroup = styled.View`
-  margin-bottom: 20px;
+  margin-bottom: ${spacing.xl}px;
 `;
 
 const Label = styled.Text<{ $color: string }>`
   font-size: 14px;
   font-weight: 600;
   color: ${(props) => props.$color};
-  margin-bottom: 8px;
+  margin-bottom: ${spacing.sm}px;
 `;
 
 const Input = styled.TextInput<{ $bg: string; $color: string; $borderColor: string }>`
@@ -224,22 +214,22 @@ const Input = styled.TextInput<{ $bg: string; $color: string; $borderColor: stri
   border-width: 1px;
   border-color: ${(props) => props.$borderColor};
   border-radius: 12px;
-  padding: 14px 16px;
+  padding: 14px ${spacing.lg}px;
   font-size: 16px;
 `;
 
 const ConditionButtons = styled.View`
   flex-direction: row;
-  gap: 12px;
+  gap: ${spacing.md}px;
 `;
 
-const ConditionButton = styled.TouchableOpacity<{ $bg: string; $selected: boolean; $borderColor: string }>`
+const ConditionButton = styled.TouchableOpacity<{ $bg: string; $selected: boolean; $borderColor: string; $selectedBg: string }>`
   flex: 1;
-  background-color: ${(props) => (props.$selected ? props.$borderColor + '20' : props.$bg)};
+  background-color: ${(props) => (props.$selected ? props.$selectedBg : props.$bg)};
   border-width: 2px;
   border-color: ${(props) => (props.$selected ? props.$borderColor : 'transparent')};
   border-radius: 12px;
-  padding: 16px;
+  padding: ${spacing.lg}px;
   flex-direction: row;
   align-items: center;
   justify-content: center;
@@ -249,13 +239,13 @@ const ConditionLabel = styled.Text<{ $color: string }>`
   font-size: 14px;
   font-weight: 600;
   color: ${(props) => props.$color};
-  margin-left: 8px;
+  margin-left: ${spacing.sm}px;
 `;
 
 const SubmitButton = styled.TouchableOpacity<{ $bg: string; $disabled: boolean }>`
   background-color: ${(props) => props.$bg};
   border-radius: 12px;
-  padding: 16px;
+  padding: ${spacing.lg}px;
   align-items: center;
   opacity: ${(props) => (props.$disabled ? 0.5 : 1)};
 `;
@@ -276,6 +266,7 @@ const networks: BlockchainNetwork[] = [
 export default function AlertsScreen() {
   const { t } = useLanguage();
   const colors = useColors();
+  const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
@@ -366,13 +357,24 @@ export default function AlertsScreen() {
     <Container $bg={colors.background}>
       <Header $pt={insets.top} $borderColor={colors.border}>
         <HeaderLeft>
-          <BackButton onPress={() => router.back()}>
+          <BackButton
+            onPress={() => router.back()}
+            accessibilityLabel={t('a11yBack') || 'Back'}
+            accessibilityRole="button"
+            hitSlop={8}
+          >
             <ArrowLeft size={24} color={colors.foreground} />
           </BackButton>
           <HeaderTitle $color={colors.foreground}>{t('priceAlerts') || 'Price Alerts'}</HeaderTitle>
         </HeaderLeft>
-        <AddButton $bg={colors.primary} onPress={() => setShowModal(true)}>
-          <Plus size={20} color="#fff" />
+        <AddButton
+          $bg={colors.primary}
+          onPress={() => setShowModal(true)}
+          accessibilityLabel={t('a11yAdd') || 'Add'}
+          accessibilityRole="button"
+          hitSlop={8}
+        >
+          <Plus size={20} color={colors.primaryForeground} />
         </AddButton>
       </Header>
 
@@ -383,18 +385,19 @@ export default function AlertsScreen() {
         contentContainerStyle={{ paddingBottom: 100 }}
       >
         {alerts.length === 0 ? (
-          <EmptySection>
-            <Bell size={48} color={colors.mutedForeground} />
-            <EmptyText $color={colors.mutedForeground}>
-              {t('noAlertsDesc') || 'Create alerts to get notified when token prices reach your targets.'}
-            </EmptyText>
-          </EmptySection>
+          <EmptyState
+            icon={Bell}
+            title={t('emptyNoAlertsTitle') || 'No price alerts'}
+            description={t('emptyNoAlertsDesc') || 'Set an alert to get notified on price movements.'}
+            actionLabel={t('emptyNoAlertsCta') || 'Create alert'}
+            onAction={() => setShowModal(true)}
+          />
         ) : (
           alerts.map((alert) => (
             <AlertCard key={alert.id} $bg={colors.card}>
               <AlertHeader>
                 <AlertToken>
-                  <TokenIcon $bg={colors.primary + '20'}>
+                  <TokenIcon $bg={theme.alpha(colors.primary, 0.125)}>
                     <TokenSymbol $color={colors.primary}>
                       {alert.token_symbol.substring(0, 3)}
                     </TokenSymbol>
@@ -405,20 +408,26 @@ export default function AlertsScreen() {
                   </AlertInfo>
                 </AlertToken>
                 <AlertActions>
-                  <IconButton $bg="#ef444420" onPress={() => confirmDelete(alert.id)}>
-                    <Trash2 size={16} color="#ef4444" />
+                  <IconButton
+                    $bg={theme.alpha(colors.danger, 0.125)}
+                    onPress={() => confirmDelete(alert.id)}
+                    accessibilityLabel={t('a11yDelete') || 'Delete'}
+                    accessibilityRole="button"
+                    hitSlop={8}
+                  >
+                    <Trash2 size={16} color={colors.danger} />
                   </IconButton>
                 </AlertActions>
               </AlertHeader>
 
               <AlertCondition>
-                <ConditionBadge $bg={alert.condition === 'above' ? '#22c55e20' : '#ef444420'}>
+                <ConditionBadge $bg={theme.alpha(alert.condition === 'above' ? colors.success : colors.danger, 0.125)}>
                   {alert.condition === 'above' ? (
-                    <TrendingUp size={16} color="#22c55e" />
+                    <TrendingUp size={16} color={colors.success} />
                   ) : (
-                    <TrendingDown size={16} color="#ef4444" />
+                    <TrendingDown size={16} color={colors.danger} />
                   )}
-                  <ConditionText $color={alert.condition === 'above' ? '#22c55e' : '#ef4444'}>
+                  <ConditionText $color={alert.condition === 'above' ? colors.success : colors.danger}>
                     {alert.condition === 'above' ? t('alertAbove') || 'Above' : t('alertBelow') || 'Below'}
                   </ConditionText>
                 </ConditionBadge>
@@ -427,8 +436,8 @@ export default function AlertsScreen() {
                 </TargetValue>
               </AlertCondition>
 
-              <StatusBadge $active={alert.is_active}>
-                <StatusText $active={alert.is_active}>
+              <StatusBadge $bg={theme.alpha(alert.is_active ? colors.success : colors.palette.gray, 0.125)}>
+                <StatusText $color={alert.is_active ? colors.success : colors.palette.gray}>
                   {alert.is_active ? t('alertActive') || 'Active' : t('alertTriggered') || 'Triggered'}
                 </StatusText>
               </StatusBadge>
@@ -443,7 +452,12 @@ export default function AlertsScreen() {
           <ModalContent $bg={colors.background} onStartShouldSetResponder={() => true}>
             <ModalHeader>
               <ModalTitle $color={colors.foreground}>{t('createAlert') || 'Create Alert'}</ModalTitle>
-              <CloseButton onPress={() => setShowModal(false)}>
+              <CloseButton
+                onPress={() => setShowModal(false)}
+                accessibilityLabel={t('a11yClose') || 'Close'}
+                accessibilityRole="button"
+                hitSlop={8}
+              >
                 <X size={24} color={colors.mutedForeground} />
               </CloseButton>
             </ModalHeader>
@@ -482,22 +496,24 @@ export default function AlertsScreen() {
                 <ConditionButton
                   $bg={colors.card}
                   $selected={condition === 'above'}
-                  $borderColor="#22c55e"
+                  $borderColor={colors.success}
+                  $selectedBg={theme.alpha(colors.success, 0.125)}
                   onPress={() => setCondition('above')}
                 >
-                  <TrendingUp size={20} color={condition === 'above' ? '#22c55e' : colors.mutedForeground} />
-                  <ConditionLabel $color={condition === 'above' ? '#22c55e' : colors.mutedForeground}>
+                  <TrendingUp size={20} color={condition === 'above' ? colors.success : colors.mutedForeground} />
+                  <ConditionLabel $color={condition === 'above' ? colors.success : colors.mutedForeground}>
                     Above
                   </ConditionLabel>
                 </ConditionButton>
                 <ConditionButton
                   $bg={colors.card}
                   $selected={condition === 'below'}
-                  $borderColor="#ef4444"
+                  $borderColor={colors.danger}
+                  $selectedBg={theme.alpha(colors.danger, 0.125)}
                   onPress={() => setCondition('below')}
                 >
-                  <TrendingDown size={20} color={condition === 'below' ? '#ef4444' : colors.mutedForeground} />
-                  <ConditionLabel $color={condition === 'below' ? '#ef4444' : colors.mutedForeground}>
+                  <TrendingDown size={20} color={condition === 'below' ? colors.danger : colors.mutedForeground} />
+                  <ConditionLabel $color={condition === 'below' ? colors.danger : colors.mutedForeground}>
                     Below
                   </ConditionLabel>
                 </ConditionButton>
@@ -524,7 +540,7 @@ export default function AlertsScreen() {
               onPress={handleCreate}
               disabled={!isFormValid || createMutation.isPending}
             >
-              <SubmitText $color="#fff">
+              <SubmitText $color={colors.primaryForeground}>
                 {createMutation.isPending ? 'Creating...' : t('createAlert') || 'Create Alert'}
               </SubmitText>
             </SubmitButton>

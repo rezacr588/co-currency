@@ -33,7 +33,7 @@ export const radii = {
   sm: 8,
   md: 12,
   lg: 16,
-  xl: 16,
+  xl: 20,
   xxl: 24,
   full: 9999,
 } as const;
@@ -177,6 +177,44 @@ export const animation = {
   slow: 400,
 } as const;
 
+// ─── Alpha Helper ────────────────────────────────────────────
+// Convert any color string (hex #rgb / #rrggbb / #rrggbbaa / rgb() / rgba())
+// into an rgba() string with the given opacity. Use for flat transparency
+// (e.g. `alpha(colors.danger, 0.125)`). For theme-consistent pill
+// backgrounds prefer `dangerMuted` / `successMuted` tokens instead.
+export function alpha(color: string, opacity: number): string {
+  const clamp = Math.max(0, Math.min(1, opacity));
+  const trimmed = color.trim();
+
+  if (trimmed.startsWith('#')) {
+    let hex = trimmed.slice(1);
+    if (hex.length === 3) {
+      hex = hex.split('').map((c) => c + c).join('');
+    }
+    if (hex.length === 8) {
+      hex = hex.slice(0, 6);
+    }
+    if (hex.length !== 6) {
+      return trimmed;
+    }
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${clamp})`;
+  }
+
+  const rgbaMatch = trimmed.match(/^rgba?\(\s*([^)]+)\s*\)$/i);
+  if (rgbaMatch) {
+    const parts = rgbaMatch[1].split(',').map((p) => p.trim());
+    if (parts.length >= 3) {
+      const [r, g, b] = parts;
+      return `rgba(${r}, ${g}, ${b}, ${clamp})`;
+    }
+  }
+
+  return trimmed;
+}
+
 // ─── Glass ───────────────────────────────────────────────────
 const buildGlass = (isDark: boolean) => ({
   intensity: 20,
@@ -228,6 +266,7 @@ export interface AppTheme {
   animation: typeof animation;
   glass: ReturnType<typeof buildGlass>;
   layout: typeof layout;
+  alpha: typeof alpha;
 }
 
 export function buildTheme(colors: ColorPalette, isDark: boolean, isRTL: boolean = false): AppTheme {
@@ -243,5 +282,6 @@ export function buildTheme(colors: ColorPalette, isDark: boolean, isRTL: boolean
     animation,
     glass: buildGlass(isDark),
     layout,
+    alpha,
   };
 }

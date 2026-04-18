@@ -15,23 +15,11 @@ interface ToastProps {
   onDismiss: () => void;
 }
 
-const variantConfig: Record<ToastVariant, { icon: typeof CheckCircle; color: string }> = {
-  success: {
-    icon: CheckCircle,
-    color: 'rgb(255, 255, 255)',
-  },
-  error: {
-    icon: AlertCircle,
-    color: 'rgb(255, 255, 255)',
-  },
-  warning: {
-    icon: AlertTriangle,
-    color: 'rgb(15, 26, 42)',
-  },
-  info: {
-    icon: Info,
-    color: '#09090b',
-  },
+const variantIcons: Record<ToastVariant, typeof CheckCircle> = {
+  success: CheckCircle,
+  error: AlertCircle,
+  warning: AlertTriangle,
+  info: Info,
 };
 
 export function Toast({
@@ -43,16 +31,23 @@ export function Toast({
 }: ToastProps) {
   const theme = useTheme();
   const colors = theme.colors;
-  const config = variantConfig[variant];
-  const Icon = config.icon;
+  const Icon = variantIcons[variant];
   const [keyboardHeight, setKeyboardHeight] = useStateToast(0);
 
   const variantBgColors: Record<ToastVariant, string> = {
-    success: colors.success + 'e6',
-    error: colors.danger + 'e6',
-    warning: colors.warning + 'e6',
-    info: colors.primary + 'e6',
+    success: theme.alpha(colors.success, 0.9),
+    error: theme.alpha(colors.danger, 0.9),
+    warning: theme.alpha(colors.warning, 0.9),
+    info: theme.alpha(colors.primary, 0.9),
   };
+
+  const variantFgColors: Record<ToastVariant, string> = {
+    success: colors.primaryForeground,
+    error: colors.primaryForeground,
+    warning: colors.accentForeground,
+    info: colors.primaryForeground,
+  };
+  const fgColor = variantFgColors[variant];
 
   useEffect(() => {
     if (visible && duration > 0) {
@@ -76,15 +71,15 @@ export function Toast({
   return (
     <View style={{ position: 'absolute', left: 16, right: 16, zIndex: 50, bottom: bottomOffset }}>
       <View style={{ backgroundColor: variantBgColors[variant], padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 }}>
-        <Icon size={ICON_SIZES.default} color={config.color} />
+        <Icon size={ICON_SIZES.default} color={fgColor} />
         <Text
-          style={{ flex: 1, marginHorizontal: 12, fontFamily: 'Inter_500Medium', color: config.color }}
+          style={{ flex: 1, marginHorizontal: 12, fontFamily: 'Inter_500Medium', color: fgColor }}
           numberOfLines={2}
         >
           {message}
         </Text>
         <Pressable onPress={onDismiss} hitSlop={HIT_SLOP_SM} style={{ padding: 4 }}>
-          <X size={ICON_SIZES.md} color={config.color} />
+          <X size={ICON_SIZES.md} color={fgColor} />
         </Pressable>
       </View>
     </View>

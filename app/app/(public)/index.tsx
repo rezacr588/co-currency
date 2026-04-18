@@ -187,7 +187,7 @@ export default function HomeScreen() {
         </View>
 
         {isTablet && (
-          <SurfaceCard variant="elevated" style={{ flex: isDesktop ? 0.85 : undefined, padding: 20 }}>
+          <SurfaceCard variant="elevated" style={{ flex: isDesktop ? 0.85 : undefined, padding: theme.spacing.xl }}>
             <Text style={{ fontSize: 16, fontFamily: theme.typography.h2.fontFamily, color: theme.colors.foreground, marginBottom: theme.spacing.lg }}>
               {t('reportsAndStats') || 'CoAI Preview'}
             </Text>

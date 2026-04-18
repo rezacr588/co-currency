@@ -5,6 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components/native';
 import { Users, Mail, Plus, PlusCircle, ChevronRight, LogIn } from 'lucide-react-native';
 
+import { useTheme } from 'styled-components/native';
+
 import { api } from '@/src/api';
 import { SharedSpace, SpaceInvite, SpaceType } from '@/src/api/social';
 import { useLanguage } from '@/src/context/LanguageContext';
@@ -19,19 +21,19 @@ const Container = styled.View<{ $bg: string }>`
 `;
 
 const Header = styled.View<{ $border: string }>`
-  padding: 16px;
+  padding: ${({ theme }) => theme.spacing.lg}px;
   border-bottom-width: 1px;
   border-bottom-color: ${(p) => p.$border};
 `;
 
 const TabRow = styled.View`
   flex-direction: row;
-  gap: 8px;
+  gap: ${({ theme }) => theme.spacing.sm}px;
 `;
 
 const Tab = styled.TouchableOpacity<{ $active: boolean; $bg: string; $activeBg: string }>`
-  padding: 8px 16px;
-  border-radius: 20px;
+  padding: ${({ theme }) => theme.spacing.sm}px ${({ theme }) => theme.spacing.lg}px;
+  border-radius: ${({ theme }) => theme.radii.xl}px;
   background-color: ${(p) => (p.$active ? p.$activeBg : p.$bg)};
 `;
 
@@ -43,25 +45,25 @@ const TabText = styled.Text<{ $active: boolean; $color: string; $activeColor: st
 
 const SpaceCard = styled.TouchableOpacity<{ $bg: string }>`
   background-color: ${(p) => p.$bg};
-  border-radius: 16px;
-  padding: 16px;
-  margin: 8px 16px;
+  border-radius: ${({ theme }) => theme.radii.lg}px;
+  padding: ${({ theme }) => theme.spacing.lg}px;
+  margin: ${({ theme }) => theme.spacing.sm}px ${({ theme }) => theme.spacing.lg}px;
 `;
 
 const SpaceHeader = styled.View`
   flex-direction: row;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: ${({ theme }) => theme.spacing.md}px;
 `;
 
 const SpaceIcon = styled.View<{ $color: string }>`
   width: 48px;
   height: 48px;
-  border-radius: 12px;
-  background-color: ${(p) => p.$color}20;
+  border-radius: ${({ theme }) => theme.radii.md}px;
+  background-color: ${({ theme, $color }) => theme.alpha($color, 0.125)};
   align-items: center;
   justify-content: center;
-  margin-right: 12px;
+  margin-right: ${({ theme }) => theme.spacing.md}px;
 `;
 
 const SpaceInfo = styled.View`
@@ -83,7 +85,7 @@ const SpaceTypeBadge = styled.Text<{ $color: string }>`
 const SpaceStats = styled.View`
   flex-direction: row;
   justify-content: space-between;
-  margin-top: 8px;
+  margin-top: ${({ theme }) => theme.spacing.sm}px;
 `;
 
 const StatItem = styled.View`
@@ -93,7 +95,7 @@ const StatItem = styled.View`
 const StatValue = styled.Text<{ $color: string; $isNegative?: boolean }>`
   font-size: 16px;
   font-weight: 700;
-  color: ${(p) => (p.$isNegative ? '#ef4444' : p.$color)};
+  color: ${({ theme, $color, $isNegative }) => ($isNegative ? theme.colors.danger : $color)};
 `;
 
 const StatLabel = styled.Text<{ $color: string }>`
@@ -104,9 +106,9 @@ const StatLabel = styled.Text<{ $color: string }>`
 
 const InviteCard = styled.View<{ $bg: string }>`
   background-color: ${(p) => p.$bg};
-  border-radius: 12px;
-  padding: 16px;
-  margin: 8px 16px;
+  border-radius: ${({ theme }) => theme.radii.md}px;
+  padding: ${({ theme }) => theme.spacing.lg}px;
+  margin: ${({ theme }) => theme.spacing.sm}px ${({ theme }) => theme.spacing.lg}px;
 `;
 
 const InviteHeader = styled.View`
@@ -128,19 +130,19 @@ const InviteTitle = styled.Text<{ $color: string }>`
 const InviteSubtitle = styled.Text<{ $color: string }>`
   font-size: 13px;
   color: ${(p) => p.$color};
-  margin-top: 4px;
+  margin-top: ${({ theme }) => theme.spacing.xs}px;
 `;
 
 const InviteActions = styled.View`
   flex-direction: row;
-  gap: 8px;
-  margin-top: 12px;
+  gap: ${({ theme }) => theme.spacing.sm}px;
+  margin-top: ${({ theme }) => theme.spacing.md}px;
 `;
 
 const FAB = styled.TouchableOpacity<{ $bg: string }>`
   position: absolute;
-  bottom: 24px;
-  right: 24px;
+  bottom: ${({ theme }) => theme.spacing.xxl}px;
+  right: ${({ theme }) => theme.spacing.xxl}px;
   width: 56px;
   height: 56px;
   border-radius: 28px;
@@ -159,16 +161,16 @@ const ModalTitle = styled.Text<{ $color: string }>`
   font-weight: 700;
   color: ${(p) => p.$color};
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: ${({ theme }) => theme.spacing.xl}px;
 `;
 
 const OptionButton = styled.TouchableOpacity<{ $bg: string }>`
   flex-direction: row;
   align-items: center;
   background-color: ${(p) => p.$bg};
-  padding: 16px;
-  border-radius: 12px;
-  margin-bottom: 12px;
+  padding: ${({ theme }) => theme.spacing.lg}px;
+  border-radius: ${({ theme }) => theme.radii.md}px;
+  margin-bottom: ${({ theme }) => theme.spacing.md}px;
 `;
 
 const OptionIcon = styled.View<{ $bg: string }>`
@@ -178,7 +180,7 @@ const OptionIcon = styled.View<{ $bg: string }>`
   background-color: ${(p) => p.$bg};
   align-items: center;
   justify-content: center;
-  margin-right: 12px;
+  margin-right: ${({ theme }) => theme.spacing.md}px;
 `;
 
 const OptionText = styled.View`
@@ -198,21 +200,21 @@ const OptionDesc = styled.Text<{ $color: string }>`
 `;
 
 const InputContainer = styled.View`
-  margin-bottom: 16px;
+  margin-bottom: ${({ theme }) => theme.spacing.lg}px;
 `;
 
 const InputLabel = styled.Text<{ $color: string }>`
   font-size: 14px;
   font-weight: 600;
   color: ${(p) => p.$color};
-  margin-bottom: 8px;
+  margin-bottom: ${({ theme }) => theme.spacing.sm}px;
 `;
 
 const StyledInput = styled.TextInput<{ $bg: string; $color: string; $border: string }>`
   background-color: ${(p) => p.$bg};
   color: ${(p) => p.$color};
-  border-radius: 12px;
-  padding: 14px 16px;
+  border-radius: ${({ theme }) => theme.radii.md}px;
+  padding: 14px ${({ theme }) => theme.spacing.lg}px;
   font-size: 16px;
   border-width: 1px;
   border-color: ${(p) => p.$border};
@@ -226,10 +228,10 @@ const ModalOverlay = styled.Pressable`
 
 const ModalContent = styled.View<{ $bg: string }>`
   background-color: ${(p) => p.$bg};
-  border-top-left-radius: 24px;
-  border-top-right-radius: 24px;
-  padding: 20px;
-  padding-bottom: 40px;
+  border-top-left-radius: ${({ theme }) => theme.radii.xxl}px;
+  border-top-right-radius: ${({ theme }) => theme.radii.xxl}px;
+  padding: ${({ theme }) => theme.spacing.xl}px;
+  padding-bottom: ${({ theme }) => theme.spacing.xxxl + theme.spacing.sm}px;
 `;
 
 const SPACE_ICONS: Record<SpaceType, string> = {
@@ -244,6 +246,7 @@ const SPACE_ICONS: Record<SpaceType, string> = {
 export default function SpacesScreen() {
   const { t } = useLanguage();
   const colors = useColors();
+  const theme = useTheme();
   const queryClient = useQueryClient();
   
   const [activeTab, setActiveTab] = useState<'spaces' | 'invites'>('spaces');
@@ -398,7 +401,7 @@ export default function SpacesScreen() {
               <TabText
                 $active={activeTab === 'spaces'}
                 $color={colors.mutedForeground}
-                $activeColor="#fff"
+                $activeColor={colors.primaryForeground}
               >
                 {t('socialSpaces') || 'Spaces'} ({spaces.length})
               </TabText>
@@ -412,7 +415,7 @@ export default function SpacesScreen() {
               <TabText
                 $active={activeTab === 'invites'}
                 $color={colors.mutedForeground}
-                $activeColor="#fff"
+                $activeColor={colors.primaryForeground}
               >
                 {t('pendingInvites') || 'Invites'} ({invites.length})
               </TabText>
@@ -456,8 +459,14 @@ export default function SpacesScreen() {
           </ScrollView>
         )}
         
-        <FAB $bg={colors.primary} onPress={() => setShowActionSheet(true)}>
-          <Plus size={28} color="#fff" />
+        <FAB
+          $bg={colors.primary}
+          onPress={() => setShowActionSheet(true)}
+          accessibilityLabel={t('a11yAdd') || 'Add'}
+          accessibilityRole="button"
+          hitSlop={8}
+        >
+          <Plus size={28} color={colors.primaryForeground} />
         </FAB>
       </Container>
       
@@ -482,7 +491,7 @@ export default function SpacesScreen() {
                   router.push('/spaces/create' as any);
                 }}
               >
-                <OptionIcon $bg={colors.primary + '20'}>
+                <OptionIcon $bg={theme.alpha(colors.primary, 0.125)}>
                   <PlusCircle size={24} color={colors.primary} />
                 </OptionIcon>
                 <OptionText>
@@ -503,7 +512,7 @@ export default function SpacesScreen() {
                   setShowJoinSheet(true);
                 }}
               >
-                <OptionIcon $bg={colors.success + '20'}>
+                <OptionIcon $bg={theme.alpha(colors.success, 0.125)}>
                   <LogIn size={24} color={colors.success} />
                 </OptionIcon>
                 <OptionText>

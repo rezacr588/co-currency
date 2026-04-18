@@ -105,6 +105,8 @@ export function PlannerSelectionSheet({
           <Pressable
             onPress={onClose}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11yClose') || 'Close'}
             style={{
               width: 36,
               height: 36,
@@ -143,7 +145,12 @@ export function PlannerSelectionSheet({
               style={{ flex: 1, color: colors.foreground, fontSize: 14 }}
             />
             {searchText ? (
-              <Pressable onPress={() => setSearchText('')} hitSlop={6}>
+              <Pressable
+                onPress={() => setSearchText('')}
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel={t('a11yClearFilter') || 'Clear search'}
+              >
                 <X size={14} color={colors.mutedForeground} />
               </Pressable>
             ) : null}
@@ -160,6 +167,9 @@ export function PlannerSelectionSheet({
             return (
               <Pressable
                 onPress={() => handlePress(item.value)}
+                accessibilityRole={multiple ? 'checkbox' : 'radio'}
+                accessibilityState={{ checked: selected }}
+                accessibilityLabel={item.label}
                 style={({ pressed }) => [
                   {
                     flexDirection: 'row',
@@ -167,7 +177,7 @@ export function PlannerSelectionSheet({
                     gap: 12,
                     borderWidth: 1,
                     borderColor: selected ? colors.accent : colors.border,
-                    backgroundColor: selected ? colors.accent + '14' : colors.card,
+                    backgroundColor: selected ? theme.alpha(colors.accent, 0.08) : colors.card,
                     borderRadius: 14,
                     paddingHorizontal: 14,
                     paddingVertical: 14,

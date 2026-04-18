@@ -28,10 +28,10 @@ export function DailyTimelineChart({
   const colors = theme.colors;
 
   return (
-    <View style={{ backgroundColor: colors.card, padding: 20, borderRadius: 12, marginBottom: 24 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+    <View style={{ backgroundColor: colors.card, padding: theme.spacing.xl, borderRadius: theme.radii.md, marginBottom: theme.spacing.xxl }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginEnd: 12 }}>
+          <View style={{ backgroundColor: colors.secondary, padding: theme.spacing.sm, borderRadius: theme.radii.sm, marginEnd: theme.spacing.md }}>
             <Calendar size={18} color={colors.mutedForeground} />
           </View>
           <View>
@@ -41,9 +41,9 @@ export function DailyTimelineChart({
         </View>
       </View>
 
-      <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 12 }}>{t('tapBarForDetails')}</Text>
+      <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: theme.spacing.md }}>{t('tapBarForDetails')}</Text>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingEnd: 8 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: theme.spacing.sm, paddingEnd: theme.spacing.sm }}>
         {chartBuckets.map((bucket, index) => {
           const incomeHeight = bucket.income > 0 ? Math.max((bucket.income / maxBucketValue) * 96, 4) : 2;
           const expenseHeight = bucket.expenses > 0 ? Math.max((bucket.expenses / maxBucketValue) * 96, 4) : 2;
@@ -56,11 +56,11 @@ export function DailyTimelineChart({
               onPress={() => onSelectBucket(index)}
               style={{
                 alignItems: 'center',
-                borderRadius: 8,
-                paddingHorizontal: 4,
-                paddingVertical: 4,
+                borderRadius: theme.radii.sm,
+                paddingHorizontal: theme.spacing.xs,
+                paddingVertical: theme.spacing.xs,
                 width: timelinePreset === '30D' ? 40 : timelinePreset === '7D' ? 56 : 62,
-                ...(isSelected ? { backgroundColor: colors.accent + '1a', borderWidth: 1, borderColor: colors.accent + '4d' } : {}),
+                ...(isSelected ? { backgroundColor: theme.alpha(colors.accent, 0.1), borderWidth: 1, borderColor: theme.alpha(colors.accent, 0.3) } : {}),
               }}
               accessibilityRole="button"
               accessibilityLabel={`${t('selectedRange')}: ${bucketRangeText}. ${bucket.txCount} ${t('transactionsCount')}`}
@@ -73,7 +73,7 @@ export function DailyTimelineChart({
                     width: 8,
                     borderTopLeftRadius: 4,
                     borderTopRightRadius: 4,
-                    backgroundColor: bucket.income > 0 ? colors.success : colors.secondary + '80',
+                    backgroundColor: bucket.income > 0 ? colors.success : theme.alpha(colors.secondary, 0.5),
                     height: incomeHeight,
                   }}
                 />
@@ -82,7 +82,7 @@ export function DailyTimelineChart({
                     width: 8,
                     borderTopLeftRadius: 4,
                     borderTopRightRadius: 4,
-                    backgroundColor: bucket.expenses > 0 ? colors.danger : colors.secondary + '80',
+                    backgroundColor: bucket.expenses > 0 ? colors.danger : theme.alpha(colors.secondary, 0.5),
                     height: expenseHeight,
                   }}
                 />
@@ -90,7 +90,7 @@ export function DailyTimelineChart({
               <Text
                 style={{
                   fontSize: 10,
-                  marginTop: 4,
+                  marginTop: theme.spacing.xs,
                   textAlign: 'center',
                   color: bucket.isCurrentBucket ? colors.accent : colors.mutedForeground,
                   fontFamily: bucket.isCurrentBucket ? 'Inter_600SemiBold' : undefined,
@@ -104,13 +104,13 @@ export function DailyTimelineChart({
         })}
       </ScrollView>
 
-      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 16 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: theme.spacing.lg, marginTop: theme.spacing.lg }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.success, marginEnd: 4 }} />
+          <View style={{ width: 8, height: 8, borderRadius: theme.radii.full, backgroundColor: colors.success, marginEnd: theme.spacing.xs }} />
           <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('income')}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: colors.danger, marginEnd: 4 }} />
+          <View style={{ width: 8, height: 8, borderRadius: theme.radii.full, backgroundColor: colors.danger, marginEnd: theme.spacing.xs }} />
           <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>{t('expenses')}</Text>
         </View>
       </View>

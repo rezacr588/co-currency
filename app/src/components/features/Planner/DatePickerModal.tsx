@@ -199,7 +199,7 @@ export function DatePickerModal({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: selected ? colors.accent : colors.border,
-    backgroundColor: selected ? colors.accent + '22' : colors.card,
+    backgroundColor: selected ? theme.alpha(colors.accent, 0.13) : colors.card,
     marginEnd: 8,
     marginBottom: 8,
     minHeight: 40,
@@ -249,6 +249,8 @@ export function DatePickerModal({
             <Pressable
               onPress={onClose}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('a11yClose') || 'Close'}
               style={({ pressed }) => [
                 {
                   paddingHorizontal: 12,
@@ -275,10 +277,10 @@ export function DatePickerModal({
             <>
               <View
                 style={{
-                  backgroundColor: colors.accent + '14',
+                  backgroundColor: theme.alpha(colors.accent, 0.08),
                   borderRadius: 10,
                   borderWidth: 1,
-                  borderColor: colors.accent + '33',
+                  borderColor: theme.alpha(colors.accent, 0.2),
                   paddingHorizontal: 14,
                   paddingVertical: 10,
                   marginBottom: 14,
@@ -348,10 +350,10 @@ export function DatePickerModal({
             <View>
               <View
                 style={{
-                  backgroundColor: colors.accent + '14',
+                  backgroundColor: theme.alpha(colors.accent, 0.08),
                   borderRadius: 10,
                   borderWidth: 1,
-                  borderColor: colors.accent + '33',
+                  borderColor: theme.alpha(colors.accent, 0.2),
                   paddingHorizontal: 14,
                   paddingVertical: 10,
                   marginBottom: 14,

@@ -24,36 +24,36 @@ function ComparisonBarChartComponent({
   const expensePercent = maxValue > 0 ? (expenses / maxValue) * 100 : 0;
 
   return (
-    <View style={{ gap: 16 }}>
+    <View style={{ gap: theme.spacing.lg }}>
       <View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.xs }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <TrendingUp size={14} color={colors.success} />
-            <Text style={{ color: colors.foreground, fontSize: 14, marginStart: 4 }}>{t('income')}</Text>
+            <Text style={{ color: colors.foreground, fontSize: 14, marginStart: theme.spacing.xs }}>{t('income')}</Text>
           </View>
           <Text style={{ color: colors.success, fontSize: 14, fontFamily: 'Inter_500Medium' }}>
             {formatCompactCurrency(income, currency)}
           </Text>
         </View>
-        <View style={{ height: 16, backgroundColor: colors.secondary, borderRadius: 9999, overflow: 'hidden' }}>
+        <View style={{ height: 16, backgroundColor: colors.secondary, borderRadius: theme.radii.full, overflow: 'hidden' }}>
           <View
-            style={{ height: '100%', borderRadius: 9999, backgroundColor: colors.success, width: `${incomePercent}%` }}
+            style={{ height: '100%', borderRadius: theme.radii.full, backgroundColor: colors.success, width: `${incomePercent}%` }}
           />
         </View>
       </View>
       <View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.xs }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <TrendingUp size={14} color={colors.danger} style={{ transform: [{ rotate: '180deg' }] }} />
-            <Text style={{ color: colors.foreground, fontSize: 14, marginStart: 4 }}>{t('expenses')}</Text>
+            <Text style={{ color: colors.foreground, fontSize: 14, marginStart: theme.spacing.xs }}>{t('expenses')}</Text>
           </View>
           <Text style={{ color: colors.danger, fontSize: 14, fontFamily: 'Inter_500Medium' }}>
             {formatCompactCurrency(expenses, currency)}
           </Text>
         </View>
-        <View style={{ height: 16, backgroundColor: colors.secondary, borderRadius: 9999, overflow: 'hidden' }}>
+        <View style={{ height: 16, backgroundColor: colors.secondary, borderRadius: theme.radii.full, overflow: 'hidden' }}>
           <View
-            style={{ height: '100%', borderRadius: 9999, backgroundColor: colors.danger, width: `${expensePercent}%` }}
+            style={{ height: '100%', borderRadius: theme.radii.full, backgroundColor: colors.danger, width: `${expensePercent}%` }}
           />
         </View>
       </View>

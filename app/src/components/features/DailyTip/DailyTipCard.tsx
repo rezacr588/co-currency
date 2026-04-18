@@ -6,6 +6,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { useTheme } from 'styled-components/native';
 import { getTodaysTip, getRandomTip, type FinancialTip } from '../../../data/financialTips';
 import { haptics } from '../../../utils/haptics';
+import { HIT_SLOP_SM } from '../../../constants/hitSlop';
 
 const DISMISSED_KEY = '@daily_tip_dismissed';
 
@@ -13,6 +14,20 @@ interface DailyTipCardProps {
   compact?: boolean;
   showDismiss?: boolean;
   onDismiss?: () => void;
+}
+
+// Semantic + palette mapping for tip categories. Hook keeps theme-aware colors
+// in sync with dark/light switches without module-level hex.
+function useTipCategoryColors(): Record<FinancialTip['category'], string> {
+  const theme = useTheme();
+  return {
+    savings: theme.colors.success,
+    budgeting: theme.colors.info,
+    investing: theme.colors.palette.purple,
+    spending: theme.colors.warning,
+    general: theme.colors.mutedForeground,
+    debt: theme.colors.danger,
+  };
 }
 
 export function DailyTipCard({ compact = false, showDismiss = true, onDismiss }: DailyTipCardProps) {

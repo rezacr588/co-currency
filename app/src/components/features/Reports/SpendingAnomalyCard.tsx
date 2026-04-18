@@ -42,9 +42,9 @@ export function SpendingAnomalyCard({ compact = false, report: providedReport = 
 
   if (compact) {
     return (
-      <View style={{ backgroundColor: colors.warning + '1a', borderWidth: 1, borderColor: colors.warning + '4d', padding: 16, borderRadius: 12, marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
+      <View style={{ backgroundColor: theme.alpha(colors.warning, 0.1), borderWidth: 1, borderColor: theme.alpha(colors.warning, 0.3), padding: theme.spacing.lg, borderRadius: theme.radii.md, marginBottom: theme.spacing.lg, flexDirection: 'row', alignItems: 'center' }}>
         <AlertTriangle size={20} color={colors.warning} />
-        <View style={{ marginStart: 12, flex: 1 }}>
+        <View style={{ marginStart: theme.spacing.md, flex: 1 }}>
           <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium', fontSize: 14 }}>
             {anomalies.length}{' '}
             {t('unusualTransactions') || 'unusual transactions this week'}
@@ -58,10 +58,10 @@ export function SpendingAnomalyCard({ compact = false, report: providedReport = 
   }
 
   return (
-    <Card style={{ padding: 24, marginBottom: 24 }}>
+    <Card style={{ padding: theme.spacing.xxl, marginBottom: theme.spacing.xxl }}>
       {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-        <View style={{ backgroundColor: colors.warning + '33', padding: 8, borderRadius: 8, marginEnd: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.lg }}>
+        <View style={{ backgroundColor: theme.alpha(colors.warning, 0.2), padding: theme.spacing.sm, borderRadius: theme.radii.sm, marginEnd: theme.spacing.md }}>
           <AlertTriangle size={20} color={colors.warning} />
         </View>
         <View style={{ flex: 1 }}>
@@ -75,11 +75,11 @@ export function SpendingAnomalyCard({ compact = false, report: providedReport = 
       </View>
 
       {/* Anomaly List */}
-      <View style={{ gap: 12 }}>
+      <View style={{ gap: theme.spacing.md }}>
         {visibleAnomalies.map((anomaly, idx) => (
           <View
             key={anomaly.transaction_id || idx}
-            style={{ backgroundColor: colors.secondary + '4d', borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 8 }}
+            style={{ backgroundColor: theme.alpha(colors.secondary, 0.3), borderWidth: 1, borderColor: colors.border, padding: theme.spacing.md, borderRadius: theme.radii.sm }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <StyledCategoryIcon
@@ -89,7 +89,7 @@ export function SpendingAnomalyCard({ compact = false, report: providedReport = 
                 borderRadius={6}
                 padding={6}
               />
-              <View style={{ flex: 1, marginStart: 8 }}>
+              <View style={{ flex: 1, marginStart: theme.spacing.sm }}>
                 <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_500Medium' }} numberOfLines={1}>
                   {anomaly.description}
                 </Text>
@@ -99,14 +99,14 @@ export function SpendingAnomalyCard({ compact = false, report: providedReport = 
                 <Text style={{ color: colors.danger, fontFamily: 'Inter_700Bold', fontSize: 14 }}>
                   {formatCompactCurrency(anomaly.amount, anomaly.currency)}
                 </Text>
-                <View style={{ backgroundColor: colors.warning + '33', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9999, marginTop: 4 }}>
+                <View style={{ backgroundColor: theme.alpha(colors.warning, 0.2), paddingHorizontal: theme.spacing.sm, paddingVertical: 2, borderRadius: theme.radii.full, marginTop: theme.spacing.xs }}>
                   <Text style={{ color: colors.warning, fontSize: 12, fontFamily: 'Inter_500Medium' }}>
                     {anomaly.deviation}x {t('timesYourAverage') || 'avg'}
                   </Text>
                 </View>
               </View>
             </View>
-            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 8 }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: theme.spacing.sm }}>
               {t('categoryAvg') || 'Category avg'}:{' '}
               {formatCompactCurrency(anomaly.average_amount, anomaly.currency)}
             </Text>
@@ -118,7 +118,7 @@ export function SpendingAnomalyCard({ compact = false, report: providedReport = 
       {hasMore && !compact && (
         <Pressable
           onPress={() => setExpanded(!expanded)}
-          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12, paddingVertical: 8 }}
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: theme.spacing.md, paddingVertical: theme.spacing.sm }}
           accessibilityRole="button"
           accessibilityLabel={expanded ? (t('showLess') || 'Show less') : `${t('showMore') || 'Show more'} (${anomalies.length - 3})`}
           accessibilityHint={expanded ? (t('showLess') || 'Show less') : (t('showMore') || 'Show more')}
@@ -128,7 +128,7 @@ export function SpendingAnomalyCard({ compact = false, report: providedReport = 
           ) : (
             <ChevronDown size={16} color={colors.mutedForeground} />
           )}
-          <Text style={{ color: colors.mutedForeground, fontSize: 14, marginStart: 4 }}>
+          <Text style={{ color: colors.mutedForeground, fontSize: 14, marginStart: theme.spacing.xs }}>
             {expanded
               ? (t('showLess') || 'Show less')
               : `${t('showMore') || 'Show more'} (${anomalies.length - 3})`}

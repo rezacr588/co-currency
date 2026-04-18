@@ -10,6 +10,7 @@ import { buildDateKey, getDaysInMonth, safeMax } from '../../../utils/dateRange'
 import { useReportTimeZone } from '../../../hooks/useReportTimeZone';
 import { CATEGORY_COLORS, StyledCategoryIcon } from '../../../constants/icons';
 import { SkeletonCard, SkeletonList } from '../../ui/Skeleton';
+import { EmptyState } from '../../ui/EmptyState';
 import { ReportErrorCard } from '../../ui';
 import { CashFlowProjectionCard } from './CashFlowProjectionCard';
 import { SpendingAnomalyCard } from './SpendingAnomalyCard';
@@ -178,8 +179,8 @@ export function MonthlyReportView({
       {/* Monthly Summary Card */}
       {monthlyReport && (
         <View style={{ backgroundColor: colors.card, padding: REPORT_LAYOUT.cardPadding, borderRadius: REPORT_LAYOUT.cardRadius, marginBottom: REPORT_LAYOUT.sectionSpacing }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginEnd: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.lg }}>
+            <View style={{ backgroundColor: colors.secondary, padding: theme.spacing.sm, borderRadius: theme.radii.sm, marginEnd: theme.spacing.md }}>
               <Calendar size={20} color={colors.placeholder} />
             </View>
             <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
@@ -196,15 +197,15 @@ export function MonthlyReportView({
 
           {/* Month-over-Month Comparison */}
           {expenseChange !== null && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: theme.spacing.lg }}>
               <View
                 style={{
-                  paddingHorizontal: 12,
+                  paddingHorizontal: theme.spacing.md,
                   paddingVertical: 6,
-                  borderRadius: 9999,
+                  borderRadius: theme.radii.full,
                   flexDirection: 'row',
                   alignItems: 'center',
-                  backgroundColor: expenseChange <= 0 ? colors.success + '33' : colors.danger + '33',
+                  backgroundColor: expenseChange <= 0 ? theme.alpha(colors.success, 0.2) : theme.alpha(colors.danger, 0.2),
                 }}
               >
                 {expenseChange <= 0 ? (
@@ -216,7 +217,7 @@ export function MonthlyReportView({
                   style={{
                     fontSize: 14,
                     fontFamily: 'Inter_600SemiBold',
-                    marginStart: 4,
+                    marginStart: theme.spacing.xs,
                     color: expenseChange <= 0 ? colors.success : colors.danger,
                   }}
                 >
@@ -226,9 +227,9 @@ export function MonthlyReportView({
             </View>
           )}
 
-          <View style={{ flexDirection: 'row', gap: 16, marginTop: 24 }}>
-            <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
-              <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>{t('net')}</Text>
+          <View style={{ flexDirection: 'row', gap: theme.spacing.lg, marginTop: theme.spacing.xxl }}>
+            <View style={{ flex: 1, backgroundColor: theme.alpha(colors.secondary, 0.5), padding: theme.spacing.md, borderRadius: theme.radii.sm }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: theme.spacing.xs }}>{t('net')}</Text>
               <Text
                 style={{
                   fontSize: 18,
@@ -239,8 +240,8 @@ export function MonthlyReportView({
                 {`${monthlyReport.net >= 0 ? '+' : '-'}${formatCompactCurrency(Math.abs(monthlyReport.net), monthlyReport.currency)}`}
               </Text>
             </View>
-            <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
-              <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>{t('savingsRate')}</Text>
+            <View style={{ flex: 1, backgroundColor: theme.alpha(colors.secondary, 0.5), padding: theme.spacing.md, borderRadius: theme.radii.sm }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: theme.spacing.xs }}>{t('savingsRate')}</Text>
               <Text
                 style={{
                   fontSize: 18,
@@ -257,14 +258,14 @@ export function MonthlyReportView({
 
       {categoryReport && categoryReport.categories.length > 0 && (
         <View style={{ backgroundColor: colors.card, padding: REPORT_LAYOUT.cardPadding, borderRadius: REPORT_LAYOUT.cardRadius, marginBottom: REPORT_LAYOUT.sectionSpacing }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginEnd: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.lg }}>
+            <View style={{ backgroundColor: colors.secondary, padding: theme.spacing.sm, borderRadius: theme.radii.sm, marginEnd: theme.spacing.md }}>
               <PieChart size={20} color={colors.placeholder} />
             </View>
             <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('spendingByCategory')}</Text>
           </View>
 
-          <View style={{ marginBottom: 24 }}>
+          <View style={{ marginBottom: theme.spacing.xxl }}>
             <HorizontalBarChart
               data={categoryReport.categories.slice(0, 6)}
               maxValue={safeMax(categoryReport.categories.map((c) => c.amount))}
@@ -283,14 +284,14 @@ export function MonthlyReportView({
           <View style={{
             flexDirection: 'row',
             flexWrap: 'wrap',
-            gap: 12,
-            marginTop: 16,
+            gap: theme.spacing.md,
+            marginTop: theme.spacing.lg,
           }}>
             {categoryReport.categories.slice(0, 6).map((cat) => {
               const categoryColor = CATEGORY_COLORS[cat.category.toLowerCase()] || colors.accent;
               const cardContent = (
                 <>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <StyledCategoryIcon
                         category={cat.category}
@@ -299,7 +300,7 @@ export function MonthlyReportView({
                         borderRadius={6}
                         padding={6}
                       />
-                      <Text style={{ fontFamily: 'Inter_500Medium', color: colors.foreground, textTransform: 'capitalize', marginStart: 8 }}>
+                      <Text style={{ fontFamily: 'Inter_500Medium', color: colors.foreground, textTransform: 'capitalize', marginStart: theme.spacing.sm }}>
                         {cat.category}
                       </Text>
                     </View>
@@ -307,17 +308,17 @@ export function MonthlyReportView({
                       {formatCompactCurrency(cat.amount, categoryReport.currency)}
                     </Text>
                   </View>
-                  <View style={{ height: 8, backgroundColor: colors.secondary, borderRadius: 9999, overflow: 'hidden' }}>
+                  <View style={{ height: 8, backgroundColor: colors.secondary, borderRadius: theme.radii.full, overflow: 'hidden' }}>
                     <View
                       style={{
                         height: '100%',
-                        borderRadius: 9999,
+                        borderRadius: theme.radii.full,
                         width: `${cat.percentage}%`,
                         backgroundColor: categoryColor,
                       }}
                     />
                   </View>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: theme.spacing.sm }}>
                     <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
                       {cat.count} {t('transactions')}
                     </Text>
@@ -333,10 +334,10 @@ export function MonthlyReportView({
                   <View
                     key={cat.category}
                     style={{
-                      backgroundColor: colors.secondary + '4d',
+                      backgroundColor: theme.alpha(colors.secondary, 0.3),
                       borderWidth: 1,
                       borderColor: colors.border,
-                      padding: 16,
+                      padding: theme.spacing.lg,
                       borderRadius: REPORT_LAYOUT.cardRadius,
                       width: categoryCardWidth,
                       minWidth: categoryCols === 1 ? undefined : 200,
@@ -352,10 +353,10 @@ export function MonthlyReportView({
                   key={cat.category}
                   onPress={() => onOpenHistory({ ...rangeTarget, category: cat.category })}
                   style={({ pressed }) => ({
-                    backgroundColor: colors.secondary + '4d',
+                    backgroundColor: theme.alpha(colors.secondary, 0.3),
                     borderWidth: 1,
                     borderColor: colors.border,
-                    padding: 16,
+                    padding: theme.spacing.lg,
                     borderRadius: REPORT_LAYOUT.cardRadius,
                     width: categoryCardWidth,
                     minWidth: categoryCols === 1 ? undefined : 200,
@@ -375,12 +376,12 @@ export function MonthlyReportView({
       {/* Trends Chart */}
       {trendsReport && trendsReport.trends && trendsReport.trends.length > 0 && (
         <View style={{ backgroundColor: colors.card, padding: REPORT_LAYOUT.cardPadding, borderRadius: REPORT_LAYOUT.cardRadius, marginBottom: REPORT_LAYOUT.sectionSpacing }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <View style={{ backgroundColor: colors.secondary, padding: 8, borderRadius: 8, marginEnd: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.lg }}>
+            <View style={{ backgroundColor: colors.secondary, padding: theme.spacing.sm, borderRadius: theme.radii.sm, marginEnd: theme.spacing.md }}>
               <BarChart3 size={20} color={colors.placeholder} />
             </View>
             <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('incomeVsExpenses')}</Text>
-            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginStart: 8 }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, marginStart: theme.spacing.sm }}>
               ({trendsReport.months} {t('months')})
             </Text>
           </View>
@@ -394,24 +395,24 @@ export function MonthlyReportView({
       {/* Forecast Card */}
       {forecast && (
         <View style={{ backgroundColor: colors.card, padding: REPORT_LAYOUT.cardPadding, borderRadius: REPORT_LAYOUT.cardRadius, marginBottom: REPORT_LAYOUT.sectionSpacing }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <View style={{ backgroundColor: colors.accent + '33', padding: 8, borderRadius: 8, marginEnd: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.lg }}>
+            <View style={{ backgroundColor: theme.alpha(colors.accent, 0.2), padding: theme.spacing.sm, borderRadius: theme.radii.sm, marginEnd: theme.spacing.md }}>
               <TrendingUp size={20} color={colors.accent} />
             </View>
             <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{t('forecast')}</Text>
           </View>
 
           {forecast.days_until_zero > 0 ? (
-            <View style={{ gap: 16 }}>
-              <View style={{ flexDirection: 'row', gap: 16 }}>
-                <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
-                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>{t('avgDaily')} {t('income')}</Text>
+            <View style={{ gap: theme.spacing.lg }}>
+              <View style={{ flexDirection: 'row', gap: theme.spacing.lg }}>
+                <View style={{ flex: 1, backgroundColor: theme.alpha(colors.secondary, 0.5), padding: theme.spacing.md, borderRadius: theme.radii.sm }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: theme.spacing.xs }}>{t('avgDaily')} {t('income')}</Text>
                   <Text style={{ color: colors.success, fontSize: 18, fontFamily: 'Inter_700Bold' }}>
                     {formatCompactCurrency(forecast.avg_daily_income, forecast.currency)}
                   </Text>
                 </View>
-                <View style={{ flex: 1, backgroundColor: colors.secondary + '80', padding: 12, borderRadius: 8 }}>
-                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: 4 }}>{t('avgDaily')} {t('expenses')}</Text>
+                <View style={{ flex: 1, backgroundColor: theme.alpha(colors.secondary, 0.5), padding: theme.spacing.md, borderRadius: theme.radii.sm }}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginBottom: theme.spacing.xs }}>{t('avgDaily')} {t('expenses')}</Text>
                   <Text style={{ color: colors.danger, fontSize: 18, fontFamily: 'Inter_700Bold' }}>
                     {formatCompactCurrency(forecast.avg_daily_spend, forecast.currency)}
                   </Text>
@@ -419,9 +420,9 @@ export function MonthlyReportView({
               </View>
 
               {forecast.net_daily_flow < 0 && (
-                <View style={{ backgroundColor: colors.danger + '1a', borderWidth: 1, borderColor: colors.danger + '4d', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ backgroundColor: theme.alpha(colors.danger, 0.1), borderWidth: 1, borderColor: theme.alpha(colors.danger, 0.3), padding: theme.spacing.lg, borderRadius: theme.radii.md, flexDirection: 'row', alignItems: 'center' }}>
                   <AlertCircle size={20} color={colors.danger} />
-                  <View style={{ marginStart: 12, flex: 1 }}>
+                  <View style={{ marginStart: theme.spacing.md, flex: 1 }}>
                     <Text style={{ color: colors.foreground, fontFamily: 'Inter_500Medium' }}>{t('daysUntilZero')}</Text>
                     <Text style={{ color: colors.danger, fontSize: 20, fontFamily: 'Inter_700Bold' }}>
                       {forecast.days_until_zero} {t('days')}
@@ -441,13 +442,11 @@ export function MonthlyReportView({
 
       {/* Empty State */}
       {!monthlyReport && !categoryReport && (
-        <View style={{ backgroundColor: colors.card, padding: 32, borderRadius: REPORT_LAYOUT.cardRadius, alignItems: 'center' }}>
-          <BarChart3 size={48} color={colors.mutedForeground} />
-          <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', marginTop: 16, fontSize: 18 }}>{t('noDataAvailable')}</Text>
-          <Text style={{ color: colors.mutedForeground, marginTop: 8, textAlign: 'center' }}>
-            {t('addTransaction')}
-          </Text>
-        </View>
+        <EmptyState
+          icon={BarChart3}
+          title={t('emptyNoReportsTitle') || 'No data for this period'}
+          description={t('emptyNoReportsDesc') || 'Add transactions in this range to see reports.'}
+        />
       )}
     </View>
   );

@@ -49,11 +49,26 @@ describe('Color Palette', () => {
   });
 
   it('no color value is empty string', () => {
-    Object.entries(darkColors).forEach(([key, value]) => {
-      expect(value.length).toBeGreaterThan(0);
-    });
-    Object.entries(lightColors).forEach(([key, value]) => {
-      expect(value.length).toBeGreaterThan(0);
+    const assertNoEmpty = (obj: Record<string, unknown>) => {
+      Object.entries(obj).forEach(([, value]) => {
+        if (typeof value === 'string') {
+          expect(value.length).toBeGreaterThan(0);
+        } else if (value && typeof value === 'object') {
+          assertNoEmpty(value as Record<string, unknown>);
+        }
+      });
+    };
+    assertNoEmpty(darkColors as unknown as Record<string, unknown>);
+    assertNoEmpty(lightColors as unknown as Record<string, unknown>);
+  });
+
+  it('palette group exists with core hues in both themes', () => {
+    const hues = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'teal', 'lime', 'cyan', 'gray'] as const;
+    hues.forEach((hue) => {
+      expect(darkColors.palette[hue]).toBeTruthy();
+      expect(darkColors.palette[`${hue}Muted` as const]).toBeTruthy();
+      expect(lightColors.palette[hue]).toBeTruthy();
+      expect(lightColors.palette[`${hue}Muted` as const]).toBeTruthy();
     });
   });
 });

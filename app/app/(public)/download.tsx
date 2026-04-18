@@ -136,7 +136,7 @@ export default function DownloadScreen() {
               width: 64,
               height: 64,
               borderRadius: 32,
-              backgroundColor: '#3ddc84' + '22',
+              backgroundColor: theme.alpha('#3ddc84', 0.133),
               alignItems: 'center',
               justifyContent: 'center',
               marginBottom: theme.spacing.lg,

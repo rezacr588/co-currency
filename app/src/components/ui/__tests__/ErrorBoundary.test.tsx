@@ -1,7 +1,16 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { render } from '@testing-library/react-native';
+import { ThemeProvider } from 'styled-components/native';
 import { ErrorBoundary } from '../ErrorBoundary';
+import { buildTheme } from '../../../theme';
+import { darkColors } from '../../../constants/colors';
+
+const testTheme = buildTheme(darkColors, true);
+
+function renderWithTheme(ui: React.ReactElement) {
+  return render(<ThemeProvider theme={testTheme}>{ui}</ThemeProvider>);
+}
 
 // Component that throws
 function ThrowingComponent({ shouldThrow }: { shouldThrow: boolean }) {
@@ -20,7 +29,7 @@ afterEach(() => {
 
 describe('ErrorBoundary', () => {
   it('renders children when there is no error', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithTheme(
       <ErrorBoundary>
         <ThrowingComponent shouldThrow={false} />
       </ErrorBoundary>
@@ -30,7 +39,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('renders fallback UI when child throws', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithTheme(
       <ErrorBoundary>
         <ThrowingComponent shouldThrow={true} />
       </ErrorBoundary>
@@ -50,7 +59,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('uses fontFamily not fontWeight for text styles', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithTheme(
       <ErrorBoundary>
         <ThrowingComponent shouldThrow={true} />
       </ErrorBoundary>
@@ -61,7 +70,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('does not use hardcoded #71717a for error message color', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithTheme(
       <ErrorBoundary>
         <ThrowingComponent shouldThrow={true} />
       </ErrorBoundary>
@@ -73,7 +82,7 @@ describe('ErrorBoundary', () => {
   it('resets error state on Try Again press', () => {
     // We can't test reset fully because ThrowingComponent will throw again,
     // but we can verify the button is pressable
-    const { getByText } = render(
+    const { getByText } = renderWithTheme(
       <ErrorBoundary>
         <ThrowingComponent shouldThrow={true} />
       </ErrorBoundary>

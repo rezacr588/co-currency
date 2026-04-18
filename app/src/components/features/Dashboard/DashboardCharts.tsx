@@ -9,6 +9,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { formatCompactCurrency } from '../../../utils/format';
 import { CATEGORY_COLORS } from '../../../constants/icons';
 import { Card } from '../../ui';
+import { HIT_SLOP_SM } from '../../../constants/hitSlop';
 
 interface DashboardChartsProps {
   currency: string;
@@ -38,7 +39,7 @@ function DashboardChartsInner({ currency }: DashboardChartsProps) {
 
   if (isPending) {
     return (
-      <View style={{ paddingVertical: 32, alignItems: 'center' }}>
+      <View style={{ paddingVertical: theme.spacing.xxxl, alignItems: 'center' }}>
         <ActivityIndicator size="small" color={theme.colors.mutedForeground} />
       </View>
     );
@@ -62,10 +63,10 @@ function DashboardChartsInner({ currency }: DashboardChartsProps) {
   const maxExpense = topCategories[0]?.amount || 0;
 
   return (
-    <View style={{ gap: 16 }}>
+    <View style={{ gap: theme.spacing.lg }}>
       {/* Income vs Expenses Card */}
-      <Card style={{ padding: 16 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+      <Card style={{ padding: theme.spacing.lg }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.lg }}>
           <Text
             style={{
               fontSize: 16,
@@ -77,6 +78,9 @@ function DashboardChartsInner({ currency }: DashboardChartsProps) {
           </Text>
           <Pressable
             onPress={() => router.push('/(app)/(tabs)/reports')}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11yViewAll') || 'View all'}
+            hitSlop={HIT_SLOP_SM}
             style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
           >
             <ArrowRight size={18} color={theme.colors.mutedForeground} />
@@ -84,7 +88,7 @@ function DashboardChartsInner({ currency }: DashboardChartsProps) {
         </View>
 
         {/* Income/Expense Bars */}
-        <View style={{ gap: 12, marginBottom: 16 }}>
+        <View style={{ gap: theme.spacing.md, marginBottom: theme.spacing.lg }}>
           {/* Income Bar */}
           <View>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -161,7 +165,7 @@ function DashboardChartsInner({ currency }: DashboardChartsProps) {
         {/* Net Cash Flow */}
         <View
           style={{
-            paddingTop: 12,
+            paddingTop: theme.spacing.md,
             borderTopWidth: 1,
             borderTopColor: theme.colors.border,
             flexDirection: 'row',
@@ -192,9 +196,9 @@ function DashboardChartsInner({ currency }: DashboardChartsProps) {
 
       {/* Top Spending Categories */}
       {topCategories.length > 0 && (
-        <Card style={{ padding: 16 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Card style={{ padding: theme.spacing.lg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.lg }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
               <PieChart size={18} color={theme.colors.foreground} />
               <Text
                 style={{
@@ -208,6 +212,9 @@ function DashboardChartsInner({ currency }: DashboardChartsProps) {
             </View>
             <Pressable
               onPress={() => router.push('/(app)/(tabs)/reports')}
+              accessibilityRole="button"
+              accessibilityLabel={t('a11yViewAll') || 'View all'}
+              hitSlop={HIT_SLOP_SM}
               style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
             >
               <ArrowRight size={18} color={theme.colors.mutedForeground} />
@@ -244,7 +251,7 @@ function DashboardChartsInner({ currency }: DashboardChartsProps) {
                       style={{
                         color: theme.colors.mutedForeground,
                         fontSize: 13,
-                        marginLeft: 8,
+                        marginLeft: theme.spacing.sm,
                       }}
                     >
                       {formatCompactCurrency(category.amount, currency)}
@@ -277,16 +284,17 @@ function DashboardChartsInner({ currency }: DashboardChartsProps) {
       {/* View Full Reports Link */}
       <Pressable
         onPress={() => router.push('/(app)/(tabs)/reports')}
+        accessibilityRole="button"
         style={({ pressed }) => [
           {
-            padding: 16,
+            padding: theme.spacing.lg,
             borderRadius: theme.radii.lg,
             borderWidth: 1,
             borderColor: theme.colors.border,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 8,
+            gap: theme.spacing.sm,
             opacity: pressed ? 0.7 : 1,
           },
         ]}

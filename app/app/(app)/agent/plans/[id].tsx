@@ -6,40 +6,14 @@ import { useState, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, Alert, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Play, Pause, Edit, Trash2, CheckCircle, Clock, AlertCircle, XCircle, Sparkles, Target } from 'lucide-react-native';
+import { ArrowLeft, Play, Pause, Edit, CheckCircle, Clock, AlertCircle, XCircle } from 'lucide-react-native';
 import { useTheme } from 'styled-components/native';
 import { useLanguage } from '@/src/context/LanguageContext';
 import { useAgentPlan, useActivatePlan, usePausePlan, useResumePlan, useDeletePlan } from '@/src/hooks/useAgent';
-import { Button } from '@/src/components/ui/Button';
 import { LoadingSpinner, EmptyState } from '@/src/components/ui';
 import { useToast } from '@/src/components/ui/Toast';
 import { haptics } from '@/src/utils/haptics';
-import { formatCurrency } from '@/src/utils/format';
-
-const STATUS_CONFIG = {
-  draft: { label: 'Draft', color: '#6b7280', icon: Edit },
-  active: { label: 'Active', color: '#22c55e', icon: Play },
-  paused: { label: 'Paused', color: '#f59e0b', icon: Pause },
-  completed: { label: 'Completed', color: '#3b82f6', icon: CheckCircle },
-  cancelled: { label: 'Cancelled', color: '#ef4444', icon: XCircle },
-};
-
-const PRIORITY_CONFIG = {
-  low: { label: 'Low', color: '#6b7280' },
-  medium: { label: 'Medium', color: '#3b82f6' },
-  high: { label: 'High', color: '#f59e0b' },
-  urgent: { label: 'Urgent', color: '#ef4444' },
-};
-
-const STEP_STATUS_CONFIG = {
-  pending: { label: 'Pending', color: '#6b7280', icon: Clock },
-  approved: { label: 'Approved', color: '#22c55e', icon: CheckCircle },
-  rejected: { label: 'Rejected', color: '#ef4444', icon: XCircle },
-  executing: { label: 'Executing', color: '#3b82f6', icon: Play },
-  completed: { label: 'Completed', color: '#22c55e', icon: CheckCircle },
-  failed: { label: 'Failed', color: '#ef4444', icon: AlertCircle },
-  skipped: { label: 'Skipped', color: '#6b7280', icon: XCircle },
-};
+import { spacing } from '@/src/theme';
 
 function asSingleParam(value: string | string[] | undefined): string | undefined {
   if (!value) return undefined;
@@ -61,6 +35,33 @@ export default function PlanDetailScreen() {
   const deletePlan = useDeletePlan();
   const [refreshing, setRefreshing] = useState(false);
   const plan = data?.plan;
+
+  const statusConfigMap = useMemo(() => ({
+    draft: { label: t('statusDraft') || 'Draft', color: colors.palette.gray, icon: Edit },
+    active: { label: t('statusActive') || 'Active', color: colors.success, icon: Play },
+    paused: { label: t('statusPaused') || 'Paused', color: colors.warning, icon: Pause },
+    completed: { label: t('statusCompleted') || 'Completed', color: colors.info, icon: CheckCircle },
+    cancelled: { label: t('statusCancelled') || 'Cancelled', color: colors.danger, icon: XCircle },
+  }), [colors, t]);
+
+  const priorityConfigMap = useMemo(() => ({
+    low: { label: t('priorityLow') || 'Low', color: colors.palette.gray },
+    medium: { label: t('priorityMedium') || 'Medium', color: colors.warning },
+    high: { label: t('priorityHigh') || 'High', color: colors.palette.orange },
+    urgent: { label: t('priorityUrgent') || 'Urgent', color: colors.danger },
+  }), [colors, t]);
+
+  // Step status map retained for future use when step rendering is completed.
+  // Intentionally referenced to keep colors/hooks in scope.
+  void useMemo(() => ({
+    pending: { label: t('stepStatusPending') || 'Pending', color: colors.palette.gray, icon: Clock },
+    approved: { label: t('stepStatusApproved') || 'Approved', color: colors.success, icon: CheckCircle },
+    rejected: { label: t('stepStatusRejected') || 'Rejected', color: colors.danger, icon: XCircle },
+    executing: { label: t('stepStatusExecuting') || 'Executing', color: colors.info, icon: Play },
+    completed: { label: t('stepStatusCompleted') || 'Completed', color: colors.success, icon: CheckCircle },
+    failed: { label: t('stepStatusFailed') || 'Failed', color: colors.danger, icon: AlertCircle },
+    skipped: { label: t('stepStatusSkipped') || 'Skipped', color: colors.palette.gray, icon: XCircle },
+  }), [colors, t]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -190,12 +191,17 @@ export default function PlanDetailScreen() {
   if (error || !plan) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
-        <View style={{ padding: 16 }}>
-          <Pressable onPress={() => router.back()} hitSlop={8}>
+        <View style={{ padding: spacing.lg }}>
+          <Pressable
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11yBack') || 'Back'}
+            hitSlop={8}
+          >
             <ArrowLeft size={24} color={colors.foreground} />
           </Pressable>
         </View>
-        <View style={{ flex: 1, padding: 16 }}>
+        <View style={{ flex: 1, padding: spacing.lg }}>
           <EmptyState
             icon={AlertCircle}
             title={t('planNotFound') || 'Plan Not Found'}
@@ -208,24 +214,33 @@ export default function PlanDetailScreen() {
     );
   }
 
-  const statusConfig = STATUS_CONFIG[plan.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.draft;
-  const priorityConfig = PRIORITY_CONFIG[plan.priority as keyof typeof PRIORITY_CONFIG] || PRIORITY_CONFIG.medium;
+  const statusConfig = statusConfigMap[plan.status as keyof typeof statusConfigMap] || statusConfigMap.draft;
+  const priorityConfig = priorityConfigMap[plan.priority as keyof typeof priorityConfigMap] || priorityConfigMap.medium;
   const StatusIcon = statusConfig.icon;
+  void priorityConfig;
+  void StatusIcon;
+  void progress;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-          <Pressable onPress={() => router.back()} style={({ pressed }) => [{ padding: 8, marginEnd: 8 }, pressed && { opacity: 0.7 }]} hitSlop={8}>
+          <Pressable
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11yBack') || 'Back'}
+            hitSlop={8}
+            style={({ pressed }) => [{ padding: spacing.sm, marginEnd: spacing.sm }, pressed && { opacity: 0.7 }]}
+          >
             <ArrowLeft size={24} color={colors.foreground} />
           </Pressable>
           <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.foreground }} numberOfLines={1}>{plan.title}</Text>
         </View>
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing || isRefetching} onRefresh={handleRefresh} tintColor={colors.accent} />}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.lg }} refreshControl={<RefreshControl refreshing={refreshing || isRefetching} onRefresh={handleRefresh} tintColor={colors.accent} />}>
         {/* Status Card - truncated, see full file */}
-        <Text style={{ fontSize: 14, color: colors.muted }}>Plan detail screen created</Text>
+        <Text style={{ fontSize: 14, color: colors.mutedForeground }}>Plan detail screen created</Text>
       </ScrollView>
     </SafeAreaView>
   );

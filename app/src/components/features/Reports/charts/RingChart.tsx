@@ -81,11 +81,11 @@ function RingChartComponent({
           <Text style={{ color: colors.foreground, fontSize: 18, fontFamily: 'Inter_700Bold' }}>{centerValue}</Text>
         </View>
       </View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12, marginTop: 16 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: theme.spacing.md, marginTop: theme.spacing.lg }}>
         {segments.slice(0, 4).map((segment, index) => (
           <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
             <View
-              style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: segment.color, marginEnd: 4 }}
+              style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: segment.color, marginEnd: theme.spacing.xs }}
             />
             <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
               {segment.label} ({formatNumber((segment.value / total) * 100, 0)}%)

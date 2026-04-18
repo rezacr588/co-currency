@@ -64,8 +64,8 @@ function ReportContextStrip({
     <View
       style={{
         backgroundColor: colors.background,
-        paddingBottom: 16,
-        marginBottom: 16,
+        paddingBottom: theme.spacing.lg,
+        marginBottom: theme.spacing.lg,
       }}
     >
       <View
@@ -75,7 +75,7 @@ function ReportContextStrip({
           borderColor: colors.border,
           borderRadius: 14,
           padding: 14,
-          gap: 10,
+          gap: theme.spacing.sm + 2,
         }}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -89,7 +89,7 @@ function ReportContextStrip({
             {t('activeReportView') || 'Active View'}
           </Text>
           <Text
-            style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_600SemiBold', flexShrink: 1, marginStart: 12, textAlign: 'right' }}
+            style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_600SemiBold', flexShrink: 1, marginStart: theme.spacing.md, textAlign: 'right' }}
             numberOfLines={1}
           >
             {activeLabel}
@@ -296,20 +296,20 @@ export default function ReportsScreen() {
 
         {/* Net Worth Card (always visible) */}
         {displayNetworth && !displayNetworthError && (
-          <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 12, marginBottom: 24 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-              <View style={{ backgroundColor: colors.primary + '18', padding: 8, borderRadius: 8, marginEnd: 12 }}>
+          <View style={{ backgroundColor: colors.card, padding: theme.spacing.lg, borderRadius: theme.radii.md, marginBottom: theme.spacing.xxl }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.lg }}>
+              <View style={{ backgroundColor: theme.alpha(colors.primary, 0.094), padding: theme.spacing.sm, borderRadius: theme.radii.sm, marginEnd: theme.spacing.md }}>
                 <Wallet size={20} color={colors.primary} />
               </View>
               <Text style={{ color: colors.mutedForeground }}>{t('netWorth')}</Text>
             </View>
-            <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: 16 }}>
+            <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.foreground, marginBottom: theme.spacing.lg }}>
               {formatCompactCurrency(displayNetworth.total_balance, displayNetworth.currency)}
             </Text>
 
             {displayNetworth.balances && displayNetworth.balances.length > 0 && (
-              <View style={{ marginTop: 8 }}>
-                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 12 }}>{t('balanceDistribution')}</Text>
+              <View style={{ marginTop: theme.spacing.sm }}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: theme.spacing.md }}>{t('balanceDistribution')}</Text>
                 <RingChart
                   segments={displayNetworth.balances.slice(0, 5).map((b) => ({
                     value: b.balance_in_base,

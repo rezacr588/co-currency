@@ -91,7 +91,7 @@ export function Toggle({ value, onValueChange, disabled = false, label }: Toggle
               width: THUMB_SIZE,
               height: THUMB_SIZE,
               borderRadius: THUMB_SIZE / 2,
-              backgroundColor: '#ffffff',
+              backgroundColor: colors.primaryForeground,
               position: 'absolute',
               top: THUMB_MARGIN,
               shadowColor: '#000',

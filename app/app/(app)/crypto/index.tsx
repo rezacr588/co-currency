@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ScrollView, RefreshControl, Alert, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import styled from 'styled-components/native';
+import styled, { useTheme } from 'styled-components/native';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Wallet, Plus, RefreshCw, TrendingUp, TrendingDown, ChevronRight, Coins, BarChart3, Bell, AlertTriangle } from 'lucide-react-native';
@@ -15,6 +15,7 @@ import { EmptyState } from '@/src/components/ui/EmptyState';
 import { LoadingSpinner } from '@/src/components/ui/LoadingSpinner';
 import { CryptoDisclaimerModal } from '@/src/components/features/Crypto/CryptoDisclaimerModal';
 import { formatCurrency } from '@/src/utils/format';
+import { spacing } from '@/src/theme';
 
 const Container = styled.View<{ $bg: string }>`
   flex: 1;
@@ -22,8 +23,8 @@ const Container = styled.View<{ $bg: string }>`
 `;
 
 const Header = styled.View<{ $pt: number }>`
-  padding: 16px;
-  padding-top: ${(props) => props.$pt + 16}px;
+  padding: ${spacing.lg}px;
+  padding-top: ${(props) => props.$pt + spacing.lg}px;
 `;
 
 const HeaderTitle = styled.Text<{ $color: string }>`
@@ -35,19 +36,19 @@ const HeaderTitle = styled.Text<{ $color: string }>`
 const HeaderSubtitle = styled.Text<{ $color: string }>`
   font-size: 14px;
   color: ${(props) => props.$color};
-  margin-top: 4px;
+  margin-top: ${spacing.xs}px;
 `;
 
 const Content = styled.ScrollView`
   flex: 1;
-  padding: 0 16px;
+  padding: 0 ${spacing.lg}px;
 `;
 
 const PortfolioCard = styled.View<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 16px;
+  padding: ${spacing.xl}px;
+  margin-bottom: ${spacing.lg}px;
 `;
 
 const PortfolioValue = styled.Text<{ $color: string }>`
@@ -59,35 +60,35 @@ const PortfolioValue = styled.Text<{ $color: string }>`
 const ChangeRow = styled.View`
   flex-direction: row;
   align-items: center;
-  margin-top: 8px;
+  margin-top: ${spacing.sm}px;
 `;
 
-const ChangeText = styled.Text<{ $color: string; $positive: boolean }>`
+const ChangeText = styled.Text<{ $color: string }>`
   font-size: 16px;
   font-weight: 600;
-  color: ${(props) => (props.$positive ? '#22c55e' : '#ef4444')};
-  margin-left: 4px;
+  color: ${(props) => props.$color};
+  margin-left: ${spacing.xs}px;
 `;
 
 const ChangeLabel = styled.Text<{ $color: string }>`
   font-size: 14px;
   color: ${(props) => props.$color};
-  margin-left: 8px;
+  margin-left: ${spacing.sm}px;
 `;
 
 const SectionTitle = styled.Text<{ $color: string }>`
   font-size: 18px;
   font-weight: 600;
   color: ${(props) => props.$color};
-  margin-bottom: 12px;
-  margin-top: 8px;
+  margin-bottom: ${spacing.md}px;
+  margin-top: ${spacing.sm}px;
 `;
 
 const QuickActions = styled.View`
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: ${spacing.md}px;
+  margin-bottom: ${spacing.lg}px;
 `;
 
 const ActionButton = styled.TouchableOpacity<{ $bg: string }>`
@@ -95,7 +96,7 @@ const ActionButton = styled.TouchableOpacity<{ $bg: string }>`
   min-width: 45%;
   background-color: ${(props) => props.$bg};
   border-radius: 12px;
-  padding: 16px;
+  padding: ${spacing.lg}px;
   flex-direction: row;
   align-items: center;
 `;
@@ -107,7 +108,7 @@ const ActionIcon = styled.View<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   justify-content: center;
   align-items: center;
-  margin-right: 12px;
+  margin-right: ${spacing.md}px;
 `;
 
 const ActionText = styled.Text<{ $color: string }>`
@@ -119,8 +120,8 @@ const ActionText = styled.Text<{ $color: string }>`
 const WalletCard = styled.TouchableOpacity<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
+  padding: ${spacing.lg}px;
+  margin-bottom: ${spacing.md}px;
   flex-direction: row;
   align-items: center;
 `;
@@ -142,10 +143,10 @@ const WalletAddress = styled.Text<{ $color: string }>`
 `;
 
 const WalletNetwork = styled.View<{ $bg: string }>`
-  padding: 4px 8px;
+  padding: ${spacing.xs}px ${spacing.sm}px;
   border-radius: 6px;
   background-color: ${(props) => props.$bg};
-  margin-top: 4px;
+  margin-top: ${spacing.xs}px;
   align-self: flex-start;
 `;
 
@@ -165,8 +166,8 @@ const WalletValue = styled.Text<{ $color: string }>`
 const TopHoldingCard = styled.View<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 8px;
+  padding: ${spacing.md}px;
+  margin-bottom: ${spacing.sm}px;
   flex-direction: row;
   align-items: center;
 `;
@@ -178,7 +179,7 @@ const TokenIcon = styled.View<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   justify-content: center;
   align-items: center;
-  margin-right: 12px;
+  margin-right: ${spacing.md}px;
 `;
 
 const TokenSymbol = styled.Text<{ $color: string }>`
@@ -212,38 +213,39 @@ const TokenValueText = styled.Text<{ $color: string }>`
   color: ${(props) => props.$color};
 `;
 
-const TokenChange = styled.Text<{ $positive: boolean }>`
+const TokenChange = styled.Text<{ $color: string }>`
   font-size: 12px;
-  color: ${(props) => (props.$positive ? '#22c55e' : '#ef4444')};
+  color: ${(props) => props.$color};
 `;
 
 const EmptyCard = styled.View<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   border-radius: 16px;
-  padding: 32px;
+  padding: ${spacing.xxxl}px;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: ${spacing.lg}px;
 `;
 
 const AddWalletButton = styled.TouchableOpacity<{ $bg: string }>`
   background-color: ${(props) => props.$bg};
   border-radius: 12px;
-  padding: 16px 24px;
+  padding: ${spacing.lg}px ${spacing.xxl}px;
   flex-direction: row;
   align-items: center;
-  margin-top: 16px;
+  margin-top: ${spacing.lg}px;
 `;
 
 const AddWalletText = styled.Text<{ $color: string }>`
   font-size: 16px;
   font-weight: 600;
   color: ${(props) => props.$color};
-  margin-left: 8px;
+  margin-left: ${spacing.sm}px;
 `;
 
 export default function CryptoPortfolioScreen() {
   const { t } = useLanguage();
   const colors = useColors();
+  const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
@@ -335,15 +337,15 @@ export default function CryptoPortfolioScreen() {
         ) : !hasWallets ? (
           <EmptyCard $bg={colors.card}>
             <Wallet size={48} color={colors.mutedForeground} />
-            <SectionTitle $color={colors.foreground} style={{ textAlign: 'center', marginTop: 16 }}>
+            <SectionTitle $color={colors.foreground} style={{ textAlign: 'center', marginTop: spacing.lg }}>
               {t('noWalletsYet') || 'No wallets connected'}
             </SectionTitle>
             <HeaderSubtitle $color={colors.mutedForeground} style={{ textAlign: 'center' }}>
               {t('noWalletsDesc') || 'Connect your first crypto wallet to start tracking your portfolio.'}
             </HeaderSubtitle>
             <AddWalletButton $bg={colors.primary} onPress={() => router.push('/crypto/add-wallet' as any)}>
-              <Plus size={20} color="#fff" />
-              <AddWalletText $color="#fff">{t('addWallet') || 'Add Wallet'}</AddWalletText>
+              <Plus size={20} color={colors.primaryForeground} />
+              <AddWalletText $color={colors.primaryForeground}>{t('addWallet') || 'Add Wallet'}</AddWalletText>
             </AddWalletButton>
           </EmptyCard>
         ) : (
@@ -358,11 +360,11 @@ export default function CryptoPortfolioScreen() {
               </PortfolioValue>
               <ChangeRow>
                 {(portfolio?.total_change_24h ?? 0) >= 0 ? (
-                  <TrendingUp size={20} color="#22c55e" />
+                  <TrendingUp size={20} color={colors.success} />
                 ) : (
-                  <TrendingDown size={20} color="#ef4444" />
+                  <TrendingDown size={20} color={colors.danger} />
                 )}
-                <ChangeText $color={colors.foreground} $positive={(portfolio?.total_change_24h ?? 0) >= 0}>
+                <ChangeText $color={(portfolio?.total_change_24h ?? 0) >= 0 ? colors.success : colors.danger}>
                   {(portfolio?.total_change_24h ?? 0) >= 0 ? '+' : ''}
                   {formatCurrency(Math.abs(portfolio?.total_change_24h ?? 0), 'USD')}
                 </ChangeText>
@@ -377,26 +379,26 @@ export default function CryptoPortfolioScreen() {
             {/* Quick Actions */}
             <QuickActions>
               <ActionButton $bg={colors.card} onPress={() => router.push('/crypto/add-wallet' as any)}>
-                <ActionIcon $bg={colors.primary + '20'}>
+                <ActionIcon $bg={theme.alpha(colors.primary, 0.125)}>
                   <Plus size={20} color={colors.primary} />
                 </ActionIcon>
                 <ActionText $color={colors.foreground}>{t('addWallet') || 'Add Wallet'}</ActionText>
               </ActionButton>
               <ActionButton $bg={colors.card} onPress={() => syncMutation.mutate()}>
-                <ActionIcon $bg={colors.secondary + '20'}>
+                <ActionIcon $bg={theme.alpha(colors.secondary, 0.125)}>
                   <RefreshCw size={20} color={colors.secondary} />
               </ActionIcon>
                 <ActionText $color={colors.foreground}>{t('syncWallet') || 'Sync'}</ActionText>
               </ActionButton>
               <ActionButton $bg={colors.card} onPress={() => router.push('/crypto/defi' as any)}>
-                <ActionIcon $bg="#8b5cf620">
-                  <BarChart3 size={20} color="#8b5cf6" />
+                <ActionIcon $bg={theme.alpha(colors.palette.purple, 0.125)}>
+                  <BarChart3 size={20} color={colors.palette.purple} />
                 </ActionIcon>
                 <ActionText $color={colors.foreground}>{t('defi') || 'DeFi'}</ActionText>
               </ActionButton>
               <ActionButton $bg={colors.card} onPress={() => router.push('/crypto/alerts' as any)}>
-                <ActionIcon $bg="#f59e0b20">
-                  <Bell size={20} color="#f59e0b" />
+                <ActionIcon $bg={theme.alpha(colors.warning, 0.125)}>
+                  <Bell size={20} color={colors.warning} />
                 </ActionIcon>
                 <ActionText $color={colors.foreground}>{t('priceAlerts') || 'Alerts'}</ActionText>
               </ActionButton>
@@ -408,7 +410,7 @@ export default function CryptoPortfolioScreen() {
                 <SectionTitle $color={colors.foreground}>{t('topHoldings') || 'Top Holdings'}</SectionTitle>
                 {portfolio.top_holdings.slice(0, 5).map((token) => (
                   <TopHoldingCard key={token.id} $bg={colors.card}>
-                    <TokenIcon $bg={colors.primary + '20'}>
+                    <TokenIcon $bg={theme.alpha(colors.primary, 0.125)}>
                       <TokenSymbol $color={colors.primary}>
                         {token.token_symbol.substring(0, 3)}
                       </TokenSymbol>
@@ -423,7 +425,7 @@ export default function CryptoPortfolioScreen() {
                       <TokenValueText $color={colors.foreground}>
                         {formatCurrency(token.balance_usd, 'USD')}
                       </TokenValueText>
-                      <TokenChange $positive={token.price_change_24h >= 0}>
+                      <TokenChange $color={token.price_change_24h >= 0 ? colors.success : colors.danger}>
                         {token.price_change_24h >= 0 ? '+' : ''}
                         {token.price_change_24h.toFixed(2)}%
                       </TokenChange>
@@ -448,7 +450,7 @@ export default function CryptoPortfolioScreen() {
                   <WalletAddress $color={colors.mutedForeground}>
                     {shortenAddress(wallet.address)}
                   </WalletAddress>
-                  <WalletNetwork $bg={colors.primary + '20'}>
+                  <WalletNetwork $bg={theme.alpha(colors.primary, 0.125)}>
                     <NetworkText $color={colors.primary}>{wallet.network}</NetworkText>
                   </WalletNetwork>
                 </WalletInfo>

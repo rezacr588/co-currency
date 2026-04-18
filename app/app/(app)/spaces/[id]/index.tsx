@@ -6,6 +6,8 @@ import styled from 'styled-components/native';
 import { Receipt, Users, Scale, Settings, UserPlus, ArrowLeftRight, Plus, User } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 
+import { useTheme } from 'styled-components/native';
+
 import { api } from '@/src/api';
 import { SharedExpense, BalanceSummary, SpaceMember, SuggestedSettlement, SpaceType } from '@/src/api/social';
 import { useAuth } from '@/src/context/AuthContext';
@@ -22,10 +24,10 @@ const Container = styled.View<{ $bg: string }>`
 `;
 
 const Header = styled.View<{ $color: string }>`
-  padding: 20px 16px;
-  background-color: ${(p) => p.$color}15;
-  border-bottom-left-radius: 24px;
-  border-bottom-right-radius: 24px;
+  padding: ${({ theme }) => theme.spacing.xl}px ${({ theme }) => theme.spacing.lg}px;
+  background-color: ${({ theme, $color }) => theme.alpha($color, 0.08)};
+  border-bottom-left-radius: ${({ theme }) => theme.radii.xxl}px;
+  border-bottom-right-radius: ${({ theme }) => theme.radii.xxl}px;
 `;
 
 const SpaceTitle = styled.Text<{ $color: string }>`
@@ -39,14 +41,14 @@ const SpaceSubtitle = styled.Text<{ $color: string }>`
   font-size: 14px;
   color: ${(p) => p.$color};
   text-align: center;
-  margin-top: 4px;
+  margin-top: ${({ theme }) => theme.spacing.xs}px;
 `;
 
 const BalanceCard = styled.View<{ $bg: string }>`
   background-color: ${(p) => p.$bg};
-  border-radius: 16px;
-  padding: 16px;
-  margin: 16px;
+  border-radius: ${({ theme }) => theme.radii.lg}px;
+  padding: ${({ theme }) => theme.spacing.lg}px;
+  margin: ${({ theme }) => theme.spacing.lg}px;
   align-items: center;
 `;
 
@@ -58,21 +60,21 @@ const BalanceLabel = styled.Text<{ $color: string }>`
 const BalanceValue = styled.Text<{ $color: string; $isNegative?: boolean }>`
   font-size: 32px;
   font-weight: 700;
-  color: ${(p) => (p.$isNegative ? '#ef4444' : p.$color)};
-  margin-top: 4px;
+  color: ${({ theme, $color, $isNegative }) => ($isNegative ? theme.colors.danger : $color)};
+  margin-top: ${({ theme }) => theme.spacing.xs}px;
 `;
 
 const TabRow = styled.View`
   flex-direction: row;
-  padding: 0 16px;
-  margin-bottom: 8px;
-  gap: 8px;
+  padding: 0 ${({ theme }) => theme.spacing.lg}px;
+  margin-bottom: ${({ theme }) => theme.spacing.sm}px;
+  gap: ${({ theme }) => theme.spacing.sm}px;
 `;
 
 const Tab = styled.TouchableOpacity<{ $active: boolean; $bg: string; $activeBg: string }>`
   flex: 1;
   padding: 10px;
-  border-radius: 12px;
+  border-radius: ${({ theme }) => theme.radii.md}px;
   background-color: ${(p) => (p.$active ? p.$activeBg : p.$bg)};
   align-items: center;
 `;
@@ -80,14 +82,14 @@ const Tab = styled.TouchableOpacity<{ $active: boolean; $bg: string; $activeBg: 
 const TabText = styled.Text<{ $active: boolean; $color: string }>`
   font-size: 13px;
   font-weight: 600;
-  color: ${(p) => (p.$active ? '#fff' : p.$color)};
+  color: ${({ theme, $active, $color }) => ($active ? theme.colors.primaryForeground : $color)};
 `;
 
 const ExpenseCard = styled.TouchableOpacity<{ $bg: string }>`
   background-color: ${(p) => p.$bg};
-  border-radius: 12px;
+  border-radius: ${({ theme }) => theme.radii.md}px;
   padding: 14px;
-  margin: 6px 16px;
+  margin: 6px ${({ theme }) => theme.spacing.lg}px;
   flex-direction: row;
   align-items: center;
 `;
@@ -99,7 +101,7 @@ const ExpenseIcon = styled.View<{ $bg: string }>`
   background-color: ${(p) => p.$bg};
   align-items: center;
   justify-content: center;
-  margin-right: 12px;
+  margin-right: ${({ theme }) => theme.spacing.md}px;
 `;
 
 const ExpenseInfo = styled.View`
@@ -126,9 +128,9 @@ const ExpenseAmount = styled.Text<{ $color: string }>`
 
 const MemberCard = styled.View<{ $bg: string }>`
   background-color: ${(p) => p.$bg};
-  border-radius: 12px;
+  border-radius: ${({ theme }) => theme.radii.md}px;
   padding: 14px;
-  margin: 6px 16px;
+  margin: 6px ${({ theme }) => theme.spacing.lg}px;
   flex-direction: row;
   align-items: center;
 `;
@@ -140,7 +142,7 @@ const MemberAvatar = styled.View<{ $bg: string }>`
   background-color: ${(p) => p.$bg};
   align-items: center;
   justify-content: center;
-  margin-right: 12px;
+  margin-right: ${({ theme }) => theme.spacing.md}px;
 `;
 
 const MemberInfo = styled.View`
@@ -162,14 +164,14 @@ const MemberRole = styled.Text<{ $color: string }>`
 const MemberBalance = styled.Text<{ $isNegative?: boolean }>`
   font-size: 15px;
   font-weight: 700;
-  color: ${(p) => (p.$isNegative ? '#ef4444' : '#22c55e')};
+  color: ${({ theme, $isNegative }) => ($isNegative ? theme.colors.danger : theme.colors.success)};
 `;
 
 const SettlementCard = styled.View<{ $bg: string }>`
   background-color: ${(p) => p.$bg};
-  border-radius: 12px;
+  border-radius: ${({ theme }) => theme.radii.md}px;
   padding: 14px;
-  margin: 6px 16px;
+  margin: 6px ${({ theme }) => theme.spacing.lg}px;
   flex-direction: row;
   align-items: center;
 `;
@@ -191,8 +193,8 @@ const SettlementAmount = styled.Text<{ $color: string }>`
 
 const FAB = styled.TouchableOpacity<{ $bg: string }>`
   position: absolute;
-  bottom: 24px;
-  right: 24px;
+  bottom: ${({ theme }) => theme.spacing.xxl}px;
+  right: ${({ theme }) => theme.spacing.xxl}px;
   width: 56px;
   height: 56px;
   border-radius: 28px;
@@ -208,8 +210,8 @@ const FAB = styled.TouchableOpacity<{ $bg: string }>`
 
 const ActionRow = styled.View`
   flex-direction: row;
-  padding: 12px 16px;
-  gap: 12px;
+  padding: ${({ theme }) => theme.spacing.md}px ${({ theme }) => theme.spacing.lg}px;
+  gap: ${({ theme }) => theme.spacing.md}px;
 `;
 
 const ActionButton = styled.TouchableOpacity<{ $bg: string }>`
@@ -218,9 +220,9 @@ const ActionButton = styled.TouchableOpacity<{ $bg: string }>`
   align-items: center;
   justify-content: center;
   background-color: ${(p) => p.$bg};
-  padding: 12px;
-  border-radius: 12px;
-  gap: 8px;
+  padding: ${({ theme }) => theme.spacing.md}px;
+  border-radius: ${({ theme }) => theme.radii.md}px;
+  gap: ${({ theme }) => theme.spacing.sm}px;
 `;
 
 const ActionText = styled.Text<{ $color: string }>`
@@ -234,25 +236,25 @@ const ModalTitle = styled.Text<{ $color: string }>`
   font-weight: 700;
   color: ${(p) => p.$color};
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: ${({ theme }) => theme.spacing.xl}px;
 `;
 
 const InputContainer = styled.View`
-  margin-bottom: 16px;
+  margin-bottom: ${({ theme }) => theme.spacing.lg}px;
 `;
 
 const InputLabel = styled.Text<{ $color: string }>`
   font-size: 14px;
   font-weight: 600;
   color: ${(p) => p.$color};
-  margin-bottom: 8px;
+  margin-bottom: ${({ theme }) => theme.spacing.sm}px;
 `;
 
 const StyledInput = styled.TextInput<{ $bg: string; $color: string; $border: string }>`
   background-color: ${(p) => p.$bg};
   color: ${(p) => p.$color};
-  border-radius: 12px;
-  padding: 14px 16px;
+  border-radius: ${({ theme }) => theme.radii.md}px;
+  padding: 14px ${({ theme }) => theme.spacing.lg}px;
   font-size: 16px;
   border-width: 1px;
   border-color: ${(p) => p.$border};
@@ -266,10 +268,10 @@ const ModalOverlay = styled.Pressable`
 
 const ModalContent = styled.View<{ $bg: string }>`
   background-color: ${(p) => p.$bg};
-  border-top-left-radius: 24px;
-  border-top-right-radius: 24px;
-  padding: 20px;
-  padding-bottom: 40px;
+  border-top-left-radius: ${({ theme }) => theme.radii.xxl}px;
+  border-top-right-radius: ${({ theme }) => theme.radii.xxl}px;
+  padding: ${({ theme }) => theme.spacing.xl}px;
+  padding-bottom: ${({ theme }) => theme.spacing.xxxl + theme.spacing.sm}px;
 `;
 
 type TabType = 'expenses' | 'balances' | 'members';
@@ -287,6 +289,7 @@ export default function SpaceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useLanguage();
   const colors = useColors();
+  const theme = useTheme();
   const { user } = useAuth();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
@@ -395,7 +398,7 @@ export default function SpaceDetailScreen() {
       $bg={colors.card}
       onPress={() => router.push(`/spaces/${id}/expense/${expense.id}` as any)}
     >
-      <ExpenseIcon $bg={colors.primary + '20'}>
+      <ExpenseIcon $bg={theme.alpha(colors.primary, 0.125)}>
         <Receipt size={22} color={colors.primary} />
       </ExpenseIcon>
       <ExpenseInfo>
@@ -412,7 +415,7 @@ export default function SpaceDetailScreen() {
   
   const renderBalance = (balance: BalanceSummary) => (
     <MemberCard key={balance.member_id} $bg={colors.card}>
-      <MemberAvatar $bg={colors.primary + '20'}>
+      <MemberAvatar $bg={theme.alpha(colors.primary, 0.125)}>
         <User size={22} color={colors.primary} />
       </MemberAvatar>
       <MemberInfo>
@@ -446,7 +449,7 @@ export default function SpaceDetailScreen() {
     const balance = balances.find((b) => b.member_id === member.id);
     return (
       <MemberCard key={member.id} $bg={colors.card}>
-        <MemberAvatar $bg={colors.primary + '20'}>
+        <MemberAvatar $bg={theme.alpha(colors.primary, 0.125)}>
           <User size={22} color={colors.primary} />
         </MemberAvatar>
         <MemberInfo>
@@ -474,7 +477,12 @@ export default function SpaceDetailScreen() {
           headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.foreground,
           headerRight: () => (
-            <Pressable onPress={() => router.push(`/spaces/${id}/settings` as any)}>
+            <Pressable
+              onPress={() => router.push(`/spaces/${id}/settings` as any)}
+              accessibilityLabel={t('spaceSettings') || 'Space settings'}
+              accessibilityRole="button"
+              hitSlop={8}
+            >
               <Settings size={24} color={colors.foreground} />
             </Pressable>
           ),
@@ -564,8 +572,8 @@ export default function SpaceDetailScreen() {
           {activeTab === 'balances' && (
             <>
               {suggested.length > 0 && (
-                <View style={{ marginBottom: 16 }}>
-                  <InputLabel $color={colors.mutedForeground} style={{ paddingHorizontal: 16, marginTop: 8 }}>
+                <View style={{ marginBottom: theme.spacing.lg }}>
+                  <InputLabel $color={colors.mutedForeground} style={{ paddingHorizontal: theme.spacing.lg, marginTop: theme.spacing.sm }}>
                     {t('suggestedSettlements') || 'Suggested Settlements'}
                   </InputLabel>
                   {suggested.map(renderSettlement)}
@@ -589,8 +597,14 @@ export default function SpaceDetailScreen() {
         </ScrollView>
         
         {activeTab === 'expenses' && (
-          <FAB $bg={colors.primary} onPress={() => router.push(`/spaces/${id}/add-expense` as any)}>
-            <Plus size={28} color="#fff" />
+          <FAB
+            $bg={colors.primary}
+            onPress={() => router.push(`/spaces/${id}/add-expense` as any)}
+            accessibilityLabel={t('a11yAdd') || 'Add'}
+            accessibilityRole="button"
+            hitSlop={8}
+          >
+            <Plus size={28} color={colors.primaryForeground} />
           </FAB>
         )}
       </Container>

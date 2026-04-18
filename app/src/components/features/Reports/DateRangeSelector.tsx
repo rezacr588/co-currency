@@ -56,18 +56,18 @@ export function DateRangeSelector({
   return (
     <View style={{ marginBottom: DATE_SELECTOR_BOTTOM_MARGIN }}>
       <View style={{ backgroundColor: colors.card, borderRadius: DATE_SELECTOR_CARD_RADIUS, padding: DATE_SELECTOR_CARD_PADDING, marginBottom: DATE_SELECTOR_CARD_PADDING }}>
-        <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 12 }}>
+        <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: theme.spacing.md }}>
           {selectDateRangeLabel}
         </Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
           {datePresets.map((preset) => (
             <Pressable
               key={preset.value}
               onPress={() => onPresetChange(preset.value)}
               style={{
-                paddingHorizontal: 16,
-                paddingVertical: 8,
-                borderRadius: 9999,
+                paddingHorizontal: theme.spacing.lg,
+                paddingVertical: theme.spacing.sm,
+                borderRadius: theme.radii.full,
                 backgroundColor: selectedPreset === preset.value ? colors.primary : colors.secondary,
               }}
               accessibilityRole="button"
@@ -105,7 +105,7 @@ export function DateRangeSelector({
         accessibilityHint="Open month picker"
       >
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ backgroundColor: colors.primary + '18', padding: 8, borderRadius: 8, marginEnd: 12 }}>
+          <View style={{ backgroundColor: theme.alpha(colors.primary, 0.094), padding: theme.spacing.sm, borderRadius: theme.radii.sm, marginEnd: theme.spacing.md }}>
             <Calendar size={20} color={colors.primary} />
           </View>
           <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>{dateLabel}</Text>

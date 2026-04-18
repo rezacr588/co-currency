@@ -60,30 +60,32 @@ export function MonthYearPicker({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable
-        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: modalScreenPadding }}
+        style={{ flex: 1, backgroundColor: theme.alpha(colors.overlay, 1), justifyContent: 'center', alignItems: 'center', paddingHorizontal: modalScreenPadding }}
         onPress={onClose}
       >
         <Pressable
-          style={{ backgroundColor: colors.card, borderRadius: 16, padding: PICKER_MODAL_PADDING, width: modalWidth, maxWidth: PICKER_MAX_WIDTH }}
+          style={{ backgroundColor: colors.card, borderRadius: theme.radii.lg, padding: PICKER_MODAL_PADDING, width: modalWidth, maxWidth: PICKER_MAX_WIDTH }}
           onPress={(e) => e.stopPropagation()}
         >
           {/* Year selector */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.xxl }}>
             <Pressable
               onPress={() => setViewYear(viewYear - 1)}
-              style={{ padding: 8, borderRadius: 8, backgroundColor: colors.secondary }}
+              style={{ padding: theme.spacing.sm, borderRadius: theme.radii.sm, backgroundColor: colors.secondary }}
               accessibilityRole="button"
               accessibilityLabel={previousYearLabel}
+              hitSlop={8}
             >
               <ChevronLeft size={20} color={colors.secondaryForeground} />
             </Pressable>
             <Text style={{ color: colors.foreground, fontSize: 20, fontFamily: 'Inter_700Bold' }}>{viewYear}</Text>
             <Pressable
               onPress={() => viewYear < currentYear && setViewYear(viewYear + 1)}
-              style={{ padding: 8, borderRadius: 8, backgroundColor: viewYear >= currentYear ? 'transparent' : colors.secondary, opacity: viewYear >= currentYear ? 0.3 : 1 }}
+              style={{ padding: theme.spacing.sm, borderRadius: theme.radii.sm, backgroundColor: viewYear >= currentYear ? 'transparent' : colors.secondary, opacity: viewYear >= currentYear ? 0.3 : 1 }}
               disabled={viewYear >= currentYear}
               accessibilityRole="button"
               accessibilityLabel={nextYearLabel}
+              hitSlop={8}
             >
               <ChevronRight size={20} color={colors.secondaryForeground} />
             </Pressable>
@@ -104,15 +106,15 @@ export function MonthYearPicker({
                   disabled={isFuture}
                   style={{
                     width: monthTileWidth,
-                    paddingVertical: 12,
+                    paddingVertical: theme.spacing.md,
                     borderRadius: PICKER_MONTH_TILE_RADIUS,
                     alignItems: 'center',
                     backgroundColor: isSelected
                       ? colors.primary
                       : isCurrentMonth
-                        ? colors.primary + '18'
+                        ? theme.alpha(colors.primary, 0.094)
                         : isFuture
-                          ? colors.secondary + '4D'
+                          ? theme.alpha(colors.secondary, 0.3)
                           : colors.secondary,
                     borderWidth: isCurrentMonth && !isSelected ? 1 : 0,
                     borderColor: isCurrentMonth ? colors.primary : 'transparent',
@@ -139,7 +141,7 @@ export function MonthYearPicker({
           {/* Close button */}
           <Pressable
             onPress={onClose}
-            style={{ marginTop: 24, backgroundColor: colors.secondary, paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}
+            style={{ marginTop: theme.spacing.xxl, backgroundColor: colors.secondary, paddingVertical: theme.spacing.md, borderRadius: theme.radii.md, alignItems: 'center' }}
             accessibilityRole="button"
             accessibilityLabel={t('close')}
           >

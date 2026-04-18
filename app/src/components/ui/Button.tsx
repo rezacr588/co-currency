@@ -76,8 +76,8 @@ export const Button = forwardRef<View, ButtonProps>(
       primary: colors.primaryForeground,
       secondary: colors.foreground,
       ghost: colors.foreground,
-      danger: '#ffffff',
-      success: '#ffffff',
+      danger: colors.primaryForeground,
+      success: colors.primaryForeground,
       outline: colors.foreground,
       accent: colors.accentForeground,
     };
