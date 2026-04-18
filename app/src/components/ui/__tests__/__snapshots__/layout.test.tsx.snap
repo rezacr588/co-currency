@@ -36,7 +36,7 @@ exports[`layout scaffolds renders a page header snapshot with subtitle and actio
       <Text
         style={
           {
-            "color": "#f8fafc",
+            "color": "#f4f4f5",
             "fontFamily": "Inter_700Bold",
             "fontSize": 24,
             "lineHeight": 32,
@@ -48,7 +48,7 @@ exports[`layout scaffolds renders a page header snapshot with subtitle and actio
       <Text
         style={
           {
-            "color": "#94a3b8",
+            "color": "#a1a1aa",
             "fontSize": 15,
             "lineHeight": 22,
             "marginTop": 4,

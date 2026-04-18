@@ -150,8 +150,18 @@ jobs:
         working-directory: ./backend
         run: go test ./...
 
+      - name: Install App Dependencies
+        working-directory: ./app
+        run: npm ci
+
       - name: Typecheck App
         working-directory: ./app
-        run: |
-          npm ci
-          npm run typecheck
+        run: npm run typecheck
+
+      - name: Lint App
+        working-directory: ./app
+        run: npm run lint
+
+      - name: Test App
+        working-directory: ./app
+        run: npm test -- --ci --maxWorkers=2
