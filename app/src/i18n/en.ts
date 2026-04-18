@@ -1670,4 +1670,9 @@ export const en = {
   ago: 'ago',
   in: 'in',
 
+  discardChangesTitle: 'Discard changes?',
+  discardChangesBody: 'You have unsaved changes. Discard and go back?',
+  keepEditing: 'Keep editing',
+  discard: 'Discard',
+
 } as const;

@@ -18,13 +18,6 @@ import {
 import { api } from '../api';
 import { STALE_REALTIME, STALE_FREQUENT, STALE_STANDARD, STALE_SLOW } from '../config/queryConfig';
 import type {
-  AgentPlan,
-  PlanStep,
-  AgentConfig,
-  DailyBriefing,
-  ActionApproval,
-  ActionLog,
-  AutopilotResult,
   AutopilotStatus,
   PlanStatus,
   CreatePlanRequest,
@@ -39,6 +32,7 @@ import type {
   ConfigResponse,
   BriefingResponse,
   AutopilotResponse,
+  StatusResponse,
 } from '../api/agent';
 
 // Query keys for cache management
@@ -142,7 +136,7 @@ export function useUpdatePlan(
  * Hook for deleting (cancelling) a plan
  */
 export function useDeletePlan(
-  options?: UseMutationOptions<{ message: string }, Error, string>
+  options?: UseMutationOptions<StatusResponse, Error, string>
 ) {
   const queryClient = useQueryClient();
 
@@ -159,7 +153,7 @@ export function useDeletePlan(
  * Hook for activating a plan
  */
 export function useActivatePlan(
-  options?: UseMutationOptions<PlanResponse, Error, string>
+  options?: UseMutationOptions<StatusResponse, Error, string>
 ) {
   const queryClient = useQueryClient();
 
@@ -177,7 +171,7 @@ export function useActivatePlan(
  * Hook for pausing a plan
  */
 export function usePausePlan(
-  options?: UseMutationOptions<PlanResponse, Error, string>
+  options?: UseMutationOptions<StatusResponse, Error, string>
 ) {
   const queryClient = useQueryClient();
 
@@ -195,7 +189,7 @@ export function usePausePlan(
  * Hook for resuming a paused plan
  */
 export function useResumePlan(
-  options?: UseMutationOptions<PlanResponse, Error, string>
+  options?: UseMutationOptions<StatusResponse, Error, string>
 ) {
   const queryClient = useQueryClient();
 
@@ -233,8 +227,8 @@ export function usePendingApprovals(
  */
 export function useApproveStep(
   options?: UseMutationOptions<
-    { message: string; step: PlanStep }, 
-    Error, 
+    StatusResponse,
+    Error,
     { planId: string; stepId: string; data: ApproveStepRequest }
   >
 ) {
@@ -257,8 +251,8 @@ export function useApproveStep(
  */
 export function useRejectStep(
   options?: UseMutationOptions<
-    { message: string; step: PlanStep }, 
-    Error, 
+    StatusResponse,
+    Error,
     { planId: string; stepId: string; data: RejectStepRequest }
   >
 ) {

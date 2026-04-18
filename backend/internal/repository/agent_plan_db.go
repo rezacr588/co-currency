@@ -160,15 +160,19 @@ func (r *AgentPlanRepository) GetPlansByUser(ctx context.Context, userID uuid.UU
 	return plans, total, rows.Err()
 }
 
-// UpdatePlanStatus updates a plan's status
-func (r *AgentPlanRepository) UpdatePlanStatus(ctx context.Context, planID uuid.UUID, status string) error {
+// UpdatePlanStatus updates a plan's status with ownership enforcement.
+// The `user_id = $3` guard is defense-in-depth: service callers already run
+// GetPlan(ctx, userID, planID) first, but enforcing ownership at the repo
+// boundary means a future caller that forgets to check can't silently mutate
+// another user's plan.
+func (r *AgentPlanRepository) UpdatePlanStatus(ctx context.Context, userID, planID uuid.UUID, status string) error {
 	query := `UPDATE agent_plans SET status = $1, updated_at = NOW()`
 	if status == "completed" {
 		query += `, completed_at = NOW()`
 	}
-	query += ` WHERE id = $2`
+	query += ` WHERE id = $2 AND user_id = $3`
 
-	result, err := r.db.Exec(ctx, query, status, planID)
+	result, err := r.db.Exec(ctx, query, status, planID, userID)
 	if err != nil {
 		return err
 	}
@@ -179,8 +183,8 @@ func (r *AgentPlanRepository) UpdatePlanStatus(ctx context.Context, planID uuid.
 }
 
 // DeletePlan deletes a plan (soft delete by setting status to cancelled)
-func (r *AgentPlanRepository) DeletePlan(ctx context.Context, planID uuid.UUID) error {
-	return r.UpdatePlanStatus(ctx, planID, "cancelled")
+func (r *AgentPlanRepository) DeletePlan(ctx context.Context, userID, planID uuid.UUID) error {
+	return r.UpdatePlanStatus(ctx, userID, planID, "cancelled")
 }
 
 // GetActivePlansCount returns count of active plans for a user
@@ -501,50 +505,100 @@ func (r *AgentPlanRepository) GetPendingApprovals(ctx context.Context, userID uu
 	return approvals, rows.Err()
 }
 
-// ApproveAction approves an action
-func (r *AgentPlanRepository) ApproveAction(ctx context.Context, approvalID uuid.UUID, method string, deviceInfo map[string]interface{}) error {
-	query := `
-		UPDATE action_approvals 
-		SET approval_status = 'approved', approval_method = $1, approved_at = NOW(), device_info = $2
-		WHERE id = $3 AND approval_status = 'pending'`
-
-	result, err := r.db.Exec(ctx, query, method, deviceInfo, approvalID)
+// GetPendingApprovalByStepID returns the pending approval ID for a given
+// step, scoped to the caller's user_id. Returns ErrApprovalNotFound if no
+// pending approval exists or the step is not owned by the user.
+//
+// This replaces the previous pattern of fetching all pending approvals for a
+// user and scanning in-memory for the matching step (O(n) per approval
+// action). Direct lookup is O(1) with the existing
+// idx_action_approvals_user_pending index.
+func (r *AgentPlanRepository) GetPendingApprovalByStepID(ctx context.Context, userID, stepID uuid.UUID) (uuid.UUID, error) {
+	var approvalID uuid.UUID
+	err := r.db.QueryRow(ctx, `
+		SELECT id FROM action_approvals
+		WHERE step_id = $1
+		  AND user_id = $2
+		  AND approval_status = 'pending'
+		LIMIT 1`, stepID, userID).Scan(&approvalID)
 	if err != nil {
-		return err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return uuid.Nil, ErrApprovalNotFound
+		}
+		return uuid.Nil, err
 	}
-	if result.RowsAffected() == 0 {
-		return ErrApprovalNotFound
-	}
-
-	// Also update the step status
-	_, err = r.db.Exec(ctx, `
-		UPDATE plan_steps SET status = 'approved', updated_at = NOW()
-		WHERE id = (SELECT step_id FROM action_approvals WHERE id = $1)`,
-		approvalID)
-	return err
+	return approvalID, nil
 }
 
-// RejectAction rejects an action
-func (r *AgentPlanRepository) RejectAction(ctx context.Context, approvalID uuid.UUID, reason string) error {
-	query := `
-		UPDATE action_approvals 
-		SET approval_status = 'rejected', rejection_reason = $1, approved_at = NOW()
-		WHERE id = $2 AND approval_status = 'pending'`
-
-	result, err := r.db.Exec(ctx, query, reason, approvalID)
+// ApproveAction approves an action and flips the step status to 'approved'
+// atomically. Both writes share a transaction, so a partial commit cannot
+// leave us with an approved approval row pointing at a still-pending step.
+//
+// The action_approvals WHERE clause guards against duplicate approvals: the
+// first caller to win the `approval_status = 'pending'` race flips the row;
+// any concurrent caller sees `RowsAffected() == 0` and receives
+// ErrApprovalNotFound (semantically "already resolved"). The step update is
+// guarded by the approval_status = 'pending' subquery so even if someone
+// races directly against plan_steps outside this method, we only promote it
+// when the approval is still authoritative.
+func (r *AgentPlanRepository) ApproveAction(ctx context.Context, approvalID uuid.UUID, method string, deviceInfo map[string]interface{}) error {
+	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	if result.RowsAffected() == 0 {
+	defer func() { _ = tx.Rollback(ctx) }() // no-op after Commit
+
+	tag, err := tx.Exec(ctx, `
+		UPDATE action_approvals
+		SET approval_status = 'approved', approval_method = $1, approved_at = NOW(), device_info = $2
+		WHERE id = $3 AND approval_status = 'pending'`,
+		method, deviceInfo, approvalID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
 		return ErrApprovalNotFound
 	}
 
-	// Also update the step status to skipped
-	_, err = r.db.Exec(ctx, `
+	if _, err := tx.Exec(ctx, `
+		UPDATE plan_steps SET status = 'approved', updated_at = NOW()
+		WHERE id = (SELECT step_id FROM action_approvals WHERE id = $1)`,
+		approvalID); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
+// RejectAction rejects an action and flips the step status to 'skipped'
+// atomically. Same transactional guarantees as ApproveAction.
+func (r *AgentPlanRepository) RejectAction(ctx context.Context, approvalID uuid.UUID, reason string) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }() // no-op after Commit
+
+	tag, err := tx.Exec(ctx, `
+		UPDATE action_approvals
+		SET approval_status = 'rejected', rejection_reason = $1, approved_at = NOW()
+		WHERE id = $2 AND approval_status = 'pending'`,
+		reason, approvalID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrApprovalNotFound
+	}
+
+	if _, err := tx.Exec(ctx, `
 		UPDATE plan_steps SET status = 'skipped', updated_at = NOW()
 		WHERE id = (SELECT step_id FROM action_approvals WHERE id = $1)`,
-		approvalID)
-	return err
+		approvalID); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 // ExpireOldApprovals marks old pending approvals as expired
@@ -565,11 +619,17 @@ func (r *AgentPlanRepository) ExpireOldApprovals(ctx context.Context) (int, erro
 // Agent Configuration
 // =========================================
 
-// GetConfig gets user's agent configuration
+// GetConfig gets user's agent configuration.
+//
+// `autopilot_time::text` cast is intentional: pgx v5 has no default binary
+// decoder for Postgres TIME (OID 1083) into Go string, and we want to keep
+// AgentConfig.AutopilotTime as a plain "HH:MM:SS" string on the JSON surface.
+// Without the cast, Scan fails with "cannot scan time (OID 1083) in binary
+// format into *string" and every GetConfig/UpdateConfig call 500s.
 func (r *AgentPlanRepository) GetConfig(ctx context.Context, userID uuid.UUID) (*model.AgentConfig, error) {
 	query := `
 		SELECT user_id, enabled, auto_approve_threshold, auto_approve_currency,
-			require_biometric_above, daily_autopilot_enabled, autopilot_time,
+			require_biometric_above, daily_autopilot_enabled, autopilot_time::text,
 			autopilot_timezone, allowed_action_types, notification_preferences,
 			created_at, updated_at
 		FROM agent_config

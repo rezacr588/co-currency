@@ -1638,4 +1638,9 @@ export const fa = {
   ago: 'پیش',
   in: 'تا',
 
+  discardChangesTitle: 'تغییرات نادیده گرفته شود؟',
+  discardChangesBody: 'تغییرات ذخیره‌نشده دارید. نادیده گرفته شود و برگردید؟',
+  keepEditing: 'ادامه ویرایش',
+  discard: 'نادیده گرفتن',
+
 } as const;

@@ -1623,4 +1623,9 @@ export const ar = {
   ago: 'مضت',
   in: 'خلال',
 
+  discardChangesTitle: 'تجاهل التغييرات؟',
+  discardChangesBody: 'لديك تغييرات غير محفوظة. هل تريد تجاهلها والعودة؟',
+  keepEditing: 'متابعة التحرير',
+  discard: 'تجاهل',
+
 } as const;
