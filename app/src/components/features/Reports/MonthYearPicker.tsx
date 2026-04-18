@@ -60,7 +60,7 @@ export function MonthYearPicker({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable
-        style={{ flex: 1, backgroundColor: theme.alpha(colors.overlay, 1), justifyContent: 'center', alignItems: 'center', paddingHorizontal: modalScreenPadding }}
+        style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', alignItems: 'center', paddingHorizontal: modalScreenPadding }}
         onPress={onClose}
       >
         <Pressable

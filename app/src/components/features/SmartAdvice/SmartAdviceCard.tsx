@@ -39,6 +39,8 @@ export function SmartAdviceCard() {
     retry: 1,
   });
 
+  const categoryColors = useCategoryColors();
+
   // Check dismissal
   const checkDismissed = async () => {
     try {
@@ -87,7 +89,6 @@ export function SmartAdviceCard() {
 
   if (!displayAdvice) return null;
 
-  const categoryColors = useCategoryColors();
   const catColor = categoryColors[displayAdvice.category] || categoryColors.general;
 
   return (

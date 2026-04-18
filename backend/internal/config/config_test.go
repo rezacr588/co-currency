@@ -71,6 +71,8 @@ func TestLoad_Defaults(t *testing.T) {
 func TestLoad_CustomValues(t *testing.T) {
 	os.Setenv("PORT", "3000")
 	os.Setenv("ENVIRONMENT", "production")
+	// JWT_SECRET is validated in production; set a long non-default value.
+	os.Setenv("JWT_SECRET", "test-only-jwt-secret-at-least-32-characters-long-for-production-validation")
 	os.Setenv("CACHE_TTL", "10m")
 	os.Setenv("RATE_LIMIT", "200")
 	os.Setenv("FRANKFURTER_URL", "https://custom.api.com")
@@ -85,6 +87,7 @@ func TestLoad_CustomValues(t *testing.T) {
 	defer func() {
 		os.Unsetenv("PORT")
 		os.Unsetenv("ENVIRONMENT")
+		os.Unsetenv("JWT_SECRET")
 		os.Unsetenv("CACHE_TTL")
 		os.Unsetenv("RATE_LIMIT")
 		os.Unsetenv("FRANKFURTER_URL")
