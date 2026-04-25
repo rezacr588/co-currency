@@ -183,7 +183,7 @@ export default function AgentDashboardScreen() {
     );
   }
 
-  const activePlans = plans.data?.plans.filter(p => p.status === 'active') || [];
+  const activePlans = plans.data?.plans?.filter(p => p.status === 'active') || [];
   const approvals = pendingApprovals.data?.approvals || [];
 
   return (
