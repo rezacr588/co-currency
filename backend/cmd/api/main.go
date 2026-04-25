@@ -145,7 +145,7 @@ func main() {
 	}
 
 	// Create router
-	r := router.New(handlers, rateLimiter, authMiddleware, staticFS)
+	r := router.New(handlers, rateLimiter, authMiddleware, cfg.AdminEmail, staticFS)
 
 	// Wrap with metrics if enabled
 	serverHandler := http.Handler(r)

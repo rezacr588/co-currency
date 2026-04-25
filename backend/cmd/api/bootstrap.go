@@ -26,6 +26,7 @@ type databases struct {
 	loanRepo         *repository.LoanRepository
 	goalRepo         *repository.GoalRepository
 	budgetRepo       *repository.BudgetRepository
+	adminRepo        *repository.AdminRepository
 }
 
 // services holds all initialized services.
@@ -96,6 +97,7 @@ func initDatabase(cfg *config.Config) *databases {
 			log.Info().Msg("Connected to main database for users/wallet")
 			db.userRepo = repository.NewUserRepository(db.mainDB)
 			db.walletRepo = repository.NewWalletRepository(db.mainDB)
+			db.adminRepo = repository.NewAdminRepository(db.mainDB.Pool())
 		}
 
 		// Initialize IRR database
@@ -700,6 +702,9 @@ func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Hand
 	// WebSocket handler
 	wsHandler := handler.NewWebSocketHandler(wsHub, svc.auth)
 
+	// Admin handler — nil when DB is unavailable; routes_admin skips registration.
+	adminHandler := handler.NewAdminHandler(db.adminRepo)
+
 	return &router.Handlers{
 		Exchange:      exchangeHandler,
 		Auth:          authHandler,
@@ -732,5 +737,6 @@ func initHandlers(cfg *config.Config, db *databases, svc *services) *router.Hand
 		Social:        socialHandler,
 		Crypto:        cryptoHandler,
 		WebSocket:     wsHandler,
+		Admin:         adminHandler,
 	}
 }

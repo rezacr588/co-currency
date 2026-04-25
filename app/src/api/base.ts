@@ -8,16 +8,29 @@ const BACKEND_URL = 'https://coai.koyeb.app/api/v1';
 
 // Platform-aware API base URL
 const getApiBase = (): string => {
-  // On web in production, use relative path for same-origin requests
+  // Highest priority on every platform: explicit override via env var. Lets
+  // us point any client (web dev server, native build, e2e harness) at any
+  // backend without recompiling. Also makes `EXPO_PUBLIC_API_URL=...` the
+  // documented escape hatch in the local-dev guide.
+  const envOverride = process.env.EXPO_PUBLIC_API_URL;
+  if (envOverride) return envOverride;
+
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    // Check if we're on the production domain
+    // Production: same-origin relative path (the Koyeb backend serves the web
+    // bundle and the API from the same host).
     if (window.location.hostname.includes('koyeb.app')) {
       return '/api/v1';
     }
-    // In development, use full backend URL
+    // Local dev: web bundle served by Expo on :8081, backend on :8080. Without
+    // this branch the dev web app would talk to production.
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') {
+      return 'http://localhost:8080/api/v1';
+    }
+    // Anything else (deployed preview, custom domain): fall back to prod.
     return BACKEND_URL;
   }
-  // On native, use the full production URL
+  // Native: respect the optional `apiUrl` extra in app config; otherwise prod.
   const configuredUrl = Constants.expoConfig?.extra?.apiUrl;
   return configuredUrl || BACKEND_URL;
 };

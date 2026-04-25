@@ -2,20 +2,23 @@ import { useMemo, useState } from 'react';
 import { View, Text, Pressable, ScrollView, useWindowDimensions } from 'react-native';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Check } from 'lucide-react-native';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowLeft } from 'lucide-react-native';
 import { api } from '../../../../src/api';
 import { useLanguage } from '../../../../src/context/LanguageContext';
 import { useTheme as useStyledTheme } from 'styled-components/native';
 import { CurrencyConverter } from '../../../../src/components/features/CurrencyConverter';
-import { useToast } from '../../../../src/components/ui/Toast';
-import { Button } from '../../../../src/components/ui/Button';
 
+/**
+ * Wallet conversion screen — read-only rate viewer scoped to the user's
+ * wallet currencies. No commit button: the page exists to show the live rate
+ * for currencies the user actually holds. Acting on it (moving funds) lives
+ * elsewhere or comes later via a different surface.
+ */
 export default function WalletConvertScreen() {
   const { t } = useLanguage();
   const router = useRouter();
   const params = useLocalSearchParams<{ amount?: string; from?: string; to?: string }>();
-  const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const styledTheme = useStyledTheme();
@@ -30,16 +33,14 @@ export default function WalletConvertScreen() {
   const initialFromCurrency = typeof params.from === 'string' ? params.from.toUpperCase() : 'USD';
   const initialToCurrency = typeof params.to === 'string' ? params.to.toUpperCase() : 'EUR';
 
-  const [converterState, setConverterState] = useState({
+  const [, setConverterState] = useState({
     amount: initialAmount,
     parsedAmount: 0,
     fromCurrency: initialFromCurrency,
     toCurrency: initialToCurrency,
   });
-  const [error, setError] = useState('');
-  const { showToast } = useToast();
 
-  const { data: balances, isPending: isLoadingBalances, isError: isBalancesError, refetch: refetchBalances } = useQuery({
+  const { data: balances, isError: isBalancesError, refetch: refetchBalances } = useQuery({
     queryKey: ['wallet', 'balances'],
     queryFn: () => api.wallet.getBalances(),
   });
@@ -49,49 +50,7 @@ export default function WalletConvertScreen() {
     [balances]
   );
 
-  const availableCurrencies = balanceCurrencies.length > 0
-    ? balanceCurrencies
-    : ['USD', 'EUR'];
-
-  const { parsedAmount, fromCurrency, toCurrency } = converterState;
-
-  const mutation = useMutation({
-    mutationFn: () =>
-      api.wallet.convert({
-        from_currency: fromCurrency,
-        to_currency: toCurrency,
-        amount: parsedAmount,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['wallet'] });
-      queryClient.invalidateQueries({ queryKey: ['wallet', 'balances'] });
-      showToast(t('conversionSuccess') || 'Conversion completed', 'success');
-      router.back();
-    },
-    onError: (err) => {
-      setError(err instanceof Error ? err.message : 'Conversion failed');
-    },
-  });
-
-  const fromBalance = balances?.balances.find((b) => b.currency === fromCurrency);
-  const hasInsufficientBalance = parsedAmount > 0 && (!fromBalance || fromBalance.balance < parsedAmount);
-
-  const handleConvert = () => {
-    if (!parsedAmount || parsedAmount <= 0) {
-      setError(t('enterValidAmount'));
-      return;
-    }
-    if (fromCurrency === toCurrency) {
-      setError(t('selectDifferentCurrencies'));
-      return;
-    }
-    if (hasInsufficientBalance) {
-      setError(t('insufficientBalance'));
-      return;
-    }
-    setError('');
-    mutation.mutate();
-  };
+  const availableCurrencies = balanceCurrencies.length > 0 ? balanceCurrencies : ['USD', 'EUR'];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isDesktop ? [] : ['top']}>
@@ -120,12 +79,6 @@ export default function WalletConvertScreen() {
           paddingBottom: bottomPadding,
         }}
       >
-        {error ? (
-          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: alpha(colors.danger, 0.2), padding: spacing.lg, borderRadius: radii.md, marginBottom: spacing.lg }}>
-            <Text style={{ color: colors.danger }}>{error}</Text>
-          </View>
-        ) : null}
-
         {isBalancesError && (
           <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: alpha(colors.danger, 0.2), padding: spacing.lg, borderRadius: radii.md, marginBottom: spacing.lg }}>
             <Text style={{ color: colors.danger, marginBottom: spacing.sm }}>{t('failedToLoadBalances') || 'Failed to load balances'}</Text>
@@ -160,32 +113,6 @@ export default function WalletConvertScreen() {
           initialToCurrency={initialToCurrency}
           onStateChange={setConverterState}
         />
-
-        {/* Balance Warning */}
-        {isLoadingBalances && parsedAmount > 0 && (
-          <View style={{ backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, padding: spacing.md, borderRadius: radii.md, marginBottom: spacing.lg }}>
-            <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>{t('loadingBalances') || 'Loading balances...'}</Text>
-          </View>
-        )}
-        {hasInsufficientBalance && !isLoadingBalances && (
-          <View style={{ backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: alpha(colors.danger, 0.2), padding: spacing.md, borderRadius: radii.md, marginBottom: spacing.lg }}>
-            <Text style={{ color: colors.danger, fontSize: 14 }}>
-              {t('insufficientBalance') || 'Insufficient balance'}: {fromBalance ? `${fromBalance.balance} ${fromCurrency}` : `0 ${fromCurrency}`}
-            </Text>
-          </View>
-        )}
-
-        {/* Convert Button */}
-        <Button
-          variant="primary"
-          size="lg"
-          onPress={handleConvert}
-          disabled={!parsedAmount || fromCurrency === toCurrency || hasInsufficientBalance || isLoadingBalances}
-          isLoading={mutation.isPending}
-          leftIcon={<Check size={20} color={colors.primaryForeground} />}
-        >
-          {t('convert')}
-        </Button>
       </ScrollView>
     </SafeAreaView>
   );

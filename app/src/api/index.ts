@@ -22,6 +22,7 @@ import { coai } from './coai';
 import { forecasting } from './forecasting';
 import { agent } from './agent';
 import { social } from './social';
+import { admin } from './admin';
 import { currencies, rates, convert } from './exchange';
 
 export const api = {
@@ -52,6 +53,7 @@ export const api = {
   forecasting,
   agent,
   social,
+  admin,
 };
 
 export {

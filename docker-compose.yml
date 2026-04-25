@@ -1,4 +1,33 @@
+# Local-dev stack: Postgres + backend + ml-service.
+# The Expo web bundler runs separately (`make dev-app`) — Docker doesn't host it
+# because expo's hot-reload + native simulators work best on the host machine.
+#
+# One-shot boot:  make dev          (Docker stack)
+# Then in another shell:  make dev-app   (Expo web on :8081)
+
 services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      # Mapped to 5433 on the host so a developer's local Homebrew Postgres
+      # (which usually owns 5432) keeps working alongside this stack. Inside
+      # the compose network the backend still uses port 5432 via the
+      # `postgres` hostname, so DATABASE_URL doesn't need to change.
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: coai
+      POSTGRES_PASSWORD: coai_dev
+      POSTGRES_DB: coai
+    volumes:
+      - coai_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # backend depends_on this — keeps the boot order deterministic instead of
+      # racing migrations against a not-yet-listening Postgres.
+      test: ["CMD-SHELL", "pg_isready -U coai -d coai"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
   backend:
     build:
       context: ./backend
@@ -11,11 +40,20 @@ services:
       - CACHE_TTL=5m
       - FRANKFURTER_URL=https://api.frankfurter.app
       - ML_SERVICE_URL=http://ml-service:5001
+      - DATABASE_URL=postgres://coai:coai_dev@postgres:5432/coai?sslmode=disable
+      # FrontendURL is added to the CORS allow-list. Expo web defaults to :8081;
+      # the CORS middleware also always allows localhost:5173/3000/8080.
+      - FRONTEND_URL=http://localhost:8081
+      # Single-admin gate for /api/v1/admin/*. Override per-environment.
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-rez.zet.int@gmail.com}
     volumes:
       - ./backend:/app
     command: go run ./cmd/api
     depends_on:
-      - ml-service
+      postgres:
+        condition: service_healthy
+      ml-service:
+        condition: service_started
 
   ml-service:
     build:
@@ -32,3 +70,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+
+volumes:
+  coai_pgdata:

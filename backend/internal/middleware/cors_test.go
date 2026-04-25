@@ -34,7 +34,7 @@ func TestCORS_AllowedOrigin(t *testing.T) {
 		t.Error("Expected Access-Control-Allow-Methods header")
 	}
 
-	if rr.Header().Get("Access-Control-Allow-Headers") != "Content-Type, Authorization" {
+	if rr.Header().Get("Access-Control-Allow-Headers") != "Content-Type, Authorization, X-Query-Params, X-Trace-Id" {
 		t.Error("Expected Access-Control-Allow-Headers header")
 	}
 }

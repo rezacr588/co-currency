@@ -1,13 +1,21 @@
 /**
  * Agent Feature Components
  *
- * Components for the Autonomous AI Financial Agent feature:
- * - AutopilotCard: 4-stage autopilot view (Onramp / Roadmap / Daily Plan / Actions)
- * - PlanCard: Individual plan display with steps
- * - ApprovalCard: Pending action approval interface
+ * Components for the Autonomous AI Financial Agent dashboard:
+ * - AgentStatusHero: at-a-glance health pill + projected balance + run scan
+ * - ApprovalsBanner: high-priority CTA when actions await approval
+ * - TodaySection: top recommendation + nearest bills
+ * - RoadmapSection: goal opportunities with progress
+ * - RecentActivitySection: last few executed actions, builds trust
+ * - PlanCard: individual plan display with steps
+ * - ApprovalCard: pending action approval interface (used on /agent/approvals)
  */
 
-export { AutopilotCard } from './AutopilotCard';
+export { AgentStatusHero } from './AgentStatusHero';
+export { ApprovalsBanner } from './ApprovalsBanner';
+export { TodaySection } from './TodaySection';
+export { RoadmapSection } from './RoadmapSection';
+export { RecentActivitySection } from './RecentActivitySection';
 export { PlanCard } from './PlanCard';
 export { ApprovalCard } from './ApprovalCard';
 
