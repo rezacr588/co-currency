@@ -66,3 +66,5 @@ ml-service/venv/
 .claude/settings.local.json
 .claude/worktrees/
 .claude/plans/
+.claude/launch.json
+.claude/scheduled_tasks.lock
