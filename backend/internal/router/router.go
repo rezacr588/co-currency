@@ -41,10 +41,12 @@ type Handlers struct {
 	Social        *handler.SocialHandler
 	Crypto        *handler.CryptoHandler
 	WebSocket     *handler.WebSocketHandler
+	Admin         *handler.AdminHandler
 }
 
-// New creates a new router with all routes configured
-func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middleware.Auth, staticFS fs.FS) *chi.Mux {
+// New creates a new router with all routes configured. adminEmail gates the
+// /api/v1/admin/* operator endpoints (empty disables them).
+func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middleware.Auth, adminEmail string, staticFS fs.FS) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Global middleware
@@ -67,6 +69,7 @@ func New(h *Handlers, rateLimiter *middleware.RateLimiter, authMiddleware *middl
 		registerAuthRoutes(api, h, rateLimiter, authMiddleware)
 		registerWalletRoutes(api, h, authMiddleware)
 		registerFeatureRoutes(api, h, rateLimiter, authMiddleware)
+		registerAdminRoutes(api, h, authMiddleware, adminEmail)
 	})
 
 	return r

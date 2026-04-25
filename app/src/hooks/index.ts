@@ -1,4 +1,5 @@
 export { useDebounce } from './useDebounce';
+export { useAdminOverview, useIsAdmin } from './useAdmin';
 export { useRates } from './useRates';
 export { useCurrencies } from './useCurrencies';
 export { useConvert } from './useConvert';

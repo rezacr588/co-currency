@@ -371,7 +371,7 @@ export function useTriggerAutopilot(
 }
 
 /**
- * Hook for the consolidated autopilot status — drives AutopilotCard header.
+ * Hook for the consolidated autopilot status — config + last/next run + counts.
  */
 export function useAutopilotStatus(
   queryOptions?: Omit<UseQueryOptions<AutopilotStatus, Error>, 'queryKey' | 'queryFn'>

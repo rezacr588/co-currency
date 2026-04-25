@@ -422,7 +422,6 @@ export const agent = {
 
   /**
    * Get consolidated autopilot status — config + last/next run + counts.
-   * Drives the AutopilotCard header.
    */
   getAutopilotStatus: () =>
     fetchAPI<AutopilotStatus>('/agent/autopilot/status'),

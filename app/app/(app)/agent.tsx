@@ -1,25 +1,82 @@
 /**
- * Agent Dashboard - Main screen for Autonomous AI Financial Agent
- * 
- * Features:
- * - Daily financial briefing
- * - Active plans list
- * - Pending approvals
- * - Agent configuration access
- * - Quick actions
+ * Agent Dashboard — main screen for the Autonomous AI Financial Agent.
+ *
+ * Layout (top to bottom):
+ *   1. Header                 → title + Settings + Create plan icons
+ *   2. ApprovalsBanner        → only when pending > 0; previews top action
+ *   3. AgentStatusHero        → health pill · projected balance · run scan
+ *   4. TodaySection           → top recommendation + nearest bills
+ *   5. RoadmapSection         → goal opportunities with progress bars
+ *   6. Active Plans / starter → list of plans, or 3 starter ideas
+ *   7. RecentActivitySection  → last few actions the agent took
  */
 
 import { View, Text, ScrollView, RefreshControl, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Plus, Settings, TrendingUp, AlertCircle } from 'lucide-react-native';
+import {
+  Plus,
+  Settings,
+  Bot,
+  AlertCircle,
+  Check,
+  ChevronRight,
+  PiggyBank,
+  Scissors,
+  CreditCard,
+  CalendarClock,
+} from 'lucide-react-native';
+import type { ComponentType } from 'react';
 import { useTheme } from 'styled-components/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '@/src/context/LanguageContext';
 import { useAgentDashboard, useAgentStatus } from '@/src/hooks/useAgent';
-import { AutopilotCard, PlanCard, ApprovalCard } from '@/src/components/features/Agent';
+import {
+  AgentStatusHero,
+  ApprovalsBanner,
+  TodaySection,
+  RoadmapSection,
+  RecentActivitySection,
+  PlanCard,
+} from '@/src/components/features/Agent';
 import { LoadingSpinner, EmptyState } from '@/src/components/ui';
 import { haptics } from '@/src/utils/haptics';
 import { spacing, radii } from '@/src/theme';
+
+interface StarterIdea {
+  key: string;
+  Icon: ComponentType<{ size?: number; color?: string }>;
+  titleKey: string;
+  fallbackTitle: string;
+  descKey: string;
+  fallbackDesc: string;
+}
+
+const STARTER_IDEAS: StarterIdea[] = [
+  {
+    key: 'emergency',
+    Icon: PiggyBank,
+    titleKey: 'agentStarterEmergency',
+    fallbackTitle: 'Emergency fund',
+    descKey: 'agentStarterEmergencyDesc',
+    fallbackDesc: 'Build a 3-month safety cushion',
+  },
+  {
+    key: 'subscriptions',
+    Icon: Scissors,
+    titleKey: 'agentStarterCleanup',
+    fallbackTitle: 'Subscription cleanup',
+    descKey: 'agentStarterCleanupDesc',
+    fallbackDesc: 'Find and cancel what you don\u2019t use',
+  },
+  {
+    key: 'debt',
+    Icon: CreditCard,
+    titleKey: 'agentStarterDebt',
+    fallbackTitle: 'Debt payoff',
+    descKey: 'agentStarterDebtDesc',
+    fallbackDesc: 'Pay down loans faster',
+  },
+];
 
 export default function AgentDashboardScreen() {
   const theme = useTheme();
@@ -33,7 +90,6 @@ export default function AgentDashboardScreen() {
     plans,
     pendingApprovals,
     briefing,
-    config,
     isLoading,
     isError,
     error,
@@ -65,76 +121,148 @@ export default function AgentDashboardScreen() {
     router.push('/agent/approvals' as any);
   };
 
-  // If agent is not enabled, show onboarding
+  // Onboarding — agent is disabled
   if (!statusLoading && !isEnabled) {
+    const onboardingExamples = [
+      t('agentOnboardingExampleSubs') || 'Cancel unused subscriptions',
+      t('agentOnboardingExampleGoals') || 'Top up your savings goals',
+      t('agentOnboardingExampleBills') || 'Pay bills before they overdraft',
+    ];
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <ScrollView
           contentContainerStyle={{
             flexGrow: 1,
             justifyContent: 'center',
-            alignItems: 'center',
             padding: spacing.xl,
           }}
         >
-          <View
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              backgroundColor: theme.alpha(colors.accent, 0.125),
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: spacing.xxl,
-            }}
-          >
-            <TrendingUp size={40} color={colors.accent} />
-          </View>
-          <Text
-            style={{
-              fontSize: 24,
-              fontFamily: 'Inter_700Bold',
-              color: colors.foreground,
-              textAlign: 'center',
-              marginBottom: spacing.md,
-            }}
-          >
-            {t('autonomousAgentTitle') || 'AI Financial Agent'}
-          </Text>
-          <Text
-            style={{
-              fontSize: 16,
-              color: colors.mutedForeground,
-              textAlign: 'center',
-              lineHeight: 24,
-              marginBottom: spacing.xxxl,
-              maxWidth: 400,
-            }}
-          >
-            {t('agentOnboardingDescription') ||
-              'Let AI manage your finances autonomously. Create plans, set approval thresholds, and let CoAI handle recurring optimizations for you.'}
-          </Text>
-          <Pressable
-            onPress={handleViewConfig}
-            accessibilityRole="button"
-            accessibilityLabel={t('enableAgent') || 'Enable Agent'}
-            style={{
-              backgroundColor: colors.accent,
-              paddingHorizontal: spacing.xxxl,
-              paddingVertical: spacing.lg,
-              borderRadius: radii.md,
-            }}
-          >
-            <Text
+          <View style={{ alignItems: 'center', maxWidth: 480, alignSelf: 'center' }}>
+            <View
               style={{
-                color: colors.accentForeground,
-                fontSize: 16,
-                fontFamily: 'Inter_600SemiBold',
+                width: 72,
+                height: 72,
+                borderRadius: radii.full,
+                backgroundColor: theme.alpha(colors.accent, 0.15),
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: spacing.xl,
               }}
             >
-              {t('enableAgent') || 'Enable Agent'}
+              <Bot size={36} color={colors.accent} />
+            </View>
+            <Text
+              style={{
+                fontSize: 26,
+                fontFamily: 'Inter_700Bold',
+                color: colors.foreground,
+                textAlign: 'center',
+                marginBottom: spacing.sm,
+              }}
+            >
+              {t('agentOnboardingHeadline') || 'Your financial copilot'}
             </Text>
-          </Pressable>
+            <Text
+              style={{
+                fontSize: 15,
+                color: colors.mutedForeground,
+                textAlign: 'center',
+                lineHeight: 22,
+                marginBottom: spacing.xxl,
+              }}
+            >
+              {t('agentOnboardingTagline') ||
+                'Scans your money daily and proposes specific actions to save, plan, and pay on time.'}
+            </Text>
+
+            {/* Concrete examples — what it'll actually do */}
+            <View
+              style={{
+                width: '100%',
+                backgroundColor: colors.card,
+                borderRadius: radii.xl,
+                borderWidth: 1,
+                borderColor: colors.border,
+                padding: spacing.lg,
+                marginBottom: spacing.lg,
+              }}
+            >
+              {onboardingExamples.map((example, idx) => (
+                <View
+                  key={idx}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: spacing.sm,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: radii.full,
+                      backgroundColor: theme.alpha(colors.success, 0.18),
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginEnd: spacing.md,
+                    }}
+                  >
+                    <Check size={12} color={colors.success} />
+                  </View>
+                  <Text
+                    style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_500Medium', flex: 1 }}
+                  >
+                    {example}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Reassurance — counter to the "autonomous" word */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: colors.successMuted,
+                paddingVertical: spacing.sm,
+                paddingHorizontal: spacing.md,
+                borderRadius: radii.full,
+                marginBottom: spacing.xxl,
+              }}
+            >
+              <Check size={14} color={colors.success} style={{ marginEnd: spacing.xs }} />
+              <Text style={{ color: colors.foreground, fontSize: 12, fontFamily: 'Inter_500Medium' }}>
+                {t('agentOnboardingReassurance') || 'You approve every action. Nothing happens without you.'}
+              </Text>
+            </View>
+
+            <Pressable
+              onPress={handleViewConfig}
+              accessibilityRole="button"
+              accessibilityLabel={t('agentOnboardingCta') || t('enableAgent') || 'Get started'}
+              style={({ pressed }) => [
+                {
+                  backgroundColor: colors.accent,
+                  paddingHorizontal: spacing.xxxl,
+                  paddingVertical: spacing.lg,
+                  borderRadius: radii.full,
+                  alignSelf: 'stretch',
+                  alignItems: 'center',
+                },
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              <Text
+                style={{
+                  color: colors.accentForeground,
+                  fontSize: 16,
+                  fontFamily: 'Inter_600SemiBold',
+                }}
+              >
+                {t('agentOnboardingCta') || t('enableAgent') || 'Get started'}
+              </Text>
+            </Pressable>
+          </View>
         </ScrollView>
       </View>
     );
@@ -143,7 +271,9 @@ export default function AgentDashboardScreen() {
   // Loading state
   if (isLoading || statusLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+      <View
+        style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}
+      >
         <LoadingSpinner />
         <Text style={{ color: colors.mutedForeground, marginTop: spacing.lg }}>
           {t('loadingAgent') || 'Loading agent...'}
@@ -164,11 +294,7 @@ export default function AgentDashboardScreen() {
             padding: spacing.xl,
           }}
           refreshControl={
-            <RefreshControl
-              refreshing={false}
-              onRefresh={handleRefresh}
-              tintColor={colors.accent}
-            />
+            <RefreshControl refreshing={false} onRefresh={handleRefresh} tintColor={colors.accent} />
           }
         >
           <EmptyState
@@ -183,7 +309,7 @@ export default function AgentDashboardScreen() {
     );
   }
 
-  const activePlans = plans.data?.plans?.filter(p => p.status === 'active') || [];
+  const activePlans = plans.data?.plans?.filter((p) => p.status === 'active') || [];
   const approvals = pendingApprovals.data?.approvals || [];
 
   return (
@@ -257,59 +383,19 @@ export default function AgentDashboardScreen() {
           />
         }
       >
-        {/* Autopilot — 4-stage framework (Onramp → Roadmap → Daily Plan → Actions) */}
-        <View style={{ marginBottom: spacing.xl }}>
-          <AutopilotCard onViewApprovals={handleViewApprovals} />
-        </View>
+        {/* Approvals banner — previews top action when pending > 0 */}
+        <ApprovalsBanner approvals={approvals} onPress={handleViewApprovals} />
 
-        {/* Pending Approvals */}
-        {approvals.length > 0 && (
-          <View style={{ marginBottom: spacing.xl }}>
-            <Text
-              style={{
-                fontSize: 18,
-                fontFamily: 'Inter_600SemiBold',
-                color: colors.foreground,
-                marginBottom: spacing.md,
-              }}
-            >
-              {t('pendingApprovals') || 'Pending Approvals'} ({approvals.length})
-            </Text>
-            {approvals.slice(0, 3).map((approval) => (
-              <View key={approval.id} style={{ marginBottom: spacing.md }}>
-                <ApprovalCard
-                  approval={approval}
-                  planId={approval.metadata?.plan_id as string || ''}
-                  planTitle={approval.metadata?.plan_title as string}
-                  stepTitle={approval.metadata?.step_title as string}
-                  estimatedImpact={approval.metadata?.estimated_impact as number}
-                  currency={approval.metadata?.currency as string}
-                  onApproved={handleRefresh}
-                  onRejected={handleRefresh}
-                />
-              </View>
-            ))}
-            {approvals.length > 3 && (
-              <Pressable
-                onPress={handleViewApprovals}
-                accessibilityRole="button"
-                accessibilityLabel={t('viewAllApprovals') || 'View all approvals'}
-                style={{
-                  alignItems: 'center',
-                  paddingVertical: spacing.md,
-                  borderTopWidth: 1,
-                  borderTopColor: colors.border,
-                }}
-              >
-                <Text style={{ color: colors.accent, fontSize: 14, fontFamily: 'Inter_500Medium' }}>
-                  {t('viewAllApprovals') || `View all ${approvals.length} approvals`}
-                </Text>
-              </Pressable>
-            )}
-          </View>
-        )}
+        {/* Status hero — health pill + balance + run scan button */}
+        <AgentStatusHero />
 
-        {/* Active Plans */}
+        {/* Today — top recommendation + nearest bills */}
+        <TodaySection />
+
+        {/* Roadmap — goal opportunities */}
+        <RoadmapSection />
+
+        {/* Active Plans — list, or starter ideas if user has none yet */}
         {activePlans.length > 0 ? (
           <View style={{ marginBottom: spacing.xl }}>
             <Text
@@ -324,78 +410,82 @@ export default function AgentDashboardScreen() {
             </Text>
             {activePlans.map((plan) => (
               <View key={plan.id} style={{ marginBottom: spacing.md }}>
-                <PlanCard
-                  plan={plan}
-                  onViewDetails={handleViewPlan}
-                  showSteps={false}
-                />
+                <PlanCard plan={plan} onViewDetails={handleViewPlan} showSteps={false} />
               </View>
             ))}
           </View>
         ) : (
           <View style={{ marginBottom: spacing.xl }}>
-            <EmptyState
-              icon={TrendingUp}
-              title={t('noActivePlans') || 'No Active Plans'}
-              description={t('createFirstPlan') || 'Create your first financial plan to get started'}
-              actionLabel={t('createPlan') || 'Create Plan'}
-              onAction={handleCreatePlan}
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
+              <CalendarClock size={18} color={colors.foreground} style={{ marginEnd: spacing.sm }} />
+              <Text
+                style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}
+              >
+                {t('agentStarterIdeasTitle') || 'Try a starter idea'}
+              </Text>
+            </View>
+            <View
+              style={{
+                backgroundColor: colors.card,
+                borderRadius: radii.xl,
+                borderWidth: 1,
+                borderColor: colors.border,
+                paddingVertical: spacing.sm,
+              }}
+            >
+              {STARTER_IDEAS.map((idea, idx) => {
+                const Icon = idea.Icon;
+                return (
+                  <Pressable
+                    key={idea.key}
+                    onPress={handleCreatePlan}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(idea.titleKey) || idea.fallbackTitle}
+                    style={({ pressed }) => [
+                      {
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: spacing.md,
+                        paddingHorizontal: spacing.lg,
+                        borderTopWidth: idx === 0 ? 0 : 1,
+                        borderTopColor: colors.borderSubtle,
+                      },
+                      pressed && { opacity: 0.7 },
+                    ]}
+                  >
+                    <View
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: radii.full,
+                        backgroundColor: theme.alpha(colors.accent, 0.12),
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginEnd: spacing.md,
+                      }}
+                    >
+                      <Icon size={18} color={colors.accent} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{ color: colors.foreground, fontSize: 14, fontFamily: 'Inter_500Medium' }}
+                      >
+                        {t(idea.titleKey) || idea.fallbackTitle}
+                      </Text>
+                      <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 2 }}>
+                        {t(idea.descKey) || idea.fallbackDesc}
+                      </Text>
+                    </View>
+                    <ChevronRight size={16} color={colors.mutedForeground} />
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
         )}
 
-        {/* Agent Status */}
-        {config.data?.config && (
-          <View
-            style={{
-              backgroundColor: colors.muted,
-              borderRadius: radii.md,
-              padding: spacing.lg,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 14,
-                fontFamily: 'Inter_600SemiBold',
-                color: colors.foreground,
-                marginBottom: spacing.md,
-              }}
-            >
-              {t('agentConfiguration') || 'Agent Configuration'}
-            </Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
-              <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>
-                {t('autoApproveBelow') || 'Auto-approve below'}
-              </Text>
-              <Text style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_500Medium' }}>
-                {config.data.config.auto_approve_threshold} {config.data.config.auto_approve_currency}
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
-              <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>
-                {t('dailyAutopilot') || 'Daily autopilot'}
-              </Text>
-              <Text style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_500Medium' }}>
-                {config.data.config.daily_autopilot_enabled ? t('enabled') || 'Enabled' : t('disabled') || 'Disabled'}
-              </Text>
-            </View>
-            <Pressable
-              onPress={handleViewConfig}
-              accessibilityRole="button"
-              accessibilityLabel={t('editSettings') || 'Edit Settings'}
-              style={{
-                marginTop: spacing.md,
-                paddingTop: spacing.md,
-                borderTopWidth: 1,
-                borderTopColor: colors.border,
-              }}
-            >
-              <Text style={{ color: colors.accent, fontSize: 13, fontFamily: 'Inter_500Medium', textAlign: 'center' }}>
-                {t('editSettings') || 'Edit Settings'}
-              </Text>
-            </Pressable>
-          </View>
-        )}
+        {/* Recent activity — what the agent has actually done */}
+        <RecentActivitySection />
       </ScrollView>
     </View>
   );

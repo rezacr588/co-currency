@@ -57,6 +57,10 @@ type Config struct {
 
 	// JWT Authentication
 	JWTSecret string `env:"JWT_SECRET" envDefault:"change-me-in-production-to-a-secure-secret"`
+	// AdminEmail gates the /api/v1/admin/* read-only operator endpoints. The
+	// default is the project owner; override per-environment if needed. Empty
+	// disables all admin endpoints (returns 403 for everyone).
+	AdminEmail string `env:"ADMIN_EMAIL" envDefault:"rez.zet.int@gmail.com"`
 	// Email Provider
 	ResendAPIKey string `env:"RESEND_API_KEY" envDefault:""`
 	// Error handling

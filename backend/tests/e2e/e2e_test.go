@@ -93,7 +93,7 @@ func SetupTestServer(t *testing.T) *TestServer {
 	authMiddleware := middleware.NewAuth(authService)
 
 	// Create router and server
-	r := router.New(handlers, rateLimiter, authMiddleware, nil)
+	r := router.New(handlers, rateLimiter, authMiddleware, "", nil)
 	server := httptest.NewServer(r)
 
 	return &TestServer{

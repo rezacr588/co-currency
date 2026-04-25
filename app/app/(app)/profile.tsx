@@ -33,6 +33,8 @@ import {
   Lock,
   MessageCircle,
   StickyNote,
+  LifeBuoy,
+  Shield,
   Fingerprint,
   Eye,
   EyeOff,
@@ -40,6 +42,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { useAuth } from '../../src/context/AuthContext';
+import { useIsAdmin } from '../../src/hooks/useAdmin';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useTheme as useStyledTheme } from 'styled-components/native';
 import { useLanguage } from '../../src/context/LanguageContext';
@@ -59,6 +62,7 @@ const LANGUAGES = [
 
 export default function ProfileScreen() {
   const { user, logout, isLoading, refreshProfile } = useAuth();
+  const isAdmin = useIsAdmin();
   const { toggleTheme, isDark } = useTheme();
   const styledTheme = useStyledTheme();
   const colors = styledTheme.colors;
@@ -567,8 +571,21 @@ export default function ProfileScreen() {
                     icon={<Info size={20} color={colors.placeholder} />}
                     label={t('aboutUs') || 'About Us'}
                     onPress={() => router.push('/(public)/about')}
-                    isLast
                   />
+                  <SettingsItem
+                    icon={<LifeBuoy size={20} color={colors.accent} />}
+                    label={t('supportMenuLabel') || 'Help & feedback'}
+                    onPress={() => router.push('/(public)/support')}
+                    isLast={!isAdmin}
+                  />
+                  {isAdmin && (
+                    <SettingsItem
+                      icon={<Shield size={20} color={colors.warning} />}
+                      label={t('adminMenuLabel') || 'Admin'}
+                      onPress={() => router.push('/admin' as any)}
+                      isLast
+                    />
+                  )}
                 </SettingsSection>
               </View>
             </View>

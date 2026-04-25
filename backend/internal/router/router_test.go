@@ -51,7 +51,7 @@ func setupTestRouter() (*Handlers, *middleware.RateLimiter, *middleware.Auth) {
 func TestNew_CreatesRouter(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
 
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	if r == nil {
 		t.Fatal("Expected router to be created")
@@ -60,7 +60,7 @@ func TestNew_CreatesRouter(t *testing.T) {
 
 func TestRouter_HealthEndpoint(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("GET", "/health", nil)
 	rr := httptest.NewRecorder()
@@ -74,7 +74,7 @@ func TestRouter_HealthEndpoint(t *testing.T) {
 
 func TestRouter_CurrenciesEndpoint(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/currencies", nil)
 	rr := httptest.NewRecorder()
@@ -89,7 +89,7 @@ func TestRouter_CurrenciesEndpoint(t *testing.T) {
 
 func TestRouter_RatesEndpoint(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/rates/USD", nil)
 	rr := httptest.NewRecorder()
@@ -104,7 +104,7 @@ func TestRouter_RatesEndpoint(t *testing.T) {
 
 func TestRouter_ConvertEndpoint_MissingParams(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/convert", nil)
 	rr := httptest.NewRecorder()
@@ -118,7 +118,7 @@ func TestRouter_ConvertEndpoint_MissingParams(t *testing.T) {
 
 func TestRouter_HistoricalEndpoint_InvalidDate(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/historical/invalid", nil)
 	rr := httptest.NewRecorder()
@@ -132,7 +132,7 @@ func TestRouter_HistoricalEndpoint_InvalidDate(t *testing.T) {
 
 func TestRouter_AuthRegisterEndpoint_ServiceUnavailable(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("POST", "/api/v1/auth/register", nil)
 	rr := httptest.NewRecorder()
@@ -147,7 +147,7 @@ func TestRouter_AuthRegisterEndpoint_ServiceUnavailable(t *testing.T) {
 
 func TestRouter_AuthLoginEndpoint_ServiceUnavailable(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("POST", "/api/v1/auth/login", nil)
 	rr := httptest.NewRecorder()
@@ -162,7 +162,7 @@ func TestRouter_AuthLoginEndpoint_ServiceUnavailable(t *testing.T) {
 
 func TestRouter_AuthProfileEndpoint_Unauthorized(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/auth/profile", nil)
 	rr := httptest.NewRecorder()
@@ -176,7 +176,7 @@ func TestRouter_AuthProfileEndpoint_Unauthorized(t *testing.T) {
 
 func TestRouter_WalletBalancesEndpoint_Unauthorized(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/wallet/balances", nil)
 	rr := httptest.NewRecorder()
@@ -190,7 +190,7 @@ func TestRouter_WalletBalancesEndpoint_Unauthorized(t *testing.T) {
 
 func TestRouter_WalletSummaryEndpoint_Unauthorized(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/wallet/summary", nil)
 	rr := httptest.NewRecorder()
@@ -204,7 +204,7 @@ func TestRouter_WalletSummaryEndpoint_Unauthorized(t *testing.T) {
 
 func TestRouter_WalletTransactionEndpoint_Unauthorized(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("POST", "/api/v1/wallet/transaction", nil)
 	rr := httptest.NewRecorder()
@@ -218,7 +218,7 @@ func TestRouter_WalletTransactionEndpoint_Unauthorized(t *testing.T) {
 
 func TestRouter_WalletConvertEndpoint_Unauthorized(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("POST", "/api/v1/wallet/convert", nil)
 	rr := httptest.NewRecorder()
@@ -232,7 +232,7 @@ func TestRouter_WalletConvertEndpoint_Unauthorized(t *testing.T) {
 
 func TestRouter_WalletTransactionsEndpoint_Unauthorized(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/wallet/transactions", nil)
 	rr := httptest.NewRecorder()
@@ -246,7 +246,7 @@ func TestRouter_WalletTransactionsEndpoint_Unauthorized(t *testing.T) {
 
 func TestRouter_AIStatusEndpoint(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/ai/status", nil)
 	rr := httptest.NewRecorder()
@@ -260,7 +260,7 @@ func TestRouter_AIStatusEndpoint(t *testing.T) {
 
 func TestRouter_AIParseReceiptEndpoint(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("POST", "/api/v1/ai/parse-receipt", nil)
 	rr := httptest.NewRecorder()
@@ -275,7 +275,7 @@ func TestRouter_AIParseReceiptEndpoint(t *testing.T) {
 
 func TestRouter_AIParseTextEndpoint(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("POST", "/api/v1/ai/parse-text", nil)
 	rr := httptest.NewRecorder()
@@ -290,7 +290,7 @@ func TestRouter_AIParseTextEndpoint(t *testing.T) {
 
 func TestRouter_AIApplyParsedEndpoint_Unauthorized(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("POST", "/api/v1/ai/apply-parsed", nil)
 	rr := httptest.NewRecorder()
@@ -304,7 +304,7 @@ func TestRouter_AIApplyParsedEndpoint_Unauthorized(t *testing.T) {
 
 func TestRouter_GoalTypesEndpoint_Unauthorized(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/goals/types", nil)
 	rr := httptest.NewRecorder()
@@ -318,7 +318,7 @@ func TestRouter_GoalTypesEndpoint_Unauthorized(t *testing.T) {
 
 func TestRouter_TasksEndpoint_Unauthorized(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/tasks", nil)
 	rr := httptest.NewRecorder()
@@ -332,7 +332,7 @@ func TestRouter_TasksEndpoint_Unauthorized(t *testing.T) {
 
 func TestRouter_TodoEndpoint_Unauthorized(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/todo", nil)
 	rr := httptest.NewRecorder()
@@ -357,7 +357,7 @@ func TestRouter_WithStaticFS(t *testing.T) {
 		},
 	}
 
-	r := New(handlers, rateLimiter, authMiddleware, mockFS)
+	r := New(handlers, rateLimiter, authMiddleware, "", mockFS)
 
 	// Test root path serves index.html
 	req := httptest.NewRequest("GET", "/", nil)
@@ -388,7 +388,7 @@ func TestRouter_SPARouting(t *testing.T) {
 		},
 	}
 
-	r := New(handlers, rateLimiter, authMiddleware, mockFS)
+	r := New(handlers, rateLimiter, authMiddleware, "", mockFS)
 
 	// Request non-existent path should fallback to index.html for SPA routing
 	req := httptest.NewRequest("GET", "/some/spa/route", nil)
@@ -410,7 +410,7 @@ func TestRouter_LandingPageIsPublic(t *testing.T) {
 		},
 	}
 
-	r := New(handlers, rateLimiter, authMiddleware, mockFS)
+	r := New(handlers, rateLimiter, authMiddleware, "", mockFS)
 
 	req := httptest.NewRequest("GET", "/", nil)
 	rr := httptest.NewRecorder()
@@ -435,7 +435,7 @@ func TestRouter_GoogleVerificationFileIsPublic(t *testing.T) {
 		},
 	}
 
-	r := New(handlers, rateLimiter, authMiddleware, mockFS)
+	r := New(handlers, rateLimiter, authMiddleware, "", mockFS)
 
 	req := httptest.NewRequest("GET", "/google7bc42b08d60d96d7.html", nil)
 	rr := httptest.NewRecorder()
@@ -453,7 +453,7 @@ func TestRouter_GoogleVerificationFileIsPublic(t *testing.T) {
 
 func TestRouter_RobotsTxtIncludesSitemapAndPrivateDisallows(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("GET", "/robots.txt", nil)
 	rr := httptest.NewRecorder()
@@ -480,7 +480,7 @@ func TestRouter_RobotsTxtIncludesSitemapAndPrivateDisallows(t *testing.T) {
 
 func TestRouter_SitemapXMLListsPublicPages(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("GET", "/sitemap.xml", nil)
 	rr := httptest.NewRecorder()
@@ -515,7 +515,7 @@ func TestRouter_SitemapXMLListsPublicPages(t *testing.T) {
 
 func TestRouter_CORSHeaders(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("GET", "/health", nil)
 	req.Header.Set("Origin", "http://localhost:5173")
@@ -530,7 +530,7 @@ func TestRouter_CORSHeaders(t *testing.T) {
 
 func TestRouter_CORSPreflight(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("OPTIONS", "/api/v1/currencies", nil)
 	rr := httptest.NewRecorder()
@@ -586,7 +586,7 @@ func TestHandlers_Structure(t *testing.T) {
 
 func TestRouter_NotFoundRoute(t *testing.T) {
 	handlers, rateLimiter, authMiddleware := setupTestRouter()
-	r := New(handlers, rateLimiter, authMiddleware, nil)
+	r := New(handlers, rateLimiter, authMiddleware, "", nil)
 
 	req := httptest.NewRequest("GET", "/nonexistent/api/route", nil)
 	rr := httptest.NewRecorder()
@@ -613,7 +613,7 @@ func TestRouter_StaticFS_EmptyPath(t *testing.T) {
 		},
 	}
 
-	r := New(handlers, rateLimiter, authMiddleware, mockFS)
+	r := New(handlers, rateLimiter, authMiddleware, "", mockFS)
 
 	// Empty path should serve index.html
 	req := httptest.NewRequest("GET", "/", nil)
