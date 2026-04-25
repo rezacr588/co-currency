@@ -9,11 +9,21 @@ CoAI (`github.com/rezacr588/co-currency`) is a full-stack personal finance app: 
 ## Development Commands
 
 ### Getting Started
+
+The fast path is Docker for the backend stack + native Expo for the app:
+
 ```bash
-make install                        # Install all dependencies (go mod download + npm install)
-cp backend/.env.example backend/.env # Configure environment
-make dev                            # Docker Compose development (recommended)
+make install     # Install all dependencies (go mod download + npm install)
+make dev         # Docker stack: Postgres :5433, backend :8080, ml-service :5001
+# in a second shell:
+make dev-app     # Expo web/native bundler on :8081 (talks to Docker backend automatically)
 ```
+
+`docker-compose.yml` provisions Postgres locally — no external DB needed. Migrations auto-run on backend startup. App's [src/api/base.ts](app/src/api/base.ts) auto-detects `localhost` and points at `http://localhost:8080/api/v1`. Override anywhere with `EXPO_PUBLIC_API_URL`.
+
+Useful targets: `make dev-down` (stop), `make dev-logs` (tail), `make dev-reset` (nuke Postgres volume — fresh DB next boot). Postgres is mapped to host `:5433` so a Homebrew Postgres on `:5432` keeps working alongside.
+
+**Admin gate**: backend reads `ADMIN_EMAIL` (default `rez.zet.int@gmail.com`); the matching user gets access to `/admin` in-app + `GET /api/v1/admin/overview`. Override per-environment when needed.
 
 ### Backend (run from /backend)
 ```bash
@@ -34,13 +44,14 @@ npx expo start           # Native dev server (press i/a for simulator)
 
 ### Make Targets
 ```bash
-make dev-backend / dev-app / dev-web
+make dev / dev-down / dev-logs / dev-reset  # Docker stack lifecycle
+make dev-backend / dev-app / dev-web        # Run a single piece natively
 make test / test-backend / test-app
 make lint / lint-backend / lint-app
-make build / build-backend / build-web   # Docker / Go binary / Expo web export
-make run-local                           # Test production build locally on :8080
-make deploy / logs / status              # Koyeb deployment
-make db-backup / db-restore / db-list    # Database backup management
+make build / build-backend / build-web      # Docker / Go binary / Expo web export
+make run-local                              # Test production build locally on :8080
+make deploy / logs / status                 # Koyeb deployment
+make db-backup / db-restore / db-list       # Database backup management
 ```
 
 ## Architecture

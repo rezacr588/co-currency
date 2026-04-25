@@ -43,7 +43,10 @@ func CORS(next http.Handler) http.Handler {
 		if origin != "" && IsOriginAllowed(origin, allowed) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			// X-Query-Params: app/src/api/agent.ts uses this header to ship list-query
+			// filters since RN-Web fetch doesn't expose URL search params for some
+			// endpoints. X-Trace-Id is reserved for client-supplied trace correlation.
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Query-Params, X-Trace-Id")
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			w.Header().Set("Vary", "Origin")
 		}
